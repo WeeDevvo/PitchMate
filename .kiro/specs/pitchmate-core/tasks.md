@@ -410,23 +410,23 @@ Each task includes property-based tests and unit tests to ensure correctness. We
 - [x] 19. Checkpoint - Ensure all infrastructure layer tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 20. Implement API layer - Authentication and JWT
-  - [ ] 20.1 Configure JWT authentication in Program.cs
+- [x] 20. Implement API layer - Authentication and JWT
+  - [x] 20.1 Configure JWT authentication in Program.cs
     - Add JWT bearer authentication
     - Configure token validation parameters
     - _Requirements: 1.3, 8.2_
 
-  - [ ] 20.2 Create AuthController
+  - [x] 20.2 Create AuthController
     - POST /api/auth/register endpoint
     - POST /api/auth/login endpoint
     - POST /api/auth/google endpoint
     - _Requirements: 1.1, 1.3, 1.5, 8.1, 8.5_
 
-  - [ ] 20.3 Write integration tests for AuthController
+  - [x] 20.3 Write integration tests for AuthController
     - Test registration, login, and Google OAuth flows
     - _Requirements: 1.1, 1.3, 1.5_
 
-  - [ ] 20.4 Write property test for authentication enforcement
+  - [x] 20.4 Write property test for authentication enforcement
     - **Property 34: Authentication enforcement**
     - **Validates: Requirements 8.2**
 
