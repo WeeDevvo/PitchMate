@@ -472,7 +472,7 @@ Each task includes property-based tests and unit tests to ensure correctness. We
     - **Validates: Requirements 8.6**
     - **Status: PASSED (100 iterations) - All 4 property tests passing**
 
-- [-] 23. Implement API layer - User and rating endpoints
+- [x] 23. Implement API layer - User and rating endpoints
   - [x] 23.1 Create UsersController
     - GET /api/users/me (get current user)
     - GET /api/users/me/squads (get user's squads with ratings)
