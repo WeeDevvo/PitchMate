@@ -430,56 +430,60 @@ Each task includes property-based tests and unit tests to ensure correctness. We
     - **Property 34: Authentication enforcement**
     - **Validates: Requirements 8.2**
 
-- [ ] 21. Implement API layer - Squad endpoints
-  - [ ] 21.1 Create SquadsController
+- [x] 21. Implement API layer - Squad endpoints
+  - [x] 21.1 Create SquadsController
     - POST /api/squads (create squad)
     - GET /api/squads (get user's squads)
+    #
     - POST /api/squads/{id}/join (join squad)
     - POST /api/squads/{id}/admins (add admin)
     - DELETE /api/squads/{id}/members/{userId} (remove member)
     - _Requirements: 2.1, 2.2, 2.5, 2.6, 2.7, 8.1, 8.5_
 
-  - [ ] 21.2 Write integration tests for SquadsController
+  - [x] 21.2 Write integration tests for SquadsController
     - Test all endpoints with valid and invalid inputs
     - _Requirements: 2.1, 2.2, 2.5, 2.6, 2.7_
 
-  - [ ] 21.3 Write property test for authorization enforcement
+  - [x] 21.3 Write property test for authorization enforcement
     - **Property 35: Authorization enforcement**
     - **Validates: Requirements 8.3**
 
-- [ ] 22. Implement API layer - Match endpoints
-  - [ ] 22.1 Create MatchesController
+- [x] 22. Implement API layer - Match endpoints
+  - [x] 22.1 Create MatchesController
     - POST /api/squads/{squadId}/matches (create match)
     - GET /api/squads/{squadId}/matches (get squad matches)
     - POST /api/matches/{id}/result (record result)
     - GET /api/matches/{id} (get match details)
     - _Requirements: 3.1, 3.6, 6.1, 6.7, 8.1, 8.5_
 
-  - [ ] 22.2 Write integration tests for MatchesController
+  - [x] 22.2 Write integration tests for MatchesController
     - Test all endpoints with valid and invalid inputs
     - Test authorization for admin-only operations
     - _Requirements: 3.1, 3.6, 6.1, 6.7_
+    - **Status: COMPLETED - All 15 tests passing**
 
-  - [ ] 22.3 Write property test for invalid request error handling
+  - [x] 22.3 Write property test for invalid request error handling
     - **Property 36: Invalid request error handling**
     - **Validates: Requirements 8.4**
+    - **Status: PASSED (100 iterations)**
 
-  - [ ] 22.4 Write property test for JSON response format
+  - [x] 22.4 Write property test for JSON response format
     - **Property 37: JSON response format**
     - **Validates: Requirements 8.6**
+    - **Status: PASSED (100 iterations) - All 4 property tests passing**
 
-- [ ] 23. Implement API layer - User and rating endpoints
-  - [ ] 23.1 Create UsersController
+- [x] 23. Implement API layer - User and rating endpoints
+  - [x] 23.1 Create UsersController
     - GET /api/users/me (get current user)
     - GET /api/users/me/squads (get user's squads with ratings)
     - GET /api/users/{id}/squads/{squadId}/rating (get user rating in squad)
     - _Requirements: 5.7, 5.8, 8.1, 8.5_
 
-  - [ ] 23.2 Write integration tests for UsersController
+  - [x] 23.2 Write integration tests for UsersController
     - Test all endpoints
     - _Requirements: 5.7, 5.8_
 
-- [ ] 24. Checkpoint - Ensure all API layer tests pass
+- [x] 24. Checkpoint - Ensure all API layer tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 25. Set up frontend Next.js project

@@ -1,5 +1,6 @@
 using PitchMate.Domain.Entities;
 using PitchMate.Domain.Repositories;
+using PitchMate.Domain.ValueObjects;
 
 namespace PitchMate.Application.Commands.Squads;
 
@@ -10,10 +11,12 @@ namespace PitchMate.Application.Commands.Squads;
 public class CreateSquadCommandHandler
 {
     private readonly ISquadRepository _squadRepository;
+    private readonly IUserRepository _userRepository;
 
-    public CreateSquadCommandHandler(ISquadRepository squadRepository)
+    public CreateSquadCommandHandler(ISquadRepository squadRepository, IUserRepository userRepository)
     {
         _squadRepository = squadRepository ?? throw new ArgumentNullException(nameof(squadRepository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     /// <summary>
@@ -48,11 +51,30 @@ public class CreateSquadCommandHandler
 
         try
         {
+            // Retrieve user
+            var user = await _userRepository.GetByIdAsync(command.CreatorId, ct);
+            if (user == null)
+            {
+                return new CreateSquadResult(
+                    SquadId: null,
+                    Success: false,
+                    ErrorCode: "BUS_004",
+                    ErrorMessage: "User not found.");
+            }
+
             // Create squad entity with creator as admin
             var squad = Squad.Create(command.Name, command.CreatorId);
 
+            // Add creator as a member with default rating
+            var initialRating = EloRating.Default;
+            squad.AddMember(command.CreatorId, initialRating);
+
+            // Add squad membership to user
+            user.JoinSquad(squad.Id, initialRating);
+
             // Persist via repository
             await _squadRepository.AddAsync(squad, ct);
+            await _userRepository.UpdateAsync(user, ct);
 
             return new CreateSquadResult(
                 SquadId: squad.Id,

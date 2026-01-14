@@ -38,7 +38,8 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = issuer,
         ValidAudience = audience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero,
+        NameClaimType = "sub" // Map the "sub" claim to ClaimTypes.NameIdentifier
     };
 });
 
@@ -72,6 +73,21 @@ builder.Services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
 builder.Services.AddScoped<CreateUserCommandHandler>();
 builder.Services.AddScoped<AuthenticateUserCommandHandler>();
 builder.Services.AddScoped<AuthenticateWithGoogleCommandHandler>();
+
+// Register squad command handlers
+builder.Services.AddScoped<PitchMate.Application.Commands.Squads.CreateSquadCommandHandler>();
+builder.Services.AddScoped<PitchMate.Application.Commands.Squads.JoinSquadCommandHandler>();
+builder.Services.AddScoped<PitchMate.Application.Commands.Squads.AddSquadAdminCommandHandler>();
+builder.Services.AddScoped<PitchMate.Application.Commands.Squads.RemoveSquadMemberCommandHandler>();
+
+// Register match command handlers
+builder.Services.AddScoped<PitchMate.Application.Commands.Matches.CreateMatchCommandHandler>();
+builder.Services.AddScoped<PitchMate.Application.Commands.Matches.RecordMatchResultCommandHandler>();
+
+// Register query handlers
+builder.Services.AddScoped<PitchMate.Application.Queries.GetUserSquadsQueryHandler>();
+builder.Services.AddScoped<PitchMate.Application.Queries.GetSquadMatchesQueryHandler>();
+builder.Services.AddScoped<PitchMate.Application.Queries.GetUserRatingInSquadQueryHandler>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
