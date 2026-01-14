@@ -486,18 +486,18 @@ Each task includes property-based tests and unit tests to ensure correctness. We
 - [x] 24. Checkpoint - Ensure all API layer tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 25. Set up frontend Next.js project
-  - [ ] 25.1 Initialize Next.js project with TypeScript and App Router
+- [x] 25. Set up frontend Next.js project
+  - [x] 25.1 Initialize Next.js project with TypeScript and App Router
     - Configure Tailwind CSS and shadcn/ui
     - Set up project structure (app/, components/, lib/)
     - _Requirements: 11.1, 11.2, 12.1_
 
-  - [ ] 25.2 Create API client service
+  - [x] 25.2 Create API client service
     - Implement REST API client with authentication
     - Handle JWT token storage and refresh
     - _Requirements: 8.1, 8.2_
 
-  - [ ] 25.3 Set up responsive layout with navigation
+  - [x] 25.3 Set up responsive layout with navigation
     - Create root layout with responsive navigation
     - Implement mobile menu and desktop navigation
     - Apply consistent design system
