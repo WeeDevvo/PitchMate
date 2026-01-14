@@ -20,7 +20,12 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 
     public AuthControllerTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory.WithWebHostBuilder(builder =>
+        _factory = factory;
+    }
+
+    private HttpClient CreateTestClient()
+    {
+        return _factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
             {
@@ -32,7 +37,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
                     services.Remove(descriptor);
                 }
 
-                // Add in-memory database for testing
+                // Add in-memory database for testing with unique name per test
                 services.AddDbContext<PitchMateDbContext>(options =>
                 {
                     options.UseInMemoryDatabase("TestDatabase_" + Guid.NewGuid());
@@ -47,14 +52,14 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
                 }
                 services.AddScoped<IGoogleTokenValidator, MockGoogleTokenValidator>();
             });
-        });
+        }).CreateClient();
     }
 
     [Fact]
     public async Task Register_WithValidCredentials_ReturnsCreated()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateTestClient();
         var request = new RegisterRequest("test@example.com", "Password123!");
 
         // Act
@@ -71,7 +76,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task Register_WithInvalidEmail_ReturnsBadRequest()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateTestClient();
         var request = new RegisterRequest("invalid-email", "Password123!");
 
         // Act
@@ -88,7 +93,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task Register_WithDuplicateEmail_ReturnsBadRequest()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateTestClient();
         var request = new RegisterRequest("duplicate@example.com", "Password123!");
 
         // Register first time
@@ -108,7 +113,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task Login_WithValidCredentials_ReturnsToken()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateTestClient();
         var email = "login@example.com";
         var password = "Password123!";
 
@@ -132,7 +137,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task Login_WithInvalidPassword_ReturnsUnauthorized()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateTestClient();
         var email = "wrongpass@example.com";
         var password = "Password123!";
 
@@ -155,7 +160,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task Login_WithNonExistentUser_ReturnsUnauthorized()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateTestClient();
 
         // Act
         var response = await client.PostAsJsonAsync("/api/auth/login", 
@@ -172,7 +177,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task GoogleAuth_WithValidToken_ReturnsToken()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateTestClient();
         var request = new GoogleAuthRequest("valid-google-token");
 
         // Act
@@ -191,7 +196,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task GoogleAuth_WithExistingUser_ReturnsTokenAndNotNewUser()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateTestClient();
         var request = new GoogleAuthRequest("valid-google-token");
 
         // First authentication (creates user)
@@ -213,7 +218,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task GoogleAuth_WithInvalidToken_ReturnsUnauthorized()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateTestClient();
         var request = new GoogleAuthRequest("invalid-google-token");
 
         // Act
