@@ -503,20 +503,20 @@ Each task includes property-based tests and unit tests to ensure correctness. We
     - Apply consistent design system
     - _Requirements: 11.1, 11.2, 11.6, 12.2_
 
-- [ ] 26. Implement frontend - Authentication pages
-  - [ ] 26.1 Create login page
+- [x] 26. Implement frontend - Authentication pages
+  - [x] 26.1 Create login page
     - Email/password form
     - Google OAuth button
     - Responsive design
     - _Requirements: 1.1, 1.3, 1.5, 11.1, 11.2_
 
-  - [ ] 26.2 Create registration page
+  - [x] 26.2 Create registration page
     - Email/password form
     - Form validation
     - Responsive design
     - _Requirements: 1.1, 11.1, 11.2_
 
-  - [ ] 26.3 Test authentication pages on mobile and desktop
+  - [x] 26.3 Test authentication pages on mobile and desktop
     - Verify responsive behavior
     - _Requirements: 11.1, 11.2_
 
