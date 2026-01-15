@@ -583,26 +583,26 @@ Each task includes property-based tests and unit tests to ensure correctness. We
     - Verify layout adjustments at different screen sizes
     - _Requirements: 11.6_
 
-- [ ] 30. Final integration and end-to-end testing
-  - [ ] 30.1 Set up Supabase PostgreSQL database
+- [x] 30. Final integration and end-to-end testing
+  - [x] 30.1 Set up Supabase PostgreSQL database
     - Create database instance
     - Run EF Core migrations
     - Seed initial configuration data
     - _Requirements: 9.2, 10.1, 10.2, 10.3_
 
-  - [ ] 30.2 Configure Google OAuth credentials
+  - [x] 30.2 Configure Google OAuth credentials
     - Set up Google Cloud project
     - Configure OAuth consent screen
     - Add credentials to backend configuration
     - _Requirements: 1.5_
 
-  - [ ] 30.3 Perform end-to-end testing
+  - [x] 30.3 Perform end-to-end testing
     - Test complete user flows (register, create squad, create match, record result)
     - Verify ELO calculations are correct
     - Test on mobile and desktop devices
     - _Requirements: All_
 
-  - [ ] 30.4 Review and fix any remaining issues
+  - [x] 30.4 Review and fix any remaining issues
     - Address any bugs found during testing
     - Ensure all property tests pass with 100+ iterations
     - Verify code coverage meets goals

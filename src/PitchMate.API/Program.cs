@@ -95,6 +95,16 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Seed database if --seed argument is provided
+if (args.Contains("--seed"))
+{
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<PitchMateDbContext>();
+    await DatabaseSeeder.SeedAsync(context);
+    Console.WriteLine("Database seeded successfully.");
+    return; // Exit after seeding
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
