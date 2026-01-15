@@ -520,21 +520,21 @@ Each task includes property-based tests and unit tests to ensure correctness. We
     - Verify responsive behavior
     - _Requirements: 11.1, 11.2_
 
-- [ ] 27. Implement frontend - Squad management pages
-  - [ ] 27.1 Create squads list page
+- [x] 27. Implement frontend - Squad management pages
+  - [x] 27.1 Create squads list page
     - Display user's squads
     - Create new squad button
     - Responsive grid/list layout
     - _Requirements: 2.1, 2.5, 11.1, 11.2_
 
-  - [ ] 27.2 Create squad detail page
+  - [x] 27.2 Create squad detail page
     - Display squad members with ratings
     - Admin controls (add admin, remove member)
     - Join squad button for non-members
     - Responsive layout
     - _Requirements: 2.2, 2.6, 2.7, 11.1, 11.2_
 
-  - [ ] 27.3 Test squad pages on mobile and desktop
+  - [x] 27.3 Test squad pages on mobile and desktop
     - Verify responsive behavior and touch interactions
     - _Requirements: 11.1, 11.2, 11.4, 11.5_
 
