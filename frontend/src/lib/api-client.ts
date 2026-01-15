@@ -4,6 +4,7 @@ import type {
   LoginRequest,
   RegisterRequest,
   User,
+  UserSquad,
   Squad,
   Match,
   SquadMembership,
@@ -130,8 +131,12 @@ export const usersApi = {
     return fetchWithAuth<User>("/users/me");
   },
 
-  async getUserSquads(): Promise<ApiResponse<Squad[]>> {
-    return fetchWithAuth<Squad[]>("/users/me/squads");
+  async getUserSquads(): Promise<ApiResponse<UserSquad[]>> {
+    const response = await fetchWithAuth<{ squads: UserSquad[] }>("/users/me/squads");
+    if (response.data) {
+      return { data: response.data.squads };
+    }
+    return { error: response.error };
   },
 
   async getUserRatingInSquad(userId: string, squadId: string): Promise<ApiResponse<SquadMembership>> {

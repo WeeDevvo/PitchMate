@@ -30,9 +30,9 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Registration request containing email and password.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>User ID on success or error details on failure.</returns>
+    /// <returns>User details and JWT token on success or error details on failure.</returns>
     [HttpPost("register")]
-    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
     {
@@ -47,9 +47,25 @@ public class AuthController : ControllerBase
             return BadRequest(new ErrorResponse(result.ErrorMessage ?? "Registration failed.", result.ErrorCode));
         }
 
+        // Auto-login after successful registration
+        var loginCommand = new AuthenticateUserCommand(request.Email, request.Password);
+        var loginResult = await _authenticateUserHandler.HandleAsync(loginCommand, ct);
+
+        if (!loginResult.Success)
+        {
+            // Registration succeeded but login failed - this shouldn't happen
+            return StatusCode(500, new ErrorResponse("Registration succeeded but auto-login failed. Please try logging in manually."));
+        }
+
+        var userResponse = new UserDto(
+            loginResult.UserId!.Value,
+            request.Email,
+            DateTime.UtcNow
+        );
+
         return CreatedAtAction(
             nameof(Register), 
-            new RegisterResponse(result.UserId.Value));
+            new AuthResponse(loginResult.Token!, userResponse));
     }
 
     /// <summary>
@@ -57,9 +73,9 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Login request containing email and password.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>JWT token on success or error details on failure.</returns>
+    /// <returns>JWT token and user details on success or error details on failure.</returns>
     [HttpPost("login")]
-    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
@@ -74,7 +90,13 @@ public class AuthController : ControllerBase
             return Unauthorized(new ErrorResponse(result.ErrorMessage ?? "Authentication failed.", result.ErrorCode));
         }
 
-        return Ok(new LoginResponse(result.Token!, result.UserId!.Value));
+        var userResponse = new UserDto(
+            result.UserId!.Value,
+            request.Email,
+            DateTime.UtcNow
+        );
+
+        return Ok(new AuthResponse(result.Token!, userResponse));
     }
 
     /// <summary>
@@ -124,6 +146,16 @@ public record LoginRequest(string Email, string Password);
 /// Response model for successful login.
 /// </summary>
 public record LoginResponse(string Token, Guid UserId);
+
+/// <summary>
+/// Response model for authentication (login/register).
+/// </summary>
+public record AuthResponse(string Token, UserDto User);
+
+/// <summary>
+/// User data transfer object.
+/// </summary>
+public record UserDto(Guid Id, string Email, DateTime CreatedAt);
 
 /// <summary>
 /// Request model for Google OAuth authentication.

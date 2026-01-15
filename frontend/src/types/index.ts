@@ -5,7 +5,16 @@ export interface User {
   createdAt: string;
 }
 
-// Squad types
+// Squad types - matches backend UserSquadDto
+export interface UserSquad {
+  squadId: string;
+  name: string;
+  currentRating: number;
+  joinedAt: string;
+  isAdmin: boolean;
+}
+
+// Full squad type (for detail pages)
 export interface Squad {
   id: string;
   name: string;

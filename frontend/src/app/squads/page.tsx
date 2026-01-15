@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { usersApi, squadsApi } from "@/lib/api-client";
-import type { Squad } from "@/types";
+import type { UserSquad } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 export default function SquadsPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [squads, setSquads] = useState<Squad[]>([]);
+  const [squads, setSquads] = useState<UserSquad[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -53,7 +53,8 @@ export default function SquadsPage() {
     setError(null);
     const response = await squadsApi.createSquad(newSquadName.trim());
     if (response.data) {
-      setSquads([...squads, response.data]);
+      // Reload squads to get the new one with proper structure
+      await loadSquads();
       setNewSquadName("");
       setShowCreateForm(false);
     } else {
@@ -156,36 +157,29 @@ export default function SquadsPage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {squads.map((squad) => {
-            const isAdmin = user && squad.adminIds.includes(user.id);
-            const userMembership = user
-              ? squad.members.find((m) => m.userId === user.id)
-              : null;
-
             return (
-              <Link key={squad.id} href={`/squads/${squad.id}`}>
+              <Link key={squad.squadId} href={`/squads/${squad.squadId}`}>
                 <Card className="h-full transition-shadow hover:shadow-lg">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <CardTitle className="line-clamp-2">{squad.name}</CardTitle>
-                      {isAdmin && (
+                      {squad.isAdmin && (
                         <span className="rounded-full bg-primary px-2 py-1 text-xs font-medium text-primary-foreground">
                           Admin
                         </span>
                       )}
                     </div>
                     <CardDescription>
-                      {squad.members.length} {squad.members.length === 1 ? "member" : "members"}
+                      Squad member
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {userMembership && (
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Your Rating</p>
-                        <p className="text-2xl font-bold">{userMembership.currentRating}</p>
-                      </div>
-                    )}
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Your Rating</p>
+                      <p className="text-2xl font-bold">{squad.currentRating}</p>
+                    </div>
                     <p className="mt-4 text-xs text-muted-foreground">
-                      Joined {new Date(squad.createdAt).toLocaleDateString()}
+                      Joined {new Date(squad.joinedAt).toLocaleDateString()}
                     </p>
                   </CardContent>
                 </Card>

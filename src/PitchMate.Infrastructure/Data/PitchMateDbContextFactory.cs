@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 
 namespace PitchMate.Infrastructure.Data;
 
@@ -13,9 +14,18 @@ public class PitchMateDbContextFactory : IDesignTimeDbContextFactory<PitchMateDb
     {
         var optionsBuilder = new DbContextOptionsBuilder<PitchMateDbContext>();
         
-        // Use a placeholder connection string for design-time operations
-        // In production, this will be configured via dependency injection
-        optionsBuilder.UseNpgsql("Host=localhost;Database=pitchmate;Username=postgres;Password=postgres");
+        // Build configuration to read from appsettings.json, user secrets, and environment variables
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddUserSecrets<PitchMateDbContextFactory>(optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+        
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? "Host=localhost;Database=pitchmate;Username=postgres;Password=postgres";
+        
+        optionsBuilder.UseNpgsql(connectionString);
         
         return new PitchMateDbContext(optionsBuilder.Options);
     }
