@@ -538,28 +538,28 @@ Each task includes property-based tests and unit tests to ensure correctness. We
     - Verify responsive behavior and touch interactions
     - _Requirements: 11.1, 11.2, 11.4, 11.5_
 
-- [ ] 28. Implement frontend - Match management pages
-  - [ ] 28.1 Create matches list page
+- [x] 28. Implement frontend - Match management pages
+  - [x] 28.1 Create matches list page
     - Display squad matches (upcoming and completed)
     - Create match button for admins
     - Responsive layout
     - _Requirements: 3.1, 3.6, 11.1, 11.2_
 
-  - [ ] 28.2 Create match creation page
+  - [x] 28.2 Create match creation page
     - Player selection from squad members
     - Team size configuration
     - Date/time picker
     - Responsive form
     - _Requirements: 3.1, 3.2, 3.3, 11.1, 11.2_
 
-  - [ ] 28.3 Create match detail page
+  - [x] 28.3 Create match detail page
     - Display teams with player ratings
     - Record result form for admins
     - Balance feedback input
     - Responsive layout
     - _Requirements: 4.6, 6.1, 6.2, 6.5, 11.1, 11.2_
 
-  - [ ] 28.4 Test match pages on mobile and desktop
+  - [x] 28.4 Test match pages on mobile and desktop
     - Verify responsive behavior and form interactions
     - _Requirements: 11.1, 11.2, 11.4, 11.5_
 
