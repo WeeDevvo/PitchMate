@@ -486,123 +486,123 @@ Each task includes property-based tests and unit tests to ensure correctness. We
 - [x] 24. Checkpoint - Ensure all API layer tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 25. Set up frontend Next.js project
-  - [ ] 25.1 Initialize Next.js project with TypeScript and App Router
+- [x] 25. Set up frontend Next.js project
+  - [x] 25.1 Initialize Next.js project with TypeScript and App Router
     - Configure Tailwind CSS and shadcn/ui
     - Set up project structure (app/, components/, lib/)
     - _Requirements: 11.1, 11.2, 12.1_
 
-  - [ ] 25.2 Create API client service
+  - [x] 25.2 Create API client service
     - Implement REST API client with authentication
     - Handle JWT token storage and refresh
     - _Requirements: 8.1, 8.2_
 
-  - [ ] 25.3 Set up responsive layout with navigation
+  - [x] 25.3 Set up responsive layout with navigation
     - Create root layout with responsive navigation
     - Implement mobile menu and desktop navigation
     - Apply consistent design system
     - _Requirements: 11.1, 11.2, 11.6, 12.2_
 
-- [ ] 26. Implement frontend - Authentication pages
-  - [ ] 26.1 Create login page
+- [x] 26. Implement frontend - Authentication pages
+  - [x] 26.1 Create login page
     - Email/password form
     - Google OAuth button
     - Responsive design
     - _Requirements: 1.1, 1.3, 1.5, 11.1, 11.2_
 
-  - [ ] 26.2 Create registration page
+  - [x] 26.2 Create registration page
     - Email/password form
     - Form validation
     - Responsive design
     - _Requirements: 1.1, 11.1, 11.2_
 
-  - [ ] 26.3 Test authentication pages on mobile and desktop
+  - [x] 26.3 Test authentication pages on mobile and desktop
     - Verify responsive behavior
     - _Requirements: 11.1, 11.2_
 
-- [ ] 27. Implement frontend - Squad management pages
-  - [ ] 27.1 Create squads list page
+- [x] 27. Implement frontend - Squad management pages
+  - [x] 27.1 Create squads list page
     - Display user's squads
     - Create new squad button
     - Responsive grid/list layout
     - _Requirements: 2.1, 2.5, 11.1, 11.2_
 
-  - [ ] 27.2 Create squad detail page
+  - [x] 27.2 Create squad detail page
     - Display squad members with ratings
     - Admin controls (add admin, remove member)
     - Join squad button for non-members
     - Responsive layout
     - _Requirements: 2.2, 2.6, 2.7, 11.1, 11.2_
 
-  - [ ] 27.3 Test squad pages on mobile and desktop
+  - [x] 27.3 Test squad pages on mobile and desktop
     - Verify responsive behavior and touch interactions
     - _Requirements: 11.1, 11.2, 11.4, 11.5_
 
-- [ ] 28. Implement frontend - Match management pages
-  - [ ] 28.1 Create matches list page
+- [x] 28. Implement frontend - Match management pages
+  - [x] 28.1 Create matches list page
     - Display squad matches (upcoming and completed)
     - Create match button for admins
     - Responsive layout
     - _Requirements: 3.1, 3.6, 11.1, 11.2_
 
-  - [ ] 28.2 Create match creation page
+  - [x] 28.2 Create match creation page
     - Player selection from squad members
     - Team size configuration
     - Date/time picker
     - Responsive form
     - _Requirements: 3.1, 3.2, 3.3, 11.1, 11.2_
 
-  - [ ] 28.3 Create match detail page
+  - [x] 28.3 Create match detail page
     - Display teams with player ratings
     - Record result form for admins
     - Balance feedback input
     - Responsive layout
     - _Requirements: 4.6, 6.1, 6.2, 6.5, 11.1, 11.2_
 
-  - [ ] 28.4 Test match pages on mobile and desktop
+  - [x] 28.4 Test match pages on mobile and desktop
     - Verify responsive behavior and form interactions
     - _Requirements: 11.1, 11.2, 11.4, 11.5_
 
-- [ ] 29. Implement frontend - Design system and accessibility
-  - [ ] 29.1 Create reusable UI components
+- [x] 29. Implement frontend - Design system and accessibility
+  - [x] 29.1 Create reusable UI components
     - Button, Input, Card, Modal components using shadcn/ui
     - Apply consistent styling and spacing
     - _Requirements: 12.1, 12.2, 12.3_
 
-  - [ ] 29.2 Implement visual feedback for interactions
+  - [x] 29.2 Implement visual feedback for interactions
     - Hover, focus, and active states
     - Loading states and spinners
     - Success/error notifications
     - _Requirements: 12.5_
 
-  - [ ] 29.3 Test color contrast for accessibility
+  - [x] 29.3 Test color contrast for accessibility
     - **Property 44: Color contrast compliance**
     - **Validates: Requirements 12.6**
 
-  - [ ] 29.4 Test responsive breakpoints
+  - [x] 29.4 Test responsive breakpoints
     - Verify layout adjustments at different screen sizes
     - _Requirements: 11.6_
 
-- [ ] 30. Final integration and end-to-end testing
-  - [ ] 30.1 Set up Supabase PostgreSQL database
+- [x] 30. Final integration and end-to-end testing
+  - [x] 30.1 Set up Supabase PostgreSQL database
     - Create database instance
     - Run EF Core migrations
     - Seed initial configuration data
     - _Requirements: 9.2, 10.1, 10.2, 10.3_
 
-  - [ ] 30.2 Configure Google OAuth credentials
+  - [x] 30.2 Configure Google OAuth credentials
     - Set up Google Cloud project
     - Configure OAuth consent screen
     - Add credentials to backend configuration
     - _Requirements: 1.5_
 
-  - [ ] 30.3 Perform end-to-end testing
+  - [x] 30.3 Perform end-to-end testing
     - Test complete user flows (register, create squad, create match, record result)
     - Verify ELO calculations are correct
     - Test on mobile and desktop devices
     - _Requirements: All_
 
-  - [ ] 30.4 Review and fix any remaining issues
+  - [x] 30.4 Review and fix any remaining issues
     - Address any bugs found during testing
     - Ensure all property tests pass with 100+ iterations
     - Verify code coverage meets goals
