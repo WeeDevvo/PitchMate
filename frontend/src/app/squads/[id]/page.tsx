@@ -139,9 +139,9 @@ export default function SquadDetailPage() {
     );
   }
 
-  const isAdmin = user && squad.adminIds.includes(user.id);
-  const isMember = user && squad.members.some((m) => m.userId === user.id);
-  const userMembership = user ? squad.members.find((m) => m.userId === user.id) : null;
+  const isAdmin = user && squad.adminIds.includes(user.userId);
+  const isMember = user && squad.members.some((m) => m.userId === user.userId);
+  const userMembership = user ? squad.members.find((m) => m.userId === user.userId) : null;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -205,6 +205,21 @@ export default function SquadDetailPage() {
         </Card>
       )}
 
+      {/* Matches Section - Available to all members */}
+      {isMember && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Matches</CardTitle>
+            <CardDescription>View and manage squad matches</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="default" size="lg" className="w-full sm:w-auto">
+              <Link href={`/squads/${squadId}/matches`}>View Matches</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Admin Controls */}
       {isAdmin && (
         <Card className="mb-8">
@@ -241,7 +256,7 @@ export default function SquadDetailPage() {
                         .filter((m) => !squad.adminIds.includes(m.userId))
                         .map((member) => (
                           <option key={member.userId} value={member.userId}>
-                            User {member.userId.substring(0, 8)}... (Rating: {member.currentRating})
+                            {member.email} (Rating: {member.currentRating})
                           </option>
                         ))}
                     </select>
@@ -293,10 +308,10 @@ export default function SquadDetailPage() {
                     >
                       <option value="">Select a member...</option>
                       {squad.members
-                        .filter((m) => m.userId !== user?.id)
+                        .filter((m) => m.userId !== user?.userId)
                         .map((member) => (
                           <option key={member.userId} value={member.userId}>
-                            User {member.userId.substring(0, 8)}... (Rating: {member.currentRating})
+                            {member.email} (Rating: {member.currentRating})
                           </option>
                         ))}
                     </select>
@@ -323,10 +338,6 @@ export default function SquadDetailPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-
-            <Button asChild variant="default" className="w-full sm:w-auto">
-              <Link href={`/squads/${squadId}/matches`}>View Matches</Link>
-            </Button>
           </CardContent>
         </Card>
       )}
@@ -349,7 +360,7 @@ export default function SquadDetailPage() {
                   .sort((a, b) => b.currentRating - a.currentRating)
                   .map((member, index) => {
                     const memberIsAdmin = squad.adminIds.includes(member.userId);
-                    const isCurrentUser = user?.id === member.userId;
+                    const isCurrentUser = user?.userId === member.userId;
                     
                     return (
                       <Card key={member.userId} className={isCurrentUser ? "border-primary" : ""}>
@@ -358,7 +369,7 @@ export default function SquadDetailPage() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <p className="font-medium">
-                                  {isCurrentUser ? "You" : `User ${member.userId.substring(0, 8)}...`}
+                                  {isCurrentUser ? "You" : member.email}
                                 </p>
                                 {memberIsAdmin && (
                                   <Badge variant="secondary" className="text-xs">

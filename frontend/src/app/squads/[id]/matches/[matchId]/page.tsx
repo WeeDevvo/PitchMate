@@ -136,7 +136,7 @@ export default function MatchDetailPage() {
     );
   }
 
-  const isAdmin = user && squad.adminIds.includes(user.id);
+  const isAdmin = user && squad.adminIds.includes(user.userId);
   const canRecordResult = isAdmin && match.status === "Pending";
 
   return (
@@ -293,25 +293,30 @@ export default function MatchDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {match.teamA.players.map((player, index) => (
-                  <div
-                    key={player.userId}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div>
-                      <p className="font-medium text-sm">
-                        Player {index + 1}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        User {player.userId.substring(0, 8)}...
-                      </p>
+                {match.teamA.players.map((player, index) => {
+                  const member = squad.members.find(m => m.userId === player.userId);
+                  const isCurrentUser = user?.userId === player.userId;
+                  
+                  return (
+                    <div
+                      key={player.userId}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">
+                          {isCurrentUser ? "You" : (member?.email || `User ${player.userId.substring(0, 8)}...`)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Player {index + 1}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold">{player.rating || player.ratingAtMatchTime}</p>
+                        <p className="text-xs text-muted-foreground">Rating</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold">{player.ratingAtMatchTime}</p>
-                      <p className="text-xs text-muted-foreground">Rating</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -331,25 +336,30 @@ export default function MatchDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {match.teamB.players.map((player, index) => (
-                  <div
-                    key={player.userId}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div>
-                      <p className="font-medium text-sm">
-                        Player {index + 1}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        User {player.userId.substring(0, 8)}...
-                      </p>
+                {match.teamB.players.map((player, index) => {
+                  const member = squad.members.find(m => m.userId === player.userId);
+                  const isCurrentUser = user?.userId === player.userId;
+                  
+                  return (
+                    <div
+                      key={player.userId}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">
+                          {isCurrentUser ? "You" : (member?.email || `User ${player.userId.substring(0, 8)}...`)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Player {index + 1}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold">{player.rating || player.ratingAtMatchTime}</p>
+                        <p className="text-xs text-muted-foreground">Rating</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold">{player.ratingAtMatchTime}</p>
-                      <p className="text-xs text-muted-foreground">Rating</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -373,7 +383,11 @@ export default function MatchDetailPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-sm text-muted-foreground">Total Players</p>
-              <p className="text-lg font-semibold">{match.players.length}</p>
+              <p className="text-lg font-semibold">
+                {match.teamA && match.teamB 
+                  ? match.teamA.players.length + match.teamB.players.length 
+                  : match.playerCount || 0}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Team Size</p>

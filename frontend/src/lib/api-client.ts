@@ -166,7 +166,7 @@ export const squadsApi = {
   async addAdmin(squadId: string, userId: string): Promise<ApiResponse<void>> {
     return fetchWithAuth<void>(`/squads/${squadId}/admins`, {
       method: "POST",
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ targetUserId: userId }),
     });
   },
 
@@ -192,7 +192,11 @@ export const matchesApi = {
   },
 
   async getSquadMatches(squadId: string): Promise<ApiResponse<Match[]>> {
-    return fetchWithAuth<Match[]>(`/squads/${squadId}/matches`);
+    const response = await fetchWithAuth<{ matches: Match[] }>(`/squads/${squadId}/matches`);
+    if (response.data) {
+      return { data: response.data.matches };
+    }
+    return { error: response.error };
   },
 
   async getMatch(matchId: string): Promise<ApiResponse<Match>> {

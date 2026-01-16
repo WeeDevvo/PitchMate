@@ -23,6 +23,7 @@ public class SquadsController : ControllerBase
     private readonly RemoveSquadMemberCommandHandler _removeSquadMemberHandler;
     private readonly GetUserSquadsQueryHandler _getUserSquadsHandler;
     private readonly ISquadRepository _squadRepository;
+    private readonly IUserRepository _userRepository;
 
     public SquadsController(
         CreateSquadCommandHandler createSquadHandler,
@@ -30,7 +31,8 @@ public class SquadsController : ControllerBase
         AddSquadAdminCommandHandler addSquadAdminHandler,
         RemoveSquadMemberCommandHandler removeSquadMemberHandler,
         GetUserSquadsQueryHandler getUserSquadsHandler,
-        ISquadRepository squadRepository)
+        ISquadRepository squadRepository,
+        IUserRepository userRepository)
     {
         _createSquadHandler = createSquadHandler ?? throw new ArgumentNullException(nameof(createSquadHandler));
         _joinSquadHandler = joinSquadHandler ?? throw new ArgumentNullException(nameof(joinSquadHandler));
@@ -38,6 +40,7 @@ public class SquadsController : ControllerBase
         _removeSquadMemberHandler = removeSquadMemberHandler ?? throw new ArgumentNullException(nameof(removeSquadMemberHandler));
         _getUserSquadsHandler = getUserSquadsHandler ?? throw new ArgumentNullException(nameof(getUserSquadsHandler));
         _squadRepository = squadRepository ?? throw new ArgumentNullException(nameof(squadRepository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     /// <summary>
@@ -127,12 +130,22 @@ public class SquadsController : ControllerBase
             return NotFound(new ErrorResponse("Squad not found."));
         }
 
-        var members = squad.Members.Select(m => new SquadMemberDto(
-            UserId: m.UserId.Value,
-            SquadId: m.SquadId.Value,
-            CurrentRating: m.CurrentRating.Value,
-            JoinedAt: m.JoinedAt
-        )).ToList();
+        // Load user details for each member to get their emails
+        var members = new List<SquadMemberDto>();
+        foreach (var member in squad.Members)
+        {
+            var user = await _userRepository.GetByIdAsync(member.UserId, ct);
+            if (user != null)
+            {
+                members.Add(new SquadMemberDto(
+                    UserId: member.UserId.Value,
+                    Email: user.Email.Value,
+                    SquadId: member.SquadId.Value,
+                    CurrentRating: member.CurrentRating.Value,
+                    JoinedAt: member.JoinedAt
+                ));
+            }
+        }
 
         var adminIds = squad.AdminIds.Select(a => a.Value).ToList();
 
@@ -326,6 +339,7 @@ public record GetSquadDetailsResponse(
 /// </summary>
 public record SquadMemberDto(
     Guid UserId,
+    string Email,
     Guid SquadId,
     int CurrentRating,
     DateTime JoinedAt);

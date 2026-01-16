@@ -1,8 +1,8 @@
 // User types
 export interface User {
-  id: string;
+  userId: string;
   email: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 // Squad types - matches backend UserSquadDto
@@ -25,6 +25,7 @@ export interface Squad {
 
 export interface SquadMembership {
   userId: string;
+  email: string;
   squadId: string;
   currentRating: number;
   joinedAt: string;
@@ -32,14 +33,19 @@ export interface SquadMembership {
 
 // Match types
 export interface Match {
-  id: string;
-  squadId: string;
+  matchId: string;
+  squadId?: string;
   scheduledAt: string;
   teamSize: number;
   status: MatchStatus;
-  players: MatchPlayer[];
+  playerCount: number;
   teamA?: Team;
   teamB?: Team;
+  winner?: TeamDesignation | null;
+  completedAt?: string | null;
+  // Legacy properties for backward compatibility
+  id?: string;
+  players?: MatchPlayer[];
   result?: MatchResult;
 }
 
@@ -47,7 +53,8 @@ export type MatchStatus = "Pending" | "Completed" | "Cancelled";
 
 export interface MatchPlayer {
   userId: string;
-  ratingAtMatchTime: number;
+  rating: number;
+  ratingAtMatchTime?: number; // Legacy property
 }
 
 export interface Team {
