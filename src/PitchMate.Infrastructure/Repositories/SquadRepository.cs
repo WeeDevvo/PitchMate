@@ -111,6 +111,9 @@ public class SquadRepository : ISquadRepository
             // Update admin relationships in the join table
             await SaveAdminIdsAsync(squad, ct);
             
+            // Update member ratings in the squad_memberships table (owned by User entities)
+            await SaveMemberRatingsAsync(squad, ct);
+            
             await _context.SaveChangesAsync(ct);
         }
         catch (DbUpdateConcurrencyException ex)
@@ -186,23 +189,90 @@ public class SquadRepository : ISquadRepository
     /// </summary>
     private async Task SaveAdminIdsAsync(Squad squad, CancellationToken ct)
     {
-        // Remove existing admin records
+        // Clear all tracked Dictionary entities to avoid conflicts
+        var trackedDictionaries = _context.ChangeTracker.Entries<Dictionary<string, object>>()
+            .Where(e => e.State != Microsoft.EntityFrameworkCore.EntityState.Detached)
+            .ToList();
+        
+        foreach (var entry in trackedDictionaries)
+        {
+            entry.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+        }
+
+        // Get existing admin records without tracking
         var existingAdmins = await _context.Set<Dictionary<string, object>>("squad_admins")
+            .AsNoTracking()
             .Where(d => (Guid)d["squad_id"] == squad.Id.Value)
             .ToListAsync(ct);
-        
-        _context.Set<Dictionary<string, object>>("squad_admins").RemoveRange(existingAdmins);
 
-        // Add current admin records
-        foreach (var adminId in squad.AdminIds)
+        var existingAdminUserIds = existingAdmins.Select(d => (Guid)d["user_id"]).ToHashSet();
+        var currentAdminIds = squad.AdminIds.Select(a => a.Value).ToHashSet();
+
+        // Determine which admins to add and which to remove
+        var adminsToRemove = existingAdminUserIds.Except(currentAdminIds).ToList();
+        var adminsToAdd = currentAdminIds.Except(existingAdminUserIds).ToList();
+
+        // Remove admins that are no longer in the list
+        foreach (var adminToRemove in adminsToRemove)
+        {
+            var recordToRemove = existingAdmins.First(d => (Guid)d["user_id"] == adminToRemove);
+            // Attach the entity so EF Core can track it for deletion
+            _context.Set<Dictionary<string, object>>("squad_admins").Attach(recordToRemove);
+            _context.Set<Dictionary<string, object>>("squad_admins").Remove(recordToRemove);
+        }
+
+        // Add new admins
+        foreach (var adminToAdd in adminsToAdd)
         {
             var adminRecord = new Dictionary<string, object>
             {
                 ["squad_id"] = squad.Id.Value,
-                ["user_id"] = adminId.Value
+                ["user_id"] = adminToAdd
             };
             
             await _context.Set<Dictionary<string, object>>("squad_admins").AddAsync(adminRecord, ct);
+        }
+    }
+
+    /// <summary>
+    /// Saves updated member ratings to the squad_memberships table (owned by User entities).
+    /// </summary>
+    private async Task SaveMemberRatingsAsync(Squad squad, CancellationToken ct)
+    {
+        // Load all users who are members of this squad
+        var memberUserIds = squad.Members.Select(m => m.UserId).ToList();
+        var users = await _context.Users
+            .Include(u => u.SquadMemberships)
+            .Where(u => memberUserIds.Contains(u.Id))
+            .ToListAsync(ct);
+
+        // Update each user's membership rating
+        foreach (var user in users)
+        {
+            var squadMembership = squad.Members.FirstOrDefault(m => m.UserId == user.Id);
+            if (squadMembership != null)
+            {
+                // Find the corresponding membership in the user's collection
+                var userMembershipIndex = user.SquadMemberships
+                    .ToList()
+                    .FindIndex(m => m.SquadId == squad.Id);
+                
+                if (userMembershipIndex >= 0)
+                {
+                    // Use reflection to update the membership in the user's collection
+                    var squadMembershipsField = typeof(Domain.Entities.User).GetField("_squadMemberships", 
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    
+                    if (squadMembershipsField != null)
+                    {
+                        var membershipsList = (List<SquadMembership>)squadMembershipsField.GetValue(user)!;
+                        membershipsList[userMembershipIndex] = squadMembership;
+                        
+                        // Mark the user as modified so EF Core saves the changes
+                        _context.Users.Update(user);
+                    }
+                }
+            }
         }
     }
 }

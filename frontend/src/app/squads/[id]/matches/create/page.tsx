@@ -118,8 +118,8 @@ export default function CreateMatchPage() {
     );
 
     if (response.data) {
-      // Navigate to the matches list
-      router.push(`/squads/${squadId}/matches`);
+      // Navigate to the match detail page to show the teams
+      router.push(`/squads/${squadId}/matches/${response.data.matchId}`);
     } else {
       setError(response.error?.message || "Failed to create match");
       setIsCreating(false);
@@ -159,7 +159,7 @@ export default function CreateMatchPage() {
     );
   }
 
-  const isAdmin = user && squad.adminIds.includes(user.id);
+  const isAdmin = user && squad.adminIds.includes(user.userId);
 
   if (!isAdmin) {
     return (
@@ -304,7 +304,7 @@ export default function CreateMatchPage() {
                   .sort((a, b) => b.currentRating - a.currentRating)
                   .map((member) => {
                     const isSelected = selectedPlayerIds.includes(member.userId);
-                    const isCurrentUser = user?.id === member.userId;
+                    const isCurrentUser = user?.userId === member.userId;
                     const memberIsAdmin = squad.adminIds.includes(member.userId);
 
                     return (
@@ -323,9 +323,7 @@ export default function CreateMatchPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-sm">
-                                {isCurrentUser
-                                  ? "You"
-                                  : `User ${member.userId.substring(0, 8)}...`}
+                                {isCurrentUser ? "You" : member.email}
                               </p>
                               {memberIsAdmin && (
                                 <Badge variant="secondary" className="text-xs">

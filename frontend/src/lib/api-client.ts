@@ -4,6 +4,7 @@ import type {
   LoginRequest,
   RegisterRequest,
   User,
+  UserSquad,
   Squad,
   Match,
   SquadMembership,
@@ -111,7 +112,7 @@ export const authApi = {
   async loginWithGoogle(googleToken: string): Promise<ApiResponse<AuthResponse>> {
     const response = await fetchWithAuth<AuthResponse>("/auth/google", {
       method: "POST",
-      body: JSON.stringify({ token: googleToken }),
+      body: JSON.stringify({ googleToken }),
     });
     if (response.data?.token) {
       setToken(response.data.token);
@@ -130,8 +131,12 @@ export const usersApi = {
     return fetchWithAuth<User>("/users/me");
   },
 
-  async getUserSquads(): Promise<ApiResponse<Squad[]>> {
-    return fetchWithAuth<Squad[]>("/users/me/squads");
+  async getUserSquads(): Promise<ApiResponse<UserSquad[]>> {
+    const response = await fetchWithAuth<{ squads: UserSquad[] }>("/users/me/squads");
+    if (response.data) {
+      return { data: response.data.squads };
+    }
+    return { error: response.error };
   },
 
   async getUserRatingInSquad(userId: string, squadId: string): Promise<ApiResponse<SquadMembership>> {
@@ -161,7 +166,7 @@ export const squadsApi = {
   async addAdmin(squadId: string, userId: string): Promise<ApiResponse<void>> {
     return fetchWithAuth<void>(`/squads/${squadId}/admins`, {
       method: "POST",
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ targetUserId: userId }),
     });
   },
 
@@ -187,7 +192,11 @@ export const matchesApi = {
   },
 
   async getSquadMatches(squadId: string): Promise<ApiResponse<Match[]>> {
-    return fetchWithAuth<Match[]>(`/squads/${squadId}/matches`);
+    const response = await fetchWithAuth<{ matches: Match[] }>(`/squads/${squadId}/matches`);
+    if (response.data) {
+      return { data: response.data.matches };
+    }
+    return { error: response.error };
   },
 
   async getMatch(matchId: string): Promise<ApiResponse<Match>> {

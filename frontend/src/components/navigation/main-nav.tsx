@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/squads", label: "Squads" },
-  { href: "/matches", label: "Matches" },
 ];
 
 export function MainNav() {

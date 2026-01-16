@@ -607,7 +607,7 @@ Each task includes property-based tests and unit tests to ensure correctness. We
     - Ensure all property tests pass with 100+ iterations
     - Verify code coverage meets goals
 
-- [ ] 31. Final checkpoint - Ensure all tests pass
+- [x] 31. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

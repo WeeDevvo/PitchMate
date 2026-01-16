@@ -48,10 +48,19 @@ export default function SquadMatchesPage() {
 
     // Load matches
     const matchesResponse = await matchesApi.getSquadMatches(squadId);
+    console.log("Matches API Response:", matchesResponse);
+    
     if (matchesResponse.data) {
-      setMatches(matchesResponse.data);
+      // Ensure matches is always an array
+      const matchesData = Array.isArray(matchesResponse.data) 
+        ? matchesResponse.data 
+        : [];
+      console.log("Matches Data (array):", matchesData);
+      setMatches(matchesData);
     } else {
+      console.error("Matches API Error:", matchesResponse.error);
       setError(matchesResponse.error?.message || "Failed to load matches");
+      setMatches([]); // Set empty array on error
     }
     
     setIsLoading(false);
@@ -90,9 +99,19 @@ export default function SquadMatchesPage() {
     );
   }
 
-  const isAdmin = user && squad.adminIds.includes(user.id);
-  const upcomingMatches = matches.filter((m) => m.status === "Pending");
-  const completedMatches = matches.filter((m) => m.status === "Completed");
+  const isAdmin = user && squad.adminIds.includes(user.userId);
+  const upcomingMatches = (matches || []).filter((m) => m.status === "Pending");
+  const completedMatches = (matches || []).filter((m) => m.status === "Completed");
+
+  // Debug logging
+  console.log("Matches Page Debug:", {
+    userId: user?.userId,
+    squadAdminIds: squad.adminIds,
+    isAdmin,
+    userObject: user,
+    matchesArray: matches,
+    matchesLength: matches?.length,
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -110,7 +129,7 @@ export default function SquadMatchesPage() {
           <div>
             <h1 className="text-3xl font-bold">Matches</h1>
             <p className="mt-2 text-muted-foreground">
-              {matches.length} {matches.length === 1 ? "match" : "matches"} total
+              {(matches || []).length} {(matches || []).length === 1 ? "match" : "matches"} total
             </p>
           </div>
           {isAdmin && (
@@ -144,7 +163,7 @@ export default function SquadMatchesPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {upcomingMatches.map((match) => (
-              <Link key={match.id} href={`/squads/${squadId}/matches/${match.id}`}>
+              <Link key={match.matchId} href={`/squads/${squadId}/matches/${match.matchId}`}>
                 <Card className="transition-colors hover:bg-accent">
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -164,7 +183,7 @@ export default function SquadMatchesPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Players:</span>
-                        <span className="font-medium">{match.players.length}</span>
+                        <span className="font-medium">{match.playerCount}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Team Size:</span>
@@ -200,7 +219,7 @@ export default function SquadMatchesPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {completedMatches.map((match) => (
-              <Link key={match.id} href={`/squads/${squadId}/matches/${match.id}`}>
+              <Link key={match.matchId} href={`/squads/${squadId}/matches/${match.matchId}`}>
                 <Card className="transition-colors hover:bg-accent">
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -220,16 +239,16 @@ export default function SquadMatchesPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Players:</span>
-                        <span className="font-medium">{match.players.length}</span>
+                        <span className="font-medium">{match.playerCount}</span>
                       </div>
-                      {match.result && (
+                      {match.winner && (
                         <div className="mt-4 pt-4 border-t">
                           <p className="text-xs text-muted-foreground mb-2">Result</p>
                           <div className="flex items-center justify-center">
                             <Badge variant="outline" className="text-sm">
-                              {match.result.winner === "Draw"
+                              {match.winner === "Draw"
                                 ? "Draw"
-                                : `${match.result.winner} Won`}
+                                : `${match.winner} Won`}
                             </Badge>
                           </div>
                         </div>

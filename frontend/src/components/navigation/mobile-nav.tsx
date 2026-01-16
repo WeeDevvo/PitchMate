@@ -17,7 +17,6 @@ import { useAuth } from "@/lib/auth-context";
 
 const navItems = [
   { href: "/squads", label: "Squads" },
-  { href: "/matches", label: "Matches" },
 ];
 
 export function MobileNav() {
