@@ -18,8 +18,11 @@ export default function SquadsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showJoinForm, setShowJoinForm] = useState(false);
   const [newSquadName, setNewSquadName] = useState("");
+  const [squadIdToJoin, setSquadIdToJoin] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -63,6 +66,24 @@ export default function SquadsPage() {
     setIsCreating(false);
   };
 
+  const handleJoinSquad = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!squadIdToJoin.trim()) return;
+
+    setIsJoining(true);
+    setError(null);
+    const response = await squadsApi.joinSquad(squadIdToJoin.trim());
+    if (response.data !== undefined) {
+      // Reload squads to show the newly joined squad
+      await loadSquads();
+      setSquadIdToJoin("");
+      setShowJoinForm(false);
+    } else {
+      setError(response.error?.message || "Failed to join squad");
+    }
+    setIsJoining(false);
+  };
+
   if (authLoading || !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -80,13 +101,29 @@ export default function SquadsPage() {
             Manage your squads and organize matches
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          size="lg"
-          className="w-full sm:w-auto"
-        >
-          {showCreateForm ? "Cancel" : "Create New Squad"}
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button
+            onClick={() => {
+              setShowJoinForm(!showJoinForm);
+              setShowCreateForm(false);
+            }}
+            size="lg"
+            variant="outline"
+            className="flex-1 sm:flex-none"
+          >
+            {showJoinForm ? "Cancel" : "Join Squad"}
+          </Button>
+          <Button
+            onClick={() => {
+              setShowCreateForm(!showCreateForm);
+              setShowJoinForm(false);
+            }}
+            size="lg"
+            className="flex-1 sm:flex-none"
+          >
+            {showCreateForm ? "Cancel" : "Create New Squad"}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -130,6 +167,53 @@ export default function SquadsPage() {
                     setError(null);
                   }}
                   disabled={isCreating}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {showJoinForm && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Join a Squad</CardTitle>
+            <CardDescription>
+              Enter the Squad ID to join an existing squad
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleJoinSquad} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="squadId">Squad ID</Label>
+                <Input
+                  id="squadId"
+                  type="text"
+                  placeholder="e.g., a581c4cd-29cf-4410-885a-b6c3dd1cf911"
+                  value={squadIdToJoin}
+                  onChange={(e) => setSquadIdToJoin(e.target.value)}
+                  disabled={isJoining}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ask the squad admin for the Squad ID
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={isJoining || !squadIdToJoin.trim()}>
+                  {isJoining ? "Joining..." : "Join Squad"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowJoinForm(false);
+                    setSquadIdToJoin("");
+                    setError(null);
+                  }}
+                  disabled={isJoining}
                 >
                   Cancel
                 </Button>

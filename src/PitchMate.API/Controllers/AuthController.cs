@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PitchMate.Application.Commands.Users;
+using PitchMate.Domain.Repositories;
 
 namespace PitchMate.API.Controllers;
 
@@ -14,15 +15,18 @@ public class AuthController : ControllerBase
     private readonly CreateUserCommandHandler _createUserHandler;
     private readonly AuthenticateUserCommandHandler _authenticateUserHandler;
     private readonly AuthenticateWithGoogleCommandHandler _authenticateWithGoogleHandler;
+    private readonly IUserRepository _userRepository;
 
     public AuthController(
         CreateUserCommandHandler createUserHandler,
         AuthenticateUserCommandHandler authenticateUserHandler,
-        AuthenticateWithGoogleCommandHandler authenticateWithGoogleHandler)
+        AuthenticateWithGoogleCommandHandler authenticateWithGoogleHandler,
+        IUserRepository userRepository)
     {
         _createUserHandler = createUserHandler ?? throw new ArgumentNullException(nameof(createUserHandler));
         _authenticateUserHandler = authenticateUserHandler ?? throw new ArgumentNullException(nameof(authenticateUserHandler));
         _authenticateWithGoogleHandler = authenticateWithGoogleHandler ?? throw new ArgumentNullException(nameof(authenticateWithGoogleHandler));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     /// <summary>
@@ -104,9 +108,9 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Google OAuth request containing Google token.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>JWT token on success or error details on failure.</returns>
+    /// <returns>JWT token and user details on success or error details on failure.</returns>
     [HttpPost("google")]
-    [ProducesResponseType(typeof(GoogleAuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GoogleAuth([FromBody] GoogleAuthRequest request, CancellationToken ct)
     {
@@ -121,7 +125,20 @@ public class AuthController : ControllerBase
             return Unauthorized(new ErrorResponse(result.ErrorMessage ?? "Google authentication failed.", result.ErrorCode));
         }
 
-        return Ok(new GoogleAuthResponse(result.Token!, result.UserId!.Value, result.IsNewUser));
+        // Get user details
+        var user = await _userRepository.GetByIdAsync(result.UserId!, ct);
+        if (user == null)
+        {
+            return StatusCode(500, new ErrorResponse("User not found after authentication."));
+        }
+
+        var userResponse = new UserDto(
+            user.Id.Value,
+            user.Email.Value,
+            user.CreatedAt
+        );
+
+        return Ok(new AuthResponse(result.Token!, userResponse));
     }
 }
 

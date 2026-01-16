@@ -161,6 +161,19 @@ export default function SquadDetailPage() {
             <p className="mt-2 text-muted-foreground">
               {squad.members.length} {squad.members.length === 1 ? "member" : "members"}
             </p>
+            <div className="mt-2 flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">Squad ID: {squadId}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => {
+                  navigator.clipboard.writeText(squadId);
+                }}
+              >
+                Copy
+              </Button>
+            </div>
           </div>
           {!isMember && (
             <Button onClick={handleJoinSquad} disabled={isJoining} size="lg">

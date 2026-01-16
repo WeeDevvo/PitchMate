@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PitchMate.Application.Commands.Squads;
 using PitchMate.Application.Queries;
+using PitchMate.Domain.Repositories;
 using PitchMate.Domain.ValueObjects;
 
 namespace PitchMate.API.Controllers;
@@ -21,19 +22,22 @@ public class SquadsController : ControllerBase
     private readonly AddSquadAdminCommandHandler _addSquadAdminHandler;
     private readonly RemoveSquadMemberCommandHandler _removeSquadMemberHandler;
     private readonly GetUserSquadsQueryHandler _getUserSquadsHandler;
+    private readonly ISquadRepository _squadRepository;
 
     public SquadsController(
         CreateSquadCommandHandler createSquadHandler,
         JoinSquadCommandHandler joinSquadHandler,
         AddSquadAdminCommandHandler addSquadAdminHandler,
         RemoveSquadMemberCommandHandler removeSquadMemberHandler,
-        GetUserSquadsQueryHandler getUserSquadsHandler)
+        GetUserSquadsQueryHandler getUserSquadsHandler,
+        ISquadRepository squadRepository)
     {
         _createSquadHandler = createSquadHandler ?? throw new ArgumentNullException(nameof(createSquadHandler));
         _joinSquadHandler = joinSquadHandler ?? throw new ArgumentNullException(nameof(joinSquadHandler));
         _addSquadAdminHandler = addSquadAdminHandler ?? throw new ArgumentNullException(nameof(addSquadAdminHandler));
         _removeSquadMemberHandler = removeSquadMemberHandler ?? throw new ArgumentNullException(nameof(removeSquadMemberHandler));
         _getUserSquadsHandler = getUserSquadsHandler ?? throw new ArgumentNullException(nameof(getUserSquadsHandler));
+        _squadRepository = squadRepository ?? throw new ArgumentNullException(nameof(squadRepository));
     }
 
     /// <summary>
@@ -99,6 +103,48 @@ public class SquadsController : ControllerBase
         )).ToList();
 
         return Ok(new GetUserSquadsResponse(squads));
+    }
+
+    /// <summary>
+    /// Get a specific squad by ID with all members and admins.
+    /// </summary>
+    /// <param name="id">Squad ID.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Squad details with members and admins.</returns>
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(GetSquadDetailsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetSquadDetails(Guid id, CancellationToken ct)
+    {
+        var userId = GetAuthenticatedUserId();
+        if (userId == null)
+            return Unauthorized(new ErrorResponse("User not authenticated."));
+
+        var squad = await _squadRepository.GetByIdAsync(new SquadId(id), ct);
+        if (squad == null)
+        {
+            return NotFound(new ErrorResponse("Squad not found."));
+        }
+
+        var members = squad.Members.Select(m => new SquadMemberDto(
+            UserId: m.UserId.Value,
+            SquadId: m.SquadId.Value,
+            CurrentRating: m.CurrentRating.Value,
+            JoinedAt: m.JoinedAt
+        )).ToList();
+
+        var adminIds = squad.AdminIds.Select(a => a.Value).ToList();
+
+        var response = new GetSquadDetailsResponse(
+            Id: squad.Id.Value,
+            Name: squad.Name,
+            CreatedAt: squad.CreatedAt,
+            AdminIds: adminIds,
+            Members: members
+        );
+
+        return Ok(response);
     }
 
     /// <summary>
@@ -264,3 +310,22 @@ public record AddSquadAdminResponse(bool Success, string Message);
 /// Response model for remove squad member operation.
 /// </summary>
 public record RemoveSquadMemberResponse(bool Success, string Message);
+
+/// <summary>
+/// Response model for get squad details endpoint.
+/// </summary>
+public record GetSquadDetailsResponse(
+    Guid Id,
+    string Name,
+    DateTime CreatedAt,
+    IReadOnlyList<Guid> AdminIds,
+    IReadOnlyList<SquadMemberDto> Members);
+
+/// <summary>
+/// DTO for squad member information.
+/// </summary>
+public record SquadMemberDto(
+    Guid UserId,
+    Guid SquadId,
+    int CurrentRating,
+    DateTime JoinedAt);

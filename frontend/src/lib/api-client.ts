@@ -112,7 +112,7 @@ export const authApi = {
   async loginWithGoogle(googleToken: string): Promise<ApiResponse<AuthResponse>> {
     const response = await fetchWithAuth<AuthResponse>("/auth/google", {
       method: "POST",
-      body: JSON.stringify({ token: googleToken }),
+      body: JSON.stringify({ googleToken }),
     });
     if (response.data?.token) {
       setToken(response.data.token);

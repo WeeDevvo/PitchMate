@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { GoogleLogin } from "@react-oauth/google";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,30 +45,35 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleSuccess = async (credentialResponse: any) => {
     setError("");
     setIsLoading(true);
-
     try {
-      // In a real implementation, this would use Google's OAuth flow
-      // For now, we'll show a placeholder message
-      // The actual implementation would use @react-oauth/google or similar
-      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      
-      if (!googleClientId) {
-        setError("Google OAuth is not configured. Please use email/password login.");
+      if (!credentialResponse.credential) {
+        setError("No credential received from Google.");
         setIsLoading(false);
         return;
       }
 
-      // This is a placeholder - in production, you'd use Google's OAuth library
-      // to get the token and then call loginWithGoogle
-      setError("Google OAuth integration requires additional setup.");
-    } catch {
+      console.log('Google credential received');
+      const result = await loginWithGoogle(credentialResponse.credential);
+      console.log('Backend response:', result);
+      
+      if (result.success) {
+        router.push("/squads");
+      } else {
+        setError(result.error || "Google login failed. Please try again.");
+      }
+    } catch (err) {
+      console.error('Google login error:', err);
       setError("Google login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    setError("Google login was cancelled or failed.");
   };
 
   if (authLoading) {
@@ -143,30 +149,17 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogleLogin}
-            disabled={isLoading}
-          >
-            <svg
-              className="mr-2 h-4 w-4"
-              aria-hidden="true"
-              focusable="false"
-              data-prefix="fab"
-              data-icon="google"
-              role="img"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 488 512"
-            >
-              <path
-                fill="currentColor"
-                d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
-              />
-            </svg>
-            Continue with Google
-          </Button>
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="outline"
+              size="large"
+              text="continue_with"
+              width="384"
+              useOneTap={false}
+            />
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
