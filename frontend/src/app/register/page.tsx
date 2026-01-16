@@ -7,14 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Zap, Mail, Lock, CheckCircle2, ArrowLeft } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -37,7 +30,6 @@ export default function RegisterPage() {
   };
 
   const validatePassword = (password: string): boolean => {
-    // Password must be at least 8 characters
     return password.length >= 8;
   };
 
@@ -100,131 +92,135 @@ export default function RegisterPage() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Create an account</CardTitle>
-          <CardDescription>
-            Sign up to start organizing matches with PitchMate
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute top-1/3 right-1/4 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-md">
+        <Link
+          href="/"
+          className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to home
+        </Link>
+
+        <div className="rounded-2xl border border-border bg-card p-8">
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
+                <Zap className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <h1 className="text-2xl font-bold">Create an account</h1>
+              <p className="mt-2 text-muted-foreground">Sign up to start organizing matches</p>
+            </div>
+
             {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
+              <div className="mb-4 rounded-lg border border-destructive bg-destructive/10 p-3">
+                <p className="text-sm text-destructive">{error}</p>
               </div>
             )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (validationErrors.email) {
-                    setValidationErrors({ ...validationErrors, email: undefined });
-                  }
-                }}
-                required
-                disabled={isLoading}
-                autoComplete="email"
-                aria-invalid={!!validationErrors.email}
-                aria-describedby={validationErrors.email ? "email-error" : undefined}
-              />
-              {validationErrors.email && (
-                <p id="email-error" className="text-sm text-destructive">
-                  {validationErrors.email}
-                </p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (validationErrors.password) {
-                    setValidationErrors({ ...validationErrors, password: undefined });
-                  }
-                }}
-                required
-                disabled={isLoading}
-                autoComplete="new-password"
-                aria-invalid={!!validationErrors.password}
-                aria-describedby={validationErrors.password ? "password-error" : undefined}
-              />
-              {validationErrors.password && (
-                <p id="password-error" className="text-sm text-destructive">
-                  {validationErrors.password}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  if (validationErrors.confirmPassword) {
-                    setValidationErrors({ ...validationErrors, confirmPassword: undefined });
-                  }
-                }}
-                required
-                disabled={isLoading}
-                autoComplete="new-password"
-                aria-invalid={!!validationErrors.confirmPassword}
-                aria-describedby={validationErrors.confirmPassword ? "confirm-password-error" : undefined}
-              />
-              {validationErrors.confirmPassword && (
-                <p id="confirm-password-error" className="text-sm text-destructive">
-                  {validationErrors.confirmPassword}
-                </p>
-              )}
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (validationErrors.email) {
+                        setValidationErrors({ ...validationErrors, email: undefined });
+                      }
+                    }}
+                    className="pl-10 h-11 bg-secondary/50 border-border"
+                    required
+                    disabled={isLoading}
+                    autoComplete="email"
+                  />
+                </div>
+                {validationErrors.email && (
+                  <p className="text-sm text-destructive">{validationErrors.email}</p>
+                )}
+              </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? "Creating account..." : "Create account"}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link
-              href="/login"
-              className="font-medium text-primary hover:underline"
-            >
-              Sign in
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (validationErrors.password) {
+                        setValidationErrors({ ...validationErrors, password: undefined });
+                      }
+                    }}
+                    className="pl-10 h-11 bg-secondary/50 border-border"
+                    required
+                    disabled={isLoading}
+                    autoComplete="new-password"
+                  />
+                </div>
+                {validationErrors.password && (
+                  <p className="text-sm text-destructive">{validationErrors.password}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <CheckCircle2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (validationErrors.confirmPassword) {
+                        setValidationErrors({ ...validationErrors, confirmPassword: undefined });
+                      }
+                    }}
+                    className="pl-10 h-11 bg-secondary/50 border-border"
+                    required
+                    disabled={isLoading}
+                    autoComplete="new-password"
+                  />
+                </div>
+                {validationErrors.confirmPassword && (
+                  <p className="text-sm text-destructive">{validationErrors.confirmPassword}</p>
+                )}
+              </div>
+
+              <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                {isLoading ? "Creating account..." : "Create Account"}
+              </Button>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primary hover:underline font-medium">
+                Sign in
+              </Link>
+            </p>
+          </div>
+      </div>
     </div>
   );
 }
