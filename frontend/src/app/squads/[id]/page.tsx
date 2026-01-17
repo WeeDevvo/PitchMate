@@ -7,19 +7,16 @@ import { useAuth } from "@/lib/auth-context";
 import { squadsApi, usersApi } from "@/lib/api-client";
 import type { Squad, User } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ArrowLeft, Copy, Shield, Calendar, Trophy, UserPlus, UserMinus, Check } from "lucide-react";
 
 export default function SquadDetailPage() {
   const router = useRouter();
@@ -30,12 +27,26 @@ export default function SquadDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   // Admin controls state
   const [showAddAdminDialog, setShowAddAdminDialog] = useState(false);
   const [showRemoveMemberDialog, setShowRemoveMemberDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const getRatingColor = (rating: number) => {
+    if (rating >= 1300) return "text-yellow-400"
+    if (rating >= 1200) return "text-primary"
+    if (rating >= 1100) return "text-blue-400"
+    return "text-muted-foreground"
+  }
+
+  const handleCopyCode = async () => {
+    await navigator.clipboard.writeText(squadId)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -125,16 +136,16 @@ export default function SquadDetailPage() {
   if (!squad) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="mb-4 text-center text-muted-foreground">
+        <div className="rounded-xl border border-border bg-card p-12">
+          <div className="flex flex-col items-center justify-center text-center">
+            <p className="mb-4 text-muted-foreground">
               {error || "Squad not found"}
             </p>
             <Button asChild>
               <Link href="/squads">Back to Squads</Link>
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -142,44 +153,41 @@ export default function SquadDetailPage() {
   const isAdmin = user && squad.adminIds.includes(user.userId);
   const isMember = user && squad.members.some((m) => m.userId === user.userId);
   const userMembership = user ? squad.members.find((m) => m.userId === user.userId) : null;
+  const sortedMembers = [...squad.members].sort((a, b) => b.currentRating - a.currentRating);
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Breadcrumb */}
+      <Link
+        href="/squads"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Squads
+      </Link>
+
       {/* Header */}
-      <div className="mb-8">
-        <div className="mb-4">
-          <Link href="/squads" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Back to Squads
-          </Link>
-        </div>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold">{squad.name}</h1>
-              {isAdmin && <Badge>Admin</Badge>}
-            </div>
-            <p className="mt-2 text-muted-foreground">
-              {squad.members.length} {squad.members.length === 1 ? "member" : "members"}
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">Squad ID: {squadId}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => {
-                  navigator.clipboard.writeText(squadId);
-                }}
-              >
-                Copy
-              </Button>
-            </div>
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{squad.name}</h1>
+            {isAdmin && (
+              <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
+                <Shield className="mr-1 h-3 w-3" />
+                Admin
+              </Badge>
+            )}
           </div>
-          {!isMember && (
-            <Button onClick={handleJoinSquad} disabled={isJoining} size="lg">
-              {isJoining ? "Joining..." : "Join Squad"}
-            </Button>
-          )}
+          <p className="mt-2 text-muted-foreground">{squad.members.length} members</p>
+        </div>
+
+        {/* Squad Code */}
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2">
+          <span className="text-sm text-muted-foreground">Squad ID:</span>
+          <code className="font-mono text-sm">{squadId.substring(0, 13)}...</code>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopyCode}>
+            {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+          </Button>
         </div>
       </div>
 
@@ -189,209 +197,176 @@ export default function SquadDetailPage() {
         </div>
       )}
 
-      {/* User's Rating Card */}
-      {userMembership && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Your Rating</CardTitle>
-            <CardDescription>Your current skill rating in this squad</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">{userMembership.currentRating}</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Member since {new Date(userMembership.joinedAt).toLocaleDateString()}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Your Rating Card */}
+          {userMembership && (
+            <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider">Your Rating</p>
+                  <p className={`text-5xl font-bold ${getRatingColor(userMembership.currentRating)}`}>
+                    {userMembership.currentRating}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Joined {new Date(userMembership.joinedAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-6xl opacity-20">
+                    <Trophy className="h-20 w-20" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-      {/* Matches Section - Available to all members */}
-      {isMember && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Matches</CardTitle>
-            <CardDescription>View and manage squad matches</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="default" size="lg" className="w-full sm:w-auto">
-              <Link href={`/squads/${squadId}/matches`}>View Matches</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Admin Controls */}
-      {isAdmin && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Admin Controls</CardTitle>
-            <CardDescription>Manage squad members and admins</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 sm:flex-row">
-            <Dialog open={showAddAdminDialog} onOpenChange={setShowAddAdminDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto">
-                  Add Admin
+          {/* Matches Section */}
+          {isMember && (
+            <div className="rounded-xl border border-border bg-card p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Matches</h2>
+                  <p className="text-sm text-muted-foreground">View and manage squad matches</p>
+                </div>
+                <Button asChild>
+                  <Link href={`/squads/${squadId}/matches`}>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    View Matches
+                  </Link>
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Admin</DialogTitle>
-                  <DialogDescription>
-                    Select a member to grant admin privileges
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-select">Select Member</Label>
+              </div>
+            </div>
+          )}
+
+          {/* Admin Controls */}
+          {isAdmin && (
+            <div className="rounded-xl border border-border bg-card p-6">
+              <h2 className="mb-4 text-lg font-semibold">Admin Controls</h2>
+              <div className="flex flex-wrap gap-3">
+                <Dialog open={showAddAdminDialog} onOpenChange={setShowAddAdminDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Add Admin
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Admin</DialogTitle>
+                      <DialogDescription>Select a member to grant admin privileges</DialogDescription>
+                    </DialogHeader>
                     <select
-                      id="admin-select"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       value={selectedUserId}
                       onChange={(e) => setSelectedUserId(e.target.value)}
-                      disabled={isProcessing}
                     >
-                      <option value="">Select a member...</option>
+                      <option value="">Select a member</option>
                       {squad.members
                         .filter((m) => !squad.adminIds.includes(m.userId))
                         .map((member) => (
                           <option key={member.userId} value={member.userId}>
-                            {member.email} (Rating: {member.currentRating})
+                            {member.email}
                           </option>
                         ))}
                     </select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddAdminDialog(false);
-                      setSelectedUserId("");
-                    }}
-                    disabled={isProcessing}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleAddAdmin}
-                    disabled={!selectedUserId || isProcessing}
-                  >
-                    {isProcessing ? "Adding..." : "Add Admin"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                    <Button className="mt-4" onClick={handleAddAdmin} disabled={!selectedUserId || isProcessing}>
+                      {isProcessing ? "Adding..." : "Add Admin"}
+                    </Button>
+                  </DialogContent>
+                </Dialog>
 
-            <Dialog open={showRemoveMemberDialog} onOpenChange={setShowRemoveMemberDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto">
-                  Remove Member
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Remove Member</DialogTitle>
-                  <DialogDescription>
-                    Select a member to remove from the squad
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="member-select">Select Member</Label>
+                <Dialog open={showRemoveMemberDialog} onOpenChange={setShowRemoveMemberDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="text-destructive hover:text-destructive bg-transparent">
+                      <UserMinus className="mr-2 h-4 w-4" />
+                      Remove Member
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Remove Member</DialogTitle>
+                      <DialogDescription>Select a member to remove from the squad</DialogDescription>
+                    </DialogHeader>
                     <select
-                      id="member-select"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       value={selectedUserId}
                       onChange={(e) => setSelectedUserId(e.target.value)}
-                      disabled={isProcessing}
                     >
-                      <option value="">Select a member...</option>
+                      <option value="">Select a member</option>
                       {squad.members
                         .filter((m) => m.userId !== user?.userId)
                         .map((member) => (
                           <option key={member.userId} value={member.userId}>
-                            {member.email} (Rating: {member.currentRating})
+                            {member.email}
                           </option>
                         ))}
                     </select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowRemoveMemberDialog(false);
-                      setSelectedUserId("");
-                    }}
-                    disabled={isProcessing}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleRemoveMember}
-                    disabled={!selectedUserId || isProcessing}
-                    variant="destructive"
-                  >
-                    {isProcessing ? "Removing..." : "Remove Member"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Members List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Squad Members</CardTitle>
-          <CardDescription>
-            All members and their current ratings
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {squad.members.length === 0 ? (
-              <p className="text-center text-muted-foreground">No members yet</p>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {squad.members
-                  .sort((a, b) => b.currentRating - a.currentRating)
-                  .map((member, index) => {
-                    const memberIsAdmin = squad.adminIds.includes(member.userId);
-                    const isCurrentUser = user?.userId === member.userId;
-                    
-                    return (
-                      <Card key={member.userId} className={isCurrentUser ? "border-primary" : ""}>
-                        <CardContent className="pt-6">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">
-                                  {isCurrentUser ? "You" : member.email}
-                                </p>
-                                {memberIsAdmin && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Admin
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="mt-1 text-2xl font-bold">{member.currentRating}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Rank #{index + 1}
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                    <Button 
+                      variant="destructive" 
+                      className="mt-4" 
+                      onClick={handleRemoveMember} 
+                      disabled={!selectedUserId || isProcessing}
+                    >
+                      {isProcessing ? "Removing..." : "Remove Member"}
+                    </Button>
+                  </DialogContent>
+                </Dialog>
               </div>
-            )}
+            </div>
+          )}
+        </div>
+
+        {/* Members List - Leaderboard */}
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h2 className="mb-4 text-lg font-semibold">Leaderboard</h2>
+          <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+            {sortedMembers.map((member, index) => {
+              const memberIsAdmin = squad.adminIds.includes(member.userId);
+              const isCurrentUser = user?.userId === member.userId;
+              
+              return (
+                <div
+                  key={member.userId}
+                  className={`flex items-center justify-between rounded-lg p-3 transition-colors ${
+                    isCurrentUser
+                      ? "bg-primary/10 border border-primary/30"
+                      : "bg-secondary/30 hover:bg-secondary/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                        index === 0
+                          ? "bg-yellow-500/20 text-yellow-400"
+                          : index === 1
+                            ? "bg-gray-400/20 text-gray-400"
+                            : index === 2
+                              ? "bg-orange-500/20 text-orange-400"
+                              : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {index + 1}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {isCurrentUser ? "You" : member.email.split("@")[0]}
+                        </span>
+                        {memberIsAdmin && <Shield className="h-3 w-3 text-primary" />}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-lg font-bold ${getRatingColor(member.currentRating)}`}>
+                    {member.currentRating}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
