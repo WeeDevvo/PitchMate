@@ -1,0 +1,15 @@
+{
+  "name": "pitchmate",
+  "private": true,
+  "version": "0.0.0",
+  "description": "PitchMate monorepo (web + shared packages). Backend lives under backend/ as a .NET solution.",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @pitchmate/web",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@pitchmate/api-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Typed TypeScript client generated from the PitchMate .NET OpenAPI spec. Generation tool finalised when the API is wired (CI fails on drift).",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "gen": "echo \"TODO: generate from OpenAPI (openapi-typescript + openapi-fetch, per TS2). Wired at API integration.\""
+  }
+}

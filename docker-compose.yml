@@ -1,0 +1,24 @@
+# Local development services for PitchMate.
+# Currently just the dev database. Start it with:  docker compose up -d
+# These credentials are LOCAL-DEV ONLY (never used in QA/prod, which use Key Vault).
+services:
+  db:
+    image: postgres:16
+    container_name: pitchmate-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pitchmate
+      POSTGRES_USER: pitchmate
+      POSTGRES_PASSWORD: pitchmate_local_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pitchmate-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pitchmate -d pitchmate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pitchmate-db-data:

@@ -1,0 +1,6 @@
+@PitchMate.Api_HostAddress = http://localhost:5243
+
+GET {{PitchMate.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

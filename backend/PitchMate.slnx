@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PitchMate.Api/PitchMate.Api.csproj" />
+    <Project Path="src/PitchMate.Application/PitchMate.Application.csproj" />
+    <Project Path="src/PitchMate.Domain/PitchMate.Domain.csproj" />
+    <Project Path="src/PitchMate.Infrastructure/PitchMate.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PitchMate.Application.Tests/PitchMate.Application.Tests.csproj" />
+    <Project Path="tests/PitchMate.Domain.Tests/PitchMate.Domain.Tests.csproj" />
+    <Project Path="tests/PitchMate.Infrastructure.Tests/PitchMate.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
