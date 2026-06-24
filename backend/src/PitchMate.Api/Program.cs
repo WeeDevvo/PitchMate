@@ -5,9 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 // OpenAPI document (consumed to generate the typed TS client in packages/api-client).
 builder.Services.AddOpenApi();
 
-var connectionString = builder.Configuration.GetConnectionString("Default")
-    ?? throw new InvalidOperationException("Connection string 'Default' is not configured.");
-builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
