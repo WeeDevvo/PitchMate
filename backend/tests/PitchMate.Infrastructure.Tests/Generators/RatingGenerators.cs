@@ -73,7 +73,6 @@ public static class RatingGenerators
         from decayFreeDays in Gen.Choose(0, 365)
         from decayRate in NonNegativeSmall
         from movEnabled in Gen.Elements(true, false)
-        from participationEnabled in Gen.Elements(true, false)
         from beginnerMean in FiniteMu
         from averageGap in PositiveSmall
         from strongGap in PositiveSmall
@@ -88,7 +87,13 @@ public static class RatingGenerators
             DecayFreePeriodDays = decayFreeDays,
             DecayRate = decayRate,
             MarginOfVictoryWeightingEnabled = movEnabled,
-            ParticipationWeightingEnabled = participationEnabled,
+            // Participation weighting is left disabled here: this generator pairs with the valid
+            // outcome/player generators, which supply no participation value, and per Requirement 7.6
+            // an enabled participation lever rejects a missing participation value. The margin lever, by
+            // contrast, is neutral (multiplier 1.0) when no margin is supplied, so it stays random above.
+            // The participation-specific property tests (Properties 15, 16) construct their own enabled
+            // configs alongside outcomes that carry participation values.
+            ParticipationWeightingEnabled = false,
             BeginnerMean = beginnerMean,
             AverageMean = beginnerMean + averageGap,
             StrongMean = beginnerMean + averageGap + strongGap,
@@ -187,14 +192,21 @@ public static class RatingGenerators
     /// </summary>
     public static Gen<RatingEngineConfig> InvalidConfig() =>
         from baseConfig in ValidConfig()
-        from mutation in Gen.Choose(0, 5)
+        from mutation in Gen.Choose(0, 6)
         select mutation switch
         {
+            // Non-positive initial uncertainty.
             0 => baseConfig with { InitialUncertainty = 0.0 },
+            // Non-positive provisional threshold.
             1 => baseConfig with { ProvisionalThreshold = -1.0 },
+            // Negative decay rate parameter.
             2 => baseConfig with { DecayRate = -0.5 },
+            // Margin multiplier maximum below 1.0.
             3 => baseConfig with { MarginMultiplierMax = 0.5 },
+            // Non-finite value anywhere in the configuration.
             4 => baseConfig with { DefaultMean = double.NaN },
+            // Negative decay-free period (the other decay parameter).
+            5 => baseConfig with { DecayFreePeriodDays = -1 },
             // Tier means not strictly ordered (Strong not greater than Average).
             _ => baseConfig with { StrongMean = baseConfig.AverageMean }
         };
@@ -211,6 +223,71 @@ public static class RatingGenerators
         from rosters in ListOfLength(rosterCount, ValidTeamRoster())
         from emptyIndex in Gen.Choose(0, rosterCount - 1)
         select (IReadOnlyList<TeamRoster>)Replace(rosters, emptyIndex, new TeamRoster(new List<Rating>()));
+
+    /// <summary>
+    /// An otherwise-valid outcome carrying a negative goal margin — expects <c>NegativeMargin</c> when
+    /// the margin-of-victory lever is enabled (Requirement 6.6). The teams, ratings, and ranks are all
+    /// valid so structural validation passes and the margin check is the first violation reached.
+    /// </summary>
+    public static Gen<MatchOutcome> NegativeMarginOutcome() =>
+        from teamCount in Gen.Choose(2, 4)
+        from teams in ListOfLength(teamCount, ValidTeamResult())
+        from margin in Gen.Choose(-100, -1)
+        select new MatchOutcome(teams, margin);
+
+    /// <summary>
+    /// An otherwise-valid outcome (every player carrying a valid participation value) with exactly one
+    /// player whose participation is malformed — missing, non-finite, or outside the inclusive range
+    /// [0, 1]. Expects <c>InvalidParticipation</c> when the participation lever is enabled
+    /// (Requirement 7.6). All other players carry a valid participation so the injected value is the
+    /// first violation reached.
+    /// </summary>
+    public static Gen<MatchOutcome> InvalidParticipationOutcome() =>
+        from teamCount in Gen.Choose(2, 4)
+        from teams in ListOfLength(teamCount, ValidTeamResultWithParticipation())
+        from badTeamIndex in Gen.Choose(0, teamCount - 1)
+        from badRating in ValidRating()
+        from badParticipation in InvalidParticipationValue()
+        from rank in Gen.Choose(0, 3)
+        select ReplaceTeam(
+            teams,
+            badTeamIndex,
+            new TeamResult(new List<PlayerInput> { new(badRating, badParticipation) }, rank));
+
+    /// <summary>
+    /// A <see cref="SkillTier"/> value that is not one of Beginner, Average, or Strong (an out-of-range
+    /// enum cast) — expects <c>UnknownSkillTier</c> from <c>CreateRating</c> (Requirement 8.6).
+    /// </summary>
+    public static Gen<SkillTier> UnknownSkillTier() =>
+        from raw in Gen.OneOf(Gen.Choose(3, 100), Gen.Choose(-100, -1))
+        select (SkillTier)raw;
+
+    /// <summary>A negative inactivity duration in whole days — expects <c>NegativeDuration</c>.</summary>
+    public static Gen<int> NegativeDuration() => Gen.Choose(-100_000, -1);
+
+    /// <summary>A valid player input carrying a valid participation value in the closed range [0, 1].</summary>
+    private static Gen<PlayerInput> ValidPlayerInputWithParticipation() =>
+        from rating in ValidRating()
+        from milli in Gen.Choose(0, 1_000)
+        select new PlayerInput(rating, milli / 1000.0);
+
+    /// <summary>A valid team result whose players all carry valid participation values.</summary>
+    private static Gen<TeamResult> ValidTeamResultWithParticipation() =>
+        from playerCount in Gen.Choose(1, 4)
+        from players in ListOfLength(playerCount, ValidPlayerInputWithParticipation())
+        from rank in Gen.Choose(0, 3)
+        select new TeamResult(players, rank);
+
+    /// <summary>
+    /// A malformed participation value: missing (null), non-finite (NaN/±∞), strictly above 1.0, or
+    /// strictly below 0.0 — each of which the participation lever must reject (Requirement 7.6).
+    /// </summary>
+    private static Gen<double?> InvalidParticipationValue() =>
+        Gen.OneOf(
+            Gen.Constant((double?)null),
+            from d in NonFiniteDouble select (double?)d,
+            from milli in Gen.Choose(1, 50_000) select (double?)(1.0 + milli / 1000.0),
+            from milli in Gen.Choose(1, 50_000) select (double?)(-(milli / 1000.0)));
 
     // --- Helpers ---
 
