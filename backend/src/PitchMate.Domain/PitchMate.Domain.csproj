@@ -6,4 +6,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="PitchMate.Domain.Tests" />
+    <!-- The persistence layer restores soft-deleted entities via BaseEntity.Restore(),
+         an internal mediator kept off the public surface. -->
+    <InternalsVisibleTo Include="PitchMate.Infrastructure" />
+  </ItemGroup>
+
 </Project>

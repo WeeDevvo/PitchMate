@@ -59,6 +59,7 @@ nunit-*.xml
 # Kiro AI config and local project docs (kept local, not version-controlled)
 .kiro/
 docs/
+DeleteMe/
 
 # ----- Node / JavaScript (web + packages) -----
 node_modules/
