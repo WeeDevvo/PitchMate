@@ -5,6 +5,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The persistence property/integration tests exercise the internal EfRepository<T>
+         and UnitOfWork implementations directly over the Testcontainers-backed test context,
+         so the production save-hook (audit + soft-delete reinterpretation) is covered. -->
+    <InternalsVisibleTo Include="PitchMate.Infrastructure.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
