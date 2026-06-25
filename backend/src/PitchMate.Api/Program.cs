@@ -2,6 +2,14 @@ using PitchMate.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Fail fast on misconfigured DI: validate the container when the host is built and enforce
+// scope correctness so missing or mis-scoped registrations surface at startup (Req 7.6).
+builder.Host.UseDefaultServiceProvider((context, options) =>
+{
+    options.ValidateOnBuild = true;
+    options.ValidateScopes = true;
+});
+
 // OpenAPI document (consumed to generate the typed TS client in packages/api-client).
 builder.Services.AddOpenApi();
 
