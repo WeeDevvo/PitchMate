@@ -1,0 +1,103 @@
+name: CD · Production (main)
+
+# Deploys to production on merge to `main`, behind a MANUAL APPROVAL gate.
+#
+# The approval gate is the GitHub `production` environment's "Required
+# reviewers" setting — configure it in repo Settings → Environments. Each
+# job below targets `environment: production`, so a deploy pauses for reviewer
+# sign-off before running.
+#
+# ┌─ NOT YET LIVE ──────────────────────────────────────────────────────────┐
+# │ Guarded by `vars.AZURE_DEPLOY_ENABLED == 'true'` — jobs are SKIPPED      │
+# │ until Azure + OIDC + the `production` environment are configured.        │
+# │ See .github/workflows/README.md for the checklist.                       │
+# └──────────────────────────────────────────────────────────────────────────┘
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # Azure login via GitHub OIDC federation
+
+jobs:
+  deploy-backend:
+    name: Deploy backend
+    if: vars.AZURE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production # required reviewers here = the manual approval gate
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore local tools (dotnet-ef)
+        run: dotnet tool restore
+
+      - name: Publish API
+        run: dotnet publish src/PitchMate.Api -c Release -o ../publish/api
+
+      - name: Produce migration bundle
+        run: >-
+          dotnet ef migrations bundle
+          --project src/PitchMate.Infrastructure
+          --startup-project src/PitchMate.Api
+          --configuration Release
+          --self-contained -r linux-x64
+          --output ../publish/efbundle
+          --force
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Explicit, out-of-process migration step that completes before the app
+      # rollout. Idempotent; stops without partial apply on failure.
+      - name: Apply migrations (efbundle)
+        working-directory: publish
+        run: ./efbundle --connection "${{ secrets.DB_CONNECTION_STRING }}"
+
+      # TODO: deploy the published API to Azure App Service / Container Apps.
+      - name: Deploy API
+        run: echo "TODO wire Azure App Service / Container Apps deploy"
+
+  deploy-web:
+    name: Deploy web
+    if: vars.AZURE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web
+        run: npm run build --workspace @pitchmate/web
+
+      # TODO: deploy apps/web/dist to Azure Static Web Apps (prod token).
+      - name: Deploy to Static Web Apps
+        run: echo "TODO wire Azure Static Web Apps deploy"

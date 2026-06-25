@@ -1,0 +1,68 @@
+name: CI · Backend
+
+# Build + test gate for the .NET solution. A red run blocks merge (enforce via
+# branch protection on main/develop). Path-filtered so web-only changes don't
+# trigger it (see tech.md → Environments & CI/CD).
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - "Directory.Build.props"
+      - ".github/workflows/ci-backend.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - "Directory.Build.props"
+      - ".github/workflows/ci-backend.yml"
+
+# Cancel superseded runs on the same ref to save runner time.
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build & test
+    # ubuntu-latest ships a running Docker daemon, which the Infrastructure
+    # tests need for Testcontainers (real PostgreSQL — no in-memory/SQLite).
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/.config/dotnet-tools.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore local tools (dotnet-ef)
+        run: dotnet tool restore
+
+      - name: Restore dependencies
+        run: dotnet restore PitchMate.slnx
+
+      # TreatWarningsAsErrors is on repo-wide (Directory.Build.props), so a
+      # warning fails the build here.
+      - name: Build (Release)
+        run: dotnet build PitchMate.slnx --configuration Release --no-restore
+
+      # Includes Domain/Application unit + property tests and the Infrastructure
+      # Testcontainers integration, migration, and architecture tests.
+      - name: Test (Release)
+        run: dotnet test PitchMate.slnx --configuration Release --no-build --verbosity normal

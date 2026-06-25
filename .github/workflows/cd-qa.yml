@@ -1,0 +1,105 @@
+name: CD · QA (develop)
+
+# Deploys to the QA/staging environment on merge to `develop`.
+#
+# ┌─ NOT YET LIVE ──────────────────────────────────────────────────────────┐
+# │ Every deploy job is guarded by `vars.AZURE_DEPLOY_ENABLED == 'true'`.    │
+# │ Until that repo variable is set the jobs are SKIPPED (green, not red).   │
+# │ Flip it on once the Azure resources + GitHub OIDC federation + the `qa`  │
+# │ environment exist. See .github/workflows/README.md for the checklist.    │
+# └──────────────────────────────────────────────────────────────────────────┘
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-qa
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # required for Azure login via GitHub OIDC federation (no long-lived keys)
+
+jobs:
+  # ── Backend: migrate (efbundle, explicit step) then deploy the API ────────
+  deploy-backend:
+    name: Deploy backend
+    if: vars.AZURE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: qa
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore local tools (dotnet-ef)
+        run: dotnet tool restore
+
+      - name: Publish API
+        run: dotnet publish src/PitchMate.Api -c Release -o ../publish/api
+
+      # Migrations run as an explicit, out-of-process step BEFORE the app rolls
+      # out — never on startup (docs/migrations.md). The bundle embeds every
+      # migration and is idempotent (no-op when nothing is pending).
+      - name: Produce migration bundle
+        run: >-
+          dotnet ef migrations bundle
+          --project src/PitchMate.Infrastructure
+          --startup-project src/PitchMate.Api
+          --configuration Release
+          --self-contained -r linux-x64
+          --output ../publish/efbundle
+          --force
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Apply migrations (efbundle)
+        working-directory: publish
+        run: ./efbundle --connection "${{ secrets.DB_CONNECTION_STRING }}"
+
+      # TODO: deploy the published API to Azure App Service / Container Apps.
+      # e.g. azure/webapps-deploy@v3 with app-name + the ./publish/api package,
+      # or a container build + Azure/container-apps-deploy-action.
+      - name: Deploy API
+        run: echo "TODO wire Azure App Service / Container Apps deploy"
+
+  # ── Web: build and deploy the static React app ────────────────────────────
+  deploy-web:
+    name: Deploy web
+    if: vars.AZURE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: qa
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web
+        run: npm run build --workspace @pitchmate/web
+
+      # TODO: deploy apps/web/dist to Azure Static Web Apps
+      # (Azure/static-web-apps-deploy with the QA deployment token).
+      - name: Deploy to Static Web Apps
+        run: echo "TODO wire Azure Static Web Apps deploy"
