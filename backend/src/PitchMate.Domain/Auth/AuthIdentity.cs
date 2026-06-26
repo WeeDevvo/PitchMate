@@ -46,6 +46,12 @@ public sealed class AuthIdentity : BaseEntity, IAnonymisable
         Credential = credential;
     }
 
+    // Parameterless constructor used only by the persistence layer to materialise the
+    // entity; the public factories remain the sole way application code creates an identity.
+    // The persistence layer assigns the mapped properties after construction, so the
+    // non-null guarantee on ProviderUserId is restored before the entity is observed.
+    private AuthIdentity() => ProviderUserId = null!;
+
     /// <summary>
     /// Creates a <see cref="AuthProvider.Password"/> identity for <paramref name="userId"/>,
     /// keyed on the normalised email and carrying the supplied credential.
