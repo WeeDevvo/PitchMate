@@ -22,8 +22,9 @@ public interface ITokenService
     AccessTokenValidation ValidateAccessToken(string? token);
 
     /// <summary>
-    /// Generates a fresh opaque refresh-token secret together with the one-way hash to persist; the
-    /// plaintext is returned to the caller exactly once and never stored (Requirement 9.x).
+    /// Generates a fresh opaque refresh-token secret together with the one-way hash to persist and the
+    /// absolute expiry (computed from the clock and configured lifetime); the plaintext is returned to
+    /// the caller exactly once and never stored (Requirement 9.x).
     /// </summary>
     RefreshTokenSecret GenerateRefreshToken();
 }

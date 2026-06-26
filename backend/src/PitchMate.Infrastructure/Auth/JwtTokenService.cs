@@ -117,7 +117,8 @@ public sealed class JwtTokenService : ITokenService
     {
         var plaintext = _tokenGenerator.Generate();
         var hash = _secretHasher.Hash(plaintext);
-        return new RefreshTokenSecret(plaintext, hash);
+        var expiresAt = _timeProvider.GetUtcNow() + _options.RefreshTokenLifetime;
+        return new RefreshTokenSecret(plaintext, hash, expiresAt);
     }
 
     private TokenValidationParameters BuildValidationParameters() => new()
