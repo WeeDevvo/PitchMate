@@ -6,7 +6,7 @@ name: CD · QA (develop)
 # │ Every deploy job is guarded by `vars.AZURE_DEPLOY_ENABLED == 'true'`.    │
 # │ Until that repo variable is set the jobs are SKIPPED (green, not red).   │
 # │ Flip it on once the Azure resources + GitHub OIDC federation + the `qa`  │
-# │ environment exist. See .github/workflows/README.md for the checklist.    │
+# │ environment exist. See docs/walking-skeleton.md for the full runbook.    │
 # └──────────────────────────────────────────────────────────────────────────┘
 on:
   push:
@@ -70,11 +70,13 @@ jobs:
         working-directory: publish
         run: ./efbundle --connection "${{ secrets.DB_CONNECTION_STRING }}"
 
-      # TODO: deploy the published API to Azure App Service / Container Apps.
-      # e.g. azure/webapps-deploy@v3 with app-name + the ./publish/api package,
-      # or a container build + Azure/container-apps-deploy-action.
+      # Deploy the published API to Azure App Service (zip-deploy). The app name
+      # comes from a repo variable set during provisioning (walking-skeleton.md).
       - name: Deploy API
-        run: echo "TODO wire Azure App Service / Container Apps deploy"
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME_QA }}
+          package: publish/api
 
   # ── Web: build and deploy the static React app ────────────────────────────
   deploy-web:
@@ -99,7 +101,13 @@ jobs:
       - name: Build web
         run: npm run build --workspace @pitchmate/web
 
-      # TODO: deploy apps/web/dist to Azure Static Web Apps
-      # (Azure/static-web-apps-deploy with the QA deployment token).
+      # Upload the pre-built output to Azure Static Web Apps using the QA
+      # deployment token. skip_app_build keeps the action from rebuilding.
       - name: Deploy to Static Web Apps
-        run: echo "TODO wire Azure Static Web Apps deploy"
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: apps/web/dist
+          skip_app_build: true
+          skip_api_build: true
