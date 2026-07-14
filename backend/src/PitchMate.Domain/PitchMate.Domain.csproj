@@ -11,6 +11,10 @@
     <!-- The persistence layer restores soft-deleted entities via BaseEntity.Restore(),
          an internal mediator kept off the public surface. -->
     <InternalsVisibleTo Include="PitchMate.Infrastructure" />
+    <!-- The Application-layer squad-deletion property tests drive the real soft-delete /
+         restore mediators (BaseEntity.MarkDeleted / Restore) to model a genuinely
+         pending-deletion squad in-memory, mirroring the persistence pipeline. -->
+    <InternalsVisibleTo Include="PitchMate.Application.Tests" />
   </ItemGroup>
 
 </Project>

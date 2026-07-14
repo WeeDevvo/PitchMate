@@ -53,4 +53,16 @@ public interface ISquadRepository
     /// <param name="cancellationToken">A token that surfaces cancellation to the caller.</param>
     /// <returns>The squads due for purge, or an empty list.</returns>
     Task<IReadOnlyList<Squad>> ListPurgeDueAsync(DateTimeOffset now, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stages a <b>permanent</b> removal of <paramref name="squad"/> for the purge path, so the row
+    /// is genuinely deleted rather than soft-deleted when
+    /// <see cref="Common.Persistence.IUnitOfWork.SaveChangesAsync"/> commits (Requirement 17.5).
+    /// Unlike <see cref="Common.Persistence.IRepository{T}.Remove"/>, which the save pipeline
+    /// reinterprets as a soft-delete for every <c>BaseEntity</c>, this bypasses soft-delete so an
+    /// already soft-deleted squad reaching its purge instant is erased for good. Synchronous because
+    /// it only mutates tracked state; the write happens on the unit-of-work commit.
+    /// </summary>
+    /// <param name="squad">The soft-deleted squad to remove permanently.</param>
+    void RemovePermanently(Squad squad);
 }

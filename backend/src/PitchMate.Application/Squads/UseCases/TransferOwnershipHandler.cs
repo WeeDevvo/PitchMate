@@ -59,6 +59,16 @@ public sealed class TransferOwnershipHandler
             return gate;
         }
 
+        // A squad that is pending deletion rejects every action except export and reversal; the check
+        // runs only after authorisation, so a non-member never learns the squad's state
+        // (Requirement 17.3).
+        if (await _memberships.IsSquadPendingDeletionAsync(command.SquadId, cancellationToken))
+        {
+            return Result.Fail(new SquadError(
+                SquadErrorCode.SquadPendingDeletion,
+                "The squad is pending deletion; only exporting the squad and reversing the deletion are permitted."));
+        }
+
         SquadMembership? target =
             await _memberships.GetByIdAsync(command.TargetMembershipId, cancellationToken);
 

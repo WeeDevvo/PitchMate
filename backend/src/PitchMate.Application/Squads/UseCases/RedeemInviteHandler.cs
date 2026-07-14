@@ -116,6 +116,16 @@ public sealed class RedeemInviteHandler
             return Fail(SquadErrorCode.InviteUnusable, "The invite is invalid or no longer usable.");
         }
 
+        // A squad that is pending deletion rejects every action except export and reversal, so a
+        // redemption for it creates no membership even when the invite is otherwise redeemable
+        // (Requirement 17.3).
+        if (await _memberships.IsSquadPendingDeletionAsync(invite.SquadId, cancellationToken))
+        {
+            return Fail(
+                SquadErrorCode.SquadPendingDeletion,
+                "The squad is pending deletion; only exporting the squad and reversing the deletion are permitted.");
+        }
+
         SquadMembership? existing =
             await _memberships.GetByUserAndSquadAsync(command.ActingUserId, invite.SquadId, cancellationToken);
 

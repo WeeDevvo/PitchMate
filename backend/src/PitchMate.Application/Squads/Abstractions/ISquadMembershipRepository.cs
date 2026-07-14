@@ -55,6 +55,20 @@ public interface ISquadMembershipRepository
     Task<SquadMembership?> GetOwnerAsync(Guid squadId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Determines whether the squad identified by <paramref name="squadId"/> is currently pending
+    /// deletion — soft-deleted and awaiting purge (Requirement 17.3). The membership- and
+    /// invite-centric use cases resolve their acting membership through this repository but do not
+    /// otherwise load the squad; they consult this probe <em>after</em> authorisation so that a
+    /// squad in its grace period rejects every squad action except exporting the squad and reversing
+    /// the deletion, without changing the acting-membership resolution that export and reversal rely
+    /// on. Returns <see langword="false"/> when the squad does not exist or is not pending deletion.
+    /// </summary>
+    /// <param name="squadId">The squad whose pending-deletion state is probed.</param>
+    /// <param name="cancellationToken">A token that surfaces cancellation to the caller.</param>
+    /// <returns><see langword="true"/> when the squad is soft-deleted and awaiting purge; otherwise <see langword="false"/>.</returns>
+    Task<bool> IsSquadPendingDeletionAsync(Guid squadId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Determines whether another non-anonymised membership in <paramref name="squadId"/> already
     /// holds the normalised (trimmed, lower-cased) display name <paramref name="normalisedName"/>,
     /// optionally excluding the membership identified by <paramref name="excludingMembershipId"/> so a
@@ -66,4 +80,28 @@ public interface ISquadMembershipRepository
     /// <param name="cancellationToken">A token that surfaces cancellation to the caller.</param>
     /// <returns><see langword="true"/> when the normalised name is already taken; otherwise <see langword="false"/>.</returns>
     Task<bool> DisplayNameTakenAsync(Guid squadId, string normalisedName, Guid? excludingMembershipId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lists every membership backed by <paramref name="userId"/> across all squads it belongs to,
+    /// regardless of state, so the user-erasure path can apply the anonymise-vs-remove rule to each
+    /// of that user's memberships (Requirement 18.3, 18.4). Returns an empty list when the user backs
+    /// no membership. Guest memberships are never returned because they carry no backing user.
+    /// </summary>
+    /// <param name="userId">The backing user whose memberships are listed.</param>
+    /// <param name="cancellationToken">A token that surfaces cancellation to the caller.</param>
+    /// <returns>The user's memberships across every squad, or an empty list.</returns>
+    Task<IReadOnlyList<SquadMembership>> ListForUserAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stages a <b>permanent</b> removal of <paramref name="membership"/> for the erasure and purge
+    /// paths, so a membership that carries no match history is genuinely deleted rather than
+    /// soft-deleted when <see cref="Common.Persistence.IUnitOfWork.SaveChangesAsync"/> commits
+    /// (Requirement 18.2, 18.4). Unlike <see cref="Common.Persistence.IRepository{T}.Remove"/>, which
+    /// the save pipeline reinterprets as a soft-delete for every <c>BaseEntity</c>, this bypasses
+    /// soft-delete. A membership that carries match history is anonymised via
+    /// <see cref="SquadMembership.Anonymise"/> and retained instead of being passed here. Synchronous
+    /// because it only mutates tracked state; the write happens on the unit-of-work commit.
+    /// </summary>
+    /// <param name="membership">The membership to remove permanently.</param>
+    void RemovePermanently(SquadMembership membership);
 }

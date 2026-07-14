@@ -58,6 +58,16 @@ public sealed class LeaveSquadHandler
                 "The acting user is not a member of this squad."));
         }
 
+        // A squad that is pending deletion rejects every action except export and reversal; the check
+        // runs only after the actor is confirmed a member, so a non-member never learns the squad's
+        // state (Requirement 17.3).
+        if (await _memberships.IsSquadPendingDeletionAsync(command.SquadId, cancellationToken))
+        {
+            return Result.Fail(new SquadError(
+                SquadErrorCode.SquadPendingDeletion,
+                "The squad is pending deletion; only exporting the squad and reversing the deletion are permitted."));
+        }
+
         // An already-inactive membership is a no-op success and never reaches the commit (Requirement 7.3).
         bool wasActive = acting.State == MembershipState.Active;
 

@@ -90,6 +90,16 @@ public sealed class GenerateInviteHandler
             return Result<GenerateInviteResult>.Fail(gate.Error!);
         }
 
+        // A squad that is pending deletion rejects every action except export and reversal; the check
+        // runs only after authorisation, so a non-member never learns the squad's state and no invite
+        // is created (Requirement 17.3).
+        if (await _memberships.IsSquadPendingDeletionAsync(command.SquadId, cancellationToken))
+        {
+            return Fail(
+                SquadErrorCode.SquadPendingDeletion,
+                "The squad is pending deletion; only exporting the squad and reversing the deletion are permitted.");
+        }
+
         // Resolve the expiry instant, enforcing the validity range and the non-expiring policy
         // (Requirement 10.2, 10.3, 10.9).
         Result<DateTimeOffset?> expiry = ResolveExpiry(command);

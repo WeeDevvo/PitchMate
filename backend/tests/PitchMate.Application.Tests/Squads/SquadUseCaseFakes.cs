@@ -117,8 +117,30 @@ internal sealed class SquadStore
     public Squad? FindSquad(Guid id) =>
         !_deletedSquads.Contains(id) && _squads.TryGetValue(id, out Squad? squad) ? squad : null;
 
+    /// <summary>Permanently removes a committed squad (and any soft-delete marker) by identity.</summary>
+    public void RemoveSquadPermanently(Guid id)
+    {
+        _squads.Remove(id);
+        _deletedSquads.Remove(id);
+    }
+
+    /// <summary>Permanently removes a committed membership by identity.</summary>
+    public void RemoveMembershipPermanently(Guid membershipId) =>
+        _memberships.RemoveAll(m => m.Id == membershipId);
+
     /// <summary>Finds a committed squad including soft-deleted ones, or <see langword="null"/>.</summary>
     public Squad? FindSquadIncludingDeleted(Guid id) => _squads.GetValueOrDefault(id);
+
+    /// <summary>
+    /// Lists the committed soft-deleted squads whose purge instant is at or before
+    /// <paramref name="now"/>, mirroring the production purge-due query (Requirement 17.5).
+    /// </summary>
+    public IReadOnlyList<Squad> ListPurgeDueSquads(DateTimeOffset now) =>
+        _deletedSquads
+            .Select(id => _squads.GetValueOrDefault(id))
+            .Where(s => s is not null && s.PurgeAt is not null && s.PurgeAt.Value <= now)
+            .Select(s => s!)
+            .ToList();
 
     /// <summary>Lists the committed, non-deleted squads in which the user holds a membership.</summary>
     public IReadOnlyList<Squad> ListSquadsForUser(Guid userId)
@@ -143,6 +165,10 @@ internal sealed class SquadStore
     /// <summary>Finds a committed membership by identity, or <see langword="null"/>.</summary>
     public SquadMembership? FindMembershipById(Guid membershipId) =>
         _memberships.FirstOrDefault(m => m.Id == membershipId);
+
+    /// <summary>Lists every committed membership backed by the user across all squads.</summary>
+    public IReadOnlyList<SquadMembership> ListMembershipsForUser(Guid userId) =>
+        _memberships.Where(m => m.UserId == userId).ToList();
 
     /// <summary>Lists the committed memberships of a squad, optionally restricted to active ones.</summary>
     public IReadOnlyList<SquadMembership> ListMembershipsForSquad(Guid squadId, bool activeOnly) =>
@@ -211,8 +237,13 @@ internal sealed class FakeSquadRepository : ISquadRepository
     public Task<IReadOnlyList<Squad>> ListPurgeDueAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<Squad> due = [];
-        return Task.FromResult(due);
+        return Task.FromResult(_store.ListPurgeDueSquads(now));
+    }
+
+    public void RemovePermanently(Squad squad)
+    {
+        ArgumentNullException.ThrowIfNull(squad);
+        _store.RemoveSquadPermanently(squad.Id);
     }
 }
 
@@ -258,6 +289,17 @@ internal sealed class FakeSquadMembershipRepository : ISquadMembershipRepository
         return Task.FromResult(owner);
     }
 
+    public Task<bool> IsSquadPendingDeletionAsync(Guid squadId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Mirrors the production probe: the squad is resolved including soft-deleted rows (so the
+        // acting-membership resolution export/reversal rely on is unaffected) and reports whether it
+        // is pending deletion via the Domain soft-delete flag.
+        Squad? squad = _store.FindSquadIncludingDeleted(squadId);
+        return Task.FromResult(squad is not null && squad.IsPendingDeletion);
+    }
+
     public Task<bool> DisplayNameTakenAsync(Guid squadId, string normalisedName, Guid? excludingMembershipId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -267,6 +309,18 @@ internal sealed class FakeSquadMembershipRepository : ISquadMembershipRepository
                 && m.DisplayNameNormalized is not null
                 && m.DisplayNameNormalized == normalisedName);
         return Task.FromResult(taken);
+    }
+
+    public Task<IReadOnlyList<SquadMembership>> ListForUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.ListMembershipsForUser(userId));
+    }
+
+    public void RemovePermanently(SquadMembership membership)
+    {
+        ArgumentNullException.ThrowIfNull(membership);
+        _store.RemoveMembershipPermanently(membership.Id);
     }
 }
 
