@@ -384,6 +384,26 @@ public sealed class SquadMembership : BaseEntity, IAnonymisable
     }
 
     /// <summary>
+    /// Updates the optional cold-start <see cref="Rating.SkillTier"/> seed recorded on this
+    /// membership, used when an admin edits a guest (Requirement 14.5, 14.6, 14.7). Passing
+    /// <see langword="null"/> clears the seed; a value outside the defined
+    /// <see cref="Rating.SkillTier"/> enumeration is rejected as a validation failure and leaves the
+    /// current seed unchanged (Requirement 14.6).
+    /// </summary>
+    /// <param name="skillTier">The new skill-tier seed, or <see langword="null"/> to clear it.</param>
+    /// <returns>A success once the seed is applied, or a validation failure for an undefined value.</returns>
+    public Result UpdateSkillTier(SkillTier? skillTier)
+    {
+        if (skillTier is not null && !Enum.IsDefined(skillTier.Value))
+        {
+            return Fail(SquadErrorCode.ValidationFailed, "The requested skill tier is not a defined value.");
+        }
+
+        SkillTier = skillTier;
+        return Result.Ok();
+    }
+
+    /// <summary>
     /// Completes a guest claim by rebinding a guest membership to <paramref name="userId"/> as a
     /// registered <see cref="SquadRole.Member"/> and setting <see cref="ClaimCompleted"/>, leaving
     /// <see cref="State"/> and <see cref="DisplayName"/> unchanged so rating, stats, and history are
