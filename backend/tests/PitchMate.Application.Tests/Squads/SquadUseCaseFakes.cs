@@ -22,15 +22,20 @@ internal sealed class SquadStore
     private readonly Dictionary<Guid, Squad> _squads = new();
     private readonly HashSet<Guid> _deletedSquads = new();
     private readonly List<SquadMembership> _memberships = new();
+    private readonly List<Invite> _invites = new();
 
     private readonly List<Squad> _pendingSquads = new();
     private readonly List<SquadMembership> _pendingMemberships = new();
+    private readonly List<Invite> _pendingInvites = new();
 
     /// <summary>The squads durably committed so far, keyed by identity.</summary>
     public IReadOnlyDictionary<Guid, Squad> Squads => _squads;
 
     /// <summary>The memberships durably committed so far.</summary>
     public IReadOnlyList<SquadMembership> Memberships => _memberships;
+
+    /// <summary>The invites durably committed so far.</summary>
+    public IReadOnlyList<Invite> Invites => _invites;
 
     /// <summary>The number of times a save was attempted against this store.</summary>
     public int SaveCallCount { get; private set; }
@@ -51,11 +56,17 @@ internal sealed class SquadStore
     /// <summary>Seeds a committed membership for read-path tests.</summary>
     public void AddCommittedMembership(SquadMembership membership) => _memberships.Add(membership);
 
+    /// <summary>Seeds a committed invite for read/count-path tests.</summary>
+    public void AddCommittedInvite(Invite invite) => _invites.Add(invite);
+
     /// <summary>Stages a squad for insertion on the next successful save.</summary>
     public void StageSquad(Squad squad) => _pendingSquads.Add(squad);
 
     /// <summary>Stages a membership for insertion on the next successful save.</summary>
     public void StageMembership(SquadMembership membership) => _pendingMemberships.Add(membership);
+
+    /// <summary>Stages an invite for insertion on the next successful save.</summary>
+    public void StageInvite(Invite invite) => _pendingInvites.Add(invite);
 
     /// <summary>Records that a save was attempted.</summary>
     public void RecordSaveCall() => SaveCallCount++;
@@ -63,15 +74,17 @@ internal sealed class SquadStore
     /// <summary>Atomically commits every staged squad and membership together, returning the row count.</summary>
     public int Commit()
     {
-        int count = _pendingSquads.Count + _pendingMemberships.Count;
+        int count = _pendingSquads.Count + _pendingMemberships.Count + _pendingInvites.Count;
         foreach (Squad squad in _pendingSquads)
         {
             _squads[squad.Id] = squad;
         }
 
         _memberships.AddRange(_pendingMemberships);
+        _invites.AddRange(_pendingInvites);
         _pendingSquads.Clear();
         _pendingMemberships.Clear();
+        _pendingInvites.Clear();
         return count;
     }
 
@@ -80,6 +93,7 @@ internal sealed class SquadStore
     {
         _pendingSquads.Clear();
         _pendingMemberships.Clear();
+        _pendingInvites.Clear();
     }
 
     /// <summary>Finds a committed user by identity, or <see langword="null"/>.</summary>
@@ -121,6 +135,21 @@ internal sealed class SquadStore
         _memberships
             .Where(m => m.SquadId == squadId && (!activeOnly || m.State == MembershipState.Active))
             .ToList();
+
+    /// <summary>Finds a committed invite by identity, or <see langword="null"/>.</summary>
+    public Invite? FindInviteById(Guid inviteId) => _invites.FirstOrDefault(i => i.Id == inviteId);
+
+    /// <summary>Finds a committed invite by its stored one-way token hash, or <see langword="null"/>.</summary>
+    public Invite? FindInviteByTokenHash(string tokenHash) =>
+        _invites.FirstOrDefault(i => i.TokenHash == tokenHash);
+
+    /// <summary>Lists the committed invites of a squad.</summary>
+    public IReadOnlyList<Invite> ListInvitesForSquad(Guid squadId) =>
+        _invites.Where(i => i.SquadId == squadId).ToList();
+
+    /// <summary>Counts the committed invites of a squad whose effective state at <paramref name="now"/> is active.</summary>
+    public int CountActiveInvites(Guid squadId, DateTimeOffset now) =>
+        _invites.Count(i => i.SquadId == squadId && i.EffectiveState(now) == InviteState.Active);
 }
 
 /// <summary>In-memory <see cref="ISquadRepository"/> over a <see cref="SquadStore"/>.</summary>
@@ -216,6 +245,96 @@ internal sealed class FakeSquadMembershipRepository : ISquadMembershipRepository
                 && m.DisplayNameNormalized == normalisedName);
         return Task.FromResult(taken);
     }
+}
+
+/// <summary>
+/// In-memory <see cref="IInviteRepository"/> over a <see cref="SquadStore"/>. <c>AddAsync</c> only
+/// stages the invite (committed on a successful unit-of-work save), while the lookups and the active
+/// count operate over committed invites, computing "active" against the supplied clock so the derived
+/// expired state mirrors the production repository.
+/// </summary>
+internal sealed class FakeInviteRepository : IInviteRepository
+{
+    private readonly SquadStore _store;
+    private readonly TimeProvider _clock;
+
+    public FakeInviteRepository(SquadStore store, TimeProvider clock)
+    {
+        _store = store;
+        _clock = clock;
+    }
+
+    public Task AddAsync(Invite invite, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(invite);
+        _store.StageInvite(invite);
+        return Task.CompletedTask;
+    }
+
+    public Task<Invite?> GetByIdAsync(Guid inviteId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.FindInviteById(inviteId));
+    }
+
+    public Task<Invite?> FindByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.FindInviteByTokenHash(tokenHash));
+    }
+
+    public Task<IReadOnlyList<Invite>> ListForSquadAsync(Guid squadId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.ListInvitesForSquad(squadId));
+    }
+
+    public Task<int> CountActiveAsync(Guid squadId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.CountActiveInvites(squadId, _clock.GetUtcNow()));
+    }
+}
+
+/// <summary>
+/// A deterministic <see cref="IInviteSecretService"/> that mints a distinct redeemable link, short
+/// code, and one-way token hash per call (all three mutually distinct), records how many times it was
+/// asked to generate, and re-hashes a presented secret with the same digest. It never stores a
+/// recoverable secret, so tests can assert that only the hash is persisted.
+/// </summary>
+internal sealed class FakeInviteSecretService : IInviteSecretService
+{
+    /// <summary>The number of times <see cref="Generate"/> was invoked.</summary>
+    public int GenerateCallCount { get; private set; }
+
+    /// <summary>The most recently generated secret, or <see langword="null"/> if none.</summary>
+    public InviteSecret? LastGenerated { get; private set; }
+
+    public InviteSecret Generate()
+    {
+        GenerateCallCount++;
+        string token = Guid.NewGuid().ToString("N");
+        var secret = new InviteSecret(
+            RedeemableLink: $"https://pitch-mate.co.uk/join/{token}",
+            Code: token[..10].ToUpperInvariant(),
+            TokenHash: "hash::" + token);
+        LastGenerated = secret;
+        return secret;
+    }
+
+    public string Hash(string presentedSecret) => "hash::" + presentedSecret;
+}
+
+/// <summary>
+/// A controllable <see cref="TimeProvider"/> anchored at a fixed instant so invite expiry derivation
+/// is deterministic across property iterations. Stands in for a FakeTimeProvider.
+/// </summary>
+internal sealed class SquadFakeClock(DateTimeOffset utcNow) : TimeProvider
+{
+    private readonly DateTimeOffset _utcNow = utcNow.ToUniversalTime();
+
+    public override DateTimeOffset GetUtcNow() => _utcNow;
 }
 
 /// <summary>In-memory <see cref="IUserRepository"/> over a <see cref="SquadStore"/>.</summary>
