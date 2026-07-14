@@ -23,10 +23,12 @@ internal sealed class SquadStore
     private readonly HashSet<Guid> _deletedSquads = new();
     private readonly List<SquadMembership> _memberships = new();
     private readonly List<Invite> _invites = new();
+    private readonly List<GuestClaim> _claims = new();
 
     private readonly List<Squad> _pendingSquads = new();
     private readonly List<SquadMembership> _pendingMemberships = new();
     private readonly List<Invite> _pendingInvites = new();
+    private readonly List<GuestClaim> _pendingClaims = new();
 
     /// <summary>The squads durably committed so far, keyed by identity.</summary>
     public IReadOnlyDictionary<Guid, Squad> Squads => _squads;
@@ -36,6 +38,9 @@ internal sealed class SquadStore
 
     /// <summary>The invites durably committed so far.</summary>
     public IReadOnlyList<Invite> Invites => _invites;
+
+    /// <summary>The guest claims durably committed so far.</summary>
+    public IReadOnlyList<GuestClaim> Claims => _claims;
 
     /// <summary>The number of times a save was attempted against this store.</summary>
     public int SaveCallCount { get; private set; }
@@ -68,13 +73,19 @@ internal sealed class SquadStore
     /// <summary>Stages an invite for insertion on the next successful save.</summary>
     public void StageInvite(Invite invite) => _pendingInvites.Add(invite);
 
+    /// <summary>Seeds a committed guest claim for claim-lifecycle tests.</summary>
+    public void AddCommittedClaim(GuestClaim claim) => _claims.Add(claim);
+
+    /// <summary>Stages a guest claim for insertion on the next successful save.</summary>
+    public void StageClaim(GuestClaim claim) => _pendingClaims.Add(claim);
+
     /// <summary>Records that a save was attempted.</summary>
     public void RecordSaveCall() => SaveCallCount++;
 
     /// <summary>Atomically commits every staged squad and membership together, returning the row count.</summary>
     public int Commit()
     {
-        int count = _pendingSquads.Count + _pendingMemberships.Count + _pendingInvites.Count;
+        int count = _pendingSquads.Count + _pendingMemberships.Count + _pendingInvites.Count + _pendingClaims.Count;
         foreach (Squad squad in _pendingSquads)
         {
             _squads[squad.Id] = squad;
@@ -82,9 +93,11 @@ internal sealed class SquadStore
 
         _memberships.AddRange(_pendingMemberships);
         _invites.AddRange(_pendingInvites);
+        _claims.AddRange(_pendingClaims);
         _pendingSquads.Clear();
         _pendingMemberships.Clear();
         _pendingInvites.Clear();
+        _pendingClaims.Clear();
         return count;
     }
 
@@ -94,6 +107,7 @@ internal sealed class SquadStore
         _pendingSquads.Clear();
         _pendingMemberships.Clear();
         _pendingInvites.Clear();
+        _pendingClaims.Clear();
     }
 
     /// <summary>Finds a committed user by identity, or <see langword="null"/>.</summary>
@@ -146,6 +160,15 @@ internal sealed class SquadStore
     /// <summary>Lists the committed invites of a squad.</summary>
     public IReadOnlyList<Invite> ListInvitesForSquad(Guid squadId) =>
         _invites.Where(i => i.SquadId == squadId).ToList();
+
+    /// <summary>
+    /// Finds the current open claim for a membership: the most recently committed claim for it whose
+    /// state is not <see cref="GuestClaimState.Reversed"/>, so an in-flight (pending/consented) claim
+    /// <em>and</em> a completed claim both resolve — mirroring the production repository the reversal
+    /// handler relies on to record its audit. Returns <see langword="null"/> when none remains open.
+    /// </summary>
+    public GuestClaim? FindOpenClaimForMembership(Guid membershipId) =>
+        _claims.LastOrDefault(c => c.MembershipId == membershipId && c.State != GuestClaimState.Reversed);
 
     /// <summary>Counts the committed invites of a squad whose effective state at <paramref name="now"/> is active.</summary>
     public int CountActiveInvites(Guid squadId, DateTimeOffset now) =>
@@ -294,6 +317,34 @@ internal sealed class FakeInviteRepository : IInviteRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(_store.CountActiveInvites(squadId, _clock.GetUtcNow()));
+    }
+}
+
+/// <summary>
+/// In-memory <see cref="IGuestClaimRepository"/> over a <see cref="SquadStore"/>. <c>AddAsync</c> only
+/// stages the claim (committed on a successful unit-of-work save), while
+/// <c>GetOpenForMembershipAsync</c> resolves the current non-reversed claim from the committed set —
+/// including a completed claim — so consent, completion, and the reversal audit all act on the
+/// in-flight record exactly as the production repository would.
+/// </summary>
+internal sealed class FakeGuestClaimRepository : IGuestClaimRepository
+{
+    private readonly SquadStore _store;
+
+    public FakeGuestClaimRepository(SquadStore store) => _store = store;
+
+    public Task AddAsync(GuestClaim claim, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(claim);
+        _store.StageClaim(claim);
+        return Task.CompletedTask;
+    }
+
+    public Task<GuestClaim?> GetOpenForMembershipAsync(Guid membershipId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.FindOpenClaimForMembership(membershipId));
     }
 }
 
