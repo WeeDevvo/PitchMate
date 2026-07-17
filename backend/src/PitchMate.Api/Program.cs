@@ -1,6 +1,7 @@
 using PitchMate.Api.Auth;
 using PitchMate.Api.Auth.Endpoints;
 using PitchMate.Api.Auth.OpenApi;
+using PitchMate.Api.Squads;
 using PitchMate.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +28,10 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // selects the email sender, and registers the auth use cases and their Infrastructure
 // implementations (Requirements 11.7, 12.6, 15).
 builder.Services.AddAuth(builder.Configuration);
+
+// Squads composition root: binds the Squads:Invites options, registers the squad use cases, and
+// wires their Infrastructure implementations behind the Application abstractions (Requirement 19.4).
+builder.Services.AddSquads(builder.Configuration);
 
 var app = builder.Build();
 

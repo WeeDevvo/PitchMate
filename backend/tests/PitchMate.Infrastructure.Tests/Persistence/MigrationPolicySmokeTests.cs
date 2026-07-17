@@ -17,14 +17,16 @@ namespace PitchMate.Infrastructure.Tests.Persistence;
 /// in <c>PitchMate.Infrastructure</c> and the <c>PitchMate.Api</c> startup) — Req 12.1, 12.2. The
 /// test-only <see cref="PostgreSqlContainerFixture"/> legitimately uses <c>EnsureCreatedAsync</c>,
 /// so only the production projects are scanned.</item>
-/// <item>Exactly one EF Core migration exists in the <see cref="PitchMateDbContext"/> migrations
-/// assembly, with no predecessor, representing the initial schema baseline — Req 11.1.</item>
+/// <item>The initial schema baseline migration exists in the <see cref="PitchMateDbContext"/>
+/// migrations assembly and is the <em>earliest</em> migration, with no predecessor — Req 11.1.
+/// Later feature specs add further migrations after the baseline, so these tests assert the
+/// baseline is present and first rather than that it is the only migration.</item>
 /// </list>
 /// <para>Validates: Requirements 11.1, 12.1, 12.2.</para>
 /// </summary>
 public sealed class MigrationPolicySmokeTests
 {
-    /// <summary>The single expected migration id (the initial schema baseline).</summary>
+    /// <summary>The expected initial schema baseline migration id (the earliest migration, no predecessor).</summary>
     private const string InitialMigrationId = "20260625201240_InitialCreate";
 
     /// <summary>
@@ -90,43 +92,50 @@ public sealed class MigrationPolicySmokeTests
                 + string.Join(Environment.NewLine, violations));
     }
 
-    // Requirement 11.1 — exactly one migration in the DbContext's migrations assembly, no predecessor.
+    // Requirement 11.1 — the initial baseline migration exists in the DbContext's migrations assembly
+    // and is the earliest one (no predecessor). Later specs add further migrations after it.
     /// <summary>
     /// Resolves the EF Core migrations assembly for <see cref="PitchMateDbContext"/> (constructed via
-    /// the design-time factory, which opens no database connection) and asserts it contains exactly one
-    /// migration whose id is the initial baseline.
+    /// the design-time factory, which opens no database connection) and asserts the initial baseline
+    /// migration is present and is the earliest migration in id order — so nothing precedes it.
     /// </summary>
     [Fact]
-    public void MigrationsAssemblyContainsExactlyOneInitialBaselineMigration()
+    public void MigrationsAssemblyContainsInitialBaselineMigrationAsEarliest()
     {
         using var context = new PitchMateDbContextFactory().CreateDbContext([]);
 
         var migrationsAssembly = context.GetService<IMigrationsAssembly>();
-        var migrations = migrationsAssembly.Migrations;
+        var migrationIds = migrationsAssembly.Migrations.Keys.ToList();
 
-        var single = Assert.Single(migrations);
-        Assert.Equal(InitialMigrationId, single.Key);
+        Assert.Contains(InitialMigrationId, migrationIds);
+        Assert.Equal(
+            InitialMigrationId,
+            migrationIds.OrderBy(id => id, StringComparer.Ordinal).First());
     }
 
-    // Requirement 11.1 — cross-check via the [Migration] attribute that exactly one migration type ships.
+    // Requirement 11.1 — cross-check via the [Migration] attribute that the initial baseline migration
+    // type ships and is the earliest declared migration (no predecessor).
     /// <summary>
     /// Independently of EF's migrations-assembly view, reflects over the Infrastructure assembly for
     /// concrete <see cref="Migration"/> types carrying the <see cref="MigrationAttribute"/> and asserts
-    /// there is exactly one, identified as the initial baseline — so no preceding migration exists.
+    /// the initial baseline is among them and is the earliest by id — so no preceding migration exists.
     /// </summary>
     [Fact]
-    public void InfrastructureAssemblyDeclaresExactlyOneMigrationType()
+    public void InfrastructureAssemblyDeclaresInitialBaselineMigrationTypeAsEarliest()
     {
         var infrastructureAssembly = typeof(PitchMateDbContext).Assembly;
 
-        var migrationTypes = infrastructureAssembly.GetTypes()
+        var migrationIds = infrastructureAssembly.GetTypes()
             .Where(t => typeof(Migration).IsAssignableFrom(t)
                 && !t.IsAbstract
                 && t.GetCustomAttribute<MigrationAttribute>() is not null)
+            .Select(t => t.GetCustomAttribute<MigrationAttribute>()!.Id)
             .ToList();
 
-        var migrationType = Assert.Single(migrationTypes);
-        Assert.Equal(InitialMigrationId, migrationType.GetCustomAttribute<MigrationAttribute>()!.Id);
+        Assert.Contains(InitialMigrationId, migrationIds);
+        Assert.Equal(
+            InitialMigrationId,
+            migrationIds.OrderBy(id => id, StringComparer.Ordinal).First());
     }
 
     /// <summary>

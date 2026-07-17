@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PitchMate.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using PitchMate.Infrastructure.Persistence;
 namespace PitchMate.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PitchMateDbContext))]
-    partial class PitchMateDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260717135126_AddSquadsAndMembership")]
+    partial class AddSquadsAndMembership
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

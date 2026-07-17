@@ -24,36 +24,37 @@ public class PurgeAndErasureProperties
     /// <summary>A fixed UTC anchor the fake clock reads from for purge-due selection.</summary>
     private static readonly DateTimeOffset Anchor = new(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
-    // Feature: squads-and-membership, Property 37: Purge removes the squad, anonymising history-bearing
-    // memberships - for any soft-deleted squad once the clock reaches or passes its purge instant, the
-    // squad and its memberships are permanently removed, except that each membership carrying match
-    // history is anonymised (de-identified) and retained rather than removed. A soft-deleted squad
+    // Feature: squads-and-membership, Property 37: Purge removes the squad and all of its memberships -
+    // for any soft-deleted squad once the clock reaches or passes its purge instant, the squad and
+    // every one of its memberships are permanently removed. A full squad purge destroys the squad and
+    // its entire match history together, so the anonymisation-over-deletion rule (which governs erasure
+    // within a SURVIVING squad) does not apply and no membership is retained. A soft-deleted squad
     // whose purge instant is still in the future is not touched.
-    // Validates: Requirements 17.5, 18.1, 18.2, 18.7
+    // Validates: Requirements 17.5
     [Property(MaxTest = 200)]
     [Trait("Property", "37")]
-    public Property Property37_PurgeRemovesSquadAnonymisingHistoryBearing() =>
+    public Property Property37_PurgeRemovesSquadAndAllMemberships() =>
         Prop.ForAll(
             Arb.From(HistoryFlagsGen(1, 6)),
             historyFlags =>
             {
                 var clock = new SquadFakeClock(Anchor);
                 var store = new SquadStore();
-                var probe = new ConfigurableMembershipHistoryProbe();
 
                 // A due squad: soft-deleted with a purge instant already reached.
                 Squad due = Squad.Create("Due Squad").Value!;
                 due.MarkForDeletion(Anchor.AddDays(-1));
                 store.AddCommittedSquad(due, softDeleted: true);
 
-                var dueMemberships = new List<(Guid Id, bool HasHistory)>();
+                // A mix of memberships, some standing in for history-bearing ones: a full purge removes
+                // them all regardless, so the history flags must not change the outcome.
+                var dueMembershipIds = new List<Guid>();
                 for (int i = 0; i < historyFlags.Count; i++)
                 {
                     SquadMembership member =
                         SquadMembership.CreateRegistered(due.Id, Guid.NewGuid(), $"DueMember{i}").Value!;
                     store.AddCommittedMembership(member);
-                    probe.SetHasHistory(member.Id, historyFlags[i]);
-                    dueMemberships.Add((member.Id, historyFlags[i]));
+                    dueMembershipIds.Add(member.Id);
                 }
 
                 // A soft-deleted squad whose purge instant is still in the future: must be untouched.
@@ -61,19 +62,13 @@ public class PurgeAndErasureProperties
                 notDue.MarkForDeletion(Anchor.AddDays(10));
                 store.AddCommittedSquad(notDue, softDeleted: true);
 
-                SquadMembership notDueHistory =
-                    SquadMembership.CreateRegistered(notDue.Id, Guid.NewGuid(), "SurvivorHistory").Value!;
-                store.AddCommittedMembership(notDueHistory);
-                probe.SetHasHistory(notDueHistory.Id, hasHistory: true);
-
-                SquadMembership notDueNoHistory =
-                    SquadMembership.CreateRegistered(notDue.Id, Guid.NewGuid(), "SurvivorNoHistory").Value!;
-                store.AddCommittedMembership(notDueNoHistory);
+                SquadMembership notDueMember =
+                    SquadMembership.CreateRegistered(notDue.Id, Guid.NewGuid(), "Survivor").Value!;
+                store.AddCommittedMembership(notDueMember);
 
                 var handler = new PurgeSquadHandler(
                     new FakeSquadRepository(store),
                     new FakeSquadMembershipRepository(store),
-                    probe,
                     new FakeSquadUnitOfWork(store),
                     clock);
 
@@ -84,32 +79,17 @@ public class PurgeAndErasureProperties
                     && result.Value == 1
                     && !store.Squads.ContainsKey(due.Id);
 
-                // History-bearing due memberships are anonymised and retained; the rest are removed.
-                bool membershipsHandled = dueMemberships.All(m =>
-                {
-                    SquadMembership? after = store.FindMembershipById(m.Id);
-                    if (m.HasHistory)
-                    {
-                        return after is not null
-                            && after.DisplayName == SquadMembership.DisplayNamePlaceholder
-                            && after.DisplayNameNormalized is null
-                            && after.UserId is null;
-                    }
+                // Every due membership is permanently removed — none retained or anonymised.
+                bool allDueMembershipsRemoved = dueMembershipIds.All(id => store.FindMembershipById(id) is null);
 
-                    return after is null;
-                });
-
-                // The not-yet-due squad and both its memberships are left entirely untouched.
-                SquadMembership? survivorHistory = store.FindMembershipById(notDueHistory.Id);
-                SquadMembership? survivorNoHistory = store.FindMembershipById(notDueNoHistory.Id);
+                // The not-yet-due squad and its membership are left entirely untouched.
+                SquadMembership? survivor = store.FindMembershipById(notDueMember.Id);
                 bool notDueUntouched = store.Squads.ContainsKey(notDue.Id)
-                    && survivorHistory is not null
-                    && survivorHistory.DisplayName == "SurvivorHistory"
-                    && survivorHistory.UserId is not null
-                    && survivorNoHistory is not null
-                    && survivorNoHistory.DisplayName == "SurvivorNoHistory";
+                    && survivor is not null
+                    && survivor.DisplayName == "Survivor"
+                    && survivor.UserId is not null;
 
-                return (dueSquadPurged && membershipsHandled && notDueUntouched).ToProperty();
+                return (dueSquadPurged && allDueMembershipsRemoved && notDueUntouched).ToProperty();
             });
 
     // Feature: squads-and-membership, Property 38: Erasure anonymises history-bearing memberships and
