@@ -41,6 +41,23 @@ public interface INotificationRepository
     Task<IReadOnlyList<SquadMembership>> ResolveRegisteredAsync(Guid squadId, IReadOnlyCollection<Guid> ids, CancellationToken ct);
 
     /// <summary>
+    /// Resolves the deliverable email address of each recipient membership in one query that joins the
+    /// supplied <paramref name="membershipIds"/> (registered memberships of the owning
+    /// <paramref name="squadId"/>) to their backing user, so best-effort email dispatch avoids an N+1
+    /// per-recipient lookup. The returned map is keyed by recipient membership id and contains an entry
+    /// only for a membership whose backing user has a <b>deliverable</b> email address — a recorded
+    /// address that is neither absent nor empty. A membership with no deliverable address is simply
+    /// omitted from the map, which the publisher treats as a non-error skip (Requirement 6.6). Contains no
+    /// entry for guests or memberships outside the squad. Returns an empty map when none match.
+    /// </summary>
+    /// <param name="squadId">The owning squad whose recipient emails are resolved.</param>
+    /// <param name="membershipIds">The resolved recipient membership ids whose emails are wanted.</param>
+    /// <param name="ct">A token that surfaces cancellation to the caller.</param>
+    /// <returns>A map of recipient membership id to deliverable email address; empty when none match.</returns>
+    Task<IReadOnlyDictionary<Guid, string>> ResolveRecipientEmailsAsync(
+        Guid squadId, IReadOnlyCollection<Guid> membershipIds, CancellationToken ct);
+
+    /// <summary>
     /// Lists the caller's own notifications — records whose recipient membership is backed by
     /// <paramref name="userId"/> — ordered by creation instant descending then id descending for a stable
     /// total order, capped at <paramref name="limit"/> and optionally scoped to a single
