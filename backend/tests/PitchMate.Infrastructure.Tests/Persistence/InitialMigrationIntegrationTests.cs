@@ -26,7 +26,11 @@ namespace PitchMate.Infrastructure.Tests.Persistence;
 [Collection(PostgreSqlCollection.Name)]
 public sealed class InitialMigrationIntegrationTests
 {
-    /// <summary>The identifier of the one and only initial migration in the Infrastructure project.</summary>
+    /// <summary>
+    /// The identifier of the initial migration in the Infrastructure project. Later specs add
+    /// further migrations, so tests assert this migration is present among those applied rather
+    /// than that it is the only one.
+    /// </summary>
     private const string InitialMigrationId = "20260625201240_InitialCreate";
 
     private readonly PostgreSqlContainerFixture _fixture;
@@ -55,9 +59,12 @@ public sealed class InitialMigrationIntegrationTests
 
             await context.Database.MigrateAsync();
 
-            // The migration records exactly its identifier in the history (Req 11.2).
+            // The migration records its identifier in the history (Req 11.2). Later specs add
+            // further migrations, so assert the initial migration is among those applied rather
+            // than that it is the only one — the schema-matches-model assertion below still proves
+            // the full applied set produced exactly the model's tables.
             var applied = (await context.Database.GetAppliedMigrationsAsync()).ToList();
-            Assert.Equal(new[] { InitialMigrationId }, applied);
+            Assert.Contains(InitialMigrationId, applied);
 
             // The migrations-history table itself exists.
             Assert.True(await MigrationTestSupport.TableExistsAsync(
@@ -126,8 +133,8 @@ public sealed class InitialMigrationIntegrationTests
                 .OrderBy(t => t, StringComparer.Ordinal).ToList();
 
             Assert.Equal(tablesBefore, tablesAfter);
-            Assert.Equal(
-                new[] { InitialMigrationId },
+            Assert.Contains(
+                InitialMigrationId,
                 (await context.Database.GetAppliedMigrationsAsync()).ToList());
         });
     }

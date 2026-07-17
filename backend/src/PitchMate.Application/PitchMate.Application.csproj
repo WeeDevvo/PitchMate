@@ -8,6 +8,12 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.9" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The SquadAuthorization gate is an internal helper exercised directly by the
+         Application property tests (squads-and-membership design Properties 8 and 9). -->
+    <InternalsVisibleTo Include="PitchMate.Application.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

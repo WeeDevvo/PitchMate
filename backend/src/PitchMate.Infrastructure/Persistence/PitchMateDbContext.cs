@@ -29,6 +29,12 @@ public class PitchMateDbContext : DbContext
     private readonly TimeProvider _clock;
     private readonly ICurrentUserAccessor _currentUser;
 
+    // Entities explicitly marked for a genuine, permanent delete (the purge and erasure paths),
+    // which must bypass the soft-delete reinterpretation the save pipeline otherwise applies to
+    // every BaseEntity (Req 17.5, 18.2). Reference identity is used so a marked instance is matched
+    // regardless of any value-equality semantics. Cleared after each successful save.
+    private readonly HashSet<BaseEntity> _hardDeletes = new(ReferenceEqualityComparer.Instance);
+
     /// <summary>
     /// Initialises the context with its options, an injected clock used to stamp audit
     /// timestamps, and the accessor that supplies the acting user for audit metadata.
@@ -79,16 +85,36 @@ public class PitchMateDbContext : DbContext
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the asynchronous save.</param>
     /// <returns>The count of state-changed entities persisted.</returns>
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // Reject invalid identifiers before any I/O (Req 9.4).
         ApplyIdValidation();
 
-        // Stamp audit fields and convert deletions to soft-deletes (Req 2, 3).
+        // Stamp audit fields and convert deletions to soft-deletes (Req 2, 3), except for entities
+        // explicitly marked for a permanent delete, which keep their EF Deleted state (Req 17.5, 18.2).
         ApplyAuditAndSoftDelete(this, _clock.GetUtcNow(), _currentUser.CurrentUserId);
 
-        return base.SaveChangesAsync(cancellationToken);
+        // A soft-deleted owner keeps its row, so its owned dependents (which EF cascaded to Deleted)
+        // must be kept too rather than physically removed.
+        RetainOwnedDependentsOfSoftDeletedOwners(this);
+
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        // The permanent-delete markers only apply to the batch just committed.
+        _hardDeletes.Clear();
+        return result;
     }
+
+    /// <summary>
+    /// Marks <paramref name="entity"/> for a genuine, permanent delete so the save pipeline leaves
+    /// its EF <see cref="EntityState.Deleted"/> state intact rather than reinterpreting it as a
+    /// soft-delete (Req 17.5, 18.2). The caller is responsible for also placing the entity in the
+    /// <see cref="EntityState.Deleted"/> state (via <c>Set&lt;T&gt;().Remove</c>); the delete is
+    /// committed on the next <see cref="SaveChangesAsync"/>. Used by the squad purge and erasure
+    /// repositories.
+    /// </summary>
+    /// <param name="entity">The entity to remove permanently on the next save.</param>
+    internal void MarkForHardDelete(BaseEntity entity) => _hardDeletes.Add(entity);
 
     /// <summary>
     /// Rejects any tracked entity that is being inserted, updated, or deleted while its
@@ -139,10 +165,92 @@ public class PitchMateDbContext : DbContext
                     break;
 
                 case EntityState.Deleted:
-                    ApplyDeletion(entry, now, actor);
+                    // An entity explicitly marked for permanent removal keeps its EF Deleted state
+                    // so it is genuinely deleted (Req 17.5, 18.2); everything else soft-deletes.
+                    if (!context._hardDeletes.Contains(entry.Entity))
+                    {
+                        ApplyDeletion(entry, now, actor);
+                    }
+
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Reinterprets EF Core's cascade of an <em>owned</em> dependent to <see cref="EntityState.Deleted"/>
+    /// when its owner is only being soft-deleted. Because a soft-deleted owner keeps its row (its
+    /// delete was rewritten to a soft-delete by <see cref="ApplyAuditAndSoftDelete"/>), its owned rows —
+    /// which are not <see cref="BaseEntity"/> instances and so are never soft-deletable themselves
+    /// (e.g. a squad's feature flags) — must be retained alongside it; otherwise a later restore would
+    /// find them gone. Each such cascaded-delete entry is reverted to <see cref="EntityState.Unchanged"/>.
+    /// A genuinely hard-deleted owner (the purge/erasure path) is excluded, so its owned rows are still
+    /// removed with it (Req 17.4, 17.5).
+    /// </summary>
+    private static void RetainOwnedDependentsOfSoftDeletedOwners(PitchMateDbContext context)
+    {
+        foreach (var entry in context.ChangeTracker.Entries().ToList())
+        {
+            if (entry.State != EntityState.Deleted || !entry.Metadata.IsOwned())
+            {
+                continue;
+            }
+
+            var owner = FindOwnerEntity(context, entry);
+
+            // Keep the owned row only when its owner is being soft-deleted (row retained), not
+            // hard-deleted (row genuinely removed, so its owned rows go with it).
+            if (owner is not null && owner.IsDeleted && !context._hardDeletes.Contains(owner))
+            {
+                entry.State = EntityState.Unchanged;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resolves the owning <see cref="BaseEntity"/> of an owned dependent entry by matching the
+    /// dependent's ownership foreign-key values against the tracked principal's primary key.
+    /// </summary>
+    private static BaseEntity? FindOwnerEntity(PitchMateDbContext context, EntityEntry ownedEntry)
+    {
+        var ownership = ownedEntry.Metadata.FindOwnership();
+        if (ownership is null)
+        {
+            return null;
+        }
+
+        var principalClrType = ownership.PrincipalEntityType.ClrType;
+        var foreignKeyValues = ownership.Properties
+            .Select(property => ownedEntry.Property(property.Name).CurrentValue)
+            .ToArray();
+        var principalKeyNames = ownership.PrincipalKey.Properties
+            .Select(property => property.Name)
+            .ToArray();
+
+        foreach (var candidate in context.ChangeTracker.Entries<BaseEntity>())
+        {
+            if (!principalClrType.IsInstanceOfType(candidate.Entity))
+            {
+                continue;
+            }
+
+            var matches = true;
+            for (var i = 0; i < principalKeyNames.Length; i++)
+            {
+                if (!Equals(candidate.Property(principalKeyNames[i]).CurrentValue, foreignKeyValues[i]))
+                {
+                    matches = false;
+                    break;
+                }
+            }
+
+            if (matches)
+            {
+                return candidate.Entity;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

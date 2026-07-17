@@ -1,6 +1,8 @@
 using PitchMate.Api.Auth;
 using PitchMate.Api.Auth.Endpoints;
 using PitchMate.Api.Auth.OpenApi;
+using PitchMate.Api.Squads;
+using PitchMate.Api.Squads.Endpoints;
 using PitchMate.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +30,10 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // implementations (Requirements 11.7, 12.6, 15).
 builder.Services.AddAuth(builder.Configuration);
 
+// Squads composition root: binds the Squads:Invites options, registers the squad use cases, and
+// wires their Infrastructure implementations behind the Application abstractions (Requirement 19.4).
+builder.Services.AddSquads(builder.Configuration);
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -51,6 +57,12 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
 // linking, account, and GDPR operations (Requirement 13). Each endpoint delegates to an
 // Application use case and maps failures through the single AuthErrorCode → HTTP seam.
 app.MapAuthEndpoints();
+
+// Squad endpoints: squad create/read/list, role and ownership actions, leave/removal, invites
+// (generate/list/revoke/redeem plus the anonymous pre-join preview), feature flags, guests, guest
+// claims, and the delete/reverse/export lifecycle (Requirement 19.4). Each endpoint delegates to an
+// Application use case and maps failures through the single SquadErrorCode → HTTP seam.
+app.MapSquadEndpoints();
 
 app.Run();
 
