@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -7,6 +8,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 using PitchMate.Api.Auth.Endpoints;
 using PitchMate.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
@@ -33,6 +36,13 @@ public sealed class RoutingApiFactory : WebApplicationFactory<LinkExternalProvid
     // Pinned image version, matching the Infrastructure test fixture (steering: pin versions).
     private const string PostgreSqlImage = "postgres:17.2";
 
+    // The token parameters the booted host verifies against. Held as constants so the factory both
+    // configures the JWT bearer pipeline with them and can mint tokens the pipeline will accept
+    // (a valid signing key is >= 32 bytes for HMAC-SHA256; this is a throwaway test value, no secret).
+    private const string SigningKey = "routing-tests-signing-key-that-is-at-least-32-bytes-long-000000";
+    private const string Issuer = "https://tests.pitch-mate.local";
+    private const string Audience = "pitchmate-routing-tests";
+
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder(PostgreSqlImage)
         .WithDatabase("pitchmate_api_tests")
         .WithUsername("pitchmate")
@@ -45,6 +55,37 @@ public sealed class RoutingApiFactory : WebApplicationFactory<LinkExternalProvid
     /// <summary>Opens a DI scope backed by the running host, for seeding and inspecting persisted state.</summary>
     public IServiceScope CreateScope() => Services.CreateScope();
 
+    /// <summary>
+    /// Mints a well-formed access token the booted host's JWT bearer pipeline accepts, stamping
+    /// <paramref name="userId"/> as the <c>sub</c> claim (the identifier the squad endpoints resolve
+    /// the acting user from). It is signed with the same key, algorithm, issuer, and audience the host
+    /// verifies against and is valid around the host's controllable <see cref="Clock"/>, so a request
+    /// bearing it reaches the endpoint handler rather than being rejected as unauthenticated.
+    /// </summary>
+    /// <param name="userId">The user identifier to stamp on the token's subject claim.</param>
+    /// <returns>A compact JWS access token accepted by the running host.</returns>
+    public string CreateAccessToken(Guid userId)
+    {
+        DateTimeOffset now = Clock.GetUtcNow();
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));
+
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = Issuer,
+            Audience = Audience,
+            IssuedAt = now.UtcDateTime,
+            NotBefore = now.AddMinutes(-1).UtcDateTime,
+            Expires = now.AddMinutes(15).UtcDateTime,
+            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256),
+            Claims = new Dictionary<string, object>
+            {
+                [JwtRegisteredClaimNames.Sub] = userId.ToString(),
+            },
+        };
+
+        return new JsonWebTokenHandler().CreateToken(descriptor);
+    }
+
     /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -56,9 +97,9 @@ public sealed class RoutingApiFactory : WebApplicationFactory<LinkExternalProvid
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Default"] = _container.GetConnectionString(),
-                ["Auth:Token:SigningKey"] = "routing-tests-signing-key-that-is-at-least-32-bytes-long-000000",
-                ["Auth:Token:Issuer"] = "https://tests.pitch-mate.local",
-                ["Auth:Token:Audience"] = "pitchmate-routing-tests",
+                ["Auth:Token:SigningKey"] = SigningKey,
+                ["Auth:Token:Issuer"] = Issuer,
+                ["Auth:Token:Audience"] = Audience,
                 ["Auth:Token:AccessTokenLifetime"] = "00:15:00",
                 ["Auth:Token:RefreshTokenLifetime"] = "30.00:00:00",
                 ["Auth:Google:ClientId"] = "routing-tests.apps.googleusercontent.com",

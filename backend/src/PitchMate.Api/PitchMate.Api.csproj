@@ -22,4 +22,11 @@
     <ProjectReference Include="..\PitchMate.Infrastructure\PitchMate.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The SquadErrorResults translation seam is the single SquadErrorCode -> HTTP mapping. It is
+         internal (the Api exposes no mapping logic on its public surface) and is unit-tested directly
+         by the Api tests (squads-and-membership tasks 19.3). -->
+    <InternalsVisibleTo Include="PitchMate.Api.Tests" />
+  </ItemGroup>
+
 </Project>
