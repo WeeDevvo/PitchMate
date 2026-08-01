@@ -1,6 +1,7 @@
 using FsCheck;
 using FsCheck.Fluent;
 using FsCheck.Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 using PitchMate.Application.Squads.UseCases;
 using PitchMate.Domain.Squads;
 using DomainResult = PitchMate.Domain.Squads.Result;
@@ -157,10 +158,16 @@ public class RoleChangeProperties
     private static DomainResult Invoke(SquadStore store, Operation operation, Guid actingUserId, Guid squadId, Guid targetId)
     {
         var memberships = new FakeSquadMembershipRepository(store);
+        var squads = new FakeSquadRepository(store);
         var unitOfWork = new FakeSquadUnitOfWork(store);
 
         return operation == Operation.Promote
-            ? new PromoteToAdminHandler(memberships, unitOfWork)
+            ? new PromoteToAdminHandler(
+                    memberships,
+                    squads,
+                    unitOfWork,
+                    new FakeNotificationPublisher(),
+                    NullLogger<PromoteToAdminHandler>.Instance)
                 .HandleAsync(new PromoteToAdminCommand(actingUserId, squadId, targetId), CancellationToken.None)
                 .GetAwaiter().GetResult()
             : new DemoteToMemberHandler(memberships, unitOfWork)

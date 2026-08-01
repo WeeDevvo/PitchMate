@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Logging;
 using PitchMate.Application.Auth.Abstractions;
 using PitchMate.Application.Common.Persistence;
+using PitchMate.Application.Notifications;
 using PitchMate.Domain.Auth;
 
 namespace PitchMate.Application.Auth.Gdpr;
@@ -35,7 +37,9 @@ public sealed class EraseUserHandler(
     IAuthIdentityRepository authIdentities,
     IRepository<PasswordCredential> passwordCredentials,
     IRefreshTokenStore refreshTokens,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    RemoveNotificationsForUserHandler? removeNotifications = null,
+    ILogger<EraseUserHandler>? logger = null)
 {
     /// <summary>
     /// Handles an <see cref="EraseUserCommand"/>, anonymising the user and destroying every
@@ -99,6 +103,47 @@ public sealed class EraseUserHandler(
         // state remains (Requirement 14.7).
         await unitOfWork.SaveChangesAsync(ct);
 
+        // Only after the user erasure has committed do we remove the user's in-app notifications,
+        // which carry no match-history integrity requirement and are therefore deleted rather than
+        // anonymised (notifications Requirements 11.1, 11.6). The removal runs on its own unit of work
+        // and never touches match or rating-replay data; any failure is logged (identifiers only) and
+        // swallowed so it can never roll back or surface through the committed erasure.
+        await RemoveNotificationsForErasedUserAsync(command.UserId, ct);
+
         return Result.Ok();
+    }
+
+    /// <summary>
+    /// Best-effort removal of every in-app notification backed by the erased user (notifications
+    /// Requirement 11.1). Mirrors the way the squad lifecycle hooks are wired: it runs only after the
+    /// erasure has committed, is isolated on its own unit of work, and swallows every failure — logging
+    /// identifiers only, never any PII — so a notifications-side problem never undoes the erasure.
+    /// </summary>
+    private async Task RemoveNotificationsForErasedUserAsync(Guid userId, CancellationToken ct)
+    {
+        if (removeNotifications is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var removal = await removeNotifications.HandleAsync(userId, ct);
+            if (!removal.IsSuccess)
+            {
+                logger?.LogWarning(
+                    "In-app notification removal for erased user failed (isolated; erasure stays committed). "
+                    + "UserId={UserId}, Reason={Reason}",
+                    userId, removal.Error?.Code);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        {
+            logger?.LogWarning(
+                ex,
+                "In-app notification removal for erased user threw (isolated; erasure stays committed). "
+                + "UserId={UserId}",
+                userId);
+        }
     }
 }

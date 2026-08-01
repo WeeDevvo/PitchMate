@@ -1,5 +1,6 @@
 using PitchMate.Application.Auth.Abstractions;
 using PitchMate.Application.Common.Persistence;
+using PitchMate.Application.Notifications;
 using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Domain.Auth;
 using PitchMate.Domain.Squads;
@@ -493,4 +494,57 @@ internal sealed class FakeSquadUnitOfWork : IUnitOfWork
 
         return Task.FromResult(_store.Commit());
     }
+}
+
+/// <summary>
+/// In-memory <see cref="INotificationPublisher"/> that records each publish call so producer-wiring
+/// tests can assert the notification type, owning squad, and directed target set, without persisting
+/// or emailing anything. It returns a configurable <see cref="PitchMate.Domain.Notifications.Result"/>
+/// (success by default) and can be told to throw, so the producers' best-effort isolation can be
+/// exercised. It is a real fake, not a mocking-framework stub.
+/// </summary>
+internal sealed class FakeNotificationPublisher : INotificationPublisher
+{
+    private readonly bool _throwOnPublish;
+    private readonly PitchMate.Domain.Notifications.Result _result;
+
+    public FakeNotificationPublisher(bool throwOnPublish = false)
+    {
+        _throwOnPublish = throwOnPublish;
+        _result = PitchMate.Domain.Notifications.Result.Ok();
+    }
+
+    public FakeNotificationPublisher(PitchMate.Domain.Notifications.Result result)
+    {
+        _throwOnPublish = false;
+        _result = result;
+    }
+
+    /// <summary>The publish calls captured in invocation order.</summary>
+    public List<PublishCall> Calls { get; } = new();
+
+    public Task<PitchMate.Domain.Notifications.Result> PublishAsync(
+        PitchMate.Domain.Notifications.NotificationType type,
+        Guid squadId,
+        IReadOnlyCollection<Guid> directedTargetMembershipIds,
+        NotificationContext context,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Calls.Add(new PublishCall(type, squadId, directedTargetMembershipIds.ToArray(), context));
+
+        if (_throwOnPublish)
+        {
+            throw new InvalidOperationException("Induced publish failure for isolation testing.");
+        }
+
+        return Task.FromResult(_result);
+    }
+
+    /// <summary>A single captured publish invocation.</summary>
+    internal sealed record PublishCall(
+        PitchMate.Domain.Notifications.NotificationType Type,
+        Guid SquadId,
+        IReadOnlyList<Guid> DirectedTargetMembershipIds,
+        NotificationContext Context);
 }

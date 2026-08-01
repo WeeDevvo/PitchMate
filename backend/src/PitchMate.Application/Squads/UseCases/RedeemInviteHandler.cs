@@ -1,7 +1,10 @@
+using Microsoft.Extensions.Logging;
 using PitchMate.Application.Auth.Abstractions;
 using PitchMate.Application.Common.Persistence;
+using PitchMate.Application.Notifications;
 using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Domain.Squads;
+using NotificationType = PitchMate.Domain.Notifications.NotificationType;
 
 namespace PitchMate.Application.Squads.UseCases;
 
@@ -45,38 +48,52 @@ public sealed class RedeemInviteHandler
     private readonly IInviteRepository _invites;
     private readonly ISquadMembershipRepository _memberships;
     private readonly IUserRepository _users;
+    private readonly ISquadRepository _squads;
     private readonly IInviteSecretService _inviteSecrets;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _clock;
+    private readonly INotificationPublisher _publisher;
+    private readonly ILogger<RedeemInviteHandler> _logger;
 
     /// <summary>
     /// Creates the handler with the invite repository it resolves the presented secret through, the
     /// membership repository it resolves the acting user's membership and display-name uniqueness in,
-    /// the user repository it derives a default display name from, the invite secret service it hashes
-    /// the presented secret with, the unit of work it commits through, and the clock it validates the
-    /// invite's redeemability against.
+    /// the user repository it derives a default display name from, the squad repository it reads the
+    /// squad name from for notification rendering, the invite secret service it hashes the presented
+    /// secret with, the unit of work it commits through, the clock it validates the invite's
+    /// redeemability against, the notification publisher it raises a <c>MemberJoined</c> notification
+    /// through after a committed join, and the logger it records an isolated publish failure with.
     /// </summary>
     public RedeemInviteHandler(
         IInviteRepository invites,
         ISquadMembershipRepository memberships,
         IUserRepository users,
+        ISquadRepository squads,
         IInviteSecretService inviteSecrets,
         IUnitOfWork unitOfWork,
-        TimeProvider clock)
+        TimeProvider clock,
+        INotificationPublisher publisher,
+        ILogger<RedeemInviteHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(invites);
         ArgumentNullException.ThrowIfNull(memberships);
         ArgumentNullException.ThrowIfNull(users);
+        ArgumentNullException.ThrowIfNull(squads);
         ArgumentNullException.ThrowIfNull(inviteSecrets);
         ArgumentNullException.ThrowIfNull(unitOfWork);
         ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _invites = invites;
         _memberships = memberships;
         _users = users;
+        _squads = squads;
         _inviteSecrets = inviteSecrets;
         _unitOfWork = unitOfWork;
         _clock = clock;
+        _publisher = publisher;
+        _logger = logger;
     }
 
     /// <summary>
@@ -207,7 +224,77 @@ public sealed class RedeemInviteHandler
 
         // Persist the new membership atomically; a failure persists no membership (Requirement 11.1).
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Only after the join has committed successfully, publish the MemberJoined notification to the
+        // squad's active Owner and Admins, excluding the joiner. A publish failure is isolated and never
+        // rolls back or surfaces from the committed join (Requirement 8.1, 8.5, 8.6, 8.8).
+        await PublishMemberJoinedAsync(membership, cancellationToken);
+
         return Result<RedeemInviteResult>.Ok(new RedeemInviteResult(membership.Id, RedeemOutcome.Joined));
+    }
+
+    /// <summary>
+    /// Publishes the <see cref="NotificationType.MemberJoined"/> notification for a freshly joined
+    /// member, directed to the squad's active Owner and Admin registered memberships and excluding the
+    /// joiner itself (Requirement 8.1). The whole attempt is best-effort and fully isolated: any failure
+    /// Result or thrown exception is caught, logged without contact PII — only the
+    /// <see cref="NotificationType"/>, the squad id, the joiner membership id, and a failure reason — and
+    /// swallowed, so the already-committed join is never rolled back and the failure never surfaces to
+    /// the caller (Requirement 8.5, 8.6, 8.8).
+    /// </summary>
+    private async Task PublishMemberJoinedAsync(SquadMembership joiner, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Resolve the recipients: the squad's active Owner and Admin registered memberships, minus
+            // the joiner (a joiner is a plain Member, but exclude by id defensively) (Requirement 8.1).
+            IReadOnlyList<SquadMembership> active =
+                await _memberships.ListForSquadAsync(joiner.SquadId, activeOnly: true, cancellationToken);
+
+            List<Guid> targets = active
+                .Where(m => !m.IsGuest
+                    && (m.Role == SquadRole.Owner || m.Role == SquadRole.Admin)
+                    && m.Id != joiner.Id)
+                .Select(m => m.Id)
+                .ToList();
+
+            // No Owner/Admin to notify (excluding the joiner) resolves to an empty directed set; nothing
+            // to publish.
+            if (targets.Count == 0)
+            {
+                return;
+            }
+
+            Squad? squad = await _squads.GetByIdAsync(joiner.SquadId, cancellationToken);
+            var context = new NotificationContext
+            {
+                SquadName = squad?.Name ?? string.Empty,
+                ActorDisplayName = joiner.DisplayName,
+            };
+
+            PitchMate.Domain.Notifications.Result published = await _publisher.PublishAsync(
+                NotificationType.MemberJoined, joiner.SquadId, targets, context, cancellationToken);
+
+            if (!published.IsSuccess)
+            {
+                _logger.LogWarning(
+                    "Notification publish failed after committed squad join (isolated; join retained). "
+                    + "Type={NotificationType}, SquadId={SquadId}, JoinerMembershipId={JoinerMembershipId}, "
+                    + "RecipientCount={RecipientCount}, Reason={Reason}",
+                    NotificationType.MemberJoined, joiner.SquadId, joiner.Id, targets.Count,
+                    published.Error?.Code.ToString() ?? "Unknown");
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        {
+            // The join is already committed; isolate every publish failure so it is never rolled back and
+            // never surfaces to the caller. Log identifiers and the exception type only — no contact PII
+            // (Requirement 8.5, 8.6, 8.8).
+            _logger.LogWarning(
+                "Notification publish threw after committed squad join (isolated; join retained). "
+                + "Type={NotificationType}, SquadId={SquadId}, JoinerMembershipId={JoinerMembershipId}, Reason={Reason}",
+                NotificationType.MemberJoined, joiner.SquadId, joiner.Id, ex.GetType().Name);
+        }
     }
 
     private async Task<Result<string>> ResolveJoinDisplayNameAsync(

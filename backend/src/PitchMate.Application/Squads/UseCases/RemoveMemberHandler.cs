@@ -1,6 +1,9 @@
+using Microsoft.Extensions.Logging;
 using PitchMate.Application.Common.Persistence;
+using PitchMate.Application.Notifications;
 using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Domain.Squads;
+using NotificationType = PitchMate.Domain.Notifications.NotificationType;
 
 namespace PitchMate.Application.Squads.UseCases;
 
@@ -25,15 +28,32 @@ public sealed class RemoveMemberHandler
 {
     private readonly ISquadMembershipRepository _memberships;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISquadRepository? _squads;
+    private readonly INotificationPublisher? _publisher;
+    private readonly ILogger<RemoveMemberHandler>? _logger;
 
-    /// <summary>Creates the handler with the membership repository it reads/stages through and the unit of work it commits with.</summary>
-    public RemoveMemberHandler(ISquadMembershipRepository memberships, IUnitOfWork unitOfWork)
+    /// <summary>
+    /// Creates the handler with the membership repository it reads/stages through and the unit of work it
+    /// commits with. The squad repository, notification publisher, and logger are optional collaborators
+    /// used only for the best-effort <see cref="NotificationType.RemovedFromSquad"/> notification raised
+    /// after a committed removal; production wiring supplies all three, and they are left absent in tests
+    /// that exercise only the removal itself (Requirement 8.3, 8.6, 8.8).
+    /// </summary>
+    public RemoveMemberHandler(
+        ISquadMembershipRepository memberships,
+        IUnitOfWork unitOfWork,
+        ISquadRepository? squads = null,
+        INotificationPublisher? publisher = null,
+        ILogger<RemoveMemberHandler>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(memberships);
         ArgumentNullException.ThrowIfNull(unitOfWork);
 
         _memberships = memberships;
         _unitOfWork = unitOfWork;
+        _squads = squads;
+        _publisher = publisher;
+        _logger = logger;
     }
 
     /// <summary>
@@ -94,7 +114,75 @@ public sealed class RemoveMemberHandler
         // the display name reserved (Requirement 8.1, 8.3, 8.6).
         target.Deactivate();
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Only after the removal has committed do we raise the directed RemovedFromSquad notification.
+        // The publish runs on its own unit of work, so any failure is logged (no PII) and swallowed and
+        // can never roll back or surface through the committed removal (Requirement 8.3, 8.6, 8.8).
+        await PublishRemovedFromSquadAsync(command.SquadId, acting!, target, cancellationToken);
         return Result.Ok();
+    }
+
+    /// <summary>
+    /// Raises the best-effort <see cref="NotificationType.RemovedFromSquad"/> notification directed to the
+    /// now-<see cref="MembershipState.Inactive"/> removed membership. The publisher permits a directed
+    /// target that became inactive as a result of this very event. Every failure — an unresolved squad, a
+    /// failed publish result, or a thrown exception — is logged with identifiers only (never a display
+    /// name, email, or notification content) and swallowed so the committed removal is unaffected
+    /// (Requirement 8.3, 8.6, 8.8).
+    /// </summary>
+    private async Task PublishRemovedFromSquadAsync(
+        Guid squadId,
+        SquadMembership actor,
+        SquadMembership removed,
+        CancellationToken cancellationToken)
+    {
+        if (_publisher is null || _squads is null)
+        {
+            return;
+        }
+
+        try
+        {
+            Squad? squad = await _squads.GetByIdAsync(squadId, cancellationToken);
+            if (squad is null)
+            {
+                _logger?.LogWarning(
+                    "RemovedFromSquad notification skipped: owning squad could not be resolved. "
+                    + "Type={NotificationType}, SquadId={SquadId}, RemovedMembershipId={RemovedMembershipId}",
+                    NotificationType.RemovedFromSquad, squadId, removed.Id);
+                return;
+            }
+
+            var context = new NotificationContext
+            {
+                SquadName = squad.Name,
+                ActorDisplayName = actor.DisplayName,
+                AffectedMemberDisplayName = removed.DisplayName,
+            };
+
+            var publish = await _publisher.PublishAsync(
+                NotificationType.RemovedFromSquad,
+                squadId,
+                [removed.Id],
+                context,
+                cancellationToken);
+
+            if (!publish.IsSuccess)
+            {
+                _logger?.LogWarning(
+                    "RemovedFromSquad notification publish failed (isolated; removal stays committed). "
+                    + "Type={NotificationType}, SquadId={SquadId}, RemovedMembershipId={RemovedMembershipId}, Reason={Reason}",
+                    NotificationType.RemovedFromSquad, squadId, removed.Id, publish.Error?.Code);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        {
+            _logger?.LogWarning(
+                ex,
+                "RemovedFromSquad notification publish threw (isolated; removal stays committed). "
+                + "Type={NotificationType}, SquadId={SquadId}, RemovedMembershipId={RemovedMembershipId}",
+                NotificationType.RemovedFromSquad, squadId, removed.Id);
+        }
     }
 
     private static Result PendingDeletion() => Result.Fail(new SquadError(

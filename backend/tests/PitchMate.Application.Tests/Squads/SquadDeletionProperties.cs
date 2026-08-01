@@ -1,6 +1,7 @@
 using FsCheck;
 using FsCheck.Fluent;
 using FsCheck.Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 using PitchMate.Application.Common.Persistence;
 using PitchMate.Application.Squads.UseCases;
 using PitchMate.Domain.Squads;
@@ -347,7 +348,12 @@ public class SquadDeletionProperties
 
             return action switch
             {
-                PendingAction.Promote => new PromoteToAdminHandler(memberships, unitOfWork)
+                PendingAction.Promote => new PromoteToAdminHandler(
+                        memberships,
+                        squads,
+                        unitOfWork,
+                        new FakeNotificationPublisher(),
+                        NullLogger<PromoteToAdminHandler>.Instance)
                     .HandleAsync(new PromoteToAdminCommand(OwnerUserId, SquadId, MemberMembershipId), CancellationToken.None)
                     .GetAwaiter().GetResult(),
 
@@ -375,7 +381,16 @@ public class SquadDeletionProperties
                     .HandleAsync(new RevokeInviteCommand(OwnerUserId, SquadId, InviteId), CancellationToken.None)
                     .GetAwaiter().GetResult(),
 
-                PendingAction.RedeemInvite => new RedeemInviteHandler(invites, memberships, users, Secrets, unitOfWork, Clock)
+                PendingAction.RedeemInvite => new RedeemInviteHandler(
+                        invites,
+                        memberships,
+                        users,
+                        squads,
+                        Secrets,
+                        unitOfWork,
+                        Clock,
+                        new FakeNotificationPublisher(),
+                        NullLogger<RedeemInviteHandler>.Instance)
                     .HandleAsync(new RedeemInviteCommand(Guid.NewGuid(), InviteSecretValue, "NewJoiner"), CancellationToken.None)
                     .GetAwaiter().GetResult().ToResult(),
 

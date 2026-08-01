@@ -410,6 +410,86 @@ namespace PitchMate.Infrastructure.Persistence.Migrations
                     b.ToTable("user", (string)null);
                 });
 
+            modelBuilder.Entity("PitchMate.Domain.Notifications.InAppNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("body");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<int>("ReadState")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("read_state");
+
+                    b.Property<Guid>("RecipientMembershipId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recipient_membership_id");
+
+                    b.Property<Guid>("SquadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("squad_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_in_app_notification");
+
+                    b.HasIndex("RecipientMembershipId")
+                        .HasDatabaseName("ix_in_app_notification_recipient_unread")
+                        .HasFilter("read_state = 0");
+
+                    b.HasIndex("RecipientMembershipId", "CreatedAt", "Id")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("ix_in_app_notification_recipient_created");
+
+                    b.ToTable("in_app_notification", (string)null);
+                });
+
             modelBuilder.Entity("PitchMate.Domain.Squads.GuestClaim", b =>
                 {
                     b.Property<Guid>("Id")
