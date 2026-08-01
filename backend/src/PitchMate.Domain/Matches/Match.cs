@@ -1,5 +1,10 @@
 using PitchMate.Domain.Common;
+using PitchMate.Domain.Rating;
 using PitchMate.Domain.Squads;
+
+// Alias the rating value type: within PitchMate.Domain.Matches the unqualified name `Rating`
+// otherwise binds to the sibling namespace PitchMate.Domain.Rating rather than the Rating record.
+using PlayerRating = PitchMate.Domain.Rating.Rating;
 
 namespace PitchMate.Domain.Matches;
 
@@ -113,6 +118,14 @@ public sealed class Match : BaseEntity
     /// (Requirement 9.3).
     /// </summary>
     public KickoffLineup? KickoffLineup { get; private set; }
+
+    /// <summary>
+    /// The recorded result of the played match — its fidelity and each team's final score — or
+    /// <see langword="null"/> before a result has been recorded (Requirement 11.2, 11.3). Set only by
+    /// a successful <see cref="RecordResult"/>; every rejected recording leaves it unchanged
+    /// (Requirement 11.6, 11.7).
+    /// </summary>
+    public MatchResult? RecordedResult { get; private set; }
 
     /// <summary>
     /// Creates a match draft in <see cref="MatchState.GatheringAvailability"/> for
@@ -854,6 +867,212 @@ public sealed class Match : BaseEntity
 
         State = MatchState.InProgress;
         return Result.Ok();
+    }
+
+    /// <summary>
+    /// Records <paramref name="result"/> as the played match's outcome, storing each team's final
+    /// score at the result's fidelity (Requirement 11.2, 11.3). Permitted only while the match is in
+    /// <see cref="MatchState.InProgress"/>; from any other state an
+    /// <see cref="MatchErrorCode.InvalidState"/> failure naming the required and current state is
+    /// returned and no result is stored (Requirement 11.6). Validation, in order — each failure leaves
+    /// <see cref="RecordedResult"/> unchanged:
+    /// <list type="bullet">
+    ///   <item>a <see cref="ResultFidelity.Rich"/> result is accepted only when
+    ///   <paramref name="liveTrackingEnabled"/> is <see langword="true"/>; otherwise a
+    ///   <see cref="MatchErrorCode.LiveTrackingDisabled"/> failure is returned (Requirement 11.4);</item>
+    ///   <item>every supplied score must be a whole number from <see cref="MatchResult.MinScore"/> to
+    ///   <see cref="MatchResult.MaxScore"/> inclusive — a negative or greater-than-99 score is rejected
+    ///   with a <see cref="MatchErrorCode.ValidationFailed"/> failure identifying the offending score
+    ///   (Requirement 11.7). A non-whole score is structurally unrepresentable because a score is an
+    ///   <see cref="int"/>;</item>
+    ///   <item>every score must reference one of the match's teams; a score for a team that is not one
+    ///   of the match's teams is rejected identifying the offending score (Requirement 11.7);</item>
+    ///   <item>no team may be scored more than once, and every one of the match's teams must have a
+    ///   score — a missing score for any team is rejected identifying that team (Requirement 11.7).</item>
+    /// </list>
+    /// On success the supplied result is stored as <see cref="RecordedResult"/> and the match remains
+    /// <see cref="MatchState.InProgress"/> (completion is a separate transition). Scores map to the
+    /// match's working <see cref="Teams"/>, which correspond one-to-one to the captured
+    /// <see cref="KickoffLineup"/> teams.
+    /// </summary>
+    /// <param name="result">The proposed result carrying the fidelity and each team's final score.</param>
+    /// <param name="liveTrackingEnabled">Whether the match's squad has live match tracking enabled, gating a <see cref="ResultFidelity.Rich"/> result.</param>
+    /// <returns>A success once the result is stored, or a state/validation/live-tracking failure that stores no result.</returns>
+    public Result RecordResult(MatchResult result, bool liveTrackingEnabled)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        var guard = EnsureState(MatchState.InProgress);
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        if (result.Fidelity == ResultFidelity.Rich && !liveTrackingEnabled)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.LiveTrackingDisabled,
+                "A rich result cannot be recorded because the squad does not have live match tracking enabled."));
+        }
+
+        var teamIds = _teams.Select(t => t.Id).ToHashSet();
+        var scored = new HashSet<Guid>();
+        foreach (var score in result.TeamScores)
+        {
+            if (score.Score < MatchResult.MinScore || score.Score > MatchResult.MaxScore)
+            {
+                return Result.Fail(new MatchError(
+                    MatchErrorCode.ValidationFailed,
+                    $"Score {score.Score} for team {score.TeamId} is invalid: each team score must be a whole number from {MatchResult.MinScore} to {MatchResult.MaxScore}."));
+            }
+
+            if (!teamIds.Contains(score.TeamId))
+            {
+                return Result.Fail(new MatchError(
+                    MatchErrorCode.ValidationFailed,
+                    $"Score for team {score.TeamId} is invalid: it is not one of this match's teams."));
+            }
+
+            if (!scored.Add(score.TeamId))
+            {
+                return Result.Fail(new MatchError(
+                    MatchErrorCode.ValidationFailed,
+                    $"Team {score.TeamId} has more than one score; each team must be scored exactly once."));
+            }
+        }
+
+        var missing = teamIds.FirstOrDefault(id => !scored.Contains(id));
+        if (missing != Guid.Empty || scored.Count != teamIds.Count)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                $"A final score is missing for team {missing}; every one of this match's teams must be scored."));
+        }
+
+        RecordedResult = result;
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Derives the <see cref="MatchOutcome"/> that is fed to <see cref="IRatingEngine.UpdateRatings"/>
+    /// at completion, built <em>solely</em> from the captured <see cref="KickoffLineup"/> — the match's
+    /// single, immutable rating unit (Requirement 10.1, 10.4, 12.2). The outcome contains one ranked team
+    /// per <see cref="KickoffTeam"/>, in the lineup's captured order, and each team carries one
+    /// <see cref="PlayerInput"/> per roster membership in roster order; every kickoff participant appears
+    /// in exactly one team and no participant absent from the lineup is included, so stats-only additions
+    /// after lock (late arrivals, leavers, substitutions) never enter the update (Requirement 10.2, 10.4).
+    /// <para>
+    /// Teams are ranked by their recorded final score using standard competition ranking: a team's rank is
+    /// one plus the number of teams with a strictly higher score, so a strictly higher score gives a
+    /// strictly better (numerically lower) rank and teams with equal scores receive equal ranks — a draw
+    /// (Requirement 11.2, 11.3, 12.3). Fidelity does not affect ranking: a <see cref="ResultFidelity.Basic"/>
+    /// and a <see cref="ResultFidelity.Rich"/> result with the same scores yield the same ranks
+    /// (Requirement 11.3, 11.5).
+    /// </para>
+    /// <para>
+    /// The kickoff teams are captured one-to-one and in order from the working <see cref="Teams"/> at
+    /// lock, which carry the score-linking identity; the kickoff team at each captured index therefore
+    /// corresponds to the working team at the same index, whose <see cref="MatchResult"/> score sets the
+    /// rank. Player ratings are not held by the aggregate: the completion handler loads (or seeds) each
+    /// participant's current rating and supplies them via <paramref name="ratingsByMembershipId"/>, keyed
+    /// by squad-membership identity, so the produced <see cref="MatchOutcome"/> — and, preserving order,
+    /// the engine's <see cref="MatchUpdate"/> output — maps back to memberships by the kickoff lineup's
+    /// ordering (Requirement 12.1, 12.2).
+    /// </para>
+    /// Preconditions, each returning without producing an outcome:
+    /// <list type="bullet">
+    ///   <item>a <see cref="KickoffLineup"/> must have been captured, else an
+    ///   <see cref="MatchErrorCode.InvalidState"/> failure is returned (Requirement 10.1);</item>
+    ///   <item>a <see cref="RecordedResult"/> must be present, else a
+    ///   <see cref="MatchErrorCode.ResultRequired"/> failure is returned (Requirement 12.5);</item>
+    ///   <item>every kickoff participant must have a supplied rating, else a
+    ///   <see cref="MatchErrorCode.ValidationFailed"/> failure identifying the missing membership is
+    ///   returned.</item>
+    /// </list>
+    /// This method reads state only; it mutates nothing and applies no rating update itself — that is the
+    /// completion handler's single <see cref="IRatingEngine.UpdateRatings"/> call (Requirement 10.1, 12.1).
+    /// </summary>
+    /// <param name="ratingsByMembershipId">
+    /// The current rating (μ, σ) of each kickoff participant, keyed by squad-membership identity, supplied
+    /// by the completion handler after loading or seeding ratings.
+    /// </param>
+    /// <returns>
+    /// A success carrying the kickoff-derived <see cref="MatchOutcome"/>, or a state/result/validation
+    /// failure that produces no outcome.
+    /// </returns>
+    public Result<MatchOutcome> DeriveOutcome(IReadOnlyDictionary<Guid, PlayerRating> ratingsByMembershipId)
+    {
+        ArgumentNullException.ThrowIfNull(ratingsByMembershipId);
+
+        if (KickoffLineup is null)
+        {
+            return Result<MatchOutcome>.Fail(new MatchError(
+                MatchErrorCode.InvalidState,
+                "Cannot derive a match outcome before a kickoff lineup has been captured at team lock."));
+        }
+
+        if (RecordedResult is null)
+        {
+            return Result<MatchOutcome>.Fail(new MatchError(
+                MatchErrorCode.ResultRequired,
+                "Cannot derive a match outcome before a result has been recorded for the match."));
+        }
+
+        var kickoffTeams = KickoffLineup.Teams;
+
+        // The kickoff teams were captured one-to-one and in order from the working teams at lock, and
+        // teams cannot be edited once the match leaves TeamsRolled, so the two stay index-aligned. The
+        // working team supplies the score-linking identity for the kickoff team at the same index.
+        if (kickoffTeams.Count != _teams.Count)
+        {
+            return Result<MatchOutcome>.Fail(new MatchError(
+                MatchErrorCode.InvalidState,
+                $"The captured kickoff lineup has {kickoffTeams.Count} team(s) but the match has {_teams.Count} working team(s); the outcome cannot be derived."));
+        }
+
+        var scoresByTeamId = new Dictionary<Guid, int>(RecordedResult.TeamScores.Count);
+        foreach (var teamScore in RecordedResult.TeamScores)
+        {
+            scoresByTeamId[teamScore.TeamId] = teamScore.Score;
+        }
+
+        var teamScores = new int[kickoffTeams.Count];
+        for (var i = 0; i < kickoffTeams.Count; i++)
+        {
+            if (!scoresByTeamId.TryGetValue(_teams[i].Id, out var score))
+            {
+                return Result<MatchOutcome>.Fail(new MatchError(
+                    MatchErrorCode.ResultRequired,
+                    $"The recorded result has no final score for team {_teams[i].Id}; the outcome cannot be derived."));
+            }
+
+            teamScores[i] = score;
+        }
+
+        var teams = new List<TeamResult>(kickoffTeams.Count);
+        for (var i = 0; i < kickoffTeams.Count; i++)
+        {
+            var kickoffTeam = kickoffTeams[i];
+            var players = new List<PlayerInput>(kickoffTeam.ParticipantMembershipIds.Count);
+            foreach (var membershipId in kickoffTeam.ParticipantMembershipIds)
+            {
+                if (!ratingsByMembershipId.TryGetValue(membershipId, out var rating))
+                {
+                    return Result<MatchOutcome>.Fail(new MatchError(
+                        MatchErrorCode.ValidationFailed,
+                        $"No rating was supplied for kickoff participant {membershipId}; the outcome cannot be derived."));
+                }
+
+                players.Add(new PlayerInput(rating));
+            }
+
+            // Standard competition ranking: rank = 1 + number of teams with a strictly higher score.
+            // Higher score => lower (better) rank; equal scores => equal ranks (a draw).
+            var rank = 1 + teamScores.Count(other => other > teamScores[i]);
+            teams.Add(new TeamResult(players, rank));
+        }
+
+        return Result<MatchOutcome>.Ok(new MatchOutcome(teams));
     }
 
     /// <summary>
