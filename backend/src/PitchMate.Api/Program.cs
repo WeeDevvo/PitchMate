@@ -1,6 +1,8 @@
 using PitchMate.Api.Auth;
 using PitchMate.Api.Auth.Endpoints;
 using PitchMate.Api.Auth.OpenApi;
+using PitchMate.Api.Notifications;
+using PitchMate.Api.Notifications.Endpoints;
 using PitchMate.Api.Squads;
 using PitchMate.Api.Squads.Endpoints;
 using PitchMate.Infrastructure;
@@ -34,6 +36,12 @@ builder.Services.AddAuth(builder.Configuration);
 // wires their Infrastructure implementations behind the Application abstractions (Requirement 19.4).
 builder.Services.AddSquads(builder.Configuration);
 
+// Notifications composition root: registers the publish fan-out, the read-model handlers, and the
+// lifecycle removals, and wires their Infrastructure implementations behind the Application
+// abstractions. Best-effort email reuses the single IEmailSender registered by AddAuth — no second
+// transport is introduced (Requirements 7.2, 13.3, 13.4, 13.6).
+builder.Services.AddNotifications();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -63,6 +71,12 @@ app.MapAuthEndpoints();
 // claims, and the delete/reverse/export lifecycle (Requirement 19.4). Each endpoint delegates to an
 // Application use case and maps failures through the single SquadErrorCode → HTTP seam.
 app.MapSquadEndpoints();
+
+// Notification endpoints: the authenticated read model — list, unread-count, mark-one-read, and
+// mark-all-read (optionally squad-scoped) (Requirements 9.1, 9.3, 9.5, 9.6). Each endpoint delegates to
+// an Application read-model handler and maps failures through the single NotificationErrorCode → HTTP
+// seam, concealing existence with a uniform 404 (Requirements 10.1–10.5, 13.4).
+app.MapNotificationEndpoints();
 
 app.Run();
 
