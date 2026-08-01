@@ -32,6 +32,7 @@ public sealed class Match : BaseEntity
 
     private readonly List<CandidateDay> _candidateDays = [];
     private readonly List<AvailabilityResponse> _availabilityResponses = [];
+    private readonly List<MatchParticipant> _participants = [];
 
     /// <summary>Parameterless constructor reserved for the persistence layer.</summary>
     private Match()
@@ -54,6 +55,13 @@ public sealed class Match : BaseEntity
     /// <summary>The current lifecycle state of the match.</summary>
     public MatchState State { get; private set; }
 
+    /// <summary>
+    /// The single candidate day an admin selected when confirming the match, becoming the match's
+    /// scheduled date-and-time, or <see langword="null"/> while the match is still gathering
+    /// availability (Requirement 6.1). Set only on a successful <see cref="Confirm"/>.
+    /// </summary>
+    public CandidateDay? ConfirmedDay { get; private set; }
+
     /// <summary>The trimmed, free-text place the match is played (1..200 characters).</summary>
     public string Location { get; private set; }
 
@@ -66,6 +74,14 @@ public sealed class Match : BaseEntity
     /// is distinct from a stored response marking an empty subset of candidate days (Requirement 4.7).
     /// </summary>
     public IReadOnlyCollection<AvailabilityResponse> AvailabilityResponses => _availabilityResponses;
+
+    /// <summary>
+    /// The match's playing pool. Registered participants are seeded on a successful
+    /// <see cref="Confirm"/>, one per active registered member whose availability response marks the
+    /// confirmed day (Requirement 6.5); guests are added by an admin once the match is
+    /// <see cref="MatchState.Confirmed"/>. A membership appears at most once (Requirement 7.4).
+    /// </summary>
+    public IReadOnlyCollection<MatchParticipant> Participants => _participants;
 
     /// <summary>
     /// Creates a match draft in <see cref="MatchState.GatheringAvailability"/> for
@@ -248,6 +264,90 @@ public sealed class Match : BaseEntity
     /// <returns>The availability tally computed from this match's candidate days and stored responses.</returns>
     public AvailabilityTally ComputeAvailabilityTally() =>
         AvailabilityTally.Compute(_candidateDays, _availabilityResponses);
+
+    /// <summary>
+    /// Confirms the match on <paramref name="day"/>, transitioning
+    /// <see cref="MatchState.GatheringAvailability"/> → <see cref="MatchState.Confirmed"/> and seeding
+    /// the playing pool (Requirement 6.1). Validation, in order — each failure returns without
+    /// mutating any state, leaving the match in <see cref="MatchState.GatheringAvailability"/> with no
+    /// <see cref="ConfirmedDay"/> and no <see cref="Participants"/>:
+    /// <list type="bullet">
+    ///   <item>the match must be in <see cref="MatchState.GatheringAvailability"/>, else an
+    ///   <see cref="MatchErrorCode.InvalidState"/> failure naming the required and current state is
+    ///   returned (Requirement 2.3, 6.8);</item>
+    ///   <item><paramref name="day"/> must resolve to one of this match's candidate days, else a
+    ///   <see cref="MatchErrorCode.ValidationFailed"/> failure identifying the invalid day is returned
+    ///   (Requirement 6.4);</item>
+    ///   <item><paramref name="availableCount"/> must be greater than or equal to
+    ///   <paramref name="minimumThreshold"/>, else a <see cref="MatchErrorCode.ThresholdNotMet"/>
+    ///   failure stating the available count and the threshold is returned (Requirement 6.2).</item>
+    /// </list>
+    /// On success the confirmed day becomes the <see cref="ConfirmedDay"/>, the state becomes
+    /// <see cref="MatchState.Confirmed"/>, and the participant set is seeded with exactly the supplied
+    /// active registered members whose stored availability response marks the confirmed day, each as a
+    /// registered <see cref="MatchParticipant"/> carrying its display-name-at-time (Requirement 6.5).
+    /// Scoping <paramref name="activeRegisteredMembers"/> to active registered memberships of the
+    /// squad is the caller's concern; the aggregate contributes the "response marks the confirmed day"
+    /// filter from its own stored responses. Duplicate memberships in
+    /// <paramref name="activeRegisteredMembers"/> yield at most one participant (Requirement 7.4).
+    /// </summary>
+    /// <param name="day">The candidate day to confirm on; must resolve, by instant, to one of the match's candidate days.</param>
+    /// <param name="availableCount">The count of available active registered members on <paramref name="day"/>, evaluated by the caller.</param>
+    /// <param name="minimumThreshold">The squad's minimum player threshold that the available count must meet.</param>
+    /// <param name="activeRegisteredMembers">The active registered memberships of the squad (identity plus display name) from which participants are seeded.</param>
+    /// <returns>A success once confirmed and seeded, or a validation/state/threshold failure that leaves the match unchanged.</returns>
+    public Result Confirm(
+        DateTimeOffset day,
+        int availableCount,
+        int minimumThreshold,
+        IReadOnlyList<RegisteredMember> activeRegisteredMembers)
+    {
+        var guard = EnsureState(MatchState.GatheringAvailability);
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        var confirmedDay = new CandidateDay(day);
+        if (!_candidateDays.Contains(confirmedDay))
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                $"Cannot confirm on {day.ToUniversalTime():O} because it is not a candidate day of this match."));
+        }
+
+        if (availableCount < minimumThreshold)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ThresholdNotMet,
+                $"Cannot confirm: {availableCount} available player(s) is below the minimum threshold of {minimumThreshold}."));
+        }
+
+        // Seed exactly the active registered members whose stored response marks the confirmed day.
+        // Eligibility (active, registered) is the caller's concern; the aggregate owns the response check.
+        var members = activeRegisteredMembers ?? [];
+        var seeded = new List<MatchParticipant>(members.Count);
+        var seenMemberships = new HashSet<Guid>();
+        foreach (var member in members)
+        {
+            if (!seenMemberships.Add(member.SquadMembershipId))
+            {
+                continue;
+            }
+
+            var response = _availabilityResponses.FirstOrDefault(r => r.SquadMembershipId == member.SquadMembershipId);
+            if (response is not null && response.Marks(confirmedDay))
+            {
+                seeded.Add(new MatchParticipant(Id, member.SquadMembershipId, member.DisplayName, isGuest: false));
+            }
+        }
+
+        ConfirmedDay = confirmedDay;
+        State = MatchState.Confirmed;
+        _participants.Clear();
+        _participants.AddRange(seeded);
+        return Result.Ok();
+    }
 
     /// <summary>
     /// The source states from which a match may be cancelled by an admin before play
