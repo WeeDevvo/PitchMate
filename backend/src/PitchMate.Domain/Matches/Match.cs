@@ -31,9 +31,22 @@ public sealed class Match : BaseEntity
     /// <summary>The maximum number of candidate days a draft may carry.</summary>
     public const int CandidateDayMaxCount = 14;
 
+    /// <summary>The minimum number of players a team may carry at lock (Requirement 8.5).</summary>
+    public const int TeamMinSize = 5;
+
+    /// <summary>The maximum number of players a team may carry at lock (Requirement 8.5).</summary>
+    public const int TeamMaxSize = 8;
+
+    /// <summary>The minimum trimmed length of a team name at lock (Requirement 8.5).</summary>
+    public const int TeamNameMinLength = 1;
+
+    /// <summary>The maximum trimmed length of a team name at lock (Requirement 8.5).</summary>
+    public const int TeamNameMaxLength = 50;
+
     private readonly List<CandidateDay> _candidateDays = [];
     private readonly List<AvailabilityResponse> _availabilityResponses = [];
     private readonly List<MatchParticipant> _participants = [];
+    private readonly List<MatchTeam> _teams = [];
 
     /// <summary>Parameterless constructor reserved for the persistence layer.</summary>
     private Match()
@@ -83,6 +96,23 @@ public sealed class Match : BaseEntity
     /// <see cref="MatchState.Confirmed"/>. A membership appears at most once (Requirement 7.4).
     /// </summary>
     public IReadOnlyCollection<MatchParticipant> Participants => _participants;
+
+    /// <summary>
+    /// The match's current working teams, set by applying a team proposal and adjusted by an admin
+    /// before locking (Requirement 8.1, 8.3). Empty until a proposal is applied. Together the teams
+    /// partition the match's participants exactly — every participant on exactly one team, none
+    /// unassigned, none duplicated (Requirement 8.2). Distinct from the immutable
+    /// <see cref="KickoffLineup"/> captured at lock.
+    /// </summary>
+    public IReadOnlyCollection<MatchTeam> Teams => _teams;
+
+    /// <summary>
+    /// The immutable snapshot of teams and rosters captured when teams were last locked — the match's
+    /// single rating unit — or <see langword="null"/> before the first successful <see cref="Lock"/>
+    /// (Requirement 10.1). Re-locking while <see cref="MatchState.TeamsRolled"/> replaces it wholesale
+    /// (Requirement 9.3).
+    /// </summary>
+    public KickoffLineup? KickoffLineup { get; private set; }
 
     /// <summary>
     /// Creates a match draft in <see cref="MatchState.GatheringAvailability"/> for
@@ -449,6 +479,319 @@ public sealed class Match : BaseEntity
     /// </summary>
     private int NextRosterPosition() =>
         _participants.Count == 0 ? 0 : _participants.Max(p => p.RosterPosition) + 1;
+
+    /// <summary>
+    /// Replaces the match's working teams with those described by <paramref name="teams"/>, the
+    /// assignment proposed by the team balancer or built by an admin (Requirement 8.1, 8.3). The
+    /// proposal must partition the match's participants exactly: every participant is assigned to
+    /// exactly one team, no participant is unassigned, and no participant appears on more than one
+    /// team (Requirement 8.2). Applying a proposal does not change the <see cref="State"/> — a
+    /// proposal is returned to the admin for adjustment before locking (Requirement 8.1). Permitted
+    /// only while the match is in <see cref="MatchState.Confirmed"/> or
+    /// <see cref="MatchState.TeamsRolled"/> (a re-roll while already rolled is allowed,
+    /// Requirement 9.3); otherwise an <see cref="MatchErrorCode.InvalidState"/> failure is returned
+    /// and the working teams are left unchanged. Validation, in order — each failure leaves the
+    /// working teams unchanged:
+    /// <list type="bullet">
+    ///   <item>at least one team must be supplied, else a <see cref="MatchErrorCode.ValidationFailed"/> failure is returned;</item>
+    ///   <item>no squad-membership identity may appear on more than one team (Requirement 8.2);</item>
+    ///   <item>every assigned identity must be a current participant of the match (Requirement 8.2);</item>
+    ///   <item>every participant of the match must be assigned to some team (Requirement 8.2).</item>
+    /// </list>
+    /// Team-name length, team-size, and single-bib rules are not enforced here; they are validated at
+    /// <see cref="Lock"/> (Requirement 8.5, 8.7), so an in-progress adjustment may be temporarily out
+    /// of those bounds.
+    /// </summary>
+    /// <param name="teams">The proposed teams, each carrying a name, a bib flag, and an ordered roster of participant membership ids.</param>
+    /// <returns>A success once the working teams are set, or a state/validation failure that leaves them unchanged.</returns>
+    public Result ApplyTeamProposal(IReadOnlyList<ProposedTeam> teams)
+    {
+        var guard = EnsureTeamsEditable();
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        if (teams is null || teams.Count == 0)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                "A team proposal must contain at least one team."));
+        }
+
+        var participantIds = _participants.Select(p => p.SquadMembershipId).ToHashSet();
+        var assigned = new HashSet<Guid>();
+        foreach (var team in teams)
+        {
+            foreach (var membershipId in team.ParticipantMembershipIds ?? [])
+            {
+                if (!assigned.Add(membershipId))
+                {
+                    return Result.Fail(new MatchError(
+                        MatchErrorCode.ValidationFailed,
+                        $"Participant {membershipId} is assigned to more than one team; each participant must be on exactly one team."));
+                }
+
+                if (!participantIds.Contains(membershipId))
+                {
+                    return Result.Fail(new MatchError(
+                        MatchErrorCode.ValidationFailed,
+                        $"Assigned membership {membershipId} is not a participant of this match."));
+                }
+            }
+        }
+
+        if (assigned.Count != participantIds.Count)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                "Every participant must be assigned to exactly one team; the proposal leaves one or more participants unassigned."));
+        }
+
+        _teams.Clear();
+        foreach (var team in teams)
+        {
+            _teams.Add(new MatchTeam(Id, team.TeamName ?? string.Empty, team.BibFlag, team.ParticipantMembershipIds ?? []));
+        }
+
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Moves the participant identified by <paramref name="squadMembershipId"/> from its current
+    /// working team to the team identified by <paramref name="toTeamId"/>, preserving the exact
+    /// partition of participants across teams (Requirement 8.2, 8.3). Permitted only while the match
+    /// is in <see cref="MatchState.Confirmed"/> or <see cref="MatchState.TeamsRolled"/>; otherwise an
+    /// <see cref="MatchErrorCode.InvalidState"/> failure is returned and the teams are left
+    /// unchanged. Validation, in order — each failure leaves the teams unchanged:
+    /// <list type="bullet">
+    ///   <item>the membership must be a current participant of the match, else a
+    ///   <see cref="MatchErrorCode.NotAParticipant"/> failure is returned;</item>
+    ///   <item>the target team must be one of the match's working teams, else a
+    ///   <see cref="MatchErrorCode.ValidationFailed"/> failure is returned;</item>
+    ///   <item>the participant must currently be assigned to a working team, else a
+    ///   <see cref="MatchErrorCode.ValidationFailed"/> failure is returned.</item>
+    /// </list>
+    /// Moving a participant to the team it is already on is a success that changes nothing.
+    /// </summary>
+    /// <param name="squadMembershipId">The identity of the participant to move.</param>
+    /// <param name="toTeamId">The identity of the destination working team.</param>
+    /// <returns>A success once moved, or a state/validation failure that leaves the teams unchanged.</returns>
+    public Result MoveParticipant(Guid squadMembershipId, Guid toTeamId)
+    {
+        var guard = EnsureTeamsEditable();
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        if (_participants.All(p => p.SquadMembershipId != squadMembershipId))
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.NotAParticipant,
+                $"Membership {squadMembershipId} is not a participant of this match."));
+        }
+
+        var target = _teams.FirstOrDefault(t => t.Id == toTeamId);
+        if (target is null)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                $"Team {toTeamId} is not a working team of this match."));
+        }
+
+        var current = _teams.FirstOrDefault(t => t.Contains(squadMembershipId));
+        if (current is null)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                $"Participant {squadMembershipId} is not assigned to any working team; apply a team proposal first."));
+        }
+
+        if (current.Id == target.Id)
+        {
+            return Result.Ok();
+        }
+
+        current.RemoveParticipant(squadMembershipId);
+        target.AddParticipant(squadMembershipId);
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Sets the <see cref="MatchTeam.TeamName"/> of the working team identified by
+    /// <paramref name="teamId"/> to <paramref name="teamName"/> (Requirement 8.3). Permitted only
+    /// while the match is in <see cref="MatchState.Confirmed"/> or <see cref="MatchState.TeamsRolled"/>;
+    /// otherwise an <see cref="MatchErrorCode.InvalidState"/> failure is returned and the teams are
+    /// left unchanged. If no working team matches <paramref name="teamId"/>, a
+    /// <see cref="MatchErrorCode.ValidationFailed"/> failure is returned. The name is stored as
+    /// supplied; its trimmed length and case-insensitive uniqueness are validated at
+    /// <see cref="Lock"/> (Requirement 8.5, 8.7).
+    /// </summary>
+    /// <param name="teamId">The identity of the working team to rename.</param>
+    /// <param name="teamName">The new team name; trimming and validation are applied at lock.</param>
+    /// <returns>A success once the name is set, or a state/validation failure that leaves the teams unchanged.</returns>
+    public Result SetTeamName(Guid teamId, string teamName)
+    {
+        var guard = EnsureTeamsEditable();
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        var team = _teams.FirstOrDefault(t => t.Id == teamId);
+        if (team is null)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                $"Team {teamId} is not a working team of this match."));
+        }
+
+        team.SetName(teamName ?? string.Empty);
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Marks the working team identified by <paramref name="teamId"/> as the single bib-wearing team,
+    /// setting its <see cref="MatchTeam.BibFlag"/> to <see langword="true"/> and clearing every other
+    /// team's flag, so exactly one team carries the flag (Requirement 8.3, 8.5). Permitted only while
+    /// the match is in <see cref="MatchState.Confirmed"/> or <see cref="MatchState.TeamsRolled"/>;
+    /// otherwise an <see cref="MatchErrorCode.InvalidState"/> failure is returned and the teams are
+    /// left unchanged. If no working team matches <paramref name="teamId"/>, a
+    /// <see cref="MatchErrorCode.ValidationFailed"/> failure is returned.
+    /// </summary>
+    /// <param name="teamId">The identity of the working team to flag as bib-wearing.</param>
+    /// <returns>A success once the bib team is set, or a state/validation failure that leaves the teams unchanged.</returns>
+    public Result SetBibTeam(Guid teamId)
+    {
+        var guard = EnsureTeamsEditable();
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        if (_teams.All(t => t.Id != teamId))
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                $"Team {teamId} is not a working team of this match."));
+        }
+
+        foreach (var team in _teams)
+        {
+            team.SetBib(team.Id == teamId);
+        }
+
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Locks the match's working teams, transitioning <see cref="MatchState.Confirmed"/> (or
+    /// re-locking from <see cref="MatchState.TeamsRolled"/>) → <see cref="MatchState.TeamsRolled"/>
+    /// and capturing a fresh immutable <see cref="KickoffLineup"/> from the locked teams
+    /// (Requirement 8.5, 9.3, 10.1). Validation, in order — each failure returns a
+    /// <see cref="MatchErrorCode.ValidationFailed"/> error naming the unmet rule and leaves the
+    /// <see cref="State"/> and all match data, including any previously captured lineup, unchanged
+    /// (Requirement 8.7):
+    /// <list type="bullet">
+    ///   <item>at least two teams must be present;</item>
+    ///   <item>each team's roster size must be 5..8 players inclusive, with uneven sizes such as 7v6
+    ///   permitted (Requirement 8.5, 8.6);</item>
+    ///   <item>exactly one team must carry a <see langword="true"/> bib flag (Requirement 8.5);</item>
+    ///   <item>every team name must have a trimmed length of 1..50 characters (Requirement 8.5);</item>
+    ///   <item>no two team names may be equal after trimming and case-insensitive comparison
+    ///   (Requirement 8.7).</item>
+    /// </list>
+    /// On success each team's stored name is normalised to its trimmed form and the captured
+    /// <see cref="KickoffLineup"/> mirrors the locked teams and rosters; a re-lock replaces any prior
+    /// lineup (Requirement 9.3).
+    /// </summary>
+    /// <returns>A success once locked and the lineup is captured, or a state/validation failure that leaves the match unchanged.</returns>
+    public Result Lock()
+    {
+        var guard = EnsureTeamsEditable();
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        if (_teams.Count < 2)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                "A match must have at least two teams to be locked."));
+        }
+
+        foreach (var team in _teams)
+        {
+            if (team.Roster.Count < TeamMinSize || team.Roster.Count > TeamMaxSize)
+            {
+                return Result.Fail(new MatchError(
+                    MatchErrorCode.ValidationFailed,
+                    $"Each team must have {TeamMinSize} to {TeamMaxSize} players, but a team has {team.Roster.Count}."));
+            }
+        }
+
+        var bibCount = _teams.Count(t => t.BibFlag);
+        if (bibCount != 1)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                $"Exactly one team must be flagged to wear bibs, but {bibCount} team(s) are flagged."));
+        }
+
+        var trimmedNames = new List<string>(_teams.Count);
+        var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var team in _teams)
+        {
+            var trimmed = (team.TeamName ?? string.Empty).Trim();
+            if (trimmed.Length < TeamNameMinLength || trimmed.Length > TeamNameMaxLength)
+            {
+                return Result.Fail(new MatchError(
+                    MatchErrorCode.ValidationFailed,
+                    $"Each team name must be {TeamNameMinLength} to {TeamNameMaxLength} characters after trimming."));
+            }
+
+            if (!seenNames.Add(trimmed))
+            {
+                return Result.Fail(new MatchError(
+                    MatchErrorCode.ValidationFailed,
+                    $"Team names must be distinct; '{trimmed}' is used by more than one team."));
+            }
+
+            trimmedNames.Add(trimmed);
+        }
+
+        // All rules hold: normalise names to their trimmed form and capture the lineup.
+        for (var i = 0; i < _teams.Count; i++)
+        {
+            _teams[i].SetName(trimmedNames[i]);
+        }
+
+        State = MatchState.TeamsRolled;
+        KickoffLineup = PitchMate.Domain.Matches.KickoffLineup.Capture(_teams);
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Shared guard for the team-editing operations (apply proposal, move, name, bib, lock). Asserts
+    /// the match is in <see cref="MatchState.Confirmed"/> or <see cref="MatchState.TeamsRolled"/> — the
+    /// two states in which teams may be rolled, adjusted, and (re-)locked (Requirement 8.1, 9.3). When
+    /// it is not, returns an <see cref="MatchErrorCode.InvalidState"/> failure naming the required and
+    /// current state and mutates nothing (Requirement 2.5).
+    /// </summary>
+    /// <returns>A success when teams may be edited; otherwise an <see cref="MatchErrorCode.InvalidState"/> failure.</returns>
+    private Result EnsureTeamsEditable()
+    {
+        if (State != MatchState.Confirmed && State != MatchState.TeamsRolled)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.InvalidState,
+                $"Match must be in {MatchState.Confirmed} or {MatchState.TeamsRolled} to edit teams, but is {State}."));
+        }
+
+        return Result.Ok();
+    }
 
     /// <summary>
     /// The source states from which a match may be cancelled by an admin before play
