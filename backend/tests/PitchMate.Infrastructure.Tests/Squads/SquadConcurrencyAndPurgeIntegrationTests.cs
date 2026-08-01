@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using PitchMate.Application.Common;
 using PitchMate.Application.Common.Persistence;
+using PitchMate.Application.Notifications;
 using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Application.Squads.UseCases;
 using PitchMate.Domain.Squads;
@@ -258,9 +260,12 @@ public sealed class SquadConcurrencyAndPurgeIntegrationTests
             new EfInviteRepository(context),
             new EfSquadMembershipRepository(context),
             new EfUserRepository(context),
+            new EfSquadRepository(context),
             new InviteSecretService(),
             new UnitOfWork(context),
-            new FakeTimeProvider());
+            new FakeTimeProvider(),
+            new NoOpNotificationPublisher(),
+            NullLogger<RedeemInviteHandler>.Instance);
 
         try
         {
@@ -357,4 +362,21 @@ public sealed class SquadConcurrencyAndPurgeIntegrationTests
 
     /// <summary>The outcome of one concurrent operation: whether it committed successfully.</summary>
     private readonly record struct OperationOutcome(bool Succeeded);
+}
+
+/// <summary>
+/// A no-op <see cref="INotificationPublisher"/> for the concurrency integration tests: the
+/// <see cref="RedeemInviteHandler"/> publishes a <c>MemberJoined</c> notification after a committed
+/// join, but these tests assert only the database-enforced concurrency guarantees, so the publish is a
+/// success that persists and emails nothing.
+/// </summary>
+internal sealed class NoOpNotificationPublisher : INotificationPublisher
+{
+    public Task<PitchMate.Domain.Notifications.Result> PublishAsync(
+        PitchMate.Domain.Notifications.NotificationType type,
+        Guid squadId,
+        IReadOnlyCollection<Guid> directedTargetMembershipIds,
+        NotificationContext context,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(PitchMate.Domain.Notifications.Result.Ok());
 }

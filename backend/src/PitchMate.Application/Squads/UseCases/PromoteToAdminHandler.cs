@@ -1,6 +1,9 @@
+using Microsoft.Extensions.Logging;
 using PitchMate.Application.Common.Persistence;
+using PitchMate.Application.Notifications;
 using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Domain.Squads;
+using NotificationType = PitchMate.Domain.Notifications.NotificationType;
 
 namespace PitchMate.Application.Squads.UseCases;
 
@@ -20,16 +23,35 @@ namespace PitchMate.Application.Squads.UseCases;
 public sealed class PromoteToAdminHandler
 {
     private readonly ISquadMembershipRepository _memberships;
+    private readonly ISquadRepository _squads;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly INotificationPublisher _publisher;
+    private readonly ILogger<PromoteToAdminHandler> _logger;
 
-    /// <summary>Creates the handler with the membership repository it reads/stages through and the unit of work it commits with.</summary>
-    public PromoteToAdminHandler(ISquadMembershipRepository memberships, IUnitOfWork unitOfWork)
+    /// <summary>
+    /// Creates the handler with the membership repository it reads/stages through, the squad repository
+    /// it reads the squad name from for notification rendering, the unit of work it commits with, the
+    /// notification publisher it raises a <c>PromotedToAdmin</c> notification through after a committed
+    /// promotion, and the logger it records an isolated publish failure with.
+    /// </summary>
+    public PromoteToAdminHandler(
+        ISquadMembershipRepository memberships,
+        ISquadRepository squads,
+        IUnitOfWork unitOfWork,
+        INotificationPublisher publisher,
+        ILogger<PromoteToAdminHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(memberships);
+        ArgumentNullException.ThrowIfNull(squads);
         ArgumentNullException.ThrowIfNull(unitOfWork);
+        ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _memberships = memberships;
+        _squads = squads;
         _unitOfWork = unitOfWork;
+        _publisher = publisher;
+        _logger = logger;
     }
 
     /// <summary>
@@ -79,7 +101,64 @@ public sealed class PromoteToAdminHandler
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Only after the promotion has committed successfully, publish the PromotedToAdmin notification
+        // directed to the promoted membership. A publish failure is isolated and never rolls back or
+        // surfaces from the committed promotion (Requirement 8.2, 8.5, 8.6, 8.8).
+        await PublishPromotedToAdminAsync(acting, target, cancellationToken);
+
         return Result.Ok();
+    }
+
+    /// <summary>
+    /// Publishes the <see cref="NotificationType.PromotedToAdmin"/> notification directed to the promoted
+    /// membership after the promotion has committed (Requirement 8.2). The whole attempt is best-effort
+    /// and fully isolated: any failure Result or thrown exception is caught, logged without contact PII —
+    /// only the <see cref="NotificationType"/>, the squad id, the actor and promoted membership ids, and a
+    /// failure reason — and swallowed, so the already-committed promotion is never rolled back and the
+    /// failure never surfaces to the caller (Requirement 8.5, 8.6, 8.8).
+    /// </summary>
+    private async Task PublishPromotedToAdminAsync(
+        SquadMembership? actor, SquadMembership promoted, CancellationToken cancellationToken)
+    {
+        try
+        {
+            Squad? squad = await _squads.GetByIdAsync(promoted.SquadId, cancellationToken);
+            var context = new NotificationContext
+            {
+                SquadName = squad?.Name ?? string.Empty,
+                ActorDisplayName = actor?.DisplayName,
+                AffectedMemberDisplayName = promoted.DisplayName,
+            };
+
+            PitchMate.Domain.Notifications.Result published = await _publisher.PublishAsync(
+                NotificationType.PromotedToAdmin,
+                promoted.SquadId,
+                new[] { promoted.Id },
+                context,
+                cancellationToken);
+
+            if (!published.IsSuccess)
+            {
+                _logger.LogWarning(
+                    "Notification publish failed after committed admin promotion (isolated; promotion retained). "
+                    + "Type={NotificationType}, SquadId={SquadId}, PromotedMembershipId={PromotedMembershipId}, "
+                    + "ActorMembershipId={ActorMembershipId}, Reason={Reason}",
+                    NotificationType.PromotedToAdmin, promoted.SquadId, promoted.Id, actor?.Id,
+                    published.Error?.Code.ToString() ?? "Unknown");
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        {
+            // The promotion is already committed; isolate every publish failure so it is never rolled back
+            // and never surfaces to the caller. Log identifiers and the exception type only — no contact
+            // PII (Requirement 8.5, 8.6, 8.8).
+            _logger.LogWarning(
+                "Notification publish threw after committed admin promotion (isolated; promotion retained). "
+                + "Type={NotificationType}, SquadId={SquadId}, PromotedMembershipId={PromotedMembershipId}, "
+                + "ActorMembershipId={ActorMembershipId}, Reason={Reason}",
+                NotificationType.PromotedToAdmin, promoted.SquadId, promoted.Id, actor?.Id, ex.GetType().Name);
+        }
     }
 
     private static Result PendingDeletion() => Result.Fail(new SquadError(

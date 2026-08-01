@@ -1,6 +1,7 @@
 using FsCheck;
 using FsCheck.Fluent;
 using FsCheck.Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 using PitchMate.Application.Squads.UseCases;
 using PitchMate.Domain.Auth;
 using PitchMate.Domain.Squads;
@@ -299,9 +300,12 @@ public class RedemptionReactivationProperties
             new FakeInviteRepository(store, clock),
             new FakeSquadMembershipRepository(store),
             new FakeUserRepository(store),
+            new FakeSquadRepository(store),
             secrets,
             new FakeSquadUnitOfWork(store),
-            clock);
+            clock,
+            new FakeNotificationPublisher(),
+            NullLogger<RedeemInviteHandler>.Instance);
 
     /// <summary>Builds the user's existing membership in the requested starting state.</summary>
     private static SquadMembership BuildExisting(Guid squadId, Guid userId, StartState state)
