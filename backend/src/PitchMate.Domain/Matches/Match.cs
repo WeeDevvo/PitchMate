@@ -31,6 +31,7 @@ public sealed class Match : BaseEntity
     public const int CandidateDayMaxCount = 14;
 
     private readonly List<CandidateDay> _candidateDays = [];
+    private readonly List<AvailabilityResponse> _availabilityResponses = [];
 
     /// <summary>Parameterless constructor reserved for the persistence layer.</summary>
     private Match()
@@ -58,6 +59,13 @@ public sealed class Match : BaseEntity
 
     /// <summary>The distinct candidate days on which members mark availability while gathering availability.</summary>
     public IReadOnlyCollection<CandidateDay> CandidateDays => _candidateDays;
+
+    /// <summary>
+    /// The availability responses currently stored for this match, at most one per squad membership
+    /// (Requirement 4.2). A membership with no stored response is absent from this collection, which
+    /// is distinct from a stored response marking an empty subset of candidate days (Requirement 4.7).
+    /// </summary>
+    public IReadOnlyCollection<AvailabilityResponse> AvailabilityResponses => _availabilityResponses;
 
     /// <summary>
     /// Creates a match draft in <see cref="MatchState.GatheringAvailability"/> for
@@ -128,6 +136,118 @@ public sealed class Match : BaseEntity
 
         return Result<Match>.Ok(new Match(id, squadId, trimmed, days));
     }
+
+    /// <summary>
+    /// Submits an availability response for <paramref name="squadMembershipId"/>, marking the subset of
+    /// this match's candidate days given by <paramref name="markedDays"/> (Requirement 4.1). The
+    /// operation is an upsert: any prior response for the same membership is replaced, so a membership
+    /// retains at most one stored response (Requirement 4.2). Validation, in order:
+    /// <list type="bullet">
+    ///   <item>the match must be in <see cref="MatchState.GatheringAvailability"/>, else an
+    ///   <see cref="MatchErrorCode.InvalidState"/> failure is returned and no response is stored or
+    ///   changed (Requirement 4.6);</item>
+    ///   <item>every marked day must be one of this match's candidate days; if any are not, a
+    ///   <see cref="MatchErrorCode.ValidationFailed"/> failure is returned identifying each offending
+    ///   day and the membership's stored response is left unchanged (Requirement 4.4).</item>
+    /// </list>
+    /// Duplicate marked days that resolve to the same candidate-day instant are collapsed, and a
+    /// response marking none of the candidate days is stored as an empty-subset response that is
+    /// distinct from the membership having no stored response (Requirement 4.7).
+    /// </summary>
+    /// <param name="squadMembershipId">The identity of the responding squad membership.</param>
+    /// <param name="markedDays">The days the member marks as available; each must be a candidate day. May be empty.</param>
+    /// <param name="submittedAt">The instant the response was submitted, recorded on the stored response.</param>
+    /// <returns>A success carrying the stored response, or a validation/state failure that leaves stored responses unchanged.</returns>
+    public Result<AvailabilityResponse> SubmitAvailability(
+        Guid squadMembershipId,
+        IReadOnlyList<DateTimeOffset> markedDays,
+        DateTimeOffset submittedAt)
+    {
+        var guard = EnsureState(MatchState.GatheringAvailability);
+        if (!guard.IsSuccess)
+        {
+            return Result<AvailabilityResponse>.Fail(guard.Error!);
+        }
+
+        var requested = markedDays ?? [];
+
+        var marked = new List<CandidateDay>(requested.Count);
+        var offending = new List<DateTimeOffset>();
+        foreach (var day in requested)
+        {
+            var candidate = new CandidateDay(day);
+            if (!_candidateDays.Contains(candidate))
+            {
+                offending.Add(day);
+            }
+            else if (!marked.Contains(candidate))
+            {
+                marked.Add(candidate);
+            }
+        }
+
+        if (offending.Count > 0)
+        {
+            var offendingList = string.Join(", ", offending.Select(d => d.ToUniversalTime().ToString("O")));
+            return Result<AvailabilityResponse>.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                $"Availability response references days that are not candidate days of this match: {offendingList}."));
+        }
+
+        _availabilityResponses.RemoveAll(r => r.SquadMembershipId == squadMembershipId);
+        var response = new AvailabilityResponse(Id, squadMembershipId, marked, submittedAt);
+        _availabilityResponses.Add(response);
+        return Result<AvailabilityResponse>.Ok(response);
+    }
+
+    /// <summary>
+    /// Clears <paramref name="squadMembershipId"/>'s stored availability response, so the membership
+    /// reverts to having no stored response (Requirement 4.3). Permitted only while the match is in
+    /// <see cref="MatchState.GatheringAvailability"/>; otherwise an <see cref="MatchErrorCode.InvalidState"/>
+    /// failure is returned and stored responses are left unchanged (Requirement 4.6). Clearing when the
+    /// membership has no stored response is a success that changes nothing.
+    /// </summary>
+    /// <param name="squadMembershipId">The identity of the membership whose response is cleared.</param>
+    /// <returns>A success once cleared, or an <see cref="MatchErrorCode.InvalidState"/> failure.</returns>
+    public Result ClearAvailability(Guid squadMembershipId)
+    {
+        var guard = EnsureState(MatchState.GatheringAvailability);
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        _availabilityResponses.RemoveAll(r => r.SquadMembershipId == squadMembershipId);
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Returns the stored availability response for <paramref name="squadMembershipId"/>, or
+    /// <see langword="null"/> when the membership has no stored response. A returned response marking
+    /// an empty subset is distinct from this method returning <see langword="null"/> (Requirement 4.7).
+    /// </summary>
+    /// <param name="squadMembershipId">The identity of the membership whose response is requested.</param>
+    /// <returns>The stored <see cref="AvailabilityResponse"/>, or <see langword="null"/> when none is stored.</returns>
+    public AvailabilityResponse? GetAvailabilityResponse(Guid squadMembershipId) =>
+        _availabilityResponses.FirstOrDefault(r => r.SquadMembershipId == squadMembershipId);
+
+    /// <summary>
+    /// Computes the <see cref="AvailabilityTally"/> for this match from its stored responses and
+    /// candidate days (Requirement 5.1). Every candidate day is represented, so a day marked by no
+    /// member reports a count of 0 and an empty member set (Requirement 5.2); a member with no stored
+    /// response, and a member whose response does not mark a day, are excluded from that day's entry
+    /// (Requirement 5.4). The aggregate holds at most one response per member (its upsert semantics),
+    /// and the underlying computation resolves a member's single most recent response by submission
+    /// time regardless (Requirement 5.3).
+    /// <para>
+    /// This computation counts exactly the responses stored on the match; scoping to active registered
+    /// members is the caller's (Application layer's) concern, matching how authorisation is handled
+    /// outside the aggregate.
+    /// </para>
+    /// </summary>
+    /// <returns>The availability tally computed from this match's candidate days and stored responses.</returns>
+    public AvailabilityTally ComputeAvailabilityTally() =>
+        AvailabilityTally.Compute(_candidateDays, _availabilityResponses);
 
     /// <summary>
     /// The source states from which a match may be cancelled by an admin before play
