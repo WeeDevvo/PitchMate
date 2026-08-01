@@ -128,6 +128,15 @@ public sealed class Match : BaseEntity
     public MatchResult? RecordedResult { get; private set; }
 
     /// <summary>
+    /// The instant the match was completed and its rating update applied, or <see langword="null"/>
+    /// before completion. Set only by the first successful <see cref="Complete"/>; it is the stable
+    /// replay ordering key, tie-broken by <see cref="BaseEntity.Id"/> via
+    /// <see cref="PitchMate.Domain.Common.ChronologicalOrder"/> (Requirement 12.1, 12.4). Once set it
+    /// is never changed — an idempotent re-completion leaves it untouched (Requirement 12.7, 13.2).
+    /// </summary>
+    public DateTimeOffset? CompletedAt { get; private set; }
+
+    /// <summary>
     /// Creates a match draft in <see cref="MatchState.GatheringAvailability"/> for
     /// <paramref name="squadId"/> (Requirement 1.1, 2.2). The draft is created only when every
     /// validation rule holds; on any failure a validation error is returned and no match is
@@ -1073,6 +1082,59 @@ public sealed class Match : BaseEntity
         }
 
         return Result<MatchOutcome>.Ok(new MatchOutcome(teams));
+    }
+
+    /// <summary>
+    /// Completes the match, transitioning <see cref="MatchState.InProgress"/> →
+    /// <see cref="MatchState.Completed"/> and stamping <paramref name="completedAtUtc"/> as the
+    /// <see cref="CompletedAt"/> replay ordering key (Requirement 12.1, 12.4). The transition of match
+    /// state is the sole responsibility captured here; deriving the outcome, applying the single
+    /// <see cref="IRatingEngine.UpdateRatings"/> call, updating each membership rating, and writing one
+    /// <see cref="RatingSnapshot"/> per participant are the completion handler's concern, performed in
+    /// the same atomic transaction (Requirement 12.1, 10.1). This method never alters the captured
+    /// <see cref="KickoffLineup"/> — the immutable rating unit (Requirement 10.1). Behaviour by state:
+    /// <list type="bullet">
+    ///   <item>an already-<see cref="MatchState.Completed"/> match is a success no-op: it applies no
+    ///   further change, leaving <see cref="State"/>, <see cref="CompletedAt"/>, the recorded result,
+    ///   and every other field exactly as the first completion left them, so a repeated request
+    ///   returns the same recorded result (available via <see cref="RecordedResult"/>) and completes
+    ///   at most once (Requirement 12.7, 10.5, 13.2, 13.3, 13.5);</item>
+    ///   <item>a match not in <see cref="MatchState.InProgress"/> (and not already
+    ///   <see cref="MatchState.Completed"/>) is rejected with an
+    ///   <see cref="MatchErrorCode.InvalidState"/> failure naming the required and current state and
+    ///   left unchanged (Requirement 12.8);</item>
+    ///   <item>an <see cref="MatchState.InProgress"/> match with no <see cref="RecordedResult"/> is
+    ///   rejected with a <see cref="MatchErrorCode.ResultRequired"/> failure and left in
+    ///   <see cref="MatchState.InProgress"/> (Requirement 12.5).</item>
+    /// </list>
+    /// </summary>
+    /// <param name="completedAtUtc">The instant to record as the match's completion time and replay ordering key.</param>
+    /// <returns>A success once completed (or on an idempotent no-op), or a state/result-required failure that leaves the match unchanged.</returns>
+    public Result Complete(DateTimeOffset completedAtUtc)
+    {
+        // Idempotent no-op: a match already completed changes nothing and reports success, so a
+        // retried completion returns the originally recorded result and applies no second update.
+        if (State == MatchState.Completed)
+        {
+            return Result.Ok();
+        }
+
+        var guard = EnsureState(MatchState.InProgress);
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        if (RecordedResult is null)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ResultRequired,
+                "Cannot complete the match before a result has been recorded."));
+        }
+
+        CompletedAt = completedAtUtc;
+        State = MatchState.Completed;
+        return Result.Ok();
     }
 
     /// <summary>
