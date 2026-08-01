@@ -33,19 +33,22 @@ public sealed class MatchParticipant : BaseEntity
     /// <summary>
     /// Creates a participant linking <paramref name="matchId"/> to
     /// <paramref name="squadMembershipId"/>, capturing the <paramref name="displayName"/> in force at
-    /// the time of addition. Called only by the owning <see cref="Match"/> aggregate once the
-    /// membership's eligibility has been established by the caller.
+    /// the time of addition and its <paramref name="rosterPosition"/> within the match's playing pool.
+    /// Called only by the owning <see cref="Match"/> aggregate once the membership's eligibility has
+    /// been established.
     /// </summary>
     /// <param name="matchId">The identity of the match this participant belongs to.</param>
     /// <param name="squadMembershipId">The identity of the squad membership playing; unique within a match.</param>
     /// <param name="displayName">The membership's display name captured at the time of addition.</param>
     /// <param name="isGuest"><see langword="true"/> when the membership is a guest; otherwise <see langword="false"/> for a registered member.</param>
-    internal MatchParticipant(Guid matchId, Guid squadMembershipId, string displayName, bool isGuest)
+    /// <param name="rosterPosition">The participant's stable position within the match's playing pool at the time of addition.</param>
+    internal MatchParticipant(Guid matchId, Guid squadMembershipId, string displayName, bool isGuest, int rosterPosition)
     {
         MatchId = matchId;
         SquadMembershipId = squadMembershipId;
         DisplayName = displayName;
         IsGuest = isGuest;
+        RosterPosition = rosterPosition;
     }
 
     /// <summary>The identity of the match this participant belongs to.</summary>
@@ -59,4 +62,11 @@ public sealed class MatchParticipant : BaseEntity
 
     /// <summary><see langword="true"/> when this participant is backed by a guest membership; otherwise <see langword="false"/>.</summary>
     public bool IsGuest { get; private set; }
+
+    /// <summary>
+    /// The participant's stable position within the match's playing pool, assigned at the time it was
+    /// added (seeded participants are positioned in seeding order; a later addition takes the next
+    /// position). Used to present participants in a deterministic roster order.
+    /// </summary>
+    public int RosterPosition { get; private set; }
 }

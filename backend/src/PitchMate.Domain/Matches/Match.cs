@@ -1,4 +1,5 @@
 using PitchMate.Domain.Common;
+using PitchMate.Domain.Squads;
 
 namespace PitchMate.Domain.Matches;
 
@@ -338,7 +339,7 @@ public sealed class Match : BaseEntity
             var response = _availabilityResponses.FirstOrDefault(r => r.SquadMembershipId == member.SquadMembershipId);
             if (response is not null && response.Marks(confirmedDay))
             {
-                seeded.Add(new MatchParticipant(Id, member.SquadMembershipId, member.DisplayName, isGuest: false));
+                seeded.Add(new MatchParticipant(Id, member.SquadMembershipId, member.DisplayName, isGuest: false, rosterPosition: seeded.Count));
             }
         }
 
@@ -348,6 +349,106 @@ public sealed class Match : BaseEntity
         _participants.AddRange(seeded);
         return Result.Ok();
     }
+
+    /// <summary>
+    /// Adds <paramref name="membership"/> to the match's playing pool as a
+    /// <see cref="MatchParticipant"/>, capturing its <see cref="SquadMembership.DisplayName"/> as the
+    /// display-name-at-time and assigning the next roster position (Requirement 7.1, 7.2). The
+    /// participant is registered or guest according to the membership's backing. Validation, in order
+    /// — each failure leaves the match's <see cref="Participants"/> unchanged:
+    /// <list type="bullet">
+    ///   <item>the match must be in <see cref="MatchState.Confirmed"/>, else an
+    ///   <see cref="MatchErrorCode.InvalidState"/> failure naming the required and current state is
+    ///   returned (Requirement 2.3, 2.5);</item>
+    ///   <item>the membership must belong to this match's squad and have
+    ///   <see cref="MembershipState.Active"/> state, else a <see cref="MatchErrorCode.ValidationFailed"/>
+    ///   failure identifying the ineligible membership is returned (Requirement 7.3);</item>
+    ///   <item>the membership must not already be a participant, else an
+    ///   <see cref="MatchErrorCode.AlreadyParticipant"/> failure is returned and the membership is
+    ///   retained as exactly one participant (Requirement 7.4).</item>
+    /// </list>
+    /// The Application layer decides which memberships an admin may add (a guest via
+    /// <c>AddGuestParticipant</c>); the aggregate owns eligibility and the no-duplicate invariant.
+    /// </summary>
+    /// <param name="membership">The squad membership to add; must belong to this squad and be active.</param>
+    /// <returns>A success carrying the new participant, or a state/validation/duplicate failure that leaves the participant set unchanged.</returns>
+    public Result<MatchParticipant> AddParticipant(SquadMembership membership)
+    {
+        ArgumentNullException.ThrowIfNull(membership);
+
+        var guard = EnsureState(MatchState.Confirmed);
+        if (!guard.IsSuccess)
+        {
+            return Result<MatchParticipant>.Fail(guard.Error!);
+        }
+
+        if (membership.SquadId != SquadId || membership.State != MembershipState.Active)
+        {
+            return Result<MatchParticipant>.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                $"Membership {membership.Id} is ineligible: it must belong to squad {SquadId} and be active."));
+        }
+
+        if (_participants.Any(p => p.SquadMembershipId == membership.Id))
+        {
+            return Result<MatchParticipant>.Fail(new MatchError(
+                MatchErrorCode.AlreadyParticipant,
+                $"Membership {membership.Id} is already a participant of this match."));
+        }
+
+        var participant = new MatchParticipant(
+            Id,
+            membership.Id,
+            membership.DisplayName,
+            membership.IsGuest,
+            NextRosterPosition());
+        _participants.Add(participant);
+        return Result<MatchParticipant>.Ok(participant);
+    }
+
+    /// <summary>
+    /// Removes the participant backed by <paramref name="squadMembershipId"/> from the match's
+    /// playing pool, after which that membership is no longer a <see cref="MatchParticipant"/>
+    /// (Requirement 7.2). Validation, in order — each failure leaves the match's
+    /// <see cref="Participants"/> unchanged:
+    /// <list type="bullet">
+    ///   <item>the match must be in <see cref="MatchState.Confirmed"/>, else an
+    ///   <see cref="MatchErrorCode.InvalidState"/> failure naming the required and current state is
+    ///   returned (Requirement 2.3, 2.5);</item>
+    ///   <item>the membership must currently be a participant, else a
+    ///   <see cref="MatchErrorCode.NotAParticipant"/> failure is returned (Requirement 7.5).</item>
+    /// </list>
+    /// Remaining participants keep their existing roster positions.
+    /// </summary>
+    /// <param name="squadMembershipId">The identity of the participant membership to remove.</param>
+    /// <returns>A success once removed, or a state/not-a-participant failure that leaves the participant set unchanged.</returns>
+    public Result RemoveParticipant(Guid squadMembershipId)
+    {
+        var guard = EnsureState(MatchState.Confirmed);
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        var participant = _participants.FirstOrDefault(p => p.SquadMembershipId == squadMembershipId);
+        if (participant is null)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.NotAParticipant,
+                $"Membership {squadMembershipId} is not a participant of this match."));
+        }
+
+        _participants.Remove(participant);
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Returns the next roster position to assign to a newly added participant: one past the highest
+    /// existing roster position, or 0 when the pool is empty. Using the maximum (rather than the
+    /// count) keeps positions stable and non-colliding across intervening removals.
+    /// </summary>
+    private int NextRosterPosition() =>
+        _participants.Count == 0 ? 0 : _participants.Max(p => p.RosterPosition) + 1;
 
     /// <summary>
     /// The source states from which a match may be cancelled by an admin before play
