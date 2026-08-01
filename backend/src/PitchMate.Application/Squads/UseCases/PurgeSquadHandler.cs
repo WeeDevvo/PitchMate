@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using PitchMate.Application.Common.Persistence;
+using PitchMate.Application.Notifications;
 using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Domain.Squads;
 
@@ -31,17 +33,25 @@ public sealed class PurgeSquadHandler
     private readonly ISquadMembershipRepository _memberships;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _clock;
+    private readonly RemoveNotificationsForSquadHandler? _removeNotifications;
+    private readonly ILogger<PurgeSquadHandler>? _logger;
 
     /// <summary>
     /// Creates the handler with the squad repository it lists due squads and removes them through, the
     /// membership repository it enumerates and stages each squad's memberships with, the unit of work
-    /// it commits with, and the clock it reads the current instant from to select due squads.
+    /// it commits with, and the clock it reads the current instant from to select due squads. The
+    /// notification removal handler and logger are optional collaborators used only for the best-effort
+    /// removal of each purged squad's in-app notifications after a committed purge; production wiring
+    /// supplies both, and they are left absent in tests that exercise only the purge itself
+    /// (notifications Requirements 11.3, 11.6).
     /// </summary>
     public PurgeSquadHandler(
         ISquadRepository squads,
         ISquadMembershipRepository memberships,
         IUnitOfWork unitOfWork,
-        TimeProvider clock)
+        TimeProvider clock,
+        RemoveNotificationsForSquadHandler? removeNotifications = null,
+        ILogger<PurgeSquadHandler>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(squads);
         ArgumentNullException.ThrowIfNull(memberships);
@@ -52,6 +62,8 @@ public sealed class PurgeSquadHandler
         _memberships = memberships;
         _unitOfWork = unitOfWork;
         _clock = clock;
+        _removeNotifications = removeNotifications;
+        _logger = logger;
     }
 
     /// <summary>
@@ -76,7 +88,52 @@ public sealed class PurgeSquadHandler
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Only after the purge has committed do we remove each purged squad's in-app notifications,
+        // which carry no match-history integrity requirement and are therefore deleted rather than
+        // anonymised (notifications Requirements 11.3, 11.6). The removals run on their own unit of work
+        // and never touch match or rating-replay data; any failure is logged (identifiers only) and
+        // swallowed so it can never roll back or surface through the committed purge.
+        foreach (Squad squad in due)
+        {
+            await RemoveNotificationsForPurgedSquadAsync(squad.Id, cancellationToken);
+        }
+
         return Result<int>.Ok(due.Count);
+    }
+
+    /// <summary>
+    /// Best-effort removal of every in-app notification owned by a purged squad (notifications
+    /// Requirement 11.3). Mirrors the way the squad lifecycle hooks are wired: it runs only after the
+    /// purge has committed, is isolated on its own unit of work, and swallows every failure — logging
+    /// identifiers only, never any PII — so a notifications-side problem never undoes the purge.
+    /// </summary>
+    private async Task RemoveNotificationsForPurgedSquadAsync(Guid squadId, CancellationToken cancellationToken)
+    {
+        if (_removeNotifications is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var removal = await _removeNotifications.HandleAsync(squadId, cancellationToken);
+            if (!removal.IsSuccess)
+            {
+                _logger?.LogWarning(
+                    "In-app notification removal for purged squad failed (isolated; purge stays committed). "
+                    + "SquadId={SquadId}, Reason={Reason}",
+                    squadId, removal.Error?.Code);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        {
+            _logger?.LogWarning(
+                ex,
+                "In-app notification removal for purged squad threw (isolated; purge stays committed). "
+                + "SquadId={SquadId}",
+                squadId);
+        }
     }
 
     /// <summary>

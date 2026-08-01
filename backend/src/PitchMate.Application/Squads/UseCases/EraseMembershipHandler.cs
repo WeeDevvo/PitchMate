@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using PitchMate.Application.Common.Persistence;
+using PitchMate.Application.Notifications;
 using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Domain.Squads;
 
@@ -29,17 +31,25 @@ public sealed class EraseMembershipHandler
     private readonly ISquadRepository _squads;
     private readonly IMembershipHistoryProbe _history;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly RemoveNotificationsForMembershipHandler? _removeNotifications;
+    private readonly ILogger<EraseMembershipHandler>? _logger;
 
     /// <summary>
     /// Creates the handler with the membership repository it resolves and stages the target through,
     /// the squad repository it checks the owner's squad deletion state with, the history probe that
-    /// decides anonymise-vs-remove, and the unit of work it commits with.
+    /// decides anonymise-vs-remove, and the unit of work it commits with. The notification removal
+    /// handler and logger are optional collaborators used only for the best-effort removal of the
+    /// anonymised membership's in-app notifications after a committed erasure; production wiring
+    /// supplies both, and they are left absent in tests that exercise only the erasure itself
+    /// (notifications Requirements 11.2, 11.6).
     /// </summary>
     public EraseMembershipHandler(
         ISquadMembershipRepository memberships,
         ISquadRepository squads,
         IMembershipHistoryProbe history,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        RemoveNotificationsForMembershipHandler? removeNotifications = null,
+        ILogger<EraseMembershipHandler>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(memberships);
         ArgumentNullException.ThrowIfNull(squads);
@@ -50,6 +60,8 @@ public sealed class EraseMembershipHandler
         _squads = squads;
         _history = history;
         _unitOfWork = unitOfWork;
+        _removeNotifications = removeNotifications;
+        _logger = logger;
     }
 
     /// <summary>
@@ -81,7 +93,49 @@ public sealed class EraseMembershipHandler
 
         await EraseAsync(membership, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Only after the erasure has committed do we remove the membership's in-app notifications,
+        // which carry no match-history integrity requirement and are therefore deleted rather than
+        // anonymised (notifications Requirements 11.2, 11.6). The removal runs on its own unit of work
+        // and never touches match or rating-replay data; any failure is logged (identifiers only) and
+        // swallowed so it can never roll back or surface through the committed erasure.
+        await RemoveNotificationsForErasedMembershipAsync(membership.Id, cancellationToken);
         return Result.Ok();
+    }
+
+    /// <summary>
+    /// Best-effort removal of every in-app notification addressed to the anonymised membership
+    /// (notifications Requirement 11.2). Mirrors the way the squad lifecycle hooks are wired: it runs
+    /// only after the erasure has committed, is isolated on its own unit of work, and swallows every
+    /// failure — logging identifiers only, never any PII — so a notifications-side problem never undoes
+    /// the erasure.
+    /// </summary>
+    private async Task RemoveNotificationsForErasedMembershipAsync(Guid membershipId, CancellationToken cancellationToken)
+    {
+        if (_removeNotifications is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var removal = await _removeNotifications.HandleAsync(membershipId, cancellationToken);
+            if (!removal.IsSuccess)
+            {
+                _logger?.LogWarning(
+                    "In-app notification removal for erased membership failed (isolated; erasure stays committed). "
+                    + "MembershipId={MembershipId}, Reason={Reason}",
+                    membershipId, removal.Error?.Code);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        {
+            _logger?.LogWarning(
+                ex,
+                "In-app notification removal for erased membership threw (isolated; erasure stays committed). "
+                + "MembershipId={MembershipId}",
+                membershipId);
+        }
     }
 
     /// <summary>
