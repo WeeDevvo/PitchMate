@@ -128,4 +128,83 @@ public sealed class Match : BaseEntity
 
         return Result<Match>.Ok(new Match(id, squadId, trimmed, days));
     }
+
+    /// <summary>
+    /// The source states from which a match may be cancelled by an admin before play
+    /// (Requirement 2.6): <see cref="MatchState.GatheringAvailability"/>,
+    /// <see cref="MatchState.Confirmed"/>, and <see cref="MatchState.TeamsRolled"/>. The in-play and
+    /// terminal states (<see cref="MatchState.InProgress"/>, <see cref="MatchState.Completed"/>,
+    /// <see cref="MatchState.Cancelled"/>) are deliberately excluded (Requirement 2.7, 15.3).
+    /// </summary>
+    private static readonly IReadOnlySet<MatchState> CancellableStates = new HashSet<MatchState>
+    {
+        MatchState.GatheringAvailability,
+        MatchState.Confirmed,
+        MatchState.TeamsRolled
+    };
+
+    /// <summary>
+    /// Starts the match, transitioning <see cref="MatchState.TeamsRolled"/> →
+    /// <see cref="MatchState.InProgress"/> (Requirement 2.3). The transition is rejected with an
+    /// <see cref="MatchErrorCode.InvalidState"/> error naming the required and current state when the
+    /// match is in any other state, including the terminal <see cref="MatchState.Completed"/> and
+    /// <see cref="MatchState.Cancelled"/> states (Requirement 11.1, 15.1, 15.3); on rejection
+    /// <see cref="State"/> and all match data are left unchanged (Requirement 15.2).
+    /// </summary>
+    /// <returns>A success once started, or an <see cref="MatchErrorCode.InvalidState"/> failure.</returns>
+    public Result Start()
+    {
+        var guard = EnsureState(MatchState.TeamsRolled);
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        State = MatchState.InProgress;
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Cancels the match, transitioning it to <see cref="MatchState.Cancelled"/> (Requirement 2.6).
+    /// Cancellation is permitted only from <see cref="MatchState.GatheringAvailability"/>,
+    /// <see cref="MatchState.Confirmed"/>, or <see cref="MatchState.TeamsRolled"/>; a request from any
+    /// other state — including the in-play <see cref="MatchState.InProgress"/> state and the terminal
+    /// <see cref="MatchState.Completed"/>/<see cref="MatchState.Cancelled"/> states — is rejected with
+    /// an <see cref="MatchErrorCode.InvalidState"/> error naming the current state (Requirement 2.7,
+    /// 11.1, 15.1, 15.3), leaving <see cref="State"/> and all match data unchanged (Requirement 15.2).
+    /// </summary>
+    /// <returns>A success once cancelled, or an <see cref="MatchErrorCode.InvalidState"/> failure.</returns>
+    public Result Cancel()
+    {
+        if (!CancellableStates.Contains(State))
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.InvalidState,
+                $"Match must be in {MatchState.GatheringAvailability}, {MatchState.Confirmed}, or {MatchState.TeamsRolled} to be cancelled, but is {State}."));
+        }
+
+        State = MatchState.Cancelled;
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Shared lifecycle guard reused by the forward state transitions (Requirement 15.1). Asserts the
+    /// match is in <paramref name="required"/>; when it is not, returns an
+    /// <see cref="MatchErrorCode.InvalidState"/> failure naming both the required and current state and
+    /// leaves <see cref="State"/> and all match data unchanged (Requirement 15.2, 15.3). The check is
+    /// pure — it mutates nothing on either the success or failure path.
+    /// </summary>
+    /// <param name="required">The single state the operation demands as its source.</param>
+    /// <returns>A success when <see cref="State"/> equals <paramref name="required"/>; otherwise an <see cref="MatchErrorCode.InvalidState"/> failure.</returns>
+    private Result EnsureState(MatchState required)
+    {
+        if (State != required)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.InvalidState,
+                $"Match must be in {required} for this operation, but is {State}."));
+        }
+
+        return Result.Ok();
+    }
 }
