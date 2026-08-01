@@ -297,6 +297,34 @@ public sealed class Match : BaseEntity
         AvailabilityTally.Compute(_candidateDays, _availabilityResponses);
 
     /// <summary>
+    /// Produces the <see cref="TeamSheet"/> read model for this match (Requirement 9.1). The sheet
+    /// presents the match's <see cref="Location"/>, its <see cref="ConfirmedDay"/>, and each locked
+    /// team with its name, bib flag, and roster of participant display names in roster order, indicating
+    /// the single bib-wearing team (Requirement 9.2). Permitted only while the match is in
+    /// <see cref="MatchState.TeamsRolled"/> — the state in which a <see cref="KickoffLineup"/> has been
+    /// captured and a <see cref="ConfirmedDay"/> is set; from any other state an
+    /// <see cref="MatchErrorCode.InvalidState"/> failure naming the required and current state is
+    /// returned and no sheet is produced (Requirement 2.5). The sheet is projected from the immutable
+    /// captured lineup, so re-locking while <see cref="MatchState.TeamsRolled"/> and re-producing the
+    /// sheet reflects the newly locked teams (Requirement 9.3).
+    /// <para>
+    /// Restricting visibility of the sheet to the match's squad is the Application layer's concern
+    /// (Requirement 9.4, 9.5); this method contributes only the projection.
+    /// </para>
+    /// </summary>
+    /// <returns>A success carrying the projected <see cref="TeamSheet"/>, or an <see cref="MatchErrorCode.InvalidState"/> failure that produces no sheet.</returns>
+    public Result<TeamSheet> ProduceTeamSheet()
+    {
+        var guard = EnsureState(MatchState.TeamsRolled);
+        if (!guard.IsSuccess)
+        {
+            return Result<TeamSheet>.Fail(guard.Error!);
+        }
+
+        return Result<TeamSheet>.Ok(TeamSheet.Project(this));
+    }
+
+    /// <summary>
     /// Confirms the match on <paramref name="day"/>, transitioning
     /// <see cref="MatchState.GatheringAvailability"/> → <see cref="MatchState.Confirmed"/> and seeding
     /// the playing pool (Requirement 6.1). Validation, in order — each failure returns without
