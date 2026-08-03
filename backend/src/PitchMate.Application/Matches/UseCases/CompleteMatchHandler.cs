@@ -50,11 +50,14 @@ namespace PitchMate.Application.Matches.UseCases;
 /// per participant, committing the lot atomically through <see cref="IUnitOfWork.SaveChangesAsync"/>.
 /// </para>
 /// <para>
-/// The match-state guard plus the row's <c>xmin</c> optimistic-concurrency token make the update
-/// apply at most once: two concurrent completions both read <see cref="MatchState.InProgress"/>, but
-/// only one commit wins; the loser's commit raises a <see cref="ConcurrencyConflictException"/>, upon
-/// which the handler reloads the match, observes it is now <see cref="MatchState.Completed"/>, and
-/// returns the existing recorded result without applying a second update (Requirement 13.4, 13.6,
+/// The match-state guard, the row's <c>xmin</c> optimistic-concurrency token, and the
+/// one-snapshot-per-(match, participant) unique index together make the update apply at most once:
+/// two concurrent completions both read <see cref="MatchState.InProgress"/>, but only one commit
+/// wins. The loser's commit fails on whichever guard the provider evaluates first — the match's
+/// <c>xmin</c> token (a <see cref="ConcurrencyConflictException"/>) or the snapshot unique index once
+/// the winner's snapshot rows exist (a <see cref="DuplicateKeyException"/>) — and the handler recovers
+/// from either identically: it reloads the match, observes it is now <see cref="MatchState.Completed"/>,
+/// and returns the existing recorded result without applying a second update (Requirement 13.4, 13.6,
 /// 12.7).
 /// </para>
 /// <para>
@@ -238,11 +241,17 @@ public sealed class CompleteMatchHandler
             // transaction (Requirement 12.1).
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
-        catch (ConcurrencyConflictException)
+        catch (Exception ex) when (ex is ConcurrencyConflictException or DuplicateKeyException)
         {
-            // Another completion won the race on the xmin-guarded row. Reload and, if the match is now
-            // completed, return its recorded result as an idempotent success applying no second update;
-            // otherwise surface the conflict (Requirement 13.4, 13.6, 12.7).
+            // Another completion won the race. Two database guards can surface a lost race here, and
+            // which one fires depends purely on the order the provider applies the batch's statements:
+            //   * the match row's xmin optimistic-concurrency token (a ConcurrencyConflictException), or
+            //   * the one-snapshot-per-(match, participant) unique index, when the winner's snapshot
+            //     rows already exist (a DuplicateKeyException).
+            // Both mean the same thing — the update was already applied by the winner — so recover from
+            // either identically: reload and, if the match is now completed, return its recorded result
+            // as an idempotent success applying no second update; otherwise surface the conflict
+            // (Requirement 13.4, 13.6, 12.7).
             Match? reloaded = await _matches.GetByIdAsync(command.MatchId, cancellationToken);
             if (reloaded is not null && reloaded.State == MatchState.Completed)
             {
