@@ -1,6 +1,8 @@
 using PitchMate.Api.Auth;
 using PitchMate.Api.Auth.Endpoints;
 using PitchMate.Api.Auth.OpenApi;
+using PitchMate.Api.Matches;
+using PitchMate.Api.Matches.Endpoints;
 using PitchMate.Api.Notifications;
 using PitchMate.Api.Notifications.Endpoints;
 using PitchMate.Api.Squads;
@@ -42,6 +44,12 @@ builder.Services.AddSquads(builder.Configuration);
 // transport is introduced (Requirements 7.2, 13.3, 13.4, 13.6).
 builder.Services.AddNotifications();
 
+// Matches composition root: registers the match-lifecycle use-case handlers so every match endpoint
+// resolves its handler. The match Infrastructure implementations (repositories, team balancer, silly
+// name generator) are already wired by AddInfrastructure, since they are internal to that assembly
+// (Requirement 16.4).
+builder.Services.AddMatches();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -77,6 +85,13 @@ app.MapSquadEndpoints();
 // an Application read-model handler and maps failures through the single NotificationErrorCode → HTTP
 // seam, concealing existence with a uniform 404 (Requirements 10.1–10.5, 13.4).
 app.MapNotificationEndpoints();
+
+// Match endpoints: the full lifecycle — draft create, availability submit/clear/tally, confirm,
+// participant add/remove, team roll/adjust/lock and the team sheet, then start, record result,
+// complete, and cancel (Requirement 16.4). Each endpoint delegates to an Application use case and
+// maps failures through the single MatchErrorCode → HTTP seam, concealing existence with a uniform
+// 404 on existence-sensitive reads (Requirement 14.4).
+app.MapMatchEndpoints();
 
 app.Run();
 
