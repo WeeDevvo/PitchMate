@@ -51,6 +51,19 @@ internal static class MatchAuthorization
     public static Result RequireActiveMember(SquadMembership? acting) =>
         IsActive(acting) ? Result.Ok() : Unauthorized();
 
+    /// <summary>
+    /// Requires an active <em>registered</em> membership of the match's squad, gating availability
+    /// submission and clearing — the only actions restricted to members who can respond to a draft.
+    /// A guest membership (which holds no backing user and never responds to a draft), an inactive
+    /// membership, or a non-member is rejected with the uniform authorisation failure so a rejection
+    /// discloses neither the squad nor the match, and no availability response is stored
+    /// (Requirement 4.5, 7.6).
+    /// </summary>
+    /// <param name="acting">The resolved acting membership, or <see langword="null"/> when the actor is not a member.</param>
+    /// <returns><see cref="Result.Ok"/> when the actor is an active registered member; otherwise the uniform failure.</returns>
+    public static Result RequireActiveRegisteredMember(SquadMembership? acting) =>
+        IsActive(acting) && !acting!.IsGuest ? Result.Ok() : Unauthorized();
+
     private static bool IsActive(SquadMembership? acting) =>
         acting is not null && acting.State == MembershipState.Active;
 
