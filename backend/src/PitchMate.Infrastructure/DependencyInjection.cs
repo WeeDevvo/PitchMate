@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using PitchMate.Application.Common;
 using PitchMate.Application.Common.Persistence;
 using PitchMate.Domain.Rating;
+using PitchMate.Infrastructure.Matches;
 using PitchMate.Infrastructure.Persistence;
 
 namespace PitchMate.Infrastructure;
@@ -45,6 +46,12 @@ public static class DependencyInjection
         services.TryAddScoped<ICurrentUserAccessor, SystemCurrentUserAccessor>();
 
         AddRatingEngine(services, configuration);
+
+        // Match-lifecycle Infrastructure: EF Core repositories plus the team balancer and silly name
+        // generator. Invoked here (rather than from the Api) because the repositories are internal to
+        // this assembly, so they must be wired from within it (Requirements 16.3, 16.4). Registered
+        // after the rating engine because the balancer depends on the singleton IRatingEngine.
+        services.AddMatchesInfrastructure();
 
         return services;
     }
