@@ -7,6 +7,8 @@ using PitchMate.Api.Notifications;
 using PitchMate.Api.Notifications.Endpoints;
 using PitchMate.Api.Squads;
 using PitchMate.Api.Squads.Endpoints;
+using PitchMate.Api.Stats;
+using PitchMate.Api.Stats.Endpoints;
 using PitchMate.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +52,12 @@ builder.Services.AddNotifications();
 // (Requirement 16.4).
 builder.Services.AddMatches();
 
+// Stats composition root: registers the stats read use-case handlers (leaderboard and player
+// profile) so every stats endpoint resolves its handler. The stats Infrastructure implementations
+// (EfStatsRepository, the display-rating parameters source, and the rich-stats source) are already
+// wired by AddInfrastructure, since they are internal to that assembly (Requirement 15.4).
+builder.Services.AddStats();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -92,6 +100,13 @@ app.MapNotificationEndpoints();
 // maps failures through the single MatchErrorCode → HTTP seam, concealing existence with a uniform
 // 404 on existence-sensitive reads (Requirement 14.4).
 app.MapMatchEndpoints();
+
+// Stats endpoints: the two squad-scoped reads — the leaderboard ranked by a selected statistic and a
+// per-player profile (Requirement 15.4). Each endpoint resolves the acting user from the token
+// subject, delegates to an Application read use case, and maps failures through the single
+// existence-concealing StatsErrorCode → HTTP seam, answering a missing/invalid token and an
+// authenticated non-member with a uniform 404 (Requirements 1.2, 1.6, 3.6).
+app.MapStatsEndpoints();
 
 app.Run();
 
