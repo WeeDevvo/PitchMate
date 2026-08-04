@@ -7,6 +7,7 @@ using PitchMate.Application.Common.Persistence;
 using PitchMate.Domain.Rating;
 using PitchMate.Infrastructure.Matches;
 using PitchMate.Infrastructure.Persistence;
+using PitchMate.Infrastructure.Stats;
 
 namespace PitchMate.Infrastructure;
 
@@ -52,6 +53,13 @@ public static class DependencyInjection
         // this assembly, so they must be wired from within it (Requirements 16.3, 16.4). Registered
         // after the rating engine because the balancer depends on the singleton IRatingEngine.
         services.AddMatchesInfrastructure();
+
+        // Stats read-surface Infrastructure: the EF Core stats repository plus the MVP parameter and
+        // rich-stats sources. Invoked here (rather than from the Api) because EfStatsRepository is
+        // internal to this assembly and must be wired from within it (Requirement 2.5, 15.3).
+        // Registered after the rating engine because EfStatsRepository depends on the singleton
+        // IRatingEngine (and IDisplayRatingParametersSource) to derive the Display_Rating leaderboard.
+        services.AddStatsInfrastructure();
 
         return services;
     }
