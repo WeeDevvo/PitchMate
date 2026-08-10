@@ -1,6 +1,8 @@
 using PitchMate.Api.Auth;
 using PitchMate.Api.Auth.Endpoints;
 using PitchMate.Api.Auth.OpenApi;
+using PitchMate.Api.LiveTracking;
+using PitchMate.Api.LiveTracking.Endpoints;
 using PitchMate.Api.Matches;
 using PitchMate.Api.Matches.Endpoints;
 using PitchMate.Api.Notifications;
@@ -58,6 +60,13 @@ builder.Services.AddMatches();
 // wired by AddInfrastructure, since they are internal to that assembly (Requirement 15.4).
 builder.Services.AddStats();
 
+// Live-tracking composition root: registers the live-tracking use-case handlers (record event batch,
+// finalise tracked result, and read running score) so every live-tracking endpoint resolves its
+// handler. The live-tracking Infrastructure implementations (EfMatchEventRepository and the
+// event-log-backed EventLogRichStatsSource) are already wired by AddInfrastructure, since they are
+// internal to that assembly (Requirement 14.4).
+builder.Services.AddLiveTracking();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -107,6 +116,13 @@ app.MapMatchEndpoints();
 // existence-concealing StatsErrorCode → HTTP seam, answering a missing/invalid token and an
 // authenticated non-member with a uniform 404 (Requirements 1.2, 1.6, 3.6).
 app.MapStatsEndpoints();
+
+// Live-tracking endpoints: the match-scoped tracking surface — record an Event_Batch, finalise the
+// tracked result, and read the current running score (Requirement 14.4). Each endpoint delegates to an
+// Application use case and maps failures through the single existence-concealing
+// LiveTrackingErrorResults seam, concealing existence with a uniform 404 for a non-member or a missing
+// match (Requirements 11.1, 11.2, 11.4).
+app.MapLiveTrackingEndpoints();
 
 app.Run();
 

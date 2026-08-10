@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using PitchMate.Application.Common;
 using PitchMate.Application.Common.Persistence;
 using PitchMate.Domain.Rating;
+using PitchMate.Infrastructure.LiveTracking;
 using PitchMate.Infrastructure.Matches;
 using PitchMate.Infrastructure.Persistence;
 using PitchMate.Infrastructure.Stats;
@@ -60,6 +61,14 @@ public static class DependencyInjection
         // Registered after the rating engine because EfStatsRepository depends on the singleton
         // IRatingEngine (and IDisplayRatingParametersSource) to derive the Display_Rating leaderboard.
         services.AddStatsInfrastructure();
+
+        // Live-tracking Infrastructure: the EF Core append-only event-log repository plus the real
+        // event-log-backed IRichStatsSource. Invoked here (rather than from the Api) because
+        // EfMatchEventRepository and EventLogRichStatsSource are internal to this assembly and must be
+        // wired from within it. Registered AFTER AddStatsInfrastructure because it replaces the
+        // EmptyRichStatsSource that registration seeds, so EventLogRichStatsSource is resolved instead
+        // (Requirement 14.3).
+        services.AddLiveTrackingInfrastructure();
 
         return services;
     }
