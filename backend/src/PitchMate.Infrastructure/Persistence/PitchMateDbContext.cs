@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using PitchMate.Application.Common;
 using PitchMate.Application.Common.Persistence;
 using PitchMate.Domain.Common;
+using PitchMate.Domain.LiveTracking;
 
 namespace PitchMate.Infrastructure.Persistence;
 
@@ -51,6 +52,13 @@ public class PitchMateDbContext : DbContext
         _clock = clock;
         _currentUser = currentUser;
     }
+
+    /// <summary>
+    /// The append-only live-tracking event log, mapped table-per-hierarchy on <c>EventKind</c>. Keyed
+    /// on the client-generated GUID v7 <c>Event_Id</c>, it is never updated or deleted once an event is
+    /// accepted (Requirement 1.3, 1.6).
+    /// </summary>
+    public DbSet<MatchEvent> MatchEvents => Set<MatchEvent>();
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -307,6 +315,15 @@ public class PitchMateDbContext : DbContext
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (!typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
+            {
+                continue;
+            }
+
+            // For an inheritance hierarchy (e.g. the table-per-hierarchy MatchEvent log) the key,
+            // concurrency token, and soft-delete query filter belong on the root type only; the
+            // derived types share the root's table and mapping, and EF rejects configuring a key or
+            // query filter on a non-root type. Skip anything that is not the root of its hierarchy.
+            if (entityType.BaseType is not null)
             {
                 continue;
             }
