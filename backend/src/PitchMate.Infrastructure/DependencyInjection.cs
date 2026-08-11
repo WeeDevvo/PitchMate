@@ -8,6 +8,7 @@ using PitchMate.Domain.Rating;
 using PitchMate.Infrastructure.LiveTracking;
 using PitchMate.Infrastructure.Matches;
 using PitchMate.Infrastructure.Persistence;
+using PitchMate.Infrastructure.Squads;
 using PitchMate.Infrastructure.Stats;
 
 namespace PitchMate.Infrastructure;
@@ -61,6 +62,13 @@ public static class DependencyInjection
         // Registered after the rating engine because EfStatsRepository depends on the singleton
         // IRatingEngine (and IDisplayRatingParametersSource) to derive the Display_Rating leaderboard.
         services.AddStatsInfrastructure();
+
+        // Squads Infrastructure: the EF Core squad repositories. Invoked here (rather than only from
+        // the Api) because the live-tracking source registered just below (EventLogRichStatsSource)
+        // depends on ISquadRepository, so the squad repositories must be present in any provider built
+        // from AddInfrastructure alone. AddSquadsInfrastructure uses Try* throughout, so the Api's
+        // AddSquads calling it again is a harmless idempotent no-op.
+        services.AddSquadsInfrastructure();
 
         // Live-tracking Infrastructure: the EF Core append-only event-log repository plus the real
         // event-log-backed IRichStatsSource. Invoked here (rather than from the Api) because
