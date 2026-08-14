@@ -1,0 +1,310 @@
+/*
+ * Responsive layout for the marketing landing page (Requirement 4).
+ *
+ * This stylesheet is the presentational shell for the landing surface. It is
+ * intentionally scoped to the landing feature's own class names — the ones the
+ * section components actually render:
+ *
+ *   NavigationHeader → .landing-header / .landing-header__logo / .landing-header__actions
+ *   HeroSection      → .hero / .hero__headline / .hero__subheadline / .hero__cta
+ *   BenefitSection   → .benefit / .benefit__heading / .benefit__description
+ *   ClosingCta       → section[data-testid='closing-cta'] (no class on the element)
+ *   SiteFooter       → .landing-footer / .landing-footer__brand / .landing-footer__links
+ *   Cta / NavAnchor  → a.cta  (focus styling lives in components/Cta.css)
+ *
+ * The composition root (LandingPage, task 12.1) is expected to wrap the page in
+ * a `.landing-page` container and import this file. The rules below therefore
+ * target `.landing-page` for page-wide guards, but every region rule also works
+ * standalone so the layout is correct regardless of the exact wrapper.
+ *
+ * Layout goals (Requirement 4):
+ *   4.1 / 4.5  single-column, no horizontal scrolling across 360–1023px.
+ *   4.2        width-constrained on desktop (1024–1920px); body-text measure
+ *              held well under 90 characters per line via `ch`-based max-width.
+ *   4.3        header, hero, benefits and footer render with no overlap/clipping
+ *              from 360–1920px.
+ *   4.4        primary and secondary CTAs stay fully visible and activatable
+ *              without horizontal scrolling across 360–1920px (actions wrap).
+ *   4.6        every image / media element is constrained to the viewport width
+ *              (max-width: 100%; height: auto) so nothing forces a scrollbar.
+ *
+ * Colours come from the theme tokens in styles/theme.css (--bg, --text,
+ * --accent-fill, --accent-text, --focus-ring); this file owns layout only.
+ */
+
+/* ------------------------------------------------------------------ *
+ * Design tokens (layout) and box model
+ * ------------------------------------------------------------------ */
+
+.landing-page {
+  /* Outer bound of any centred region. Kept below the 1920px max viewport so
+     desktop content is width-constrained rather than edge-to-edge (Req 4.2). */
+  --landing-content-max: 72rem; /* ~1152px */
+  /* Readable line length for body copy. `ch` ties the measure to the font's
+     character width; 66ch sits comfortably under the 90-character ceiling the
+     desktop layout must respect (Req 4.2). */
+  --landing-measure: 66ch;
+  /* Fluid side gutter: never smaller than 1rem on a 360px phone, growing with
+     the viewport but capped so desktop margins stay sensible. */
+  --landing-gutter: clamp(1rem, 5vw, 3rem);
+  --landing-gap: clamp(1.5rem, 4vw, 2.5rem);
+
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  /* Belt-and-braces guard against a stray wide child forcing the page sideways
+     (Req 4.1, 4.5). Width constraints below are the primary defence; this clips
+     any residual overflow without affecting vertical scrolling. */
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Predictable sizing everywhere on the landing surface: padding/borders are
+   included in declared widths so `width: 100%` never overflows (Req 4.1–4.6). */
+.landing-page,
+.landing-page *,
+.landing-page *::before,
+.landing-page *::after,
+.landing-header,
+.landing-header *,
+.hero,
+.hero *,
+.benefit,
+.benefit *,
+.landing-footer,
+.landing-footer * {
+  box-sizing: border-box;
+}
+
+/* Long, unbroken strings (URLs, long words) must wrap rather than push the
+   layout wider than the viewport (Req 4.1, 4.3, 4.5). */
+.hero__headline,
+.hero__subheadline,
+.benefit__heading,
+.benefit__description,
+.landing-footer__brand,
+.cta {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* ------------------------------------------------------------------ *
+ * Media: never let an image or embedded media exceed the viewport (Req 4.6)
+ * ------------------------------------------------------------------ */
+
+.landing-page img,
+.landing-page picture,
+.landing-page svg,
+.landing-page video,
+.landing-page canvas,
+.landing-page iframe,
+.landing-header__logo,
+.hero img,
+.benefit img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* The brand logo carries intrinsic width/height attributes for CLS; keep its
+   aspect ratio while allowing it to shrink on narrow phones (Req 4.6). */
+.landing-header__logo {
+  width: auto;
+  max-height: 2.5rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shared region wrapper: centre and width-constrain each band.
+ * A single column by default (Req 4.1); constrained on desktop (Req 4.2).
+ * ------------------------------------------------------------------ */
+
+.landing-header,
+.hero,
+.benefit,
+.landing-page > section[data-testid='closing-cta'],
+.landing-footer {
+  width: 100%;
+  max-width: var(--landing-content-max);
+  margin-inline: auto;
+  padding-inline: var(--landing-gutter);
+}
+
+/* ------------------------------------------------------------------ *
+ * Navigation header — brand on one side, account CTAs on the other.
+ * Wrapping keeps both CTAs fully visible and activatable with no
+ * horizontal scroll, even at 360px (Req 4.4).
+ * ------------------------------------------------------------------ */
+
+.landing-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding-block: 1rem;
+}
+
+.landing-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Hero — single centred column; text held to a readable measure.
+ * ------------------------------------------------------------------ */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--landing-gap);
+  padding-block: clamp(2rem, 8vw, 5rem);
+}
+
+.hero__headline {
+  max-width: 20ch; /* headlines read best short; well under any overflow risk */
+  margin: 0;
+  font-size: clamp(1.75rem, 6vw, 3.25rem);
+  line-height: 1.1;
+}
+
+.hero__subheadline {
+  /* Body-length supporting copy: constrain to the readable measure so line
+     length never exceeds ~90 characters on desktop (Req 4.2). */
+  max-width: var(--landing-measure);
+  margin: 0;
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ *
+ * Benefit sections — stacked single column in reading order (Req 4.1, 4.3).
+ * Body description constrained to the readable measure (Req 4.2).
+ * ------------------------------------------------------------------ */
+
+.benefit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+  padding-block: clamp(1.5rem, 5vw, 3rem);
+}
+
+.benefit__heading {
+  max-width: var(--landing-measure);
+  margin: 0;
+  font-size: clamp(1.25rem, 3.5vw, 1.75rem);
+  line-height: 1.25;
+}
+
+.benefit__description {
+  max-width: var(--landing-measure);
+  margin: 0;
+  font-size: clamp(1rem, 2.5vw, 1.125rem);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------ *
+ * Closing CTA — final centred call to action after the last benefit.
+ * The rendered element has no class, only data-testid, so it is targeted
+ * by attribute (Req 3.5 placement; Req 4.3/4.4 visibility).
+ * ------------------------------------------------------------------ */
+
+.landing-page > section[data-testid='closing-cta'],
+section[data-testid='closing-cta'] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--landing-gap);
+  padding-block: clamp(2rem, 6vw, 4rem);
+}
+
+section[data-testid='closing-cta'] > p {
+  max-width: var(--landing-measure);
+  margin: 0;
+  font-size: clamp(1.125rem, 3vw, 1.5rem);
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------------ *
+ * Footer — brand plus legal links; wraps so links stay visible (Req 4.4).
+ * ------------------------------------------------------------------ */
+
+.landing-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding-block: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.landing-footer__brand {
+  margin: 0;
+  font-weight: 600;
+}
+
+.landing-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Calls to action — inline controls that never exceed the viewport and
+ * remain tappable at any width (Req 4.4). Colour/focus come from theme
+ * tokens and components/Cta.css; this only guarantees layout containment.
+ * ------------------------------------------------------------------ */
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+/* Primary CTA reads as a filled button; secondary as an outline. Both use
+   brand tokens and pair the colour with shape so meaning is not colour-only. */
+.cta[data-cta-kind='primary'] {
+  background: var(--accent-fill);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.cta[data-cta-kind='secondary'] {
+  background: transparent;
+  border: 1px solid var(--accent-text);
+  color: var(--accent-text);
+}
+
+/* The hero's standalone primary CTA gets a touch more presence without risking
+   overflow (still capped at 100% of its column). */
+.hero__cta {
+  align-self: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * Desktop refinement (Req 4.2): from 1024px up, the constrained content
+ * column and readable measures above already cap line length well under
+ * 90 characters. Left-align benefit copy for a more editorial desktop feel
+ * while keeping the width constraint that limits line length.
+ * ------------------------------------------------------------------ */
+
+@media (min-width: 1024px) {
+  .hero {
+    padding-block: clamp(4rem, 6vw, 6rem);
+  }
+}
