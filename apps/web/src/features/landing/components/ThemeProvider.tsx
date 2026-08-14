@@ -55,6 +55,7 @@ const ThemeContext = createContext<Theme | undefined>(undefined)
  *
  * Must be called from within a `ThemeProvider`.
  */
+// eslint-disable-next-line react-refresh/only-export-components -- provider + its context hook are intentionally co-located
 export function useTheme(): Theme {
   const theme = useContext(ThemeContext)
   if (theme === undefined) {

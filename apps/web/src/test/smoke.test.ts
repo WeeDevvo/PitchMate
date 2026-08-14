@@ -8,7 +8,6 @@ describe('test tooling smoke test', () => {
   it('provides a jsdom document environment', () => {
     const el = document.createElement('div')
     el.textContent = 'PitchMate'
-    expect(el).toBeInTheDocument
     expect(el.textContent).toBe('PitchMate')
   })
 })

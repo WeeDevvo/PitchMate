@@ -29,26 +29,28 @@ class MatchMediaStub {
   }
 
   readonly matchMedia = (query: string): MediaQueryList => {
-    const stub = this
+    // Only the light-preference query is meaningful here. Arrow functions
+    // capture `this` (the stub instance) without aliasing it to a local.
+    const getMatches = () => (query === LIGHT_QUERY ? this.prefersLight : false)
+    const listeners = this.listeners
     return {
       get matches() {
-        // Only the light-preference query is meaningful here.
-        return query === LIGHT_QUERY ? stub.prefersLight : false
+        return getMatches()
       },
       media: query,
       onchange: null,
       addEventListener: (_type: 'change', listener: ChangeListener) => {
-        stub.listeners.add(listener)
+        listeners.add(listener)
       },
       removeEventListener: (_type: 'change', listener: ChangeListener) => {
-        stub.listeners.delete(listener)
+        listeners.delete(listener)
       },
       // Legacy API — unused by the provider but part of the interface.
       addListener: (listener: ChangeListener) => {
-        stub.listeners.add(listener)
+        listeners.add(listener)
       },
       removeListener: (listener: ChangeListener) => {
-        stub.listeners.delete(listener)
+        listeners.delete(listener)
       },
       dispatchEvent: () => true,
     } as unknown as MediaQueryList
@@ -142,7 +144,7 @@ describe('ThemeProvider live theme behaviour', () => {
 
     // Re-create the bootstrap's synchronous body (mirrors index.html).
     const runBootstrap = () => {
-      let prefersLight = false
+      let prefersLight: boolean
       try {
         prefersLight =
           typeof window.matchMedia === 'function' &&
