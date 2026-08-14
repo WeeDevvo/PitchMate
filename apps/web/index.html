@@ -4,7 +4,57 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>web</title>
+
+    <!--
+      Pre-paint theme bootstrap (Requirement 5.7).
+      Synchronous, inline, and placed before body content so the resolved theme
+      is applied to <html> before first paint. Mirrors resolveTheme() in
+      src/features/landing/lib/theme.ts: dark-mode-first — apply "light" only
+      when the browser explicitly reports a light appearance preference,
+      otherwise "dark" (covering dark and unresolvable/absent preferences).
+      Must NOT be a module (type="module" defers execution past first paint).
+    -->
+    <script>
+      (function () {
+        var prefersLight = false;
+        try {
+          prefersLight =
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-color-scheme: light)').matches;
+        } catch (e) {
+          prefersLight = false;
+        }
+        document.documentElement.setAttribute(
+          'data-theme',
+          prefersLight ? 'light' : 'dark',
+        );
+      })();
+    </script>
+
+    <!--
+      Static base metadata (Requirements 7.1, 7.6). These crawler-safe tags
+      mirror the single source of truth in
+      src/features/landing/content/landingMetadata.ts (landingMetadataBase) so
+      scrapers that do not execute JavaScript still receive valid values.
+      The runtime PageHead component owns the live/resolved metadata.
+    -->
+    <title>PitchMate — Fair teams for casual football</title>
+    <meta
+      name="description"
+      content="PitchMate helps friends organise casual football matches with fair, balanced teams and keeps your results, stats, and leaderboards."
+    />
+
+    <!-- Open Graph / social-sharing base tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pitch-mate.co.uk/" />
+    <meta property="og:title" content="PitchMate — Fair teams for casual football" />
+    <meta
+      property="og:description"
+      content="PitchMate helps friends organise casual football matches with fair, balanced teams and keeps your results, stats, and leaderboards."
+    />
+    <meta property="og:image" content="https://pitch-mate.co.uk/og-default.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
   </head>
   <body>
     <div id="root"></div>
