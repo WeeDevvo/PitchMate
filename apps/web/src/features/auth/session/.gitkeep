@@ -1,0 +1,2 @@
+# Placeholder — the Session module (SessionStore, SessionManager, AuthContext)
+# lands in task 7.x/8.x. Keeps the `session/` folder in version control.
