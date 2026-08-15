@@ -37,6 +37,12 @@ export {
 export { SubmitButton, type SubmitButtonProps } from './components/SubmitButton'
 export { LiveRegion, type LiveRegionProps } from './components/LiveRegion'
 export { LinkButton, type LinkButtonProps } from './components/LinkButton'
+export {
+  GoogleSignInControl,
+  GOOGLE_SIGN_IN_INCOMPLETE_MESSAGE,
+  GOOGLE_SIGN_IN_DEFAULT_LABEL,
+  type GoogleSignInControlProps,
+} from './components/GoogleSignInControl'
 
 // Pure validation logic (framework-free).
 export {
