@@ -156,3 +156,15 @@ export {
   RESEND_VERIFICATION_LABEL,
   type LogInScreenProps,
 } from './LogInScreen'
+
+// Screens — the Reset_Request_Screen (Requirement 5).
+export {
+  ResetRequestScreen,
+  RESET_REQUEST_HEADING,
+  LOG_IN_PATH,
+  BACK_TO_LOG_IN_LABEL,
+  EMAIL_REQUIRED_MESSAGE as RESET_REQUEST_EMAIL_REQUIRED_MESSAGE,
+  EMAIL_TOO_LONG_MESSAGE as RESET_REQUEST_EMAIL_TOO_LONG_MESSAGE,
+  EMAIL_MALFORMED_MESSAGE as RESET_REQUEST_EMAIL_MALFORMED_MESSAGE,
+  type ResetRequestScreenProps,
+} from './ResetRequestScreen'
