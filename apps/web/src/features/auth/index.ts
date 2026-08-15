@@ -199,3 +199,24 @@ export {
   LOG_IN_PATH as VERIFY_EMAIL_LOG_IN_PATH,
   type VerifyEmailScreenProps,
 } from './VerifyEmailScreen'
+
+// Screen — the unmatched-route fallback within the auth feature (Requirement 1.7).
+export {
+  AuthNotFound,
+  AUTH_NOT_FOUND_HEADING,
+  AUTH_NOT_FOUND_MESSAGE,
+  BACK_TO_LOG_IN_LABEL as AUTH_NOT_FOUND_BACK_TO_LOG_IN_LABEL,
+  LOG_IN_PATH as AUTH_NOT_FOUND_LOG_IN_PATH,
+} from './AuthNotFound'
+
+// Routing — the auth feature's route table for the app router (Requirement 1).
+export {
+  createAuthRoutes,
+  AUTH_ROUTE_PATHS,
+  SIGN_UP_ROUTE,
+  LOG_IN_ROUTE,
+  RESET_REQUEST_ROUTE,
+  RESET_CONFIRM_ROUTE,
+  VERIFY_EMAIL_ROUTE,
+  type AuthRouteDeps,
+} from './authRoutes'
