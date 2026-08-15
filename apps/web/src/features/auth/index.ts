@@ -220,3 +220,55 @@ export {
   VERIFY_EMAIL_ROUTE,
   type AuthRouteDeps,
 } from './authRoutes'
+
+// Configuration model — routes, timeouts, and the Google client id in one record
+// (Requirements 9.1, 10.3, 11.2, 11.3, 11.5).
+export {
+  createAuthConfig,
+  redirectResolutionConfigFromAuthConfig,
+  clampSignOutTimeout,
+  REDIRECT_TARGET_MAX_LENGTH,
+  REFRESH_TIMEOUT_DEFAULT_MS,
+  SIGN_OUT_TIMEOUT_MAX_MS,
+  CALL_TIMEOUT_DEFAULT_MS,
+  DEFAULT_AUTHENTICATED_ROUTE,
+  DEFAULT_PUBLIC_POST_SIGN_OUT_ROUTE,
+  type AuthConfig,
+} from './config/authConfig'
+
+// Post-auth redirect capture — the single-use Redirect_Target store and the pure
+// URL capture helper (Requirements 11.1, 11.6).
+export {
+  createRedirectTargetStore,
+  redirectCandidateFromSearch,
+  REDIRECT_PARAM_NAME,
+  type RedirectTargetStore,
+} from './session/redirectTargetStore'
+
+// Post-auth redirect & sign-out navigation wiring (Requirements 10.4, 11.1, 11.2, 11.6).
+export {
+  createAuthNavigation,
+  createNavigationController,
+  type AuthNavigation,
+  type AuthNavigationDeps,
+  type NavigationSeam,
+  type NavigationController,
+} from './session/authNavigation'
+
+// The React adapter that binds router navigation and captures the pre-auth
+// Redirect_Target (Requirements 10.4, 11.1, 11.2).
+export {
+  AuthNavigationBinder,
+  type AuthNavigationBinderProps,
+} from './session/AuthNavigationBinder'
+
+// Top-level wiring — the auth route table assembled with redirect and sign-out
+// navigation (Requirements 10.4, 11.1, 11.2, 11.6).
+export {
+  createWiredAuthRoutes,
+  sessionTuningFromConfig,
+  authApiTimeoutsFromConfig,
+  type WiredAuthRoutesOptions,
+  type WiredAuthRoutes,
+  type SessionTuning,
+} from './authWiring'

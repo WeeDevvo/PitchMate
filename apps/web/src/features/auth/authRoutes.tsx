@@ -46,6 +46,7 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.7, 1.8
  */
 import { Outlet, type RouteObject } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import { ThemeProvider } from './components/ThemeProvider'
 import { AuthProvider } from './session/AuthContext'
 import type { SessionManager } from './session/SessionManager'
@@ -124,6 +125,14 @@ export interface AuthRouteDeps {
    * its own safe default.
    */
   readonly redirectTarget?: string
+  /**
+   * An optional node rendered once inside the theme and auth providers,
+   * alongside the screen `Outlet`, in the persistent layout route. App wiring
+   * (task 19) uses this to mount the `AuthNavigationBinder`, which installs the
+   * router navigation and captures the pre-auth Redirect_Target. It renders no
+   * visible UI; when omitted the layout is unchanged.
+   */
+  readonly withinProviders?: ReactNode
 }
 
 /**
@@ -148,6 +157,7 @@ export function createAuthRoutes(deps: AuthRouteDeps): RouteObject[] {
     onSession,
     onGoogleFailure,
     redirectTarget,
+    withinProviders,
   } = deps
 
   return [
@@ -157,6 +167,7 @@ export function createAuthRoutes(deps: AuthRouteDeps): RouteObject[] {
       element: (
         <ThemeProvider>
           <AuthProvider manager={sessionManager}>
+            {withinProviders}
             <Outlet />
           </AuthProvider>
         </ThemeProvider>
