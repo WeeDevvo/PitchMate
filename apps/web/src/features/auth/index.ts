@@ -54,3 +54,32 @@ export {
   type ScreenContext,
   type BackendAuthError,
 } from './lib/errorMapping'
+
+// Session model — persistence seam (Requirements 8.3, 8.5).
+export {
+  createLocalStorageSessionStore,
+  createInMemorySessionStore,
+  SESSION_STORAGE_KEY,
+  type PersistedSession,
+  type SessionStore,
+} from './session/SessionStore'
+
+// Session model — the SessionManager core (Requirements 8.1, 8.3, 8.4, 8.5, 8.7).
+export {
+  createSessionManager,
+  type Session,
+  type AuthState,
+  type SessionManager,
+  type SessionManagerDeps,
+  type AuthApi,
+  type RefreshResult,
+  type SignOutResult,
+} from './session/SessionManager'
+
+// Session model — the thin React context over the SessionManager (Requirement 8.7).
+export {
+  AuthProvider,
+  useAuth,
+  type AuthContextValue,
+  type AuthProviderProps,
+} from './session/AuthContext'
