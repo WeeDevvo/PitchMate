@@ -22,3 +22,10 @@ export {
   useTheme,
   type ThemeProviderProps,
 } from './components/ThemeProvider'
+
+// Pure validation logic (framework-free).
+export {
+  validateEmail,
+  EMAIL_MAX_LENGTH,
+  type EmailValidation,
+} from './lib/emailValidation'
