@@ -131,3 +131,15 @@ export {
   AUTHORIZATION_HEADER,
   type BearerTokenSource,
 } from './api/authMiddleware'
+
+// Screens — the Sign_Up_Screen at `/signup` (Requirement 2).
+export {
+  SignUpScreen,
+  SIGN_UP_HEADING,
+  EMAIL_REQUIRED_MESSAGE,
+  EMAIL_TOO_LONG_MESSAGE,
+  EMAIL_MALFORMED_MESSAGE,
+  PASSWORD_TOO_SHORT_MESSAGE,
+  PASSWORD_TOO_LONG_MESSAGE,
+  type SignUpScreenProps,
+} from './SignUpScreen'
