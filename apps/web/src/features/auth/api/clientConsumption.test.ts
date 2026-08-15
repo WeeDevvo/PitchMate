@@ -70,7 +70,7 @@ function collectProductionSources(dir: string): string[] {
 }
 
 /**
- * Remove `//`/`/* *​/` comments and single/double/template string contents from
+ * Remove line and block comments and single/double/template string contents from
  * TypeScript source, replacing each with whitespace so line structure and any
  * live code are preserved. Template *expressions* (`${ ... }`) are kept as live
  * code so a call hidden inside an interpolation is still visible to the scan.
