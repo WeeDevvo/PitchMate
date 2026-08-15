@@ -29,3 +29,16 @@ export {
   EMAIL_MAX_LENGTH,
   type EmailValidation,
 } from './lib/emailValidation'
+export { extractToken } from './lib/tokenFromUrl'
+export {
+  resolveRedirectTarget,
+  type RedirectResolutionConfig,
+} from './lib/redirectTarget'
+export {
+  isRefreshRequired,
+  clampRenewalMargin,
+  RENEWAL_MARGIN_DEFAULT_MS,
+  RENEWAL_MARGIN_MIN_MS,
+  RENEWAL_MARGIN_MAX_MS,
+  type RefreshDecisionInput,
+} from './lib/accessTokenExpiry'
