@@ -42,3 +42,15 @@ export {
   RENEWAL_MARGIN_MAX_MS,
   type RefreshDecisionInput,
 } from './lib/accessTokenExpiry'
+export {
+  mapAuthError,
+  messageForOutcome,
+  GENERIC_AUTH_FAILURE,
+  UNIFORM_RESET_ACKNOWLEDGEMENT,
+  GENERIC_FALLBACK_MESSAGE,
+  GENERIC_VALIDATION_MESSAGE,
+  PASSWORD_POLICY_VALIDATION_MESSAGE,
+  type AuthOutcome,
+  type ScreenContext,
+  type BackendAuthError,
+} from './lib/errorMapping'
