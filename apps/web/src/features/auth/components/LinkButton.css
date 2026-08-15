@@ -1,0 +1,25 @@
+/*
+ * Focus styling for the shared client-side navigation control (LinkButton).
+ *
+ * Requirement 14.5 / 14.4: an auth-screen navigation control must be a real,
+ * keyboard-reachable element that shows a visible focus indicator. The control
+ * renders a real `<a href>` for native keyboard operability and exposed
+ * destination; the ring uses the --focus-ring theme token, which meets the
+ * >=3:1 contrast bar in both Themes (Requirement 13.6). `:focus-visible` scopes
+ * the ring to keyboard/programmatic focus. Colour comes from the --accent-text
+ * token so green link text on light uses Green Dark #3E8F24 (Requirement 13.7).
+ */
+
+.auth-link {
+  color: var(--accent-text);
+  cursor: pointer;
+  text-decoration: underline;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.auth-link:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}

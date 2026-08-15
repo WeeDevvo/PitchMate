@@ -3,10 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Typed TypeScript client generated from the PitchMate .NET OpenAPI spec. Generation tool finalised when the API is wired (CI fails on drift).",
+  "description": "Typed TypeScript client for the PitchMate API. Types are generated from the committed .NET OpenAPI spec (openapi/v1.json) with openapi-typescript; requests go through an openapi-fetch client typed against that contract. CI fails on drift.",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "gen": "echo \"TODO: generate from OpenAPI (openapi-typescript + openapi-fetch, per TS2). Wired at API integration.\""
+    "gen": "openapi-typescript ./openapi/v1.json -o ./src/schema.d.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "~6.0.2"
   }
 }

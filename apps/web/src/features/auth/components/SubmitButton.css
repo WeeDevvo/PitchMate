@@ -1,0 +1,37 @@
+/*
+ * Styling for the shared auth SubmitButton.
+ *
+ * Colours come from the per-Theme tokens in styles/theme.css (Requirement
+ * 13.4): a filled control using --accent-fill with text in --bg for contrast.
+ * The control shows a visible focus ring via --focus-ring, scoped with
+ * :focus-visible, meeting the visible-focus bar (Requirements 13.6, 14.4). The
+ * pending state pairs the disabled control with visible in-progress text, so
+ * the state is never conveyed by colour alone.
+ */
+
+.auth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--accent-fill);
+  color: var(--bg);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.auth-submit:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.auth-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}

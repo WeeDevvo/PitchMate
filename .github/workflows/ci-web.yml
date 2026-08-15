@@ -46,6 +46,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # API client drift gate. Regenerates the typed client (packages/api-client/src/schema.d.ts)
+      # from the COMMITTED OpenAPI spec (packages/api-client/openapi/v1.json) and fails if the
+      # result differs from what's committed — i.e. someone changed the spec but didn't regenerate
+      # the client, or hand-edited the generated file.
+      #
+      # Drift-freedom is guaranteed end to end by two gates working together:
+      #   1. THIS job (CI · Web) proves schema.d.ts is in sync with the committed openapi/v1.json.
+      #   2. CI · Backend builds PitchMate.Api, which emits openapi/v1.json at build time
+      #      (Microsoft.Extensions.ApiDescription.Server) and fails on drift of the committed spec
+      #      against the code (see ci-backend.yml).
+      # Chaining (1) and (2): code -> committed spec (backend gate) -> committed types (this gate).
+      #
+      # Residual gap: this job does NOT rebuild the spec from the .NET code (that needs the .NET
+      # SDK, which this Node-only job intentionally omits). If the backend spec gate is skipped
+      # (e.g. a PR that only touches packages/** so ci-backend's path filter doesn't run) a stale
+      # committed spec could pass here. The backend gate covers that on any backend-affecting PR.
+      - name: Check API client is in sync with the committed OpenAPI spec
+        run: |
+          npm run gen --workspace @pitchmate/api-client
+          git diff --exit-code -- packages/api-client/src/schema.d.ts
+
       - name: Lint
         run: npm run lint
 

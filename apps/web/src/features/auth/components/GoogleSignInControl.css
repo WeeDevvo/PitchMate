@@ -1,0 +1,46 @@
+/*
+ * Styling for the shared GoogleSignInControl.
+ *
+ * Colours come from the per-Theme tokens in styles/theme.css (Requirement
+ * 13.4): a bordered "secondary" control that reads clearly against the auth
+ * surface in both Themes, distinct from the filled primary SubmitButton. The
+ * control shows a visible focus ring via --focus-ring, scoped with
+ * :focus-visible, meeting the visible-focus bar (Requirements 13.6, 14.4,
+ * 14.5). The in-progress state pairs the disabled control with a visible
+ * "Signing in…" label, so the state is never conveyed by colour alone
+ * (Requirement 4.7).
+ */
+
+.auth-google__wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.auth-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid var(--control-border);
+  border-radius: 0.5rem;
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.auth-google:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.auth-google:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
