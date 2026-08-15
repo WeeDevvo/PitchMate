@@ -182,3 +182,20 @@ export {
   LOG_IN_PATH as RESET_CONFIRM_LOG_IN_PATH,
   type ResetConfirmScreenProps,
 } from './ResetConfirmScreen'
+
+// Screens — the Verify_Email_Screen at `/verify-email` (Requirement 7).
+export {
+  VerifyEmailScreen,
+  VERIFY_EMAIL_HEADING,
+  VERIFYING_MESSAGE,
+  MISSING_TOKEN_MESSAGE as VERIFY_EMAIL_MISSING_TOKEN_MESSAGE,
+  RESEND_SUCCESS_MESSAGE,
+  SEND_NEW_VERIFICATION_LABEL,
+  LOG_IN_TO_VERIFY_LABEL,
+  RETRY_LABEL,
+  CONTINUE_TO_LOG_IN_LABEL,
+  CONTINUE_TO_APP_LABEL,
+  DEFAULT_AUTHENTICATED_PATH,
+  LOG_IN_PATH as VERIFY_EMAIL_LOG_IN_PATH,
+  type VerifyEmailScreenProps,
+} from './VerifyEmailScreen'
