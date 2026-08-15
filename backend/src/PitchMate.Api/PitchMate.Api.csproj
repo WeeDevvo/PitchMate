@@ -5,11 +5,69 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>61adc400-c861-4fec-ad43-31ae18abf05e</UserSecretsId>
+
+    <!-- Emit the OpenAPI document at build time (no running server needed) so the typed TS client
+         in packages/api-client is generated from a committed, deterministic spec and CI can gate on
+         drift (steering TS2). Microsoft.Extensions.ApiDescription.Server runs the built-in
+         Microsoft.AspNetCore.OpenApi document generator during build. The document name is "v1"
+         (see AddOpenApi in Program.cs); with the file-name override below the emitted file is a
+         stable, deterministic path: packages/api-client/openapi/v1.json. -->
+    <OpenApiGenerateDocuments>true</OpenApiGenerateDocuments>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/../../../packages/api-client/openapi</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOptions>--file-name v1</OpenApiGenerateDocumentsOptions>
   </PropertyGroup>
+
+  <!-- Build-time OpenAPI emission boots the app host (via HostFactoryResolver) to enumerate the
+       endpoints. AddInfrastructure fails fast when no 'Default' connection string is configured
+       (by design), so we feed a throwaway, non-connecting placeholder into the environment that
+       the dotnet-getdocument child process inherits. Npgsql does not open a connection during
+       document generation, so this value is never used to talk to a database — it only satisfies
+       the fail-fast guard. It is set on the build process environment (not committed config), so
+       it has no effect on the running app. SetEnvironmentVariable is not on MSBuild's
+       property-function allowlist, so we set it from a tiny inline task instead. -->
+  <UsingTask TaskName="SetEnvironmentVariableTask"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Name ParameterType="System.String" Required="true" />
+      <Value ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs">
+        System.Environment.SetEnvironmentVariable(Name, Value);
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!-- The host also fails fast on absent/invalid Auth options (startup options validation). Feed a
+       complete set of throwaway, non-secret placeholders so the host builds far enough to enumerate
+       endpoints. These are only present in the build process environment during document generation;
+       they are NOT committed config and never reach the running app. No real secrets are used. -->
+  <Target Name="_SetOpenApiBuildTimeConfiguration"
+          BeforeTargets="GenerateOpenApiDocuments">
+    <SetEnvironmentVariableTask Name="ConnectionStrings__Default"
+                                Value="Host=openapi-build;Database=openapi-build;Username=openapi-build;Password=openapi-build" />
+    <SetEnvironmentVariableTask Name="Auth__Token__SigningKey"
+                                Value="openapi-build-placeholder-signing-key-not-a-secret-0123456789" />
+    <SetEnvironmentVariableTask Name="Auth__Token__Issuer" Value="https://openapi-build.local" />
+    <SetEnvironmentVariableTask Name="Auth__Token__Audience" Value="openapi-build" />
+    <SetEnvironmentVariableTask Name="Auth__Token__AccessTokenLifetime" Value="00:15:00" />
+    <SetEnvironmentVariableTask Name="Auth__Token__RefreshTokenLifetime" Value="30.00:00:00" />
+    <SetEnvironmentVariableTask Name="Auth__Google__ClientId"
+                                Value="openapi-build.apps.googleusercontent.com" />
+    <SetEnvironmentVariableTask Name="Auth__Email__Provider" Value="Console" />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <!-- Build-time OpenAPI document emission (GetDocument.Insider tool). Pinned to the 10.0.x line to
+         match Microsoft.AspNetCore.OpenApi. Dev/build-only: PrivateAssets=all so it never flows to
+         referencing projects or the published app. -->
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.9">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <!-- Override the vulnerable transitive Microsoft.OpenApi 2.0.0 (NU1903 / CVE-2026-49451, a
          parser DoS) with a patched 2.x. Compatible with Microsoft.AspNetCore.OpenApi 10.0.9. -->
     <PackageReference Include="Microsoft.OpenApi" Version="2.9.0" />

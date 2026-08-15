@@ -58,9 +58,21 @@ jobs:
         run: dotnet restore PitchMate.slnx
 
       # TreatWarningsAsErrors is on repo-wide (Directory.Build.props), so a
-      # warning fails the build here.
+      # warning fails the build here. Building PitchMate.Api also emits the OpenAPI document to
+      # packages/api-client/openapi/v1.json at build time
+      # (Microsoft.Extensions.ApiDescription.Server), so the committed spec is regenerated here.
       - name: Build (Release)
         run: dotnet build PitchMate.slnx --configuration Release --no-restore
+
+      # OpenAPI spec drift gate. The build above regenerated packages/api-client/openapi/v1.json
+      # from the current .NET code; fail if it differs from the committed spec — i.e. an API change
+      # landed without the committed contract being updated. Together with the web CI's TS-types
+      # drift gate (which regenerates schema.d.ts from this committed spec), this guarantees the
+      # typed client cannot silently fall out of sync with the API (steering TS2). Runs from the
+      # repo root so the path resolves regardless of the job's backend/ working directory.
+      - name: Check committed OpenAPI spec is in sync with the API
+        working-directory: ${{ github.workspace }}
+        run: git diff --exit-code -- packages/api-client/openapi/v1.json
 
       # Includes Domain/Application unit + property tests and the Infrastructure
       # Testcontainers integration, migration, and architecture tests.

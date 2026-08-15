@@ -83,3 +83,30 @@ export {
   type AuthContextValue,
   type AuthProviderProps,
 } from './session/AuthContext'
+
+// Typed API facade — the single seam onto the generated @pitchmate/api-client
+// (Requirements 12.1, 12.2, 12.3, 12.5).
+export {
+  createAuthApi,
+  DEFAULT_AUTH_API_TIMEOUTS,
+  type AuthApiFacade,
+  type AuthApiOptions,
+  type AuthApiTimeouts,
+  type AuthSessionPayload,
+  type AuthAckResult,
+  type AuthSessionResult,
+  type FailureOutcome,
+  type RegisterCommand,
+  type SignInCommand,
+  type RedeemPasswordResetCommand,
+} from './api/authApi'
+
+// Typed API — the bearer-attaching auth middleware and its authenticated client
+// (Requirements 8.2, 9.1).
+export {
+  createAuthMiddleware,
+  createAuthenticatedApiClient,
+  bearerCredential,
+  AUTHORIZATION_HEADER,
+  type BearerTokenSource,
+} from './api/authMiddleware'
