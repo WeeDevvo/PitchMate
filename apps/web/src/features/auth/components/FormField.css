@@ -1,0 +1,52 @@
+/*
+ * Shared styling for the labelled auth form fields (EmailField / PasswordField).
+ *
+ * All colours are drawn from the per-Theme tokens in styles/theme.css so the
+ * fields are correct in both Themes with no hard-coded colour (Requirement
+ * 13.4). The label is always rendered as persistently visible text above its
+ * control (never placeholder-only or visually hidden), satisfying Requirement
+ * 14.2. The control shows a visible focus ring via the --focus-ring token,
+ * scoped with :focus-visible, meeting the visible-focus bar (Requirements 13.6,
+ * 14.4).
+ */
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.auth-field__label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.auth-field__input {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  line-height: 1.4;
+}
+
+.auth-field__input:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* An invalid control pairs the amber-agnostic border emphasis with the
+   programmatic aria-invalid state and the associated error text, so the error
+   is never conveyed by colour alone (Requirement 14.6 + brand non-colour cue). */
+.auth-field__input[aria-invalid='true'] {
+  border-color: var(--accent-text);
+  border-width: 2px;
+}
+
+.auth-field__error {
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}

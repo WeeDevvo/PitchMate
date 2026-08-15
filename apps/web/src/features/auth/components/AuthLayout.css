@@ -1,0 +1,56 @@
+/*
+ * Presentational shell for every auth screen.
+ *
+ * Colours come exclusively from the per-Theme token tables in
+ * styles/theme.css (--bg, --surface, --text, --control-*, --accent-*,
+ * --focus-ring) — this file owns layout only and never hard-codes a colour
+ * (Requirement 13.4). The layout is a single centred form column on a themed
+ * surface, so each screen renders one clear reading order top-to-bottom
+ * (Requirements 13.4, 14.1, 14.3).
+ */
+
+.auth-layout {
+  box-sizing: border-box;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(1.5rem, 6vw, 4rem) clamp(1rem, 5vw, 3rem);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.auth-layout,
+.auth-layout *,
+.auth-layout *::before,
+.auth-layout *::after {
+  box-sizing: border-box;
+}
+
+/* The centred, width-constrained form column. */
+.auth-layout__surface {
+  width: 100%;
+  max-width: 26rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.auth-layout__heading {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* The form/content region below the single h1. */
+.auth-layout__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

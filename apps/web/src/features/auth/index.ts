@@ -23,6 +23,21 @@ export {
   type ThemeProviderProps,
 } from './components/ThemeProvider'
 
+// Shared presentational components — the single-`h1` themed shell, labelled
+// inputs with programmatic error association, the disabled-while-pending submit
+// control, the message live region, and the client-side nav link
+// (Requirements 13.4, 14.1, 14.2, 14.3, 14.4, 14.5, 14.6).
+export { AuthLayout, type AuthLayoutProps } from './components/AuthLayout'
+export { FormField, type FormFieldProps } from './components/FormField'
+export { EmailField, type EmailFieldProps } from './components/EmailField'
+export {
+  PasswordField,
+  type PasswordFieldProps,
+} from './components/PasswordField'
+export { SubmitButton, type SubmitButtonProps } from './components/SubmitButton'
+export { LiveRegion, type LiveRegionProps } from './components/LiveRegion'
+export { LinkButton, type LinkButtonProps } from './components/LinkButton'
+
 // Pure validation logic (framework-free).
 export {
   validateEmail,
