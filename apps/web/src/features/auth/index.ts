@@ -143,3 +143,16 @@ export {
   PASSWORD_TOO_LONG_MESSAGE,
   type SignUpScreenProps,
 } from './SignUpScreen'
+
+// Screens — the Log_In_Screen at `/login` (Requirement 3).
+export {
+  LogInScreen,
+  LOG_IN_HEADING,
+  SIGN_UP_PATH,
+  RESET_REQUEST_PATH,
+  VERIFY_EMAIL_PATH,
+  EMAIL_REQUIRED_MESSAGE as LOG_IN_EMAIL_REQUIRED_MESSAGE,
+  PASSWORD_REQUIRED_MESSAGE as LOG_IN_PASSWORD_REQUIRED_MESSAGE,
+  RESEND_VERIFICATION_LABEL,
+  type LogInScreenProps,
+} from './LogInScreen'
