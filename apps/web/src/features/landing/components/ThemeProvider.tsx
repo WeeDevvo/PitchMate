@@ -1,7 +1,9 @@
 /**
  * ThemeProvider — owns the live colour-scheme behaviour for the landing page.
  *
- * The pre-paint inline bootstrap in `index.html` sets the initial `data-theme`
+ * The pre-paint inline bootstrap — declared once as `THEME_BOOTSTRAP_SOURCE` in
+ * `src/theme/themeBootstrap.ts` and injected into `index.html`'s `<head>` by the
+ * `transformIndexHtml` hook in `vite.config.ts` — sets the initial `data-theme`
  * on `<html>` before first paint (Requirement 5.7). This provider then takes
  * over the *live* behaviour:
  *   - resolves the initial theme via `resolveTheme` (Requirements 5.1, 5.3, 5.4),

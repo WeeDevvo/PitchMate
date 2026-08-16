@@ -1,42 +1,36 @@
 /**
- * Pure theme logic for the web auth screens.
+ * Theme surface for the web auth screens.
  *
- * PitchMate is dark-mode-first (see brand.md): the dark Theme is applied unless
- * the visitor's browser explicitly reports a light appearance preference. This
- * mirrors the marketing landing feature's proven pattern so the auth surfaces
- * behave identically.
+ * This module holds **no implementation**. The one appearance implementation for
+ * the whole web application lives in `src/theme/` — outside this feature, outside
+ * the marketing landing feature, and outside the app shell — and all three
+ * features import it from there (Requirements 12.13, 15.7). What used to be a
+ * second copy of the dark-mode-first resolution rule here is now a re-export, so
+ * the auth screens, the landing page, and the shell can never disagree about the
+ * resolved Theme.
+ *
+ * The exported names are unchanged, so every existing consumer and test of this
+ * module — including the auth feature's public barrel — keeps working:
+ *
+ * - {@link resolveTheme} still accepts the one-argument browser-preference call
+ *   shape (`'light' | 'dark' | null`) and is still dark-mode-first: `light` only
+ *   for an explicit light preference.
+ * - {@link greenTextToken} still maps a Theme to its green token; in `src/theme`
+ *   it is defined through `greenTokenForSurface`, which keys the choice off the
+ *   surface's luminance so green on a dark card inside the light Theme still
+ *   takes the dark-surface token (Requirement 12.11).
+ *
+ * Requirements: 12.13, 15.3, 15.7
  */
 
-/** The active colour scheme of the auth screens. */
-export type Theme = 'dark' | 'light';
-
-/**
- * A resolvable appearance preference from the visitor's browser.
- * `null` represents an unresolvable/absent preference.
- */
-export type AppearancePreference = 'dark' | 'light' | null;
-
-/**
- * Resolve the active Theme from a browser appearance preference.
- *
- * Dark-mode-first: returns `'light'` if and only if the preference is explicitly
- * `'light'`; otherwise returns `'dark'` (covering `'dark'`, `null`, and any
- * unresolvable input).
- *
- * Requirements: 13.1, 13.2
- */
-export function resolveTheme(pref: AppearancePreference): Theme {
-  return pref === 'light' ? 'light' : 'dark';
-}
+export { greenTextToken, resolveTheme, type Theme } from '../../../theme';
 
 /**
- * Select the green token to use for text and icons in a given Theme.
+ * A resolvable appearance preference from the visitor's **browser**.
  *
- * In the light Theme, green text/icons use Green Dark (`#3E8F24`) for accessible
- * contrast; in the dark Theme they use Pitch Green (`#5BBF36`).
- *
- * Requirements: 13.7
+ * `null` represents an unresolvable/absent preference. This is an alias of the
+ * shared `BrowserAppearancePreference` and is deliberately *not* the shared
+ * stored `AppearancePreference` (`'system' | 'dark' | 'light'`), which models
+ * what the person chose rather than what the browser reports.
  */
-export function greenTextToken(theme: Theme): '#5BBF36' | '#3E8F24' {
-  return theme === 'light' ? '#3E8F24' : '#5BBF36';
-}
+export type { BrowserAppearancePreference as AppearancePreference } from '../../../theme';
