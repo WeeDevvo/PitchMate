@@ -33,3 +33,14 @@ export {
 // The single pure route resolver behind active-state marking and the `/app`
 // not-found outcome (Requirements 3.11, 3.12, 3.13).
 export { resolveDestination, type RouteResolution } from './lib/routeResolution';
+
+// The Squad_Scope seams a hosting Destination_Content uses to supply the scope
+// from outside the Shell_Frame (Requirements 7.1, 7.2). The provider itself is
+// composed inside the shell's own route tree, so it is not exported here.
+export {
+  SQUAD_SCOPE_ROUTE_PARAMETER,
+  useSquadScope,
+  usePublishSquadScope,
+  usePublishSquadScopeFromRoute,
+  type PublishSquadScope,
+} from './state/SquadScopeContext';
