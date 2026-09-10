@@ -74,3 +74,25 @@ export const SHELL_DESTINATIONS: readonly DestinationDefinition[] = [
   { id: 'settings', label: 'Settings', path: SETTINGS_ROUTE },
   { id: 'profile', label: 'Profile', path: PROFILE_ROUTE },
 ];
+
+/**
+ * The visible label registered for a Destination.
+ *
+ * Surfaces that head a Destination with its own name — a Destination_Content's
+ * level-one heading, the Unavailable_State's heading (Requirement 3.8) — read it
+ * from here rather than restating it, so a heading and that Destination's
+ * Primary_Navigation control can never disagree.
+ *
+ * Throws for an unregistered id. The parameter is typed to the four registered
+ * identifiers, so reaching the throw means the registry above lost an entry —
+ * a defect, not a state with a safe fallback.
+ *
+ * Requirements: 3.1, 3.8
+ */
+export function destinationLabel(id: DestinationId): string {
+  const destination = SHELL_DESTINATIONS.find((candidate) => candidate.id === id);
+  if (destination === undefined) {
+    throw new Error(`No Destination is registered with the id "${id}".`);
+  }
+  return destination.label;
+}
