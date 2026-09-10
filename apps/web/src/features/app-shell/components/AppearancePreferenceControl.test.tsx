@@ -21,13 +21,20 @@
  * because "the person selected an option and the appearance changed" is the
  * behaviour, not the provider call.
  *
+ * Requirement 12.7 is asserted here too, through the control rather than only
+ * through the provider: after a keyboard selection of `system` the browser
+ * appearance preference is flipped and the resolved Theme has to follow it on the
+ * same document, while the group keeps reporting `system` as selected. The same
+ * flip must move nothing while `dark` or `light` is selected — an explicit
+ * preference is the answer, not a starting point.
+ *
  * The exhaustive-over-all-inputs versions live in the property tests for
  * Properties 30 and 32 (tasks 13.4, 13.5); these pin the concrete cases.
  *
  * Feature: app-shell
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   APPEARANCE_STORAGE_KEY,
@@ -40,26 +47,68 @@ import { AppearancePreferenceControl } from './AppearancePreferenceControl';
 import { ShellThemeProvider } from './ShellThemeProvider';
 import { APPEARANCE_GROUP_LABEL, APPEARANCE_OPTION_LABELS } from '../lib/messages';
 
+type ChangeListener = () => void;
+
 /**
- * A `matchMedia` reporting no explicit light browser preference.
- *
- * Installed for every test so resolution is decided by the Appearance_Preference
- * alone — jsdom's own implementation reports the same thing, but pinning it keeps
- * these tests independent of that.
+ * A controllable `matchMedia`, the same stub shape the Theme_Provider's and the
+ * auth and landing providers' tests use. jsdom implements no `matchMedia`, so the
+ * browser appearance preference is supplied here and `setPrefersLight` flipping
+ * it — notifying subscribers — is a live browser appearance-preference change
+ * (Requirement 12.7).
  */
-function installMatchMedia(prefersLight: boolean): void {
-  window.matchMedia = (query: string): MediaQueryList =>
-    ({
-      matches: query === LIGHT_APPEARANCE_QUERY ? prefersLight : false,
+class MatchMediaStub {
+  private prefersLight: boolean;
+  private readonly listeners = new Set<ChangeListener>();
+
+  constructor(initialPrefersLight: boolean) {
+    this.prefersLight = initialPrefersLight;
+  }
+
+  readonly matchMedia = (query: string): MediaQueryList => {
+    // Only the light-appearance query is meaningful; anything else never matches.
+    const matches = (): boolean =>
+      query === LIGHT_APPEARANCE_QUERY ? this.prefersLight : false;
+    const listeners = this.listeners;
+
+    return {
+      get matches() {
+        return matches();
+      },
       media: query,
       onchange: null,
-      // Nothing here changes the reported preference, so subscribing is a no-op.
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      addListener: () => {},
-      removeListener: () => {},
+      addEventListener: (_type: 'change', listener: ChangeListener) => {
+        listeners.add(listener);
+      },
+      removeEventListener: (_type: 'change', listener: ChangeListener) => {
+        listeners.delete(listener);
+      },
+      addListener: (listener: ChangeListener) => {
+        listeners.add(listener);
+      },
+      removeListener: (listener: ChangeListener) => {
+        listeners.delete(listener);
+      },
       dispatchEvent: () => true,
-    }) as unknown as MediaQueryList;
+    } as unknown as MediaQueryList;
+  };
+
+  setPrefersLight(next: boolean): void {
+    this.prefersLight = next;
+    for (const listener of [...this.listeners]) {
+      listener();
+    }
+  }
+}
+
+/**
+ * Install the stub reporting `prefersLight` and hand it back so a test can flip
+ * it. One is installed for every test so resolution is decided by the
+ * Appearance_Preference alone unless the test says otherwise.
+ */
+function installMatchMedia(prefersLight: boolean): MatchMediaStub {
+  const stub = new MatchMediaStub(prefersLight);
+  window.matchMedia = stub.matchMedia;
+  return stub;
 }
 
 /** Storage pre-loaded with `stored`, or holding nothing when it is `null`. */
@@ -127,6 +176,19 @@ describe('AppearancePreferenceControl group shape', () => {
       expect(group).toContainElement(radio);
     }
   });
+
+  // Requirement 12.4 — the group's accessible name names appearance whatever the
+  // current value is: the name identifies the group's subject, so it cannot be
+  // derived from the selection.
+  it.each(['system', 'dark', 'light'] as const)(
+    'names the group for appearance while the preference is %s',
+    (preference) => {
+      renderControl(storageHolding(preference));
+
+      expect(screen.getByRole('group', { name: APPEARANCE_GROUP_LABEL })).toBeInTheDocument();
+      expect(screen.getAllByRole('group')).toHaveLength(1);
+    },
+  );
 
   // Requirement 12.4 — the three options carry exactly the three stored values,
   // in the shared module's presentation order.
@@ -239,6 +301,134 @@ describe('AppearancePreferenceControl keyboard operation', () => {
 
     expect(option('light')).toBeChecked();
     expect(appliedTheme()).toBe('light');
+  });
+
+  // Requirements 12.4, 12.5 — each of the three values is reachable and
+  // selectable by keyboard alone, and reaching it changes the reported selection
+  // and applies the newly resolved Theme.
+  //
+  // Every case starts from a *different* value and moves by one arrow step, so
+  // the group is never already on the target and no case depends on arrow
+  // navigation wrapping round the ends.
+  it.each([
+    { target: 'system', from: 'dark', key: '{ArrowUp}', theme: 'dark' },
+    { target: 'dark', from: 'system', key: '{ArrowDown}', theme: 'dark' },
+    { target: 'light', from: 'dark', key: '{ArrowDown}', theme: 'light' },
+  ] as const)(
+    'selects $target by keyboard from $from and applies the resolved theme',
+    async ({ target, from, key, theme }) => {
+      const user = userEvent.setup();
+      const storage = storageHolding(from);
+      renderControl(storage);
+
+      await user.tab();
+      await user.keyboard(key);
+
+      for (const candidate of ['system', 'dark', 'light'] as const) {
+        if (candidate === target) {
+          expect(option(candidate)).toBeChecked();
+        } else {
+          expect(option(candidate)).not.toBeChecked();
+        }
+      }
+      expect(appliedTheme()).toBe(theme);
+      expect(storage.getItem(APPEARANCE_STORAGE_KEY)).toBe(target);
+    },
+  );
+
+  // Requirements 12.2, 12.5 — `system` is not a synonym for `dark`: selecting it
+  // by keyboard while the browser reports an explicit light preference applies
+  // light, which is what distinguishes the two options' outcomes.
+  it('applies light when system is selected by keyboard and the browser prefers light', async () => {
+    const user = userEvent.setup();
+    installMatchMedia(true);
+    const storage = storageHolding('dark');
+    renderControl(storage);
+
+    expect(appliedTheme()).toBe('dark');
+
+    await user.tab();
+    await user.keyboard('{ArrowUp}');
+
+    expect(option('system')).toBeChecked();
+    expect(appliedTheme()).toBe('light');
+    expect(storage.getItem(APPEARANCE_STORAGE_KEY)).toBe('system');
+  });
+});
+
+describe('AppearancePreferenceControl live theme re-resolution', () => {
+  // Requirement 12.7 — with `system` selected through the control, a browser
+  // appearance-preference change re-resolves the Theme on the mounted document.
+  // The root element is the same one throughout: the tokens switch under a
+  // mounted tree, with no full-document reload.
+  it('follows a browser preference change after system is selected by keyboard', async () => {
+    const user = userEvent.setup();
+    const media = installMatchMedia(false);
+    const rootBefore = document.documentElement;
+    renderControl(storageHolding('dark'));
+
+    await user.tab();
+    await user.keyboard('{ArrowUp}');
+
+    expect(option('system')).toBeChecked();
+    expect(appliedTheme()).toBe('dark');
+
+    act(() => {
+      media.setPrefersLight(true);
+    });
+
+    expect(appliedTheme()).toBe('light');
+    // The selection is the person's, not the browser's: it still reports `system`.
+    expect(option('system')).toBeChecked();
+    expect(document.documentElement).toBe(rootBefore);
+
+    act(() => {
+      media.setPrefersLight(false);
+    });
+
+    expect(appliedTheme()).toBe('dark');
+    expect(option('system')).toBeChecked();
+    expect(document.documentElement).toBe(rootBefore);
+  });
+
+  // Requirements 12.3, 12.7 — an explicitly selected value is the answer, so the
+  // same flip moves neither the applied Theme nor the reported selection.
+  it.each([
+    { preference: 'dark', theme: 'dark' },
+    { preference: 'light', theme: 'light' },
+  ] as const)(
+    'ignores a browser preference change while $preference is selected',
+    ({ preference, theme }) => {
+      const media = installMatchMedia(false);
+      renderControl(storageHolding(preference));
+
+      expect(appliedTheme()).toBe(theme);
+
+      act(() => {
+        media.setPrefersLight(true);
+      });
+
+      expect(appliedTheme()).toBe(theme);
+      expect(option(preference)).toBeChecked();
+    },
+  );
+
+  // Requirement 12.7 — the live behaviour is the preference's, not the mount's:
+  // a group that started on `system` follows the browser without anyone touching
+  // the control.
+  it('follows a browser preference change while system is the stored preference', () => {
+    const media = installMatchMedia(true);
+    renderControl(storageHolding('system'));
+
+    expect(option('system')).toBeChecked();
+    expect(appliedTheme()).toBe('light');
+
+    act(() => {
+      media.setPrefersLight(false);
+    });
+
+    expect(appliedTheme()).toBe('dark');
+    expect(option('system')).toBeChecked();
   });
 });
 
