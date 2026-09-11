@@ -8,12 +8,23 @@
  * the Auth_Feature through *its* public barrel, and neither the Auth_Feature nor
  * the marketing landing feature imports the shell.
  *
- * The route table (`createShellRoutes`), the injected Destination_Content slots,
- * and the notification, account, and theme surfaces are re-exported here as
- * their tasks land. Only what exists today is exported — nothing is stubbed.
+ * The route table (`createShellRoutes`) is the shell's whole runtime surface:
+ * hand it the Authenticated_Api_Client and the Auth_Feature's sign-out
+ * navigation, spread the result into the application router, and every screen,
+ * provider, and notification surface of the shell is composed behind it. The
+ * frame, the header surfaces, the providers, and the boundary states are
+ * deliberately **not** exported — they are composed inside `shellRoutes.tsx`, so
+ * a consumer cannot mount half a shell.
  *
  * Requirements: 1.10, 15.4
  */
+
+// The one entry point that mounts the shell (Requirements 3.1, 11.1, 15.4).
+export {
+  createShellRoutes,
+  type ShellRoutesOptions,
+  type ShellDestinationContent,
+} from './shellRoutes';
 
 // The Destination registry and its route path constants (Requirements 3.1, 3.2).
 export {
