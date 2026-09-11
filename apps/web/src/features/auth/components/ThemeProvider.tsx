@@ -1,7 +1,9 @@
 /**
  * ThemeProvider — owns the live colour-scheme behaviour for the auth screens.
  *
- * The pre-paint inline bootstrap in `index.html` sets the initial `data-theme`
+ * The pre-paint inline bootstrap — declared once as `THEME_BOOTSTRAP_SOURCE` in
+ * `src/theme/themeBootstrap.ts` and injected into `index.html`'s `<head>` by the
+ * `transformIndexHtml` hook in `vite.config.ts` — sets the initial `data-theme`
  * on `<html>` before first paint. This provider then takes over the *live*
  * behaviour, mirroring the landing feature's proven pattern:
  *   - resolves the initial theme via `resolveTheme` (Requirements 13.1, 13.2),

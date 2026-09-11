@@ -11,8 +11,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import { ThemeProvider, useTheme } from './ThemeProvider'
+import {
+  LIGHT_APPEARANCE_QUERY,
+  THEME_ATTRIBUTE,
+  THEME_BOOTSTRAP_SOURCE,
+} from '../../../theme'
 
-const LIGHT_QUERY = '(prefers-color-scheme: light)'
+const LIGHT_QUERY = LIGHT_APPEARANCE_QUERY
 
 type ChangeListener = (event: MediaQueryListEvent) => void
 
@@ -135,27 +140,18 @@ describe('ThemeProvider live theme behaviour', () => {
 
   // Validates: Requirements 5.7
   it('bootstrap sets data-theme on <html> before body content (pre-paint)', () => {
-    // The pre-paint bootstrap lives in index.html and runs synchronously in
-    // <head>, before the <body>/#root content. We assert the bootstrap logic
-    // itself: it must resolve dark-mode-first and set the attribute using only
-    // matchMedia — no dependency on rendered content. Running that same script
-    // over a fresh document sets data-theme before any body content exists.
+    // The pre-paint bootstrap is the shared `THEME_BOOTSTRAP_SOURCE`, injected
+    // into <head> as one inline non-module script, so it runs synchronously
+    // before the <body>/#root content. Evaluating that same source here — rather
+    // than a copy of its logic — is what keeps this assertion honest: it must
+    // resolve dark-mode-first from storage and matchMedia alone, with no
+    // dependency on rendered content.
+    localStorage.clear()
     installMatchMedia(false)
 
-    // Re-create the bootstrap's synchronous body (mirrors index.html).
+    /** Evaluate the bootstrap exactly as the injected inline script would. */
     const runBootstrap = () => {
-      let prefersLight: boolean
-      try {
-        prefersLight =
-          typeof window.matchMedia === 'function' &&
-          window.matchMedia(LIGHT_QUERY).matches
-      } catch {
-        prefersLight = false
-      }
-      document.documentElement.setAttribute(
-        'data-theme',
-        prefersLight ? 'light' : 'dark',
-      )
+      new Function(THEME_BOOTSTRAP_SOURCE)()
     }
 
     // Body has no rendered app content yet at bootstrap time.
@@ -164,7 +160,16 @@ describe('ThemeProvider live theme behaviour', () => {
     runBootstrap()
 
     // data-theme is present even though no body/app content has rendered.
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    expect(document.documentElement.getAttribute(THEME_ATTRIBUTE)).toBe('dark')
+    expect(document.getElementById('root')).toBeNull()
+
+    // ...and an explicit light browser preference is honoured pre-paint too.
+    installMatchMedia(true)
+    document.documentElement.removeAttribute(THEME_ATTRIBUTE)
+
+    runBootstrap()
+
+    expect(document.documentElement.getAttribute(THEME_ATTRIBUTE)).toBe('light')
     expect(document.getElementById('root')).toBeNull()
   })
 })

@@ -6,30 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!--
-      Pre-paint theme bootstrap (Requirement 5.7).
-      Synchronous, inline, and placed before body content so the resolved theme
-      is applied to <html> before first paint. Mirrors resolveTheme() in
-      src/features/landing/lib/theme.ts: dark-mode-first — apply "light" only
-      when the browser explicitly reports a light appearance preference,
-      otherwise "dark" (covering dark and unresolvable/absent preferences).
-      Must NOT be a module (type="module" defers execution past first paint).
+      The pre-paint theme bootstrap is NOT written here. It is declared once as
+      THEME_BOOTSTRAP_SOURCE in src/theme/themeBootstrap.ts and injected into
+      this <head> as a synchronous inline script by the themeBootstrapPlugin
+      transformIndexHtml hook in vite.config.ts, so exactly one bootstrap
+      declaration exists in the application (Requirements 12.13, 15.7).
     -->
-    <script>
-      (function () {
-        var prefersLight = false;
-        try {
-          prefersLight =
-            typeof window.matchMedia === 'function' &&
-            window.matchMedia('(prefers-color-scheme: light)').matches;
-        } catch (e) {
-          prefersLight = false;
-        }
-        document.documentElement.setAttribute(
-          'data-theme',
-          prefersLight ? 'light' : 'dark',
-        );
-      })();
-    </script>
 
     <!--
       Static base metadata (Requirements 7.1, 7.6). These crawler-safe tags

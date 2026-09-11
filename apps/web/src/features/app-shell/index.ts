@@ -1,0 +1,57 @@
+/**
+ * Public barrel for the App_Shell feature module.
+ *
+ * Every module of the shell lives under `apps/web/src/features/app-shell/`
+ * (Requirement 1.10) and every consumer imports the shell through this single
+ * public entry point (Requirement 15.4). The dependency direction runs one way:
+ * the application-level router wiring imports this module, this module imports
+ * the Auth_Feature through *its* public barrel, and neither the Auth_Feature nor
+ * the marketing landing feature imports the shell.
+ *
+ * The route table (`createShellRoutes`) is the shell's whole runtime surface:
+ * hand it the Authenticated_Api_Client and the Auth_Feature's sign-out
+ * navigation, spread the result into the application router, and every screen,
+ * provider, and notification surface of the shell is composed behind it. The
+ * frame, the header surfaces, the providers, and the boundary states are
+ * deliberately **not** exported — they are composed inside `shellRoutes.tsx`, so
+ * a consumer cannot mount half a shell.
+ *
+ * Requirements: 1.10, 15.4
+ */
+
+// The one entry point that mounts the shell (Requirements 3.1, 11.1, 15.4).
+export {
+  createShellRoutes,
+  type ShellRoutesOptions,
+  type ShellDestinationContent,
+} from './shellRoutes';
+
+// The Destination registry and its route path constants (Requirements 3.1, 3.2).
+export {
+  SHELL_DESTINATIONS,
+  HOME_ROUTE,
+  NOTIFICATIONS_ROUTE,
+  SETTINGS_ROUTE,
+  PROFILE_ROUTE,
+  DESTINATION_LABEL_MIN_LENGTH,
+  DESTINATION_LABEL_MAX_LENGTH,
+  DESTINATION_PATH_MIN_LENGTH,
+  DESTINATION_PATH_MAX_LENGTH,
+  type DestinationId,
+  type DestinationDefinition,
+} from './lib/destinations';
+
+// The single pure route resolver behind active-state marking and the `/app`
+// not-found outcome (Requirements 3.11, 3.12, 3.13).
+export { resolveDestination, type RouteResolution } from './lib/routeResolution';
+
+// The Squad_Scope seams a hosting Destination_Content uses to supply the scope
+// from outside the Shell_Frame (Requirements 7.1, 7.2). The provider itself is
+// composed inside the shell's own route tree, so it is not exported here.
+export {
+  SQUAD_SCOPE_ROUTE_PARAMETER,
+  useSquadScope,
+  usePublishSquadScope,
+  usePublishSquadScopeFromRoute,
+  type PublishSquadScope,
+} from './state/SquadScopeContext';
