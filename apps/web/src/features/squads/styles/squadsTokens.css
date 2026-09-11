@@ -1,0 +1,271 @@
+/*
+ * Theme tokens for the squads screens.
+ *
+ * This file is the **only** place in the feature where a colour value is
+ * written. Every component and every stylesheet of `features/squads/` references
+ * these custom properties and never a literal colour, so a Theme change is a
+ * change of one attribute on the document element and nothing else
+ * (Requirement 18.9).
+ *
+ * The feature declares **no appearance storage key, no pre-paint bootstrap, and
+ * no theme resolution function** (Requirement 18.8). Appearance is resolved once
+ * for the whole application by `src/theme`, which sets `data-theme` on the
+ * document element; this file only says what each Theme looks like. Dark is the
+ * default because that shared module resolves it that way, and because the dark
+ * table is applied to `:root` as well as to `[data-theme='dark']` — an absent or
+ * unresolved attribute renders dark (Requirement 19.12).
+ *
+ * Shape and naming follow `features/app-shell/styles/theme.css` and
+ * `features/auth/styles/theme.css`: the ten shared token names keep their names
+ * *and* their values here, so a control looks the same on an auth screen, inside
+ * the shell, and on a squads screen. Re-declaring them is deliberate rather than
+ * redundant — the Squad_Screen renders inside the App_Shell frame, which declares
+ * them, but the Invite_Landing_Route renders outside it, and Requirement 19.5
+ * verifies contrast against *this* feature's declared tables.
+ *
+ * ## Palette (brand.md)
+ *
+ *   Pitch Green  #5bbf36  fills, and green text/icons on a *dark* surface
+ *   Green Dark   #3e8f24  green text/icons on a *light* surface
+ *   Green Light  #8fd96f  highlights — the dark Theme's focus ring
+ *   Ink          #141414  the dark background, and text on a light surface
+ *   Draw amber   #e0a82e  the Provisional_Band — "unsettled / uncertain"
+ *   Loss red     #e5484d  a revoked invite
+ *   Info blue    #4c8dd6  the Guest_Flag label — informational, not a result
+ *
+ * ## Feature tokens
+ *
+ * Eleven tokens extend the shared table (design.md → Theming):
+ *
+ *   --squads-card-surface           the Squad_Card and section-panel surface
+ *   --squads-card-border            that surface's edge, and a form panel's edge
+ *   --squads-inactive-surface       the row surface of an inactive Membership_State
+ *   --squads-inactive-text          that row's secondary text
+ *   --squads-chip-border            the outline shared by every label chip
+ *   --squads-provisional-text       the Provisional_Band label and its badge
+ *   --squads-provisional-border     that badge's outline
+ *   --squads-guest-text             the Guest_Flag label
+ *   --squads-invite-active-text     an active Invite_State label
+ *   --squads-invite-active-accent   that label's chip outline (graphical, 3:1)
+ *   --squads-invite-revoked-text    a revoked Invite_State label
+ *   --squads-invite-expired-text    an expired Invite_State label
+ *
+ * A label chip carries an outline and text and **no fill of its own**, so a chip
+ * introduces no fourth surface to verify text against: every chip sits on either
+ * `--squads-card-surface` or `--squads-inactive-surface`, and both are measured
+ * below.
+ *
+ * ## Colour is never the only carrier
+ *
+ * Every one of these states is also stated in words by the component that renders
+ * it — `Provisional_Band`, `Guest_Flag`, `Invite_State`, `Membership_State`, and
+ * `Former_Player` all render text from `lib/messages.ts` (Requirement 19.3). The
+ * tokens below add emphasis to a statement that survives without them.
+ *
+ * ## Green is chosen from the surface, not from the Theme (Requirement 12.11)
+ *
+ * Green text and icons take Pitch Green below a surface relative luminance of
+ * 0.05 and Green Dark at or above it, whichever Theme is active — the rule
+ * `greenTokenForSurface(luminance)` in `src/theme` implements. The dark Theme's
+ * three surfaces sit far below the boundary (`--bg` #141414 = 0.0070,
+ * `--squads-card-surface` #1e1e1e = 0.0130, `--squads-inactive-surface` #232323 =
+ * 0.0168) and the light Theme's three far above it (#ffffff = 1.0000, #f4f4f4 =
+ * 0.9047, #ebebeb = 0.8308), so `--accent-text` is Pitch Green in the dark table
+ * and Green Dark in the light one. Green on any *other* surface must not assume
+ * the Theme's answer: the component calls `greenTokenForSurface` from `src/theme`
+ * with that surface's own luminance rather than picking a hex itself.
+ *
+ * ## Contrast (WCAG 2.1 relative luminance) for the exact values below
+ *
+ * Floors: 4.5:1 for text and interactive controls, 3:1 for focus indications and
+ * graphical cues (Requirement 19.5). Every text token is measured against **all**
+ * the surfaces it can land on, because a Player_Row is painted with
+ * `--squads-card-surface` while its membership is active and
+ * `--squads-inactive-surface` while it is not.
+ *
+ *   DARK  (--bg #141414, card #1e1e1e, inactive #232323):
+ *     --text                        #f5f5f5  16.90 / 15.29 / 14.42  (>= 4.5)
+ *     --muted-text                  #c7c7c7  10.90 /  9.86 /  9.30  (>= 4.5)
+ *     --control-text  #f5f5f5 vs --control-bg #1e1e1e      = 15.29  (>= 4.5)
+ *     --control-border #8a8a8a       5.34 /  4.83 /  4.55          (>= 3)
+ *     --accent-text                 #5bbf36   7.85 /  7.11 /  6.70  (>= 4.5)
+ *     --focus-ring                  #8fd96f  10.81 /  9.78 /  9.22  (>= 3)
+ *     --squads-card-border          #8a8a8a   5.34 /  4.83 /  4.55  (>= 3)
+ *     --squads-chip-border          #8a8a8a   5.34 /  4.83 /  4.55  (>= 3)
+ *     --squads-inactive-text        #c7c7c7  10.90 /  9.86 /  9.30  (>= 4.5)
+ *     --squads-provisional-text     #e0a82e   8.61 /  7.79 /  7.34  (>= 4.5)
+ *     --squads-provisional-border   #e0a82e   8.61 /  7.79 /  7.34  (>= 3)
+ *     --squads-guest-text           #4c8dd6   5.34 /  4.83 /  4.56  (>= 4.5)
+ *     --squads-invite-active-text   #5bbf36   7.85 /  7.11 /  6.70  (>= 4.5)
+ *     --squads-invite-active-accent #5bbf36   7.85 /  7.11 /  6.70  (>= 3)
+ *     --squads-invite-revoked-text  #ef6a6f   6.11 /  5.53 /  5.21  (>= 4.5)
+ *     --squads-invite-expired-text  #c7c7c7  10.90 /  9.86 /  9.30  (>= 4.5)
+ *
+ *   LIGHT (--bg #ffffff, card #f4f4f4, inactive #ebebeb):
+ *     --text                        #141414  18.42 / 16.75 / 15.45  (>= 4.5)
+ *     --muted-text                  #595959   7.00 /  6.37 /  5.88  (>= 4.5)
+ *     --control-text  #141414 vs --control-bg #ffffff      = 18.42  (>= 4.5)
+ *     --control-border #767676       4.54 /  4.13 /  3.81          (>= 3)
+ *     --accent-text                 #3e8f24   4.07 /  3.70 /  3.41  (>= 3)
+ *     --focus-ring                  #3e8f24   4.07 /  3.70 /  3.41  (>= 3)
+ *     --squads-card-border          #767676   4.54 /  4.13 /  3.81  (>= 3)
+ *     --squads-chip-border          #767676   4.54 /  4.13 /  3.81  (>= 3)
+ *     --squads-inactive-text        #595959   7.00 /  6.37 /  5.88  (>= 4.5)
+ *     --squads-provisional-text     #8a5a00   5.93 /  5.39 /  4.97  (>= 4.5)
+ *     --squads-provisional-border   #8a5a00   5.93 /  5.39 /  4.97  (>= 3)
+ *     --squads-guest-text           #2b66a8   5.88 /  5.35 /  4.94  (>= 4.5)
+ *     --squads-invite-active-text   #141414  18.42 / 16.75 / 15.45  (>= 4.5)
+ *     --squads-invite-active-accent #3e8f24   4.07 /  3.70 /  3.41  (>= 3)
+ *     --squads-invite-revoked-text  #b42a2f   6.34 /  5.76 /  5.32  (>= 4.5)
+ *     --squads-invite-expired-text  #595959   7.00 /  6.37 /  5.88  (>= 4.5)
+ *
+ * ### Why three semantic hues shift between the Themes
+ *
+ * The brand's semantic hues are stated once and then adjusted for the surface
+ * they are read on — the same move the palette already makes with Green Dark, in
+ * both directions:
+ *
+ * - **Draw amber** #e0a82e carries text comfortably on the dark surfaces (7.34:1
+ *   at worst) but reaches only 2.14:1 on white, so the light table darkens it to
+ *   #8a5a00. The Provisional_Band is a *label*, so it owes the 4.5:1 text floor
+ *   rather than the 3:1 graphical one.
+ * - **Loss red** #e5484d reaches 4.71:1 on `--bg` but falls to 4.26:1 on the card
+ *   surface and 4.02:1 on the inactive row surface — below the text floor exactly
+ *   where a revoked invite is listed — so the dark table lightens it to #ef6a6f.
+ *   The light table darkens it to #b42a2f.
+ * - **Info blue** #4c8dd6 clears the text floor on all three dark surfaces
+ *   (4.56:1 at worst). The light table uses #2b66a8, a shade darker than the
+ *   App_Shell's #2f6fb5, because that blue reaches only 4.34:1 on the inactive
+ *   row surface, and a guest label appears on inactive rows.
+ *
+ * ### Why `--accent-text` is a 3:1 token in the light Theme, and an active invite
+ * ### is not green there
+ *
+ * Requirement 12.11 fixes green text on a light surface to exactly Green Dark
+ * #3e8f24, and #3e8f24 reaches 4.07:1 on white — above the 3:1 bar for icons,
+ * large text, and UI accents, below the 4.5:1 bar for text and interactive
+ * controls. Green is therefore absent from light-Theme body copy and control
+ * labels, exactly as the auth and shell tables already document, and
+ * `--accent-text` is reserved for accent emphasis, icons, and large text.
+ *
+ * That is why `--squads-invite-active-text` is Ink in the light table: the word
+ * "Active" is a state label and owes 4.5:1. The hue is not lost — the chip's
+ * outline takes `--squads-invite-active-accent`, a graphical cue at the 3:1
+ * floor — and the state is carried by the word itself in either case
+ * (Requirement 19.3).
+ *
+ * ## Scale tokens
+ *
+ * Spacing, radii, target sizes, and type sizes do not vary by Theme, so they are
+ * declared once on `:root` rather than duplicated into both tables. They mirror
+ * the shell's frame tokens (a 44px minimum pointer target, 8px between adjacent
+ * targets, `clamp()`-based gutters) so a squads screen inside the shell measures
+ * the same as the shell around it, and the Invite_Landing_Route outside the shell
+ * measures the same as both.
+ *
+ * Requirements: 18.8, 18.9, 19.5, 19.12
+ */
+
+/* ------------------------------------------------------------------ *
+ * Scale: spacing, radii, target sizes, typography (Theme-invariant)
+ * ------------------------------------------------------------------ */
+
+:root {
+  /* Spacing. `clamp()` rather than a fixed step, so no region carries a width
+     that could exceed a 360px viewport (Requirement 19.10). */
+  --squads-gutter: clamp(0.75rem, 4vw, 2rem);
+  --squads-gap: clamp(0.5rem, 2vw, 1.5rem);
+  --squads-gap-tight: 0.5rem;
+  --squads-gap-hairline: 0.125rem;
+
+  /* The minimum pointer target, and the minimum space between two adjacent
+     targets. Same values as the shell frame. */
+  --squads-touch-target: 44px;
+  --squads-touch-gap: 8px;
+
+  /* Radii and edges. */
+  --squads-radius: 0.5rem;
+  --squads-radius-chip: 0.75rem;
+  --squads-border-width: 1px;
+  --squads-focus-width: 3px;
+  --squads-focus-offset: 2px;
+
+  /* Bounds. A card grid tracks from this minimum, and prose is bounded to a
+     readable measure rather than to the viewport. */
+  --squads-card-min-width: 16rem;
+  --squads-measure: 40rem;
+
+  /* Typography. Sizes are relative, so a browser text-size preference scales
+     them; weights are the non-colour cue that pairs with a semantic hue. */
+  --squads-font-size-screen-heading: clamp(1.5rem, 4vw, 2rem);
+  --squads-font-size-section-heading: 1.25rem;
+  --squads-font-size-subsection-heading: 1rem;
+  --squads-font-size-body: 1rem;
+  --squads-font-size-meta: 0.875rem;
+  --squads-font-size-chip: 0.75rem;
+  --squads-line-height-body: 1.5;
+  --squads-line-height-heading: 1.25;
+  --squads-font-weight-body: 400;
+  --squads-font-weight-label: 600;
+  --squads-font-weight-heading: 700;
+}
+
+/* ------------------------------------------------------------------ *
+ * Dark Theme — the default (Requirement 19.12)
+ * ------------------------------------------------------------------ */
+
+:root,
+[data-theme='dark'] {
+  --bg: #141414;
+  --surface: #1e1e1e;
+  --text: #f5f5f5;
+  --muted-text: #c7c7c7;
+  --control-bg: #1e1e1e;
+  --control-text: #f5f5f5;
+  --control-border: #8a8a8a;
+  --accent-fill: #5bbf36;
+  --accent-text: #5bbf36;
+  --focus-ring: #8fd96f;
+  --squads-card-surface: #1e1e1e;
+  --squads-card-border: #8a8a8a;
+  --squads-inactive-surface: #232323;
+  --squads-inactive-text: #c7c7c7;
+  --squads-chip-border: #8a8a8a;
+  --squads-provisional-text: #e0a82e;
+  --squads-provisional-border: #e0a82e;
+  --squads-guest-text: #4c8dd6;
+  --squads-invite-active-text: #5bbf36;
+  --squads-invite-active-accent: #5bbf36;
+  --squads-invite-revoked-text: #ef6a6f;
+  --squads-invite-expired-text: #c7c7c7;
+}
+
+/* ------------------------------------------------------------------ *
+ * Light Theme — opt-in, applied only while the shared appearance
+ * preference resolves to light (Requirement 19.12)
+ * ------------------------------------------------------------------ */
+
+[data-theme='light'] {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --text: #141414;
+  --muted-text: #595959;
+  --control-bg: #ffffff;
+  --control-text: #141414;
+  --control-border: #767676;
+  --accent-fill: #5bbf36;
+  --accent-text: #3e8f24;
+  --focus-ring: #3e8f24;
+  --squads-card-surface: #f4f4f4;
+  --squads-card-border: #767676;
+  --squads-inactive-surface: #ebebeb;
+  --squads-inactive-text: #595959;
+  --squads-chip-border: #767676;
+  --squads-provisional-text: #8a5a00;
+  --squads-provisional-border: #8a5a00;
+  --squads-guest-text: #2b66a8;
+  --squads-invite-active-text: #141414;
+  --squads-invite-active-accent: #3e8f24;
+  --squads-invite-revoked-text: #b42a2f;
+  --squads-invite-expired-text: #595959;
+}
