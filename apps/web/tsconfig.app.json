@@ -21,6 +21,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "../../DeleteMe/apps-web-src-test-scratchNotificationsApi.test.ts", "../../DeleteMe/apps-web-src-features-squads-lib-enumCodesScratch.test.ts"],
+  "include": ["src", "../../DeleteMe/apps-web-src-test-scratchNotificationsApi.test.ts", "../../DeleteMe/apps-web-src-features-squads-lib-enumCodesScratch.test.ts", "../../DeleteMe/squads-api-squadsApi.smoke.test.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test"]
 }
