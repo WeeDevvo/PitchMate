@@ -1,19 +1,15 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { RouterProvider } from 'react-router-dom'
 import './index.css'
-import LandingPage from './features/landing/LandingPage.tsx'
+import { createAppRouter } from './app/appRouter'
 
-// The landing page owns `/`. The `/signup`, `/login`, `/privacy`, and `/terms`
-// surfaces are owned by other features and are referenced only as external
-// navigation targets from the landing page — they are intentionally not
-// registered here yet.
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <LandingPage />,
-  },
-])
+// One router for the whole application: the marketing landing route, the auth
+// feature's route table, the app shell's routes, and the application-level
+// not-found surface. It is assembled — along with the session model, the auth
+// facade, and the authenticated API client — in `app/appRouter.tsx`
+// (Requirements 15.6, 15.9).
+const router = createAppRouter()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
