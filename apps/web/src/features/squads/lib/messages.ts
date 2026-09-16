@@ -25,8 +25,8 @@
  * This module is React-free and DOM-free like every module under `lib/`
  * (Requirement 18.2): it declares constants and touches nothing.
  *
- * Requirements: 1.9, 2.4, 4.8, 4.9, 5.10, 6.4, 7.12, 8.4, 8.13, 11.6, 12.4,
- * 14.8, 15.2, 17.1, 17.2
+ * Requirements: 1.9, 2.4, 4.8, 4.9, 5.10, 6.4, 7.12, 8.4, 8.13, 10.6, 11.6,
+ * 12.4, 14.1, 14.5, 14.8, 15.2, 17.1, 17.2
  */
 
 /**
@@ -156,6 +156,46 @@ export const NO_PLAYERS_STATEMENT = 'This squad has no players yet.';
  */
 export const NO_OPTIONAL_FEATURES_STATEMENT =
   'This squad has no optional features.';
+
+/**
+ * The persistently visible label of the live-match-tracking Feature_Toggle — the
+ * one optional capability `SQUAD_FEATURE_CODES` names (Requirements 14.1, 19.3).
+ *
+ * A feature the Enum_Code_Map does not name fails the body carrying it, so every
+ * flag that reaches a toggle has a label here and no toggle is ever rendered
+ * unnamed. The wording matches the product's own name for the capability, so the
+ * toggle and the squad's feature list read alike.
+ */
+export const LIVE_MATCH_TRACKING_FEATURE_LABEL = 'Live match tracking';
+
+/**
+ * The text label stating that a feature is on (Requirements 10.6, 14.1, 19.3).
+ *
+ * A Feature_Toggle states its state three ways — this word, the control's own
+ * `aria-checked`, and the position of its knob — so the state survives a
+ * greyscale rendering and never rests on the accent hue alone.
+ */
+export const FEATURE_ENABLED_LABEL = 'Enabled';
+
+/** The text label stating that a feature is off. See {@link FEATURE_ENABLED_LABEL}. */
+export const FEATURE_DISABLED_LABEL = 'Disabled';
+
+/**
+ * The clause a live region appends to a feature's label once a `SetFeatureFlag`
+ * call has been accepted for it (Requirement 14.5).
+ *
+ * Requirement 14.5 asks the announcement to name the feature *and* its new
+ * state, and no message here takes an interpolation parameter — so the feature's
+ * own label and this clause are composed at the call site, the way
+ * `RatingBadge` composes a player's name into an accessible name.
+ */
+export const FEATURE_NOW_ENABLED_STATEMENT = 'is now enabled.';
+
+/**
+ * The clause announced once a feature has been switched off. See
+ * {@link FEATURE_NOW_ENABLED_STATEMENT}.
+ */
+export const FEATURE_NOW_DISABLED_STATEMENT = 'is now disabled.';
 
 /**
  * The matches Placeholder_Section statement, rendered while no matches content
@@ -301,6 +341,44 @@ export const FORMER_PLAYER_LABEL = 'Former player, details removed';
  * (Requirement 13.8), so there is no sibling label here.
  */
 export const PROMOTE_TO_ADMIN_LABEL = 'Make admin';
+
+/**
+ * The heading of the confirmation a Promotion_Control opens (Requirement 13.4).
+ *
+ * It states the decision being asked for and leaves the *naming* of the player to
+ * the dialog's body, because no message here takes an interpolation parameter — so
+ * "naming the player to be promoted" is a matter of the surface rendering that
+ * name as a node beside this heading rather than of a formatter folding it in.
+ */
+export const PROMOTION_CONFIRM_HEADING = 'Make this player an admin?';
+
+/**
+ * The confirmation's statement of what promoting does (Requirement 13.4).
+ *
+ * It lists the admin affordances this feature actually grants — the invite
+ * manager, guest creation and editing, the optional-feature toggles, and
+ * promotion itself — so the person confirming knows what they are handing over.
+ * It names nobody: the player being promoted is rendered beside it.
+ *
+ * Promotion is the only membership-changing action in the feature, so the
+ * statement promises no way back through the interface (Requirement 13.8).
+ */
+export const PROMOTION_CONFIRM_STATEMENT =
+  'An admin can manage invites, add and edit guests, change the optional features, and make other members admins.';
+
+/**
+ * The outcome message announced when a `PromoteToAdmin` call succeeds
+ * (Requirement 13.5).
+ *
+ * A fixed sentence carrying nothing of the response: the promoted Member_Role
+ * label comes from the re-read of `GetSquad`, not from this string, and the
+ * failed arm of the same action reads {@link GENERIC_SQUADS_FAILURE} — one message
+ * for every non-success outcome, whatever its cause (Requirements 13.7, 17.2).
+ *
+ * It says *that player* rather than naming one, for the same reason as every
+ * other message here: there is no parameter to name one through.
+ */
+export const PROMOTION_SUCCEEDED = 'That player is now an admin.';
 
 /**
  * The visible label of the guest edit control on an editable guest Player_Row
@@ -481,3 +559,359 @@ export const SQUADS_RETRY_LABEL = 'Try again';
  */
 export const DISPLAY_NAME_UNAVAILABLE =
   'That display name cannot be used in this squad. Choose another one.';
+
+/* -------------------------------------------------------------------------- */
+/* The Invite_Manager and the Invite_Reveal (Requirement 11)                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The heading of the invite generator's panel, which is also what the control
+ * that opens it is named after (Requirement 11.5).
+ *
+ * One string for both, so the control and the surface it opens cannot come to
+ * read differently — the same arrangement {@link CREATE_SQUAD_HEADING} uses.
+ */
+export const GENERATE_INVITE_HEADING = 'Generate an invite';
+
+/**
+ * The visible label of the invite generator's submit control (Requirement 11.5).
+ *
+ * Worded as the act rather than as the surface, so it still reads correctly while
+ * the control reports `aria-busy` during the call.
+ */
+export const GENERATE_INVITE_SUBMIT_LABEL = 'Generate invite';
+
+/**
+ * The persistently visible label of the validity choice (Requirement 11.5).
+ *
+ * The choice is a single selection covering both halves of what that requirement
+ * asks for — an expiring invite with a selected validity duration, and a
+ * non-expiring invite — so one label names the whole decision.
+ */
+export const INVITE_VALIDITY_LABEL = 'How long this invite lasts';
+
+/**
+ * The shortest validity an expiring invite may be generated with
+ * (Requirement 11.5).
+ *
+ * The four expiring options state a duration each rather than a date, because the
+ * expiry instant is the backend's clock plus the duration and this interface does
+ * no expiry arithmetic of its own. The bounds match the backend's accepted range,
+ * so no offered option can be rejected as out of range.
+ */
+export const INVITE_VALIDITY_ONE_HOUR_LABEL = 'Expires in 1 hour';
+
+/** A one-day validity. See {@link INVITE_VALIDITY_ONE_HOUR_LABEL}. */
+export const INVITE_VALIDITY_ONE_DAY_LABEL = 'Expires in 24 hours';
+
+/**
+ * A one-week validity — the option selected when the generator opens, and the
+ * same period the backend applies when a request supplies none.
+ *
+ * See {@link INVITE_VALIDITY_ONE_HOUR_LABEL}.
+ */
+export const INVITE_VALIDITY_SEVEN_DAYS_LABEL = 'Expires in 7 days';
+
+/** A thirty-day validity. See {@link INVITE_VALIDITY_ONE_HOUR_LABEL}. */
+export const INVITE_VALIDITY_THIRTY_DAYS_LABEL = 'Expires in 30 days';
+
+/**
+ * The longest validity the backend accepts.
+ * See {@link INVITE_VALIDITY_ONE_HOUR_LABEL}.
+ */
+export const INVITE_VALIDITY_NINETY_DAYS_LABEL = 'Expires in 90 days';
+
+/**
+ * The `active` Invite_State label (Requirement 11.2).
+ *
+ * Declared separately from {@link ACTIVE_STATE_LABEL} although the two read the
+ * same today: one names a Membership_State and the other an Invite_State, and
+ * they are free to diverge without either dragging the other with it.
+ *
+ * A word, not a hue: the `--squads-invite-active-text` token adds emphasis to a
+ * statement that survives a greyscale rendering intact (Requirement 19.3).
+ */
+export const INVITE_ACTIVE_STATE_LABEL = 'Active';
+
+/**
+ * The `revoked` Invite_State label (Requirement 11.2).
+ *
+ * A revoked invite is still listed — Requirement 11.9 takes its revoke control
+ * away rather than the entry itself — so the label states the state rather than
+ * an absence.
+ */
+export const INVITE_REVOKED_STATE_LABEL = 'Revoked';
+
+/**
+ * The `expired` Invite_State label (Requirement 11.2).
+ *
+ * Expiry is derived by the backend's clock and arrives like any other state, so
+ * this label is rendered from what the response carried rather than from a
+ * comparison made here.
+ */
+export const INVITE_EXPIRED_STATE_LABEL = 'Expired';
+
+/**
+ * The label naming an invite entry's creation instant (Requirement 11.2).
+ *
+ * A label beside the instant rather than a sentence containing it, because no
+ * message here takes an interpolation parameter — the instant is a value the
+ * entry renders next to this word.
+ */
+export const INVITE_CREATED_LABEL = 'Created';
+
+/**
+ * The label naming an expiring invite entry's expiry instant
+ * (Requirement 11.2). See {@link INVITE_CREATED_LABEL}.
+ */
+export const INVITE_EXPIRES_LABEL = 'Expires';
+
+/**
+ * The Invite_Manager's loading label, handed to the shared `LoadingIndication`
+ * while a `ListInvites` call awaits a response.
+ *
+ * Names the listing it is waiting for, the way {@link SQUADS_LOADING_LABEL} does.
+ */
+export const INVITES_LOADING_LABEL = 'Loading invites';
+
+/**
+ * Shown in place of the invite listing when `ListInvites` returned an accepted
+ * but empty collection (Requirement 11.2).
+ *
+ * An absence rather than a failure, so no error indication accompanies it — the
+ * generate control stays rendered beside it.
+ */
+export const NO_INVITES_STATEMENT = 'This squad has no invites yet.';
+
+/**
+ * The visible label of the revoke control on an `active` invite entry
+ * (Requirement 11.9).
+ *
+ * Several entries can carry an identically labelled control, so the entry
+ * describes its own control through `aria-describedby` rather than this string
+ * carrying a parameter naming the invite.
+ */
+export const REVOKE_INVITE_LABEL = 'Revoke';
+
+/**
+ * The heading of the confirmation asked for before an invite is revoked
+ * (Requirement 11.10).
+ */
+export const REVOKE_INVITE_HEADING = 'Revoke this invite';
+
+/**
+ * The statement of what revoking does, rendered as the Confirm_Dialog's
+ * description (Requirement 11.10).
+ *
+ * It states both halves of the consequence, because the second is the one a
+ * person is likely to be unsure about: revocation closes the door, and it does
+ * not remove anybody who already walked through it.
+ */
+export const REVOKE_INVITE_STATEMENT =
+  'This invite stops working straight away. Anyone who has already joined stays in the squad.';
+
+/**
+ * The visible label of the control that proceeds with a revocation
+ * (Requirement 11.10).
+ *
+ * Names the act rather than agreeing with the question, so the destructive choice
+ * is unmistakable next to the shared {@link CANCEL_LABEL}.
+ */
+export const REVOKE_INVITE_CONFIRM_LABEL = 'Revoke invite';
+
+/**
+ * The heading of the Invite_Reveal (Requirement 11.6).
+ *
+ * The surface exists for one freshly generated invite, so the heading names that
+ * invite's newness rather than the act that produced it.
+ */
+export const INVITE_REVEAL_HEADING = 'Your new invite';
+
+/**
+ * The persistently visible label of the shareable address in the Invite_Reveal
+ * (Requirements 11.6, 11.8).
+ *
+ * The address itself is the backend's `redeemableLink`, presented exactly as
+ * returned — this label names it and nothing more.
+ */
+export const INVITE_LINK_LABEL = 'Invite link';
+
+/** The persistently visible label of the Invite_Code (Requirement 11.6). */
+export const INVITE_CODE_LABEL = 'Invite code';
+
+/**
+ * The visible label of the control that copies the Invite_Link
+ * (Requirement 11.6).
+ *
+ * Only the link is copied, because only the link is long enough to be worth
+ * copying and the code is short enough to read aloud.
+ */
+export const COPY_INVITE_LINK_LABEL = 'Copy link';
+
+/**
+ * Announced when the copy control put the Invite_Link on the clipboard
+ * (Requirement 11.6).
+ *
+ * It confirms the act without repeating the value, so the announcement carries no
+ * Invite_Secret — the same reason no message here takes a parameter.
+ */
+export const INVITE_LINK_COPIED = 'Link copied.';
+
+/**
+ * Announced when the copy control could not reach the clipboard
+ * (Requirement 11.6).
+ *
+ * The values are shown once, so a failed copy needs a way forward rather than an
+ * apology: the link is rendered as selectable text beside this message.
+ */
+export const INVITE_LINK_COPY_FAILED =
+  'The link could not be copied. Select it and copy it by hand.';
+
+/**
+ * The visible label of the control that dismisses the Invite_Reveal
+ * (Requirement 11.7).
+ *
+ * Distinct from {@link CANCEL_LABEL}: nothing is being cancelled — the invite
+ * exists — so the label names discarding the display of it, which is exactly what
+ * dismissal does.
+ */
+export const DISMISS_INVITE_REVEAL_LABEL = 'Dismiss';
+
+/**
+ * The heading of the Guest_Form in `create` mode, which is also what the
+ * Guest_Manager's opening control is named after (Requirement 12.1).
+ *
+ * It says *add* rather than *create* because from an admin's point of view the
+ * person already exists — what is being added is their place in this squad.
+ */
+export const ADD_GUEST_HEADING = 'Add a guest';
+
+/**
+ * The visible label of the Guest_Form's submit control in `create` mode
+ * (Requirement 12.1).
+ */
+export const ADD_GUEST_SUBMIT_LABEL = 'Add guest';
+
+/**
+ * The heading of the Guest_Form in `edit` mode (Requirement 12.8).
+ *
+ * Distinct from {@link EDIT_GUEST_LABEL}, which names the *control* on a
+ * Player_Row: the row's action and the panel it opens are different surfaces, and
+ * a person who activated "Edit guest" should read a heading that tells them the
+ * form is now open rather than the same three words twice.
+ */
+export const EDIT_GUEST_HEADING = 'Edit a guest';
+
+/**
+ * The visible label of the Guest_Form's submit control in `edit` mode
+ * (Requirement 12.8).
+ */
+export const SAVE_GUEST_SUBMIT_LABEL = 'Save guest';
+
+/**
+ * The persistently visible label of the guest's Player_Display_Name field, in
+ * both modes of the Guest_Form (Requirements 12.1, 12.8).
+ *
+ * It says *in this squad* for the same reason
+ * {@link CREATOR_DISPLAY_NAME_LABEL} does: a display name is squad-scoped and
+ * unique within the squad, and a guest exists in no other squad at all.
+ */
+export const GUEST_DISPLAY_NAME_LABEL = 'Guest display name in this squad';
+
+/**
+ * The validation message associated with the guest's Player_Display_Name field
+ * when it is empty after trimming (Requirements 12.1, 12.2).
+ *
+ * Worded for someone else's name, unlike {@link DISPLAY_NAME_REQUIRED_MESSAGE},
+ * which an admin reads about their own on the Create_Squad_Form. The length bound
+ * is shared, so {@link DISPLAY_NAME_TOO_LONG_MESSAGE} covers the other failure.
+ */
+export const GUEST_DISPLAY_NAME_REQUIRED_MESSAGE =
+  "Enter the guest's display name.";
+
+/**
+ * The persistently visible label of the Skill_Tier selection, in both modes of
+ * the Guest_Form (Requirements 12.5, 12.8).
+ *
+ * The optionality is stated in the label because both modes offer a sentinel
+ * option that is selected by default — seeding a tier is a cold-start
+ * convenience, never a requirement, and the rating is driven by results once
+ * matches are played.
+ */
+export const SKILL_TIER_LABEL = 'Starting skill tier (optional)';
+
+/**
+ * The label of the create-mode sentinel option, selected by default, which omits
+ * the Skill_Tier from the `CreateGuest` submission entirely (Requirement 12.5).
+ */
+export const SKILL_TIER_DO_NOT_SEED_LABEL = 'Do not seed a tier';
+
+/**
+ * The label of the edit-mode sentinel option, selected by default, which conveys
+ * that the Skill_Tier is not to be changed (Requirements 12.8, 12.9).
+ *
+ * Deliberately not worded as "no tier": the Guest_Form is never told what tier a
+ * guest currently has, so the only truthful default is to leave it alone.
+ */
+export const SKILL_TIER_LEAVE_UNCHANGED_LABEL = 'Leave unchanged';
+
+/** The `beginner` Skill_Tier option label (Requirement 12.5). */
+export const SKILL_TIER_BEGINNER_LABEL = 'Beginner';
+
+/** The `average` Skill_Tier option label (Requirement 12.5). */
+export const SKILL_TIER_AVERAGE_LABEL = 'Average';
+
+/** The `strong` Skill_Tier option label (Requirement 12.5). */
+export const SKILL_TIER_STRONG_LABEL = 'Strong';
+
+/**
+ * The validation message programmatically associated with the
+ * Lawful_Basis_Acknowledgement control when a create submission is attempted
+ * without it (Requirement 12.3).
+ *
+ * A field message rather than an outcome message: no `CreateGuest` call is
+ * issued, so nothing about the backend is being reported — the form is stating a
+ * rule it settled on its own, about the control the person can act on.
+ */
+export const LAWFUL_BASIS_REQUIRED_MESSAGE =
+  'Confirm the lawful basis before adding this player.';
+
+/**
+ * The Admin_Section's level-two heading — the one heading naming administration
+ * as the section's subject (Requirement 10.7).
+ *
+ * A noun rather than an instruction ("Manage this squad"), because the section is
+ * a region of the Squad_Screen that assistive technology announces by this name
+ * on entering it, not a control that does something.
+ */
+export const ADMIN_SECTION_HEADING = 'Administration';
+
+/**
+ * The level-three heading introducing the Invite_Manager within the Admin_Section
+ * (Requirement 10.7).
+ *
+ * Distinct from {@link GENERATE_INVITE_HEADING}, which names the *panel* the
+ * generate control opens: this names the subsection that lists a squad's invites
+ * and holds that control.
+ */
+export const INVITES_SECTION_HEADING = 'Invites';
+
+/**
+ * The level-three heading introducing the Guest_Manager within the Admin_Section
+ * (Requirement 10.7).
+ *
+ * Distinct from {@link ADD_GUEST_HEADING}, which names the control that opens the
+ * create form and that form's own panel heading one level below this one.
+ */
+export const GUESTS_SECTION_HEADING = 'Guests';
+
+/**
+ * The level-three heading introducing the Feature_Toggle set within the
+ * Admin_Section (Requirements 10.7, 14.1).
+ *
+ * It says *optional* because a squad opts in to each capability and having none is
+ * an ordinary state of the squad — the same word
+ * {@link NO_OPTIONAL_FEATURES_STATEMENT} uses for the empty case, so the heading
+ * and the statement beneath it read as one thought.
+ */
+export const FEATURES_SECTION_HEADING = 'Optional features';

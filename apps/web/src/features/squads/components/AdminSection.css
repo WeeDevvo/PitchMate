@@ -1,0 +1,48 @@
+/*
+ * Presentation for the Admin_Section: the region, its heading, and the three
+ * subsections it introduces.
+ *
+ * Layout only. Every child surface brings its own stylesheet, so nothing here
+ * reaches inside one — this file spaces the outline and states the two heading
+ * levels' type, and stops.
+ *
+ * Every colour is a `var(--token)` read from `styles/squadsTokens.css`; no hex
+ * literal appears here or in `AdminSection.tsx` (Requirement 18.9). Spacing and
+ * type come from the declared scale, and the region carries no fixed width, so it
+ * fits a 360px viewport as its children do (Requirement 19.10).
+ *
+ * Requirements: 10.7, 18.9, 19.10
+ */
+
+.squads-admin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap);
+  box-sizing: border-box;
+  width: 100%;
+  color: var(--text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+}
+
+.squads-admin__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--squads-font-size-section-heading);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-heading);
+}
+
+.squads-admin__subsection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+}
+
+.squads-admin__subheading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--squads-font-size-subsection-heading);
+  font-weight: var(--squads-font-weight-label);
+  line-height: var(--squads-line-height-heading);
+}

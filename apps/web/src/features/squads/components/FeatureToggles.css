@@ -1,0 +1,147 @@
+/*
+ * The Feature_Toggle set's presentation.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal
+ * (Requirements 18.9, 19.5).
+ *
+ * ### A switch states its state three ways
+ *
+ * The accent border and the accent knob of a checked switch are the third cue,
+ * not the first: the row already renders the word `Enabled` or `Disabled` beside
+ * the control, and the control itself carries `aria-checked`. The knob also
+ * *moves* — left when off, right when on — so the state is readable with every hue
+ * removed (Requirements 10.6, 19.3). The switch keeps the shared `--control-text`
+ * on `--control-bg` (15.29:1 dark, 18.42:1 light) rather than taking a green fill,
+ * for the same reason `surfaces.css` gives: no token is declared for text on
+ * green.
+ *
+ * ### A busy switch is `aria-disabled`, not `disabled`
+ *
+ * So it keeps the focus of whoever just activated it and stays in the keyboard
+ * order (Requirement 19.4), and so the styling for that state hangs off the same
+ * attribute assistive technology reads. The reduced opacity is a redundant cue —
+ * `aria-busy` carries the fact.
+ *
+ * ### Nothing here has a fixed width
+ *
+ * Each row is a wrapping flex line: the feature's label grows, the switch and the
+ * state word keep their content width, and a long label wraps rather than
+ * overflowing a 360px viewport (Requirement 19.10). Adjacent rows keep
+ * `--squads-touch-gap` between their targets.
+ *
+ * Requirements: 18.9, 19.3, 19.4, 19.5, 19.10
+ */
+
+.squads-feature-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  color: var(--text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+}
+
+.squads-feature-toggles__statement {
+  margin: 0;
+  color: var(--text);
+}
+
+.squads-feature-toggles__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-touch-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.squads-feature-toggles__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--squads-touch-gap);
+  min-height: var(--squads-touch-target);
+  max-width: 100%;
+}
+
+/* The label naming the feature: it grows, so the switch and the state word sit at
+   the end of the line, and it wraps rather than widening the row (19.10). */
+.squads-feature-toggles__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: var(--squads-font-weight-label);
+  overflow-wrap: break-word;
+}
+
+.squads-feature-toggles__switch {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-width: var(--squads-touch-target);
+  min-height: var(--squads-touch-target);
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius-chip);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.squads-feature-toggles__switch:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+/* 19.3: the accent is emphasis over the word and the knob position, never the only
+   carrier of the state. */
+.squads-feature-toggles__switch[aria-checked='true'] {
+  border-color: var(--accent-fill);
+}
+
+.squads-feature-toggles__switch[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* The track and its knob — the position cue. Decorative, so it is `aria-hidden`
+   where it is rendered. */
+.squads-feature-toggles__track {
+  position: relative;
+  display: inline-block;
+  box-sizing: border-box;
+  width: 1.75rem;
+  height: 0.875rem;
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius-chip);
+}
+
+.squads-feature-toggles__track::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: var(--squads-gap-hairline);
+  transform: translateY(-50%);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--control-text);
+}
+
+.squads-feature-toggles__switch[aria-checked='true']
+  .squads-feature-toggles__track::after {
+  left: auto;
+  right: var(--squads-gap-hairline);
+  background: var(--accent-fill);
+}
+
+.squads-feature-toggles__state {
+  flex: 0 0 auto;
+  font-size: var(--squads-font-size-meta);
+  font-weight: var(--squads-font-weight-label);
+}
