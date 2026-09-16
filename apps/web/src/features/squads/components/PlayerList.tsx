@@ -67,6 +67,7 @@ import { useMemo, type ReactElement } from 'react';
 import { PlayerRow, type ViewerContext } from './PlayerRow';
 import { NO_PLAYERS_STATEMENT } from '../lib/messages';
 import { comparePlayerRows, type PlayerListRow } from '../lib/playerList';
+import type { PromotionMachine } from '../state/usePromotion';
 
 // The feature token table, so a list rendered outside the App_Shell frame still
 // resolves every custom property `PlayerList.css` reads (Requirement 18.9).
@@ -101,8 +102,19 @@ export interface PlayerListProps {
   /** Called with a row's membership identity to open that player's stats. */
   readonly onOpenPlayer: (membershipId: string) => void;
 
-  /** Called with a row's membership identity to begin promoting it. */
-  readonly onPromote: (membershipId: string) => void;
+  /**
+   * Called with a row's membership identity to begin promoting it. Needed only
+   * where no {@link promotion} machine is supplied; see `PlayerRow`.
+   */
+  readonly onPromote?: (membershipId: string) => void;
+
+  /**
+   * The promotion machine, passed straight to each row so the confirming
+   * `PromotionControl` composes inside the row it belongs to rather than once per
+   * screen — which is what lets a confirmation return focus to the control that
+   * opened it (Requirement 19.7).
+   */
+  readonly promotion?: PromotionMachine;
 
   /** Called with a row's membership identity to begin editing that guest. */
   readonly onEditGuest: (membershipId: string) => void;
@@ -120,6 +132,7 @@ export function PlayerList({
   viewer,
   onOpenPlayer,
   onPromote,
+  promotion,
   onEditGuest,
 }: PlayerListProps): ReactElement {
   // 7.4: the rendered order is the comparator's, so it is determined by the row
@@ -154,8 +167,9 @@ export function PlayerList({
             row={row}
             viewer={viewer}
             onOpenPlayer={onOpenPlayer}
-            onPromote={onPromote}
             onEditGuest={onEditGuest}
+            {...(onPromote === undefined ? {} : { onPromote })}
+            {...(promotion === undefined ? {} : { promotion })}
           />
         </li>
       ))}

@@ -915,3 +915,81 @@ export const GUESTS_SECTION_HEADING = 'Guests';
  * and the statement beneath it read as one thought.
  */
 export const FEATURES_SECTION_HEADING = 'Optional features';
+
+/* -------------------------------------------------------------------------- */
+/* The Squad_Screen's own headings and labels (Requirements 6.3, 6.8, 6.9)     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The Squad_Screen's level-one heading while no Squad_Detail is held — the
+ * awaiting-first-response and failed states (Requirements 6.7, 6.9, 19.1).
+ *
+ * Requirement 6.3 makes the parsed Squad_Name the `h1` once a Squad_Detail has
+ * been accepted, and Requirement 19.1 asks every screen to hold exactly one
+ * level-one heading in *every* state — including the two in which no name is
+ * known. This is that heading: a bare noun, naming the subject of the route
+ * without claiming a squad exists at it, and carrying no identifier from the
+ * requested path.
+ *
+ * The not-found state is not one of these: there the `Not_Found_Treatment`
+ * contributes the route's single `h1` instead, so no name and no fallback stands
+ * above it (Requirement 6.4).
+ */
+export const SQUAD_SCREEN_HEADING = 'Squad';
+
+/**
+ * The level-two heading introducing the Squad_Detail region — the first of the
+ * five sections whose document order Requirement 6.8 fixes.
+ *
+ * The region carries the caller's own standing in the squad (Requirement 6.3),
+ * which is what the heading names: the squad's own name is the `h1` above it, so
+ * repeating it here would state the same thing twice.
+ */
+export const SQUAD_DETAIL_SECTION_HEADING = 'Squad details';
+
+/**
+ * The label beside the caller's Member_Role in the Squad_Detail region
+ * (Requirement 6.3).
+ *
+ * A label and a value rather than a sentence, because no message here takes an
+ * interpolation parameter: the role's own word — {@link OWNER_ROLE_LABEL},
+ * {@link ADMIN_ROLE_LABEL}, {@link MEMBER_ROLE_LABEL}, or
+ * {@link NO_ROLE_RECORDED_LABEL} — is rendered as a value next to this word, the
+ * same arrangement the Invite_Manager uses for an invite's instants.
+ */
+export const YOUR_ROLE_LABEL = 'Your role';
+
+/**
+ * The level-two heading introducing the Player_List — the second section
+ * (Requirements 6.8, 7.2).
+ */
+export const PLAYERS_SECTION_HEADING = 'Players';
+
+/**
+ * The level-two heading of the matches Placeholder_Section — the third section
+ * (Requirements 6.8, 15.1).
+ *
+ * It names the subject the later match-lifecycle feature fills the slot with, so
+ * the heading reads the same before and after that content arrives
+ * (Requirement 15.4).
+ */
+export const MATCHES_SECTION_HEADING = 'Matches';
+
+/**
+ * The level-two heading of the stats Placeholder_Section — the fourth section
+ * (Requirements 6.8, 15.1).
+ *
+ * It names both surfaces the later player-stats feature supplies here, matching
+ * the wording of {@link STATS_PLACEHOLDER_STATEMENT} beneath it.
+ */
+export const STATS_SECTION_HEADING = 'Stats and leaderboards';
+
+/**
+ * The Squad_Screen's loading label, handed to the shared `LoadingIndication`
+ * while a `GetSquad` call awaits a response (Requirement 6.9).
+ *
+ * Names what is being awaited rather than saying a bare "Loading", the way
+ * {@link SQUADS_LOADING_LABEL} and {@link INVITES_LOADING_LABEL} do. It names no
+ * squad, because the name is exactly what has not arrived yet.
+ */
+export const SQUAD_LOADING_LABEL = 'Loading this squad';

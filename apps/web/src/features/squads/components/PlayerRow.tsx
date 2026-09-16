@@ -32,12 +32,15 @@
  * backend authoritative, and a `403` or `404` on either call is an outcome message
  * that changes nothing on screen.
  *
- * Each control delegates to a callback and performs no call of its own, so the row
- * stays assertable without a transport or a router. The confirming Promotion
- * Control — the confirmation naming the player, the pending state, the live-region
- * outcome — is `PromotionControl`'s job and arrives with the Admin_Section; this
- * row's job is to decide *whether* a promotion affordance exists and to hand the
- * activation on.
+ * The guest edit control delegates to a callback and performs no call of its own,
+ * so the row stays assertable without a transport or a router. The promotion
+ * affordance has two forms, and a row renders exactly one of them: handed a
+ * `promotion` machine it renders the confirming {@link PromotionControl} — the
+ * confirmation naming the player, the per-membership pending state, the
+ * live-region outcome — which is the composition the design fixes for the
+ * Squad_Screen; handed none it renders the bare control and hands the activation
+ * on through `onPromote`. Both ask the same {@link isPromotable} predicate, so
+ * neither form can offer promotion where the other would not.
  *
  * ### The Player_Stats_Route is built once, and the row states its target
  *
@@ -86,6 +89,7 @@
 import { useId, type ReactElement } from 'react';
 
 import { MembershipLabels } from './MembershipLabels';
+import { PromotionControl } from './PromotionControl';
 import { RatingBadge } from './RatingBadge';
 import { EDIT_GUEST_LABEL, PROMOTE_TO_ADMIN_LABEL } from '../lib/messages';
 import { isGuestEditable, type PlayerListRow } from '../lib/playerList';
@@ -95,6 +99,7 @@ import {
   type RatingPresentation,
 } from '../lib/ratingPresentation';
 import { playerStatsPath } from '../lib/routePaths';
+import type { PromotionMachine } from '../state/usePromotion';
 
 // The feature token table, so a row rendered outside the App_Shell frame still
 // resolves every custom property `PlayerRow.css` reads (Requirement 18.9).
@@ -188,8 +193,29 @@ export interface PlayerRowProps {
    */
   readonly onOpenPlayer: (membershipId: string) => void;
 
-  /** Called with this row's membership identity to begin promoting it. */
-  readonly onPromote: (membershipId: string) => void;
+  /**
+   * Called with this row's membership identity to begin promoting it — the
+   * affordance a caller composes its own confirmation behind.
+   *
+   * Ignored, and needed by nobody, when {@link promotion} is supplied: the
+   * confirming {@link PromotionControl} then owns the whole interaction, and a
+   * row renders one affordance or the other and never both.
+   */
+  readonly onPromote?: (membershipId: string) => void;
+
+  /**
+   * The promotion machine, where the caller has one — which the Squad_Screen
+   * does.
+   *
+   * Supplying it replaces the bare affordance above with the confirming
+   * {@link PromotionControl}: the confirmation naming the player, the per-membership
+   * pending state, and the live-region outcome, all returning focus to *this*
+   * row's control (Requirements 13.4, 13.5, 13.6). That is the composition the
+   * design fixes — `PlayerRow → PromotionControl` — and it is a prop rather than
+   * the only path because the row stays renderable without a transport for the
+   * eligibility properties that only ask which rows carry the affordance.
+   */
+  readonly promotion?: PromotionMachine;
 
   /** Called with this row's membership identity to begin editing that guest. */
   readonly onEditGuest: (membershipId: string) => void;
@@ -208,6 +234,7 @@ export function PlayerRow({
   viewer,
   onOpenPlayer,
   onPromote,
+  promotion,
   onEditGuest,
 }: PlayerRowProps): ReactElement {
   const nameId = useId();
@@ -255,22 +282,29 @@ export function PlayerRow({
       {/* 8.5, 8.8: exactly one Rating_Presentation, named for this player. */}
       <RatingBadge playerName={row.displayName} presentation={presentationOf(row)} />
 
-      {/* 10.2, 13.1: present only where the promotion predicate holds. The
-          confirmation, the pending state, and the outcome message belong to the
-          promotion surface the Admin_Section owns; the row hands the activation on. */}
-      {promotable && (
-        <button
-          type="button"
-          className="squads-player-row__action"
-          data-squads-player-promote="true"
-          // The visible label names the act; the accessible name adds whose row it
-          // is, composed here because no message carries an interpolation
-          // parameter. It contains the visible label, so the two agree.
-          aria-label={`${PROMOTE_TO_ADMIN_LABEL}: ${row.displayName}`}
-          onClick={() => onPromote(row.membershipId)}
-        >
-          {PROMOTE_TO_ADMIN_LABEL}
-        </button>
+      {/* 10.2, 13.1, 13.4: the promotion affordance, in exactly one of its two
+          forms. With a machine to hand it is the confirming `PromotionControl`,
+          which asks the same `isPromotable` predicate and so cannot disagree with
+          this row about eligibility; without one it is the bare control, and the
+          caller composes the confirmation. Never both. */}
+      {promotion !== undefined ? (
+        <PromotionControl member={row} viewer={viewer} promotion={promotion} />
+      ) : (
+        promotable &&
+        onPromote !== undefined && (
+          <button
+            type="button"
+            className="squads-player-row__action"
+            data-squads-player-promote="true"
+            // The visible label names the act; the accessible name adds whose row
+            // it is, composed here because no message carries an interpolation
+            // parameter. It contains the visible label, so the two agree.
+            aria-label={`${PROMOTE_TO_ADMIN_LABEL}: ${row.displayName}`}
+            onClick={() => onPromote(row.membershipId)}
+          >
+            {PROMOTE_TO_ADMIN_LABEL}
+          </button>
+        )
       )}
 
       {/* 12.7, 7.8: present only on an editable guest row — never on a registered
