@@ -1,0 +1,66 @@
+/*
+ * A Player_Row's membership labels.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal and no
+ * fixed pixel width (Requirements 18.9, 19.5, 19.10).
+ *
+ * The chips follow `SquadCard.css`: an outline and text, and **no fill of their
+ * own**, so a chip introduces no fourth surface for the token table's contrast
+ * measurements to chase — each is read against either `--squads-card-surface` or
+ * `--squads-inactive-surface`, both of which that table measures. A chip inherits
+ * the row's own colour by default, which is what makes an inactive row's labels
+ * mute along with the rest of it.
+ *
+ * Two chips take a hue, and neither needs it: the guest label carries the brand's
+ * informational blue and the Former_Player label the muted text token, over words
+ * that state the same facts on their own (Requirement 19.3). `--squads-guest-text`
+ * clears the 4.5:1 text floor on all three surfaces in both Themes, as the token
+ * table records.
+ *
+ * The list wraps rather than shrinking, so a row of several labels stacks on a
+ * 360px viewport instead of overflowing it.
+ */
+
+.squads-membership-labels {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--squads-touch-gap);
+  max-width: 100%;
+}
+
+/* The leading dash of an inactive row: the same weight as a label, so it reads as
+   part of the row's statement rather than as stray punctuation (7.7). */
+.squads-membership-labels__glyph {
+  color: inherit;
+  font-size: var(--squads-font-size-body);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-body);
+}
+
+.squads-membership-labels__label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--squads-chip-border);
+  border-radius: var(--squads-radius-chip);
+  color: inherit;
+  font-size: var(--squads-font-size-chip);
+  font-weight: var(--squads-font-weight-label);
+  line-height: var(--squads-line-height-body);
+  /* A display name is not in here, but a label still wraps rather than widening
+     the row past a narrow viewport (Requirement 19.10). */
+  overflow-wrap: break-word;
+}
+
+/* The Guest_Flag — informational blue, over the word "Guest" (19.3). */
+.squads-membership-labels__label[data-squads-membership-label='guest'] {
+  color: var(--squads-guest-text);
+}
+
+/* A Former_Player entry — muted, because it is a statement about a membership
+   whose identifying data was removed rather than about a person (7.8). */
+.squads-membership-labels__label[data-squads-membership-label='former-player'] {
+  color: var(--muted-text);
+}

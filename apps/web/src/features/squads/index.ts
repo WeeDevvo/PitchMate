@@ -8,10 +8,12 @@
  * consumer — which in practice means only `src/app/appRouter.tsx` — imports the
  * feature through this one entry point (Requirement 18.7).
  *
- * The barrel starts empty on purpose. Exports land here as the surfaces they
- * belong to are built: the three screens, the two route tables, and the route
- * paths with their path builders, including the `PLAYER_STATS_ROUTE` seam the
- * later player-stats feature registers against (Requirements 9.2, 9.3).
+ * Exports land here as the surfaces they belong to are built: the three screens,
+ * the two route tables, and the route paths with their path builders, including
+ * the `PLAYER_STATS_ROUTE` seam the later player-stats feature registers against
+ * (Requirements 9.2, 9.3). The Squads_Home is the first of them — it is the
+ * App_Shell's injected Home_Slot content, which `src/app/appRouter.tsx` supplies
+ * (Requirement 1.12).
  *
  * Nothing under `lib/` or `api/` is exported beyond what a screen outside the
  * feature needs (Requirement 18.7): the parsers, printers, the Enum_Code_Map,
@@ -22,4 +24,4 @@
  * Requirements: 18.1, 18.7
  */
 
-export {};
+export { SquadsHome, type SquadsHomeProps } from './screens/SquadsHome';

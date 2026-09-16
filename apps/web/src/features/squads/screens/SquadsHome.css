@@ -1,0 +1,76 @@
+/*
+ * The Squads_Home's presentation.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal and no
+ * fixed pixel width (Requirements 18.9, 19.10).
+ *
+ * The screen renders inside the App_Shell's content region, so it declares no
+ * frame, no gutter of its own beyond the gap between its parts, and no width
+ * bound on the card grid — the region around it owns those (Requirement 1.12).
+ *
+ * The card list is a `<ul>` with its markers removed rather than a bare set of
+ * divs: the list semantics announce how many squads there are, and the grid
+ * tracks from `--squads-card-min-width` so a narrow viewport collapses to one
+ * column without a media query.
+ */
+
+.squads-home {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap);
+  width: 100%;
+  max-width: 100%;
+}
+
+.squads-home__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--squads-font-size-screen-heading);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-heading);
+  overflow-wrap: break-word;
+}
+
+.squads-home__entry-points {
+  display: flex;
+  flex-wrap: wrap;
+  /* The minimum space between two adjacent pointer targets. */
+  gap: var(--squads-touch-gap);
+}
+
+.squads-home__entry-point {
+  min-height: var(--squads-touch-target);
+  padding: 0 var(--squads-gutter);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font-size: var(--squads-font-size-body);
+  font-weight: var(--squads-font-weight-label);
+  line-height: var(--squads-line-height-body);
+  cursor: pointer;
+}
+
+.squads-home__entry-point:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+.squads-home__cards {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(var(--squads-card-min-width), 100%), 1fr)
+  );
+  gap: var(--squads-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.squads-home__card {
+  display: flex;
+  min-width: 0;
+}

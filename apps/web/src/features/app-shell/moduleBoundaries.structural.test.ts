@@ -5,7 +5,7 @@
  * Requirement 15.8 makes this file part of the product rather than a courtesy
  * test. The boundary rules it enforces are stated as prohibitions — "imports only
  * through the Auth_Feature's single public entry point", "imports no module of the
- * marketing landing feature", "is imported by the application-level router wiring
+ * marketing landing feature", "is imported through its single public entry point
  * only" — and a prohibition cannot be demonstrated by an example. So the source
  * tree is read and classified, in the same form as the Auth_Feature's own
  * `featureSelfContained.test.ts` and `api/clientConsumption.test.ts`, and a
@@ -48,7 +48,11 @@
  * 4. **One-way dependency direction** (Requirement 15.4). No file under the
  *    Auth_Feature root and no file under the marketing landing root imports the
  *    shell at all, and every file outside the shell that *does* import it imports
- *    the barrel and lives under `src/app/` — the application-level router wiring.
+ *    the barrel and lives under `src/app/` — the application-level router wiring —
+ *    or under `features/squads/`, the one feature the web-squads-screens design
+ *    admits as a shell consumer (`app` → `squads` → `app-shell`; see ADR 0001).
+ *    That admission is barrel-only: a squads module reaching a deeper shell path
+ *    still fails.
  * 5. **Every route path registered exactly once** (Requirement 15.6). The real
  *    assembled application route table is flattened the way `react-router` matches
  *    it and asserted to carry no duplicate path, to carry every Auth_Feature route
@@ -89,8 +93,20 @@ const srcRoot = resolve(shellRoot, '..', '..');
 const authRoot = join(srcRoot, 'features', 'auth');
 const landingRoot = join(srcRoot, 'features', 'landing');
 const themeRoot = join(srcRoot, 'theme');
-/** The application-level router wiring — the shell's only permitted consumer. */
+/** The application-level router wiring — the shell's primary permitted consumer. */
 const appWiringRoot = join(srcRoot, 'app');
+/**
+ * The squads feature root — the one feature admitted as a shell consumer.
+ *
+ * The web-squads-screens design declares the dependency edge `app` → `squads` →
+ * `app-shell` as legitimate: the squads modules nest inside the shell's Home
+ * Destination and take `HOME_ROUTE`, `SQUAD_SCOPE_ROUTE_PARAMETER`, and
+ * `usePublishSquadScopeFromRoute` from the shell's barrel rather than restating
+ * the shell's route path or its squad-scope contract. The edge still runs one way
+ * — nothing in the shell imports the squads feature — and it is admitted at the
+ * barrel only (see ADR 0001).
+ */
+const squadsRoot = join(srcRoot, 'features', 'squads');
 
 /** Normalise an absolute path to forward slashes for stable comparisons. */
 function norm(path: string): string {
@@ -454,9 +470,24 @@ describe('the dependency direction runs one way to the App_Shell (Requirement 15
     expect(offenders).toEqual([]);
   });
 
-  it('is imported by the application-level router wiring only', () => {
+  it('is imported by the application-level router wiring and the squads feature only', () => {
+    // Two admitted consumers, and no third. `src/app/**` is the application-level
+    // router wiring. `features/squads/**` is admitted because the
+    // web-squads-screens design declares the dependency edge `app` → `squads` →
+    // `app-shell`: the squads screens mount inside the shell's Home Destination
+    // and take `HOME_ROUTE`, `SQUAD_SCOPE_ROUTE_PARAMETER`, and
+    // `usePublishSquadScopeFromRoute` from the shell's barrel instead of
+    // restating the shell's route path and squad-scope contract. The admission is
+    // narrow: a squads module reaching a deeper shell path than the barrel is
+    // still an offender here, as it is in the public-entry-point check above.
     const offenders = inboundImports
-      .filter(({ file }) => !isWithin(appWiringRoot, file))
+      .filter(({ file, target }) => {
+        if (isWithin(appWiringRoot, file)) return false;
+        if (isWithin(squadsRoot, file) && targetsBarrelOf(shellRoot, target)) {
+          return false;
+        }
+        return true;
+      })
       .map(({ file, specifier }) => ({ file: relToSrc(file), specifier }));
     expect(offenders).toEqual([]);
   });

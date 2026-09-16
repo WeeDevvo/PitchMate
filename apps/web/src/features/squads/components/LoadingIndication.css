@@ -1,0 +1,20 @@
+/*
+ * The loading indication's presentation.
+ *
+ * Every value is read from a declared custom property — the feature's own tokens
+ * in `styles/squadsTokens.css` layered over the shared `src/theme` tables — so no
+ * colour is written here and a Theme change is a change of one attribute on the
+ * document element (Requirements 18.8, 18.9).
+ *
+ * A statement rather than a spinner, so there is no animation to exempt from a
+ * reduced-motion preference.
+ */
+
+.squads-loading {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+  font-weight: var(--squads-font-weight-body);
+  max-width: var(--squads-measure);
+}

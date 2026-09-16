@@ -1,0 +1,43 @@
+/*
+ * Presentation for a Placeholder_Section.
+ *
+ * Every value here resolves from a custom property declared in
+ * `../styles/squadsTokens.css` (the feature's scale and per-Theme colour tables)
+ * or from the shared token names that table restates, so this file carries no
+ * colour literal and no fixed pixel width (Requirements 18.9, 19.10).
+ *
+ * The statement is muted rather than coloured as a warning: the section's state
+ * is an absence, and the wording carries it (Requirements 15.2, 19.3).
+ */
+
+.squads-placeholder {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  width: 100%;
+  max-width: 100%;
+  padding: var(--squads-gutter);
+  border: var(--squads-border-width) solid var(--squads-card-border);
+  border-radius: var(--squads-radius);
+  background: var(--squads-card-surface);
+  color: var(--text);
+}
+
+.squads-placeholder__heading {
+  margin: 0;
+  font-size: var(--squads-font-size-section-heading);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-heading);
+  overflow-wrap: break-word;
+}
+
+.squads-placeholder__statement {
+  margin: 0;
+  max-width: var(--squads-measure);
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-body);
+  font-weight: var(--squads-font-weight-body);
+  line-height: var(--squads-line-height-body);
+  overflow-wrap: break-word;
+}

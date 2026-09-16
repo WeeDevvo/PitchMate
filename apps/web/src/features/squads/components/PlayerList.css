@@ -1,0 +1,45 @@
+/*
+ * The Player_List's presentation.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal and no
+ * fixed pixel width (Requirements 18.9, 19.10).
+ *
+ * The list is a single column rather than a grid: a Player_Row is a wrapping line
+ * of a name, its labels, a badge, and up to two controls, so it reads down the page
+ * and stays within a 360px viewport without a media query. The markers are removed
+ * because each row's own border already separates it — which is why the `<ul>`
+ * states `role="list"` in `PlayerList.tsx`, since WebKit drops list semantics from
+ * a list styled this way.
+ *
+ * The no-players statement is muted body text bounded to the readable measure, not
+ * a bordered notice or a warning hue: an empty membership set is an absence and the
+ * wording carries it (Requirements 7.12, 19.3).
+ */
+
+.squads-player-list {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.squads-player-list__item {
+  display: flex;
+  min-width: 0;
+}
+
+.squads-player-list__empty {
+  margin: 0;
+  max-width: var(--squads-measure);
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-body);
+  font-weight: var(--squads-font-weight-body);
+  line-height: var(--squads-line-height-body);
+  overflow-wrap: break-word;
+}

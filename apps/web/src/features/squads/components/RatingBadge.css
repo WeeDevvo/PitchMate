@@ -1,0 +1,82 @@
+/*
+ * A Rating_Presentation's presentation.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal
+ * (Requirements 18.9, 19.5).
+ *
+ * ### Shape carries the state, colour only emphasises it
+ *
+ * A Display_Rating is plain emphasised text. The Provisional_Band and the
+ * Rating_Unavailable label are outlined chips carrying a badge shape beside their
+ * word, so the three are distinguishable with every hue removed — a greyscale
+ * rendering still shows a chip-with-badge against a bare number, and the words
+ * themselves say which is which (Requirements 8.4, 8.7, 19.3).
+ *
+ * The chip has no fill of its own, matching the label chips of `SquadCard.css`, so
+ * it introduces no fourth surface: its text is read against
+ * `--squads-card-surface` or `--squads-inactive-surface`, both of which the token
+ * table's contrast table measures. The amber `--squads-provisional-text` clears
+ * the 4.5:1 text floor on both (7.79 / 7.34 dark, 5.39 / 4.97 light) and the badge
+ * shape takes `currentColor`, so the graphical cue clears its own 3:1 floor by the
+ * same measurement.
+ *
+ * Sizes are relative (`rem`, `em`), so a browser text-size preference scales the
+ * badge along with the label rather than leaving a fixed dot beside grown text.
+ */
+
+.squads-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--squads-gap-tight);
+  max-width: 100%;
+  color: var(--text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+}
+
+/* A Display_Rating: the number, weighted so it reads as the row's value, and
+   tabular so a column of ratings lines up. No chip and no badge (8.1). */
+.squads-rating[data-rating-kind='rating'] {
+  font-weight: var(--squads-font-weight-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The two non-rating presentations share the chip shape (8.7). */
+.squads-rating[data-rating-kind='provisional'],
+.squads-rating[data-rating-kind='unavailable'] {
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--squads-chip-border);
+  border-radius: var(--squads-radius-chip);
+  font-size: var(--squads-font-size-chip);
+  font-weight: var(--squads-font-weight-label);
+}
+
+/* The Provisional_Band — amber, the palette's "unsettled / uncertain" (brand.md).
+   The word beside it is what actually states the absence (8.4, 19.3). */
+.squads-rating[data-rating-kind='provisional'] {
+  border-color: var(--squads-provisional-border);
+  color: var(--squads-provisional-text);
+}
+
+/* The Rating_Unavailable label — muted, because it is a statement about the squad's
+   leaderboard rather than about this player (8.13). */
+.squads-rating[data-rating-kind='unavailable'] {
+  color: var(--muted-text);
+}
+
+/* The badge shape: a ring in the label's own colour, so it needs no token of its
+   own and can never disagree with the text it sits beside. */
+.squads-rating__badge {
+  flex: 0 0 auto;
+  width: 0.75em;
+  height: 0.75em;
+  border: var(--squads-border-width) solid currentColor;
+  border-radius: 50%;
+}
+
+.squads-rating__text {
+  /* A label wraps rather than widening the row past a narrow viewport
+     (Requirement 19.10). */
+  overflow-wrap: break-word;
+}

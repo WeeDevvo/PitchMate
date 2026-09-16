@@ -1,0 +1,112 @@
+/*
+ * A Player_Row's presentation.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal and no
+ * fixed pixel width (Requirements 18.9, 19.5, 19.10).
+ *
+ * ### An inactive row is muted, and that is never the only cue
+ *
+ * `[data-membership-state='inactive']` repaints the row on the surface the token
+ * table measures for exactly this purpose, and mutes its text with
+ * `--squads-inactive-text` (9.30:1 dark, 5.88:1 light on that surface — above the
+ * 4.5:1 text floor). The state is *also* the word "Inactive" and *also* a leading
+ * dash glyph, both rendered by `MembershipLabels`, so the row survives a greyscale
+ * rendering (Requirements 7.7, 19.3). Every descendant inherits the row's colour
+ * rather than declaring its own, which is what keeps the mute consistent — and why
+ * the two hued chips are the only exceptions, each verified against both surfaces.
+ *
+ * ### The navigation control is underlined, not merely coloured
+ *
+ * The control that opens a player's stats has no border and no fill, so its
+ * affordance is the underline plus the pointer cursor plus its focus ring — never
+ * a hue (Requirement 19.3). It takes the minimum pointer target height, and the
+ * row keeps `--squads-touch-gap` between adjacent targets, so the navigation
+ * control and the admin controls can be hit apart on a touch screen
+ * (Requirement 19.4).
+ *
+ * ### Nothing here has a fixed width
+ *
+ * The row is a wrapping flex line: the name grows, everything else keeps its
+ * content width, and a row carrying two admin controls wraps onto a second line
+ * rather than overflowing a 360px viewport (Requirement 19.10). A display name is
+ * free text, so it breaks rather than widening the row.
+ */
+
+.squads-player-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--squads-touch-gap);
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--squads-touch-target);
+  padding: var(--squads-gap-tight) var(--squads-gutter);
+  border: var(--squads-border-width) solid var(--squads-card-border);
+  border-radius: var(--squads-radius);
+  background: var(--squads-card-surface);
+  color: var(--text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+}
+
+/* 7.7: the muted surface of an inactive membership — one of three cues, never the
+   only one. */
+.squads-player-row[data-membership-state='inactive'] {
+  background: var(--squads-inactive-surface);
+  color: var(--squads-inactive-text);
+}
+
+/* 9.1: the row's single navigation control. It grows so the name takes the line's
+   spare width, and shrinks to its content on a narrow viewport. */
+.squads-player-row__open {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  min-height: var(--squads-touch-target);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.squads-player-row__open:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+.squads-player-row__name {
+  font-weight: var(--squads-font-weight-label);
+  /* A display name is free text, so it wraps rather than widening the row past
+     the viewport (Requirement 19.10). */
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* The admin controls, matching the action controls of `surfaces.css` so a control
+   on a row and a control in a form read as the same application. */
+.squads-player-row__action {
+  flex: 0 0 auto;
+  min-height: var(--squads-touch-target);
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  font-size: var(--squads-font-size-meta);
+  font-weight: var(--squads-font-weight-label);
+  cursor: pointer;
+}
+
+.squads-player-row__action:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}

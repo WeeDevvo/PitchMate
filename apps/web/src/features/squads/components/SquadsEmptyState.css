@@ -1,0 +1,30 @@
+/*
+ * The Squads_Empty_State's presentation.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal and no
+ * fixed pixel width (Requirements 18.9, 19.10).
+ *
+ * The statements are muted body text rather than a warning colour or a bordered
+ * notice: an empty listing is an absence and the wording carries it
+ * (Requirements 2.1, 19.3).
+ */
+
+.squads-empty {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  width: 100%;
+  max-width: 100%;
+}
+
+.squads-empty__statement {
+  margin: 0;
+  max-width: var(--squads-measure);
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-body);
+  font-weight: var(--squads-font-weight-body);
+  line-height: var(--squads-line-height-body);
+  overflow-wrap: break-word;
+}

@@ -24,7 +24,9 @@
  * what makes that true.
  *
  * **The placeholder is a value comparison, not a heuristic.** See
- * {@link isAnonymisedPlaceholder}.
+ * {@link isAnonymisedPlaceholder}, and {@link isGuestEditable}, which reuses it so
+ * that a row's Former_Player presentation and a row's controls recognise the same
+ * set of rows (Requirements 7.8, 12.7).
  *
  * ### Why the row carries the raw leaderboard entry
  *
@@ -97,6 +99,56 @@ export const ANONYMISED_PLACEHOLDER = 'Former player';
  */
 export function isAnonymisedPlaceholder(displayName: string): boolean {
   return displayName.trim() === ANONYMISED_PLACEHOLDER;
+}
+
+/**
+ * Whether a Player_Row offers the guest edit action — the "guest and not
+ * anonymised" test, stated once so no component re-derives it.
+ *
+ * The accepted set is exactly: the caller holds Admin_Authority, the membership's
+ * Guest_Flag is set, and its Player_Display_Name is not the
+ * Anonymised_Placeholder (Requirements 7.8, 12.7). A membership without the guest
+ * flag is rejected whatever its role, because a registered member's display name
+ * belongs to that person's own account rather than to the squad's admin.
+ *
+ * It lives beside {@link isAnonymisedPlaceholder} rather than in a module of its
+ * own for the same reason {@link isPromotable} folds that predicate in: the row's
+ * Former_Player *presentation* and the row's *controls* must recognise the same
+ * set of rows, and reading one predicate is the only arrangement in which they
+ * cannot drift apart.
+ *
+ * Like the promotion predicate this is a **presentation** decision only.
+ * Requirement 10.5 keeps the backend authoritative for `EditGuest`: `true` here
+ * is no promise the call will succeed, and `false` is enforced by the control
+ * being absent rather than disabled.
+ *
+ * Pure, total, and free of exceptions: two boolean reads and one trimmed string
+ * comparison.
+ *
+ * @param member the Squad_Member whose row is being rendered
+ * @param viewerHasAdminAuthority the caller's Admin_Authority, as resolved by
+ *   `resolveAdminAuthority`
+ * @returns `true` only when an admin may edit this guest
+ *
+ * Requirements: 7.8, 12.7
+ */
+export function isGuestEditable(
+  member: SquadMember,
+  viewerHasAdminAuthority: boolean,
+): boolean {
+  // 12.7: the affordance exists only for a caller who holds Admin_Authority.
+  if (!viewerHasAdminAuthority) {
+    return false;
+  }
+
+  // 12.7: a row without the Guest_Flag offers no edit action at all.
+  if (!member.isGuest) {
+    return false;
+  }
+
+  // 7.8: an erased guest keeps its history and its stats route, but nothing about
+  // it is editable — there is no longer a person whose name this is.
+  return !isAnonymisedPlaceholder(member.displayName);
 }
 
 /**

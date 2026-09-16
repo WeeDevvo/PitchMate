@@ -1,0 +1,69 @@
+/*
+ * A Squad_Card's presentation.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal and no
+ * fixed pixel width (Requirements 18.9, 19.10).
+ *
+ * The card is one control, so the whole surface is the hit area: it takes the
+ * minimum pointer target height and a visible focus ring in both Themes
+ * (Requirements 19.4, 19.5). The two labels are outlined chips with no fill of
+ * their own, so each sits on the card surface the contrast table measures
+ * against, and each carries its value as a word rather than as a hue
+ * (Requirement 19.3).
+ */
+
+.squads-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--squads-gap-tight);
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--squads-touch-target);
+  margin: 0;
+  padding: var(--squads-gutter);
+  border: var(--squads-border-width) solid var(--squads-card-border);
+  border-radius: var(--squads-radius);
+  background: var(--squads-card-surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.squads-card:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+.squads-card__name {
+  font-size: var(--squads-font-size-section-heading);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-heading);
+  overflow-wrap: break-word;
+  /* A squad name is free text, so it must wrap rather than widen the card past
+     the viewport (Requirement 19.10). */
+  max-width: 100%;
+}
+
+.squads-card__labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--squads-touch-gap);
+  max-width: 100%;
+}
+
+.squads-card__label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--squads-chip-border);
+  border-radius: var(--squads-radius-chip);
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-chip);
+  font-weight: var(--squads-font-weight-label);
+  line-height: var(--squads-line-height-body);
+  overflow-wrap: break-word;
+}

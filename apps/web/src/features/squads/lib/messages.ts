@@ -25,8 +25,8 @@
  * This module is React-free and DOM-free like every module under `lib/`
  * (Requirement 18.2): it declares constants and touches nothing.
  *
- * Requirements: 2.4, 4.8, 5.10, 6.4, 7.12, 8.4, 8.13, 11.6, 12.4, 14.8, 15.2,
- * 17.1, 17.2
+ * Requirements: 1.9, 2.4, 4.8, 4.9, 5.10, 6.4, 7.12, 8.4, 8.13, 11.6, 12.4,
+ * 14.8, 15.2, 17.1, 17.2
  */
 
 /**
@@ -204,6 +204,39 @@ export const INVITE_SHOWN_ONCE =
   'This link and code are shown once. Copy them now, because they cannot be shown again.';
 
 /**
+ * The three Member_Role labels, and the two Membership_State labels, as rendered
+ * on a Squad_Card and on a Player_Row (Requirements 1.5, 19.3).
+ *
+ * They live here rather than beside the components that render them for the same
+ * reason every other string does: a role named on a card and the same role named
+ * on a Player_Row must read identically, and a shared constant is the only
+ * arrangement in which they cannot drift apart.
+ *
+ * Each is a **word**, not a colour. Requirement 19.3 asks for every Member_Role
+ * and Membership_State to be conveyed in text *in addition to* any colour or
+ * icon, so these labels carry the value on their own and any hue a stylesheet
+ * adds is decoration over them.
+ */
+export const OWNER_ROLE_LABEL = 'Owner';
+
+/** The `admin` Member_Role label. See {@link OWNER_ROLE_LABEL}. */
+export const ADMIN_ROLE_LABEL = 'Admin';
+
+/** The `member` Member_Role label. See {@link OWNER_ROLE_LABEL}. */
+export const MEMBER_ROLE_LABEL = 'Member';
+
+/** The `active` Membership_State label. See {@link OWNER_ROLE_LABEL}. */
+export const ACTIVE_STATE_LABEL = 'Active';
+
+/**
+ * The `inactive` Membership_State label. See {@link OWNER_ROLE_LABEL}.
+ *
+ * An inactive membership has left or been removed and keeps its ratings, stats,
+ * and history, so the label states the state rather than an absence.
+ */
+export const INACTIVE_STATE_LABEL = 'Inactive';
+
+/**
  * The Squad_Card and Player_Row label for a parsed membership that carries no
  * Member_Role (Requirement 1.6).
  *
@@ -223,6 +256,64 @@ export const NO_ROLE_RECORDED_LABEL = 'No role recorded';
 export const NO_MEMBERSHIP_STATE_RECORDED_LABEL = 'No membership state recorded';
 
 /**
+ * The Player_Row label naming a membership as a guest (Requirements 7.5, 7.6).
+ *
+ * A guest is a player who lives inside one squad with no account behind them, so
+ * the label states a fact about the membership rather than a lesser status. It is
+ * rendered **in place of** a Member_Role label when the membership carries no
+ * role, which is the case the backend produces for every guest — so no Player_Row
+ * ever names owner, admin, or member for a guest (Requirement 7.6).
+ *
+ * A word, not a hue: Requirement 19.3 fixes that the Guest_Flag is conveyed in
+ * text in addition to the `--squads-guest-text` colour the token table declares.
+ */
+export const GUEST_LABEL = 'Guest';
+
+/**
+ * The Player_Row label naming an entry as a Former_Player — a membership whose
+ * Player_Display_Name is the Anonymised_Placeholder (Requirement 7.8).
+ *
+ * Erasure is anonymisation rather than deletion: the membership keeps its ratings,
+ * stats, and match history so completed matches stay immutable and rating replay
+ * stays valid, and only the identifying data is stripped. The label says exactly
+ * that much. It states no reason for the erasure, names nobody, and adds the
+ * "details removed" clause so a reader understands why the row's name reads as a
+ * placeholder rather than as a person — which the placeholder alone does not
+ * convey.
+ *
+ * The row keeps its navigation to the Player_Stats_Route, so the retained stats
+ * remain reachable (Requirement 9.8); what it loses is the Promotion_Control and
+ * the guest edit action (Requirement 7.8).
+ */
+export const FORMER_PLAYER_LABEL = 'Former player, details removed';
+
+/**
+ * The visible label of the Promotion_Control on an eligible Player_Row
+ * (Requirement 13.1).
+ *
+ * It names the act and nothing else. The control's accessible name is built by
+ * the row from this label and that player's display name, the way
+ * `RatingBadge` builds its own — no message here takes an interpolation
+ * parameter, so a name is composed at the call site rather than folded into copy.
+ *
+ * Promotion is the only membership-changing action in the feature: no control
+ * demotes an admin, transfers a squad, or removes a membership
+ * (Requirement 13.8), so there is no sibling label here.
+ */
+export const PROMOTE_TO_ADMIN_LABEL = 'Make admin';
+
+/**
+ * The visible label of the guest edit control on an editable guest Player_Row
+ * (Requirement 12.7).
+ *
+ * Rendered only while the caller holds Admin_Authority, only on a row whose
+ * Guest_Flag is set, and never on a Former_Player row. Like the promotion label,
+ * the row composes the player's name into the control's accessible name rather
+ * than this string carrying a parameter.
+ */
+export const EDIT_GUEST_LABEL = 'Edit guest';
+
+/**
  * The Invite_Summary label shown in place of an expiry instant for an invite
  * with no expiry (Requirement 11.2).
  *
@@ -230,3 +321,163 @@ export const NO_MEMBERSHIP_STATE_RECORDED_LABEL = 'No membership state recorded'
  * listing states it rather than leaving the expiry column blank.
  */
 export const INVITE_NEVER_EXPIRES_LABEL = 'Does not expire';
+/**
+ * The label of the control that closes an open form or confirmation surface
+ * without submitting it (Requirements 19.7, 19.8).
+ *
+ * One label for both surfaces, because both do the same thing: the Form_Panel's
+ * cancel control and the Confirm_Dialog's dismiss control take the same path as
+ * the Escape key, so wording them differently would suggest a difference that
+ * does not exist. It names the act rather than the surface — "Cancel" reads
+ * correctly whether the surface is the create-squad form or the confirmation
+ * before revoking an invite — so no surface needs a label of its own.
+ */
+export const CANCEL_LABEL = 'Cancel';
+
+/**
+ * The heading of the Create_Squad_Form's panel, which is also what the
+ * Create_Squad entry point's control is named after (Requirement 3.1).
+ */
+export const CREATE_SQUAD_HEADING = 'Create a squad';
+
+/** The visible label of the Create_Squad_Form's submit control (Requirement 3.1). */
+export const CREATE_SQUAD_SUBMIT_LABEL = 'Create squad';
+
+/**
+ * The persistently visible label of the Squad_Name field (Requirement 3.1).
+ *
+ * Rendered as label text rather than as placeholder text, so it survives the
+ * field being filled in — which is what "persistently visible" asks for.
+ */
+export const SQUAD_NAME_LABEL = 'Squad name';
+
+/**
+ * The persistently visible label of the creator's Player_Display_Name field on
+ * the Create_Squad_Form (Requirement 3.1).
+ *
+ * It says *in this squad* because a display name is squad-scoped and unique
+ * within the squad, so it is not the same thing as the person's account name.
+ */
+export const CREATOR_DISPLAY_NAME_LABEL = 'Your display name in this squad';
+
+/**
+ * The validation message associated with the Squad_Name field when it is empty
+ * after trimming (Requirement 3.3).
+ *
+ * A client-side rule the form can settle on its own, so it is a field message
+ * rather than an outcome message — the distinction Requirement 3.9 turns on.
+ */
+export const SQUAD_NAME_REQUIRED_MESSAGE = 'Enter a name for the squad.';
+
+/**
+ * The validation message associated with the Squad_Name field when it exceeds
+ * the backend's column after trimming (Requirement 3.3).
+ *
+ * The bound is written as a literal because no message here takes an
+ * interpolation parameter; `nameValidation.NAME_MAX_LENGTH` is the authority and
+ * the forms' tests assert this copy states that same number.
+ */
+export const SQUAD_NAME_TOO_LONG_MESSAGE =
+  'Squad name must be 100 characters or fewer.';
+
+/**
+ * The validation message associated with a Player_Display_Name field that is
+ * required and empty after trimming (Requirement 3.3).
+ */
+export const DISPLAY_NAME_REQUIRED_MESSAGE = 'Enter your display name.';
+
+/**
+ * The validation message associated with a Player_Display_Name field that
+ * exceeds the backend's column after trimming (Requirement 3.3).
+ *
+ * See {@link SQUAD_NAME_TOO_LONG_MESSAGE} on why the bound is a literal.
+ */
+export const DISPLAY_NAME_TOO_LONG_MESSAGE =
+  'Display name must be 100 characters or fewer.';
+
+/**
+ * The heading of the Join_Code_Form's panel, which is also what the Join_Squad
+ * entry point's control is named after (Requirement 4.1).
+ */
+export const JOIN_SQUAD_HEADING = 'Join a squad';
+
+/** The visible label of the Join_Code_Form's submit control (Requirement 4.1). */
+export const JOIN_SQUAD_SUBMIT_LABEL = 'Join squad';
+
+/**
+ * The persistently visible label of the Invite_Secret field (Requirement 4.1).
+ *
+ * It names both shapes an invite arrives in, because the form accepts either and
+ * `redeemableValueFrom` reduces both to the one value the backend matches
+ * (Requirement 4.4). The label is the *only* place either word appears — no
+ * message here carries the secret itself (Requirement 4.10).
+ */
+export const INVITE_SECRET_LABEL = 'Invite link or code';
+
+/**
+ * The persistently visible label of the optional Player_Display_Name field on
+ * the Join_Code_Form (Requirement 4.1).
+ *
+ * The optionality is stated in the label rather than left to be discovered by
+ * submitting: the field may be left empty, and the display name is then omitted
+ * from `RedeemInvite` entirely (Requirement 4.2).
+ */
+export const JOIN_DISPLAY_NAME_LABEL =
+  'Your display name in this squad (optional)';
+
+/**
+ * The validation message associated with the Invite_Secret field when it is
+ * empty after trimming (Requirement 4.3).
+ *
+ * It names what to enter and nothing about what was entered, so the secret
+ * cannot travel through it (Requirement 4.10).
+ */
+export const INVITE_SECRET_REQUIRED_MESSAGE = 'Enter the invite link or code.';
+
+/**
+ * The Squads_Home's level-one heading — the one `h1` of that screen, naming the
+ * squads listing as its subject (Requirement 1.9).
+ *
+ * It says *your* squads because the listing is `ListMySquads`: every card on the
+ * screen is a squad the signed-in person belongs to, and nothing else is
+ * reachable from it.
+ */
+export const SQUADS_HOME_HEADING = 'Your squads';
+
+/**
+ * The Squads_Home's loading label, handed to the shared `LoadingIndication`
+ * while a `ListMySquads` call awaits a response (Requirements 1.10, 1.15).
+ *
+ * The label is the surface's rather than the component's, because what is being
+ * awaited differs per screen — this one names the listing it is waiting for, so
+ * a person hears "Loading your squads" rather than a bare "Loading".
+ */
+export const SQUADS_LOADING_LABEL = 'Loading your squads';
+
+/**
+ * The visible label of the Squads_Home's retry control, rendered beside
+ * {@link GENERIC_SQUADS_FAILURE} when the listing could not be loaded
+ * (Requirements 2.5, 2.6).
+ *
+ * Deliberately the plainest wording available: the failure message immediately
+ * before it already states what happened, so the control names only the act. It
+ * is the sole retry control on this screen, so nothing further is needed to tell
+ * it apart.
+ */
+export const SQUADS_RETRY_LABEL = 'Try again';
+
+/**
+ * The outcome message shown when the backend reports that a
+ * Player_Display_Name cannot be used within the squad (Requirements 3.9, 4.9).
+ *
+ * It is an **outcome** message rather than a field validation message, because
+ * the backend is the authority on whether a display name is available and no
+ * client-side rule could have known: the form stays rendered with every entered
+ * value retained and its submit control available for a further submission.
+ *
+ * Like every message here it takes no parameter, so the name that was rejected
+ * is not echoed back — the field still holds it, which is where the person can
+ * edit it.
+ */
+export const DISPLAY_NAME_UNAVAILABLE =
+  'That display name cannot be used in this squad. Choose another one.';
