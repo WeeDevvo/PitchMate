@@ -993,3 +993,89 @@ export const STATS_SECTION_HEADING = 'Stats and leaderboards';
  * squad, because the name is exactly what has not arrived yet.
  */
 export const SQUAD_LOADING_LABEL = 'Loading this squad';
+
+/* -------------------------------------------------------------------------- */
+/* The Invite_Landing_Route (Requirement 5)                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The Invite_Landing_Route's level-one heading — the one `h1` of `/join/:code`,
+ * naming joining a squad as the route's subject (Requirements 5.2, 19.1).
+ *
+ * It reads the same as {@link JOIN_SQUAD_HEADING} and is deliberately a separate
+ * constant: that one names the Join_Code_Form's panel *inside* the application,
+ * this one is a whole screen's heading shown to a visitor who may have no account
+ * at all. Neither is free to be reworded on the other's behalf.
+ *
+ * It names no squad, because the anonymous `PreviewInvite` endpoint answers the
+ * same generic pair whatever secret was presented — nothing about the squad
+ * behind the invite is known here, and Requirement 5.3 wants nothing disclosed
+ * even if it were.
+ */
+export const INVITE_LANDING_HEADING = 'Join a squad';
+
+/**
+ * The fixed instruction rendered on the Invite_Landing_Route when the
+ * `PreviewInvite` call failed, timed out, or returned a body the Response_Parser
+ * rejected — and while it is still awaiting a response (Requirements 5.2, 5.6).
+ *
+ * Requirement 5.6 is explicit that a failed preview must not block the handover:
+ * the sign-up and log-in controls stay rendered beside this sentence, so the only
+ * thing lost is the backend's own wording of the same instruction. It states what
+ * to do rather than that anything went wrong, so a visitor never reads a failure
+ * they cannot act on, and it carries nothing of the response (Requirement 17.2).
+ */
+export const INVITE_SIGN_IN_REQUIRED_INSTRUCTION =
+  'Log in or create an account to use this invite.';
+
+/**
+ * The visible label of the Invite_Landing_Route's sign-up control
+ * (Requirement 5.4).
+ *
+ * Named after what the visitor gets rather than after the route it reaches, since
+ * someone arriving from an invite link has usually never seen the application.
+ * The destination is the Auth_Feature's own `SIGN_UP_ROUTE`, so this feature
+ * spells no auth path of its own (Requirement 5.5).
+ */
+export const INVITE_SIGN_UP_LABEL = 'Create an account';
+
+/**
+ * The visible label of the Invite_Landing_Route's log-in control
+ * (Requirement 5.4). See {@link INVITE_SIGN_UP_LABEL}.
+ */
+export const INVITE_LOG_IN_LABEL = 'Log in';
+
+/**
+ * The Invite_Landing_Route's loading label, handed to the shared
+ * `LoadingIndication` while a `RedeemInvite` call awaits a response
+ * (Requirement 5.12).
+ *
+ * It names the act rather than the squad, which is exactly as much as is known:
+ * the redemption has not settled, and the response carries no squad name even
+ * when it does.
+ */
+export const INVITE_REDEEMING_LABEL = 'Joining this squad';
+
+/**
+ * The visible label of the Invite_Landing_Route's retry control, rendered beside
+ * {@link GENERIC_SQUADS_FAILURE} when a `RedeemInvite` call failed
+ * (Requirement 5.13).
+ *
+ * Declared separately from {@link SQUADS_RETRY_LABEL} although the two read the
+ * same today: that one is the Squads_Home's listing retry, and this one
+ * re-presents an invite. They are free to diverge without either dragging the
+ * other with it.
+ */
+export const INVITE_REDEEM_RETRY_LABEL = 'Try again';
+
+/**
+ * The visible label of the control that navigates from the Invite_Landing_Route
+ * to the Squads_Home (Requirements 5.9, 5.10, 5.13).
+ *
+ * One label for all three surfaces that offer it — the incomplete link, the
+ * unusable invite, and the generic failure — because all three offer the same way
+ * onward. It names the destination rather than saying "go back", since the path
+ * the visitor arrived on carries an Invite_Secret and is not somewhere to return
+ * to (which is also why a successful redemption *replaces* the history entry).
+ */
+export const SQUADS_HOME_CONTROL_LABEL = 'Go to your squads';

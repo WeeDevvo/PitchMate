@@ -21,11 +21,12 @@
  * ### What is asserted, for each generated path
  *
  * 1. **Exactly once.** The path appears once in the flattened route table.
- *    Flattening resolves a pathless layout route (the auth table's providers, the
- *    shell subtree's session providers) to its parent's path and an index child
- *    to the route it indexes, which is how `react-router` matches them — so
- *    `/app` registered as the shell layout route plus its index child counts as
- *    one registration, not two.
+ *    Flattening — `registeredPaths` in `appRouterTestHarness`, shared with the
+ *    squads feature's own path-uniqueness property — resolves a pathless layout
+ *    route (the auth table's providers, the shell subtree's session providers) to
+ *    its parent's path and an index child to the route it indexes, which is how
+ *    `react-router` matches them — so `/app` registered as the shell layout route
+ *    plus its index child counts as one registration, not two.
  * 2. **Its own screen.** Mounting the real assembled table at that path renders
  *    the one level-one heading of the screen that path belongs to: the landing
  *    page's value proposition, the auth screen's heading, or the Destination's
@@ -59,7 +60,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, screen } from '@testing-library/react';
 import fc from 'fast-check';
-import { type RouteObject } from 'react-router-dom';
 
 import {
   AUTH_ROUTE_PATHS,
@@ -81,6 +81,7 @@ import {
   assembleRoutes,
   HOME_CONTENT_HEADING,
   PROFILE_CONTENT_HEADING,
+  registeredPaths,
   renderAt,
   resetThemeAttribute,
 } from './appRouterTestHarness';
@@ -136,51 +137,6 @@ const REGISTERED_SCREENS: readonly RegisteredScreen[] = [
     heading: destinationHeading(destination),
   })),
 ];
-
-// --- Flattening the assembled table -----------------------------------------
-
-/** Join a parent's resolved path with a relative child path segment. */
-function joinPath(parentPath: string, childPath: string): string {
-  return `${parentPath.replace(/\/$/, '')}/${childPath}`;
-}
-
-/**
- * Every path the assembled table registers, one entry per matchable route.
- *
- * A route contributes a path only where a screen sits: a layout route with
- * children contributes through its children, an index child contributes the path
- * of the route it indexes, and a pathless layout route contributes its parent's
- * path — which is how `react-router` matches each of them. A child path starting
- * with `/` is already absolute (the auth screens and the shell Destinations are
- * registered that way); anything else is joined onto its parent, or taken as it
- * stands at the top level, where the application catch-all `*` sits.
- *
- * Over the assembled table it yields exactly: `/`, the five auth paths, `/app`
- * and its three Destination paths, `/app/*`, and `*`.
- */
-function registeredPaths(
-  routes: readonly RouteObject[],
-  parentPath = '',
-): string[] {
-  const paths: string[] = [];
-
-  for (const route of routes) {
-    const ownPath =
-      route.path === undefined
-        ? parentPath
-        : route.path.startsWith('/') || parentPath === ''
-          ? route.path
-          : joinPath(parentPath, route.path);
-
-    if (route.children === undefined || route.children.length === 0) {
-      paths.push(ownPath);
-    } else {
-      paths.push(...registeredPaths(route.children, ownPath));
-    }
-  }
-
-  return paths;
-}
 
 // --- Rendering --------------------------------------------------------------
 
