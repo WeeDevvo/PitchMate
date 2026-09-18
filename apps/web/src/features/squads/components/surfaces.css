@@ -24,6 +24,11 @@
  *    `--control-text` on `--control-bg` (15.29:1 dark, 18.42:1 light) and wears
  *    the accent as a 3:1 graphical cue. Which control is primary is also stated by
  *    its position and its label, never by colour alone (Requirement 19.3).
+ *    The accent edge reads `--accent-text`, the **surface-keyed** green, rather
+ *    than `--accent-fill`: the fill token is Pitch Green in both Themes and
+ *    reaches only 2.35:1 on a light control, which is below the 3:1 floor a
+ *    graphical cue owes. `--accent-text` is Pitch Green on a dark surface and
+ *    Green Dark on a light one (4.07:1), so the edge clears the floor either way.
  *  - **A pending control is `aria-disabled`, not `disabled`.** So the styling for
  *    that state hangs off the ARIA attribute, which is also what assistive
  *    technology reads.
@@ -102,7 +107,7 @@
 
 .squads-surface__action--primary {
   border-width: 2px;
-  border-color: var(--accent-fill);
+  border-color: var(--accent-text);
 }
 
 .squads-surface__action:focus-visible {

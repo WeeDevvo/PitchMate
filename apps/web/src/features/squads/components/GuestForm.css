@@ -1,0 +1,112 @@
+/*
+ * The Guest_Form's own fields — the skill-tier selection and the lawful-basis
+ * acknowledgement.
+ *
+ * The form's display-name field is the Auth_Feature's `FormField`, which brings its
+ * own declared label, control, and focus indication; these two fields are the
+ * form's own, so their presentation is declared here rather than left to the user
+ * agent. Everything around them — the panel, its heading, and its two actions —
+ * comes from `surfaces.css`.
+ *
+ * Every colour resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal
+ * (Requirement 18.9), and every spacing, radius, target size, and type size is a
+ * declared scale token, so a Guest_Form field measures the same as an
+ * Invite_Manager field.
+ *
+ * Three things it exists to declare:
+ *
+ *  - **A visible focus indication in both Themes.** A control with no
+ *    `:focus-visible` rule falls back to the user-agent ring, drawn in a colour no
+ *    token table declares — which on the dark Theme is the invisible-focus failure
+ *    Requirement 19.4 rules out. Both controls take the shared `--focus-ring`, the
+ *    3:1 indication the token table measures (Requirement 19.5).
+ *  - **A pointer target a person can hit.** The select and the acknowledgement row
+ *    each keep `--squads-touch-target`, and the checkbox scales with the text
+ *    rather than being pinned to a fixed pixel size.
+ *  - **No fixed width.** The select and the acknowledgement row fill their column
+ *    and wrap, so a long tier label or a long acknowledgement sentence stays inside
+ *    a 360px viewport (Requirement 19.10).
+ *
+ * Requirements: 12.1, 12.3, 18.9, 19.4, 19.5, 19.9, 19.10
+ */
+
+.squads-guest-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-hairline);
+  max-width: 100%;
+}
+
+/* 19.9: a persistently visible label, beside or above the control it names. */
+.squads-guest-form__label {
+  color: var(--text);
+  font-size: var(--squads-font-size-meta);
+  font-weight: var(--squads-font-weight-label);
+  line-height: var(--squads-line-height-body);
+  overflow-wrap: break-word;
+}
+
+.squads-guest-form__select {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: var(--squads-touch-target);
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+}
+
+.squads-guest-form__select:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+/* The acknowledgement: its control and its sentence on one wrapping line, the row
+   itself the minimum pointer target tall. */
+.squads-guest-form__checkbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--squads-touch-gap);
+  min-height: var(--squads-touch-target);
+  max-width: 100%;
+}
+
+.squads-guest-form__checkbox-input {
+  flex: 0 0 auto;
+  /* Relative, so a browser text-size preference scales the box with its sentence
+     rather than leaving a fixed square beside grown text. */
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--accent-text);
+}
+
+.squads-guest-form__checkbox-input:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+/* The acknowledgement's own sentence grows, so it wraps under the box rather than
+   widening the row. */
+.squads-guest-form__checkbox .squads-guest-form__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--squads-font-size-body);
+  font-weight: var(--squads-font-weight-body);
+}
+
+/* 12.3: the validation message, associated with the control it concerns. Stated in
+   words on the surface's own text token — the state is never a hue alone
+   (Requirement 19.3). */
+.squads-guest-form__error {
+  margin: 0;
+  max-width: var(--squads-measure);
+  color: var(--text);
+  font-size: var(--squads-font-size-meta);
+  line-height: var(--squads-line-height-body);
+  overflow-wrap: break-word;
+}

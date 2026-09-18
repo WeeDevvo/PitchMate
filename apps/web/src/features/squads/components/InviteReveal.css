@@ -17,6 +17,12 @@
  *  - **The labels are chips of text, not placeholders.** Each is a persistently
  *    visible element beside its value, so it survives being read, copied, and
  *    announced (Requirement 11.6).
+ *  - **The address is underlined, not coloured green.** It is a link carrying
+ *    body-size text, so it owes the 4.5:1 text floor — and green cannot reach that
+ *    on a light surface: `--accent-text` is Green Dark there, 3.70:1 on this
+ *    surface, which is an accent floor rather than a text one. So the address takes
+ *    `--text` and states its affordance with an underline and its focus ring
+ *    instead of with a hue (Requirements 19.3, 19.5).
  */
 
 .squads-invite-reveal__values {
@@ -40,9 +46,11 @@
 }
 
 .squads-invite-reveal__link {
-  color: var(--accent-text);
+  color: var(--text);
   font-size: var(--squads-font-size-body);
   line-height: var(--squads-line-height-body);
+  /* The affordance, declared rather than left to the user agent. */
+  text-decoration: underline;
   /* A redeemable address has no natural break, so it is allowed to break
      anywhere rather than overflow its column (Requirement 19.10). */
   overflow-wrap: anywhere;

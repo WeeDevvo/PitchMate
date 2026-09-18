@@ -78,7 +78,7 @@
 import { act, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 import { HOME_ROUTE } from '../../app-shell';
 import { AuthProvider, type AuthState, type SessionManager } from '../../auth';
@@ -114,6 +114,8 @@ import {
 } from '../components/PlayerRow';
 import { SQUAD_CARD_SELECTOR } from '../components/SquadCard';
 import { SQUADS_EMPTY_STATE_SELECTOR } from '../components/SquadsEmptyState';
+import { resolveAdminAuthority } from '../lib/adminAuthority';
+import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
 import { ANONYMISED_PLACEHOLDER } from '../lib/playerList';
 import type { FeatureFlag } from '../lib/parse/featureFlags';
 import type { GeneratedInvite } from '../lib/parse/generatedInvite';
@@ -664,12 +666,49 @@ export type SquadScreenStateName =
   | 'admin';
 
 /**
+ * The caller's own standing in the open squad, as the `ListMySquads` summary
+ * carries it — the whole of `resolveAdminAuthority`'s input (Requirement 6.10).
+ */
+export interface CallerStanding {
+  readonly role: MemberRole | null;
+  readonly state: MembershipStateValue | null;
+}
+
+/**
+ * What a caller may vary about a Squad_Screen state beyond the state itself.
+ *
+ * Both dimensions exist because a claim is made *over* them rather than about one
+ * chosen value: Property 43 quantifies over every resolved authority value and
+ * every injected-content combination, so neither can be a constant of the
+ * fixture. Omitting them leaves the states exactly as they were — an active
+ * `member`, or an active `owner` for the `admin` state, and no injected content.
+ */
+export interface SquadScreenStateOverrides {
+  /**
+   * The caller's Member_Role and Membership_State, which is what
+   * {@link resolveAdminAuthority} answers from and therefore what decides whether
+   * the Admin_Section is mounted at all (Requirements 6.10, 10.2).
+   */
+  readonly caller?: CallerStanding;
+
+  /** The matches Placeholder_Section's injected body (Requirement 15.3). */
+  readonly matchesContent?: ReactNode;
+
+  /** The stats Placeholder_Section's injected body (Requirement 15.3). */
+  readonly statsContent?: ReactNode;
+}
+
+/**
  * Render the Squad_Screen in one state, at its real route.
  *
  * The caller's own standing comes from the `ListMySquads` summary the way the
  * screen resolves it (Requirement 6.10): a `member` for the states that are about
  * the squad itself, and an `owner` for the `admin` state, which is what makes the
- * Admin_Section render at all.
+ * Admin_Section render at all. A caller supplying
+ * {@link SquadScreenStateOverrides.caller} replaces that default, and whether the
+ * Admin_Section is expected is then `resolveAdminAuthority`'s answer rather than
+ * the state's name — including the invite listing, which only an
+ * authority-holding caller may ask for (Requirements 10.4, 14.2).
  *
  * The `not-found` state is reached through a **malformed** `squadId`, so it also
  * pins that no call is issued for one — the requirement's own case (6.6).
@@ -677,8 +716,15 @@ export type SquadScreenStateName =
 export async function renderSquadScreenState(
   state: SquadScreenStateName,
   theme: Theme = 'dark',
+  overrides: SquadScreenStateOverrides = {},
 ): Promise<RenderedScreen> {
-  const admin = state === 'admin';
+  const caller: CallerStanding =
+    overrides.caller ??
+    ({ role: state === 'admin' ? 'owner' : 'member', state: 'active' } as const);
+
+  // 10.2: whether the admin surface is mounted is the pure predicate's answer for
+  // this caller, never a restatement of which combinations hold.
+  const authority = resolveAdminAuthority(caller.role, caller.state);
 
   const detail: StubApiOptions['detail'] =
     state === 'loading'
@@ -697,23 +743,38 @@ export async function renderSquadScreenState(
   const api = createStubApi({
     summaries: {
       kind: 'success',
-      value: [squadSummary({ role: admin ? 'owner' : 'member' })],
+      value: [squadSummary({ role: caller.role, state: caller.state })],
     },
     detail,
     leaderboard,
     // 14.2: only a caller holding Admin_Authority mounts the surface that lists
     // invites, so every other state refuses the call.
-    ...(admin ? { invites: { kind: 'success', value: INVITE_SUMMARIES } } : {}),
+    ...(authority ? { invites: { kind: 'success', value: INVITE_SUMMARIES } } : {}),
   });
 
   const requested = state === 'not-found' ? MALFORMED_SQUAD_ID : SQUAD_ID;
+
+  // 15.3: an omitted body is passed as an omitted prop rather than as an explicit
+  // `undefined`, so an absent slot is absent in the way the application's own
+  // route factory leaves it.
+  const content = {
+    ...(overrides.matchesContent === undefined
+      ? {}
+      : { matchesContent: overrides.matchesContent }),
+    ...(overrides.statsContent === undefined
+      ? {}
+      : { statsContent: overrides.statsContent }),
+  };
 
   const rendered = mount(
     theme,
     <AuthProvider manager={sessionManagerReporting('authenticated')}>
       <MemoryRouter initialEntries={[squadPath(requested)]}>
         <Routes>
-          <Route path={SQUAD_ROUTE} element={<SquadScreen api={api} />} />
+          <Route
+            path={SQUAD_ROUTE}
+            element={<SquadScreen api={api} {...content} />}
+          />
           <Route path={PLAYER_STATS_ROUTE} element={<p>player stats</p>} />
           <Route path={HOME_ROUTE} element={<p>your squads</p>} />
         </Routes>
@@ -738,7 +799,7 @@ export async function renderSquadScreenState(
       requireAbsent(PLAYER_LIST_EMPTY_SELECTOR, name);
     });
 
-    if (admin) {
+    if (authority) {
       await waitFor(() => {
         requireRendered(ADMIN_SECTION_SELECTOR, name);
         requireRendered(INVITE_ENTRY_SELECTOR, name);

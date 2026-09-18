@@ -55,6 +55,21 @@
  * `--squads-card-surface` or `--squads-inactive-surface`, and both are measured
  * below.
  *
+ * Two of the shared ten are declared for parity with the App_Shell's and the
+ * Auth_Feature's tables — the Invite_Landing_Route renders outside the shell frame
+ * and inherits nothing from it — and the feature paints with **neither**:
+ *
+ *   --surface       the shell's own panel surface; a squads surface takes
+ *                   `--squads-card-surface`
+ *   --accent-fill   Pitch Green in *both* Themes, so 2.35:1 on a light control —
+ *                   below the 3:1 floor a graphical cue owes. Nothing here fills
+ *                   with green, and a green line or shape (the primary action's
+ *                   edge, a checked switch's edge and knob) takes the
+ *                   surface-keyed `--accent-text` instead, which is Green Dark on
+ *                   a light surface and clears the floor.
+ *
+ * Property 47 holds the stylesheets to both absences.
+ *
  * ## Colour is never the only carrier
  *
  * Every one of these states is also stated in words by the component that renders

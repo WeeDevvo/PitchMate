@@ -114,6 +114,7 @@ import type {
 import { FormPanel } from './FormPanel';
 import type { SurfaceCloseReason, SurfaceHeadingLevel } from './surfaceFocus';
 import '../styles/squadsTokens.css';
+import './GuestForm.css';
 
 /** The id of the panel in `create` mode, for a caller's `aria-controls`. */
 export const GUEST_CREATE_FORM_ID = 'squads-guest-create-form';
@@ -413,6 +414,7 @@ function OpenGuestForm({
           <div className="squads-guest-form__checkbox">
             <input
               id={acknowledgementId}
+              className="squads-guest-form__checkbox-input"
               type="checkbox"
               data-squads-guest-acknowledgement="true"
               name="lawfulBasisAcknowledged"

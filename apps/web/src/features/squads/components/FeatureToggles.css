@@ -16,6 +16,13 @@
  * for the same reason `surfaces.css` gives: no token is declared for text on
  * green.
  *
+ * Both accents read `--accent-text`, the **surface-keyed** green, rather than
+ * `--accent-fill`: the fill token is Pitch Green in both Themes and reaches only
+ * 2.35:1 on a light control, below the 3:1 floor a graphical cue owes.
+ * `--accent-text` is Pitch Green on a dark surface and Green Dark on a light one
+ * (4.07:1), so the edge and the knob clear the floor in both Themes
+ * (Requirement 19.5).
+ *
  * ### A busy switch is `aria-disabled`, not `disabled`
  *
  * So it keeps the focus of whoever just activated it and stays in the keyboard
@@ -101,7 +108,7 @@
 /* 19.3: the accent is emphasis over the word and the knob position, never the only
    carrier of the state. */
 .squads-feature-toggles__switch[aria-checked='true'] {
-  border-color: var(--accent-fill);
+  border-color: var(--accent-text);
 }
 
 .squads-feature-toggles__switch[aria-disabled='true'] {
@@ -137,7 +144,7 @@
   .squads-feature-toggles__track::after {
   left: auto;
   right: var(--squads-gap-hairline);
-  background: var(--accent-fill);
+  background: var(--accent-text);
 }
 
 .squads-feature-toggles__state {
