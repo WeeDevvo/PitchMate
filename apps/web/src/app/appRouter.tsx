@@ -15,10 +15,33 @@
  * | `/` | `LandingPage` | 15.6 |
  * | `/signup`, `/login`, `/reset-password`, `/reset-password/confirm`, `/verify-email` | the Auth_Feature table via `createWiredAuthRoutes` | 15.6 |
  * | `/app`, `/app/notifications`, `/app/settings`, `/app/profile`, `/app/*` | the App_Shell table via `createShellRoutes` | 3.1, 3.9, 3.10, 15.4 |
+ * | `/app` (index) | the Squads_Feature's `SquadsHome`, injected as the shell's Home_Slot content | squads 1.12, 18.6 |
+ * | `/app/squads/:squadId` | the Squads_Feature's `SquadScreen`, nested into the shell's `/app` layout route | squads 18.5 |
+ * | `/join/:code` | the Squads_Feature's `InviteLandingScreen`, outside the Route_Guard and the shell frame | squads 5.1, 18.5 |
  * | `*` | {@link AppNotFound} | 15.9 |
  *
  * The auth subtree is registered ahead of the shell subtree, and the
  * application-level catch-all last.
+ *
+ * ### How the Squads_Feature's two tables are placed
+ *
+ * The feature registers nothing itself (squads Requirement 18.4): it builds two
+ * tables and this module places them on opposite sides of the shell (squads
+ * Requirement 18.5).
+ *
+ * - The Squad_Route belongs **behind** the Route_Guard and **inside** the frame,
+ *   so it is nested into the shell's `/app` layout route by
+ *   {@link withNestedRoutes} — a copy, so no file of the shell changes and the
+ *   shell's own array is left as the shell built it.
+ * - The Invite_Landing_Route belongs **outside** both, because its whole purpose
+ *   is to work for a visitor with no session: inside the guard it would bounce to
+ *   the Log_In_Route and lose the invite code, and inside the frame it would
+ *   render authenticated chrome to a stranger. It is registered at the top level,
+ *   ahead of the application catch-all.
+ *
+ * The Squads_Home is **not** a route. It is the shell's injected Home_Slot
+ * content, so exactly one screen resolves at the Default_Authenticated_Route
+ * (squads Requirement 18.6).
  *
  * ### Why the auth table's own `*` child is not registered here
  *
@@ -91,8 +114,15 @@ import {
 } from '../features/auth';
 import {
   createShellRoutes,
+  HOME_ROUTE,
   type ShellDestinationContent,
 } from '../features/app-shell';
+import {
+  SquadsHome,
+  createSquadsApi,
+  createSquadsPublicRoutes,
+  createSquadsShellRoutes,
+} from '../features/squads';
 import LandingPage from '../features/landing/LandingPage';
 import { AppNotFound } from './AppNotFound';
 import { APP_CATCH_ALL_ROUTE, LANDING_ROUTE } from './appRoutePaths';
@@ -130,7 +160,10 @@ export interface AppRoutesOptions {
   /**
    * The Destination_Content injected into the shell's Home, Profile, and Settings
    * Destinations. Omitted bodies render the shell's Unavailable_State
-   * (Requirements 3.7, 3.8, 15.4).
+   * (Requirements 3.7, 3.8, 15.4) — except Home, which defaults to the
+   * Squads_Feature's `SquadsHome` (squads Requirements 1.12, 18.6). A supplied
+   * `home` replaces it, which is how a test mounts the assembled router with its
+   * own Destination bodies.
    */
   readonly destinationContent?: ShellDestinationContent;
   /** The configured notification Poll_Interval in seconds (Requirement 4.6). */
@@ -220,6 +253,51 @@ function withoutFeatureCatchAll(routes: RouteObject[]): RouteObject[] {
 }
 
 /**
+ * Nest `children` into the route of `routes` registered at `path`, returning a
+ * **copy** of the table.
+ *
+ * This is how a feature route reaches the inside of another feature's layout
+ * route without either feature knowing about the other. The App_Shell returns its
+ * table with `/app` as a layout route carrying the Route_Guard, the providers, and
+ * the Shell_Frame; the Squads_Feature returns its Squad_Route as a *relative*
+ * child. Appending that child here puts it behind the guard and inside the frame
+ * with neither feature restating either (squads Requirement 18.5).
+ *
+ * Nothing is mutated: the matched route is replaced by a copy carrying a new
+ * children array, and every other route is passed through as it stands. The
+ * shell's array therefore stays exactly as the shell built it — no file under
+ * `features/app-shell/` changes, and a caller may nest into the same table twice
+ * without the first call being visible to the second.
+ *
+ * The search is deliberately shallow — only the table's own top-level routes are
+ * considered, which is where a layout route's path sits — so a table registering
+ * `path` nowhere is returned with the same routes and no children appended
+ * anywhere.
+ *
+ * @param routes the table to nest into, left untouched
+ * @param path the registered path of the layout route to nest under, for example
+ *   the App_Shell's `HOME_ROUTE`
+ * @param children the routes to append, expressed relative to `path`
+ * @returns a new table, identical to `routes` but for the matched route
+ */
+export function withNestedRoutes(
+  routes: readonly RouteObject[],
+  path: string,
+  children: readonly RouteObject[],
+): RouteObject[] {
+  return routes.map((route) => {
+    // An index route carries no children by construction — `RouteObject` is a
+    // union and only its non-index arm has a `children` property — so it is passed
+    // through even where its path matches.
+    if (route.path !== path || route.index === true) {
+      return route;
+    }
+
+    return { ...route, children: [...(route.children ?? []), ...children] };
+  });
+}
+
+/**
  * Assemble the application's route table.
  *
  * Everything the routes need is constructed here unless it is supplied — see
@@ -276,15 +354,36 @@ export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
     navigationController,
   });
 
-  const shellRoutes = createShellRoutes({
-    apiClient,
-    // 8.9, 9.4: the Auth_Feature owns ending the Session and the navigation that
-    // follows it; the shell only triggers it.
-    signOut: auth.navigation.signOut,
-    destinationContent: options.destinationContent,
-    pollIntervalSeconds: options.pollIntervalSeconds,
-    now: options.now,
-  });
+  // squads 16.2, 18.4: one Squads_Api over the same Authenticated_Api_Client,
+  // built once here and handed to every screen of the feature — the Squads_Home
+  // in the shell's Home_Slot, the Squad_Screen inside the frame, and the
+  // unauthenticated Invite_Landing_Route, whose `PreviewInvite` is anonymous and
+  // needs no bearer. The feature constructs no client and no facade of its own.
+  const squadsApi = createSquadsApi({ apiClient });
+
+  const shellRoutes = withNestedRoutes(
+    createShellRoutes({
+      apiClient,
+      // 8.9, 9.4: the Auth_Feature owns ending the Session and the navigation that
+      // follows it; the shell only triggers it.
+      signOut: auth.navigation.signOut,
+      destinationContent: {
+        ...options.destinationContent,
+        // squads 1.12, 18.6: the Squads_Home is the Home_Slot content rather than
+        // a route, so exactly one screen resolves at `/app`. A supplied body still
+        // wins, which is what lets a test mount the assembled router with its own
+        // Destination content; an absent one falls back the same way the shell's
+        // own slots do.
+        home: options.destinationContent?.home ?? <SquadsHome api={squadsApi} />,
+      },
+      pollIntervalSeconds: options.pollIntervalSeconds,
+      now: options.now,
+    }),
+    HOME_ROUTE,
+    // squads 18.5: behind the Route_Guard and inside the frame, by nesting rather
+    // than by the feature restating either.
+    createSquadsShellRoutes({ api: squadsApi }),
+  );
 
   return [
     { path: LANDING_ROUTE, element: <LandingPage /> },
@@ -306,6 +405,25 @@ export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
         </AuthProvider>
       ),
       children: shellRoutes,
+    },
+
+    {
+      // squads 5.1, 18.5: the Invite_Landing_Route, at the application's top
+      // level — outside the Route_Guard and outside the shell frame, so a visitor
+      // with no session keeps the invite code and sees no authenticated chrome.
+      //
+      // The only thing wrapped around it is an `AuthProvider` over the same
+      // session model the rest of the application observes, because the screen
+      // reads the Auth_State to decide whether it owes a preview or a redemption.
+      // The `AuthNavigationBinder` is deliberately absent: squads Requirement 5.14
+      // has a session lost on this route navigate nowhere, and an unbound
+      // navigation controller is a no-op.
+      element: (
+        <AuthProvider manager={sessionManager}>
+          <Outlet />
+        </AuthProvider>
+      ),
+      children: createSquadsPublicRoutes({ api: squadsApi }),
     },
 
     // 15.9: the application's single catch-all, reached by any path no route

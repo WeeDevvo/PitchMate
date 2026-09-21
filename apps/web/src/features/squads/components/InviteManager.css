@@ -1,0 +1,188 @@
+/*
+ * The Invite_Manager's listing and its generate control.
+ *
+ * Every colour resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal
+ * (Requirement 18.9), and every spacing, radius, target size, and type size is a
+ * declared scale token, so the surface measures the same inside the App_Shell
+ * frame as the rest of the feature.
+ *
+ * The three Invite_State hues are the ones that table declares and measures:
+ * `--squads-invite-active-text`, `--squads-invite-revoked-text`, and
+ * `--squads-invite-expired-text`. None of them carries the state on its own — the
+ * entry states it in words beside them (Requirement 19.3) — and the active chip
+ * takes `--squads-invite-active-accent` as its outline so the emphasis survives in
+ * the light Theme, where the word itself must take the 4.5:1 text token.
+ *
+ * Entries wrap rather than shrink: an entry's facts stack above its revoke control
+ * on a narrow viewport instead of overflowing it (Requirement 19.10), and the
+ * control keeps the minimum pointer target and the minimum gap from its
+ * neighbours.
+ */
+
+.squads-invite-manager {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--squads-measure);
+  color: var(--text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+}
+
+/* The generate control: the same shape as every other control of the feature. */
+.squads-invite-manager__generate {
+  align-self: flex-start;
+  min-height: var(--squads-touch-target);
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  font-weight: var(--squads-font-weight-label);
+  cursor: pointer;
+}
+
+.squads-invite-manager__generate:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+.squads-invite-manager__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-hairline);
+}
+
+.squads-invite-manager__field-label {
+  color: var(--text);
+  font-size: var(--squads-font-size-meta);
+  font-weight: var(--squads-font-weight-label);
+}
+
+.squads-invite-manager__select {
+  min-height: var(--squads-touch-target);
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+}
+
+.squads-invite-manager__select:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+.squads-invite-manager__empty {
+  margin: 0;
+  color: var(--muted-text);
+}
+
+.squads-invite-manager__entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-touch-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.squads-invite-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--squads-touch-gap);
+  box-sizing: border-box;
+  padding: var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--squads-card-border);
+  border-radius: var(--squads-radius);
+  background: var(--squads-card-surface);
+}
+
+.squads-invite-entry__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--squads-touch-gap);
+  min-width: 0;
+}
+
+/* The Invite_State chip: an outline and text, no fill of its own, so it adds no
+   further surface for the token table's contrast measurements to chase. */
+.squads-invite-entry__state {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--squads-chip-border);
+  border-radius: var(--squads-radius-chip);
+  font-size: var(--squads-font-size-chip);
+  font-weight: var(--squads-font-weight-label);
+}
+
+.squads-invite-entry__state[data-squads-invite-state='active'] {
+  border-color: var(--squads-invite-active-accent);
+  color: var(--squads-invite-active-text);
+}
+
+.squads-invite-entry__state[data-squads-invite-state='revoked'] {
+  color: var(--squads-invite-revoked-text);
+}
+
+.squads-invite-entry__state[data-squads-invite-state='expired'] {
+  color: var(--squads-invite-expired-text);
+}
+
+.squads-invite-entry__field {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--squads-gap-hairline) var(--squads-gap-tight);
+  min-width: 0;
+}
+
+.squads-invite-entry__label {
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-meta);
+  font-weight: var(--squads-font-weight-label);
+}
+
+.squads-invite-entry__instant {
+  color: var(--text);
+  font-size: var(--squads-font-size-meta);
+  overflow-wrap: break-word;
+}
+
+.squads-invite-entry__never-expires {
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-meta);
+}
+
+.squads-invite-entry__revoke {
+  min-height: var(--squads-touch-target);
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  font-weight: var(--squads-font-weight-label);
+  cursor: pointer;
+}
+
+.squads-invite-entry__revoke:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+/* The pending state is carried by `aria-busy` and by the control's own reported
+   disabled state; the reduced opacity is a redundant cue, never the only one. */
+.squads-invite-entry__revoke[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.7;
+}

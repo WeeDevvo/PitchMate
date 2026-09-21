@@ -80,6 +80,7 @@ import {
   REDIRECT_PARAM_NAME,
 } from '../features/auth';
 import { HOME_ROUTE, SHELL_DESTINATIONS } from '../features/app-shell';
+import { INVITE_LANDING_ROUTE } from '../features/squads';
 import { landingContent } from '../features/landing/content/landingContent';
 import {
   APP_NOT_FOUND_BODY,
@@ -126,13 +127,26 @@ function pathnameOf(requested: string): string {
 }
 
 /**
+ * The prefix of the Squads_Feature's Invite_Landing_Route, `/join/:code`.
+ *
+ * That path carries a dynamic segment, so it cannot be excluded by comparing
+ * against a concrete registered path the way {@link REGISTERED_PATHS} are. It is
+ * excluded by prefix instead, on the same conservative reading as `/app` below —
+ * derived from the registered pattern rather than restated, so a change to the
+ * pattern moves this exclusion with it.
+ */
+const INVITE_LANDING_PREFIX = INVITE_LANDING_ROUTE.split('/:')[0];
+
+/**
  * Is this requested address the subject of Requirement 15.9 — matching no
  * registered route, and not beginning with the Home_Destination route path?
  *
  * The `/app` exclusion is a plain string-prefix test rather than a segment test,
  * which is the conservative reading: it rules out `/app`, everything the shell's
  * own `/app/*` not-found owns (Requirement 3.10), and also near neighbours like
- * `/apple`, which the requirement's wording leaves outside this property.
+ * `/apple`, which the requirement's wording leaves outside this property. The
+ * Invite_Landing_Route is excluded the same way, because its code segment is
+ * dynamic.
  */
 function matchesNoRegisteredRoute(requested: string): boolean {
   const normalised = normalisePath(pathnameOf(requested));
@@ -141,6 +155,7 @@ function matchesNoRegisteredRoute(requested: string): boolean {
     normalised.startsWith('/') &&
     normalised.length > 1 &&
     !normalised.startsWith(HOME_ROUTE) &&
+    !normalised.startsWith(INVITE_LANDING_PREFIX) &&
     !REGISTERED_PATHS.some((path) => normalisePath(path) === normalised)
   );
 }
@@ -316,6 +331,10 @@ describe('appRouter — Property 38 (unmatched path outside /app)', () => {
     expect(matchesNoRegisteredRoute(HOME_ROUTE)).toBe(false);
     expect(matchesNoRegisteredRoute('/App/Settings/')).toBe(false);
     expect(matchesNoRegisteredRoute('/app/nothing-here')).toBe(false);
+
+    // And the Invite_Landing_Route, whose code segment is dynamic.
+    expect(matchesNoRegisteredRoute('/join/some-code')).toBe(false);
+    expect(matchesNoRegisteredRoute('/Join/SOME-CODE')).toBe(false);
 
     // And every near miss is admitted, so the boundary cases are actually run.
     for (const path of NEAR_MISS_PATHS) {

@@ -1,0 +1,72 @@
+/*
+ * The Invite_Reveal's own presentation, over the shared surface in
+ * `surfaces.css`.
+ *
+ * Every colour resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal
+ * (Requirement 18.9), and every spacing, radius, and type size is a declared
+ * scale token so the surface measures the same wherever it renders.
+ *
+ * Two choices worth stating:
+ *
+ *  - **The link and the code wrap rather than scroll.** Both are long, opaque
+ *    values with no natural break, so `overflow-wrap: anywhere` is what keeps them
+ *    inside a 360px viewport instead of widening the surface past it
+ *    (Requirement 19.10). A horizontally scrolling secret is a secret a person
+ *    cannot read back to check.
+ *  - **The labels are chips of text, not placeholders.** Each is a persistently
+ *    visible element beside its value, so it survives being read, copied, and
+ *    announced (Requirement 11.6).
+ *  - **The address is underlined, not coloured green.** It is a link carrying
+ *    body-size text, so it owes the 4.5:1 text floor — and green cannot reach that
+ *    on a light surface: `--accent-text` is Green Dark there, 3.70:1 on this
+ *    surface, which is an accent floor rather than a text one. So the address takes
+ *    `--text` and states its affordance with an underline and its focus ring
+ *    instead of with a hue (Requirements 19.3, 19.5).
+ */
+
+.squads-invite-reveal__values {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+}
+
+.squads-invite-reveal__value {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-hairline);
+  min-width: 0;
+}
+
+.squads-invite-reveal__label {
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-meta);
+  font-weight: var(--squads-font-weight-label);
+  line-height: var(--squads-line-height-body);
+}
+
+.squads-invite-reveal__link {
+  color: var(--text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+  /* The affordance, declared rather than left to the user agent. */
+  text-decoration: underline;
+  /* A redeemable address has no natural break, so it is allowed to break
+     anywhere rather than overflow its column (Requirement 19.10). */
+  overflow-wrap: anywhere;
+}
+
+.squads-invite-reveal__link:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+.squads-invite-reveal__code {
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--squads-chip-border);
+  border-radius: var(--squads-radius);
+  color: var(--text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+  overflow-wrap: anywhere;
+}

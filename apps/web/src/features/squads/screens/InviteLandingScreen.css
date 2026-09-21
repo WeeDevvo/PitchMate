@@ -1,0 +1,96 @@
+/*
+ * The Invite_Landing_Route's presentation.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, layered over the shared `src/theme` tables, so
+ * this file carries no colour literal and no fixed pixel width (Requirements
+ * 18.9, 19.10).
+ *
+ * Unlike the other two screens, this one renders **outside** the App_Shell frame
+ * (Requirement 5.1), so it owns the page surface itself: the themed background,
+ * the gutter, and a centred column bounded to a readable measure rather than to
+ * the viewport. The shape mirrors the Auth_Feature's own layout, because a visitor
+ * following an invite link usually goes straight from here to sign-up or log-in and
+ * the two surfaces should read as one journey.
+ *
+ * The two handover controls and the control to the Squads_Home are anchors, so they
+ * are styled as controls rather than as prose links: the touch target is the
+ * feature's own minimum, and the focus ring is the shared token so keyboard
+ * operation is visible in both themes (Requirements 19.4, 19.6).
+ */
+
+.squads-invite-landing {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--squads-gutter);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.squads-invite-landing__surface {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--squads-gap);
+  width: 100%;
+  max-width: var(--squads-measure);
+}
+
+.squads-invite-landing__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--squads-font-size-screen-heading);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-heading);
+  overflow-wrap: break-word;
+}
+
+.squads-invite-landing__handover,
+.squads-invite-landing__outcome {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--squads-gap-tight);
+  width: 100%;
+  max-width: 100%;
+}
+
+.squads-invite-landing__message {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+  overflow-wrap: break-word;
+}
+
+.squads-invite-landing__controls {
+  display: flex;
+  flex-wrap: wrap;
+  /* The minimum space between two adjacent pointer targets. */
+  gap: var(--squads-touch-gap);
+}
+
+.squads-invite-landing__control,
+.squads-invite-landing__home {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--squads-touch-target);
+  padding: 0 var(--squads-gutter);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font-size: var(--squads-font-size-body);
+  font-weight: var(--squads-font-weight-label);
+  line-height: var(--squads-line-height-body);
+  text-decoration: none;
+}
+
+.squads-invite-landing__control:focus-visible,
+.squads-invite-landing__home:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}

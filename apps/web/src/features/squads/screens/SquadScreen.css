@@ -1,0 +1,68 @@
+/*
+ * The Squad_Screen's presentation.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/squadsTokens.css`, so this file carries no colour literal and no
+ * fixed pixel width (Requirements 18.9, 19.10).
+ *
+ * The screen renders inside the App_Shell's content region, so it declares no
+ * frame and no gutter of its own beyond the gaps between its parts — the region
+ * around it owns those. The five sections are stacked in the document order
+ * Requirement 6.8 fixes, and nothing here reorders them: the order is a fact of
+ * the markup rather than of a layout property, so it holds for a screen reader
+ * and for a keyboard alike.
+ */
+
+.squad-screen {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap);
+  width: 100%;
+  max-width: 100%;
+}
+
+.squad-screen__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--squads-font-size-screen-heading);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-heading);
+  /* A squad name is a person's own words, so it may be one long token. */
+  overflow-wrap: break-word;
+}
+
+.squad-screen__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  min-width: 0;
+}
+
+.squad-screen__section-heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--squads-font-size-section-heading);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-heading);
+}
+
+.squad-screen__caller-role {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--squads-gap-tight);
+  align-items: baseline;
+  margin: 0;
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+}
+
+.squad-screen__caller-role-label {
+  color: var(--muted-text);
+  font-weight: var(--squads-font-weight-body);
+}
+
+.squad-screen__caller-role-value {
+  color: var(--text);
+  font-weight: var(--squads-font-weight-label);
+}

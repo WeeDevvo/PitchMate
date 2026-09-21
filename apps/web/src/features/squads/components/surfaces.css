@@ -1,0 +1,123 @@
+/*
+ * Presentation for the feature's two surface primitives, the Form_Panel and the
+ * Confirm_Dialog.
+ *
+ * One stylesheet for both, for the same reason there is one focus module for
+ * both: they are a pair, and a form and the confirmation that follows it should
+ * not look like they came from different applications. Both components import
+ * this file and the token table beside it.
+ *
+ * Every colour is a `var(--token)` reading from `styles/squadsTokens.css` — no
+ * hex literal appears here or in either component (Requirement 18.9), and every
+ * spacing, radius, target size, and type size is a declared scale token, so a
+ * surface measures the same inside the App_Shell frame as it does on the
+ * Invite_Landing_Route outside it.
+ *
+ * Three choices worth stating:
+ *
+ *  - **No fixed width.** The surface is bounded by `--squads-measure` through
+ *    `max-width` and otherwise fills its column, and its action row wraps. Nothing
+ *    here can exceed a 360px viewport (Requirement 19.10).
+ *  - **The submit control takes the accent as an outline, not as a fill.** A
+ *    filled Pitch Green control would need a text colour verified against green,
+ *    and no such token is declared; the control therefore keeps the shared
+ *    `--control-text` on `--control-bg` (15.29:1 dark, 18.42:1 light) and wears
+ *    the accent as a 3:1 graphical cue. Which control is primary is also stated by
+ *    its position and its label, never by colour alone (Requirement 19.3).
+ *    The accent edge reads `--accent-text`, the **surface-keyed** green, rather
+ *    than `--accent-fill`: the fill token is Pitch Green in both Themes and
+ *    reaches only 2.35:1 on a light control, which is below the 3:1 floor a
+ *    graphical cue owes. `--accent-text` is Pitch Green on a dark surface and
+ *    Green Dark on a light one (4.07:1), so the edge clears the floor either way.
+ *  - **A pending control is `aria-disabled`, not `disabled`.** So the styling for
+ *    that state hangs off the ARIA attribute, which is also what assistive
+ *    technology reads.
+ *
+ * Requirements: 18.9, 19.3, 19.4, 19.5, 19.10
+ */
+
+.squads-surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--squads-measure);
+  padding: var(--squads-gutter);
+  border: var(--squads-border-width) solid var(--squads-card-border);
+  border-radius: var(--squads-radius);
+  background: var(--squads-card-surface);
+  color: var(--text);
+  font-size: var(--squads-font-size-body);
+  line-height: var(--squads-line-height-body);
+}
+
+/* The surface root is focusable only as the fallback target for a surface with
+   no focusable control of its own, so it still shows a visible focus indication
+   at the 3:1 floor (Requirements 19.4, 19.5). */
+.squads-surface:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+.squads-surface__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--squads-font-size-section-heading);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-heading);
+}
+
+.squads-surface__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap);
+}
+
+.squads-surface__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+}
+
+.squads-surface__statement {
+  margin: 0;
+  color: var(--text);
+}
+
+/* Wrapping rather than shrinking, so two controls at the minimum pointer target
+   stack instead of overflowing a narrow viewport. */
+.squads-surface__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--squads-touch-gap);
+}
+
+.squads-surface__action {
+  min-height: var(--squads-touch-target);
+  padding: 0 var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  font-weight: var(--squads-font-weight-label);
+  cursor: pointer;
+}
+
+.squads-surface__action--primary {
+  border-width: 2px;
+  border-color: var(--accent-text);
+}
+
+.squads-surface__action:focus-visible {
+  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+/* The pending state is carried by the control's own label and by `aria-busy`;
+   the reduced opacity is a redundant cue, never the only one. */
+.squads-surface__action[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.7;
+}
