@@ -138,6 +138,10 @@ public static class AuthServiceCollectionExtensions
         services.AddScoped<EraseUserHandler>();
         services.AddScoped<ExportUserDataHandler>();
 
+        // The account-settings read (GET /auth/me). Read-only, but scoped like the rest so it shares
+        // the request scope's DbContext-backed repositories.
+        services.AddScoped<GetAccountHandler>();
+
         // Email verification and password reset handlers.
         services.AddScoped<RequestEmailVerificationHandler>();
         services.AddScoped<RedeemEmailVerificationHandler>();

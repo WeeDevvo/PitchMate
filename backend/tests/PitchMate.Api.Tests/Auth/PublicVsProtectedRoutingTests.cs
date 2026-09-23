@@ -108,6 +108,7 @@ public sealed class PublicVsProtectedRoutingTests : IClassFixture<RoutingApiFact
     // invalid access token with the uniform 401.
     public static TheoryData<string, HttpMethod, object?> ProtectedEndpoints() => new()
     {
+        { "/auth/me", HttpMethod.Get, null },
         { "/auth/sign-out", HttpMethod.Post, new { refreshToken = "bogus-token" } },
         { "/auth/identities/external", HttpMethod.Post, new { provider = "Google", assertion = "bogus" } },
         { "/auth/identities/password", HttpMethod.Post, new { password = "some-password-value" } },
@@ -180,6 +181,7 @@ public sealed class PublicVsProtectedRoutingTests : IClassFixture<RoutingApiFact
 
     private static IEnumerable<(string Path, HttpMethod Method, object? Body)> ProtectedRequests()
     {
+        yield return ("/auth/me", HttpMethod.Get, null);
         yield return ("/auth/sign-out", HttpMethod.Post, new { refreshToken = "bogus-token" });
         yield return ("/auth/identities/external", HttpMethod.Post, new { provider = "Google", assertion = "bogus" });
         yield return ("/auth/identities/password", HttpMethod.Post, new { password = "some-password-value" });

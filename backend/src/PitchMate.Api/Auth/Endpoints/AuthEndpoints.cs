@@ -16,9 +16,10 @@ namespace PitchMate.Api.Auth.Endpoints;
 /// <para>
 /// The public endpoints (register, sign-in, Google sign-in, refresh, password-reset request, and
 /// email-verification redeem) are reachable without an access token (Requirement 13.6). The protected
-/// endpoints (sign-out, account linking, add-password, unlink, email-verification resend, erasure, and
-/// export) require an authenticated caller and resolve the acting <c>User</c> identity from the access
-/// token's subject claim rather than any client-supplied body value (Requirements 13.1, 13.2). The
+/// endpoints (account read, sign-out, account linking, add-password, unlink, email-verification
+/// resend, erasure, and export) require an authenticated caller and resolve the acting <c>User</c>
+/// identity from the access token's subject claim rather than any client-supplied body value
+/// (Requirements 13.1, 13.2). The
 /// JWT bearer scheme, the uniform unauthenticated response, and the OpenAPI security description are
 /// configured separately with the authentication middleware.
 /// </para>
@@ -113,6 +114,26 @@ public static class AuthEndpoints
     /// </summary>
     private static void MapProtectedEndpoints(RouteGroupBuilder group)
     {
+        // Read the caller's own account and its linked sign-in methods, each carrying the identity id
+        // that unlinking targets (Requirement 8.1). The caller is resolved from the token subject, so
+        // the view can only ever describe the authenticated user. A caller whose user record does not
+        // exist keeps the seam's existing UserNotFound mapping (Requirement 8.6).
+        group.MapGet("/me", static async (
+            ClaimsPrincipal principal,
+            GetAccountHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new GetAccountCommand(userId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("GetAccount")
+            .Produces<AccountView>(StatusCodes.Status200OK);
+
         // Sign out, revoking the presented refresh token's whole family (Requirement 9.4).
         group.MapPost("/sign-out", static async (
             SignOutCommand command,
