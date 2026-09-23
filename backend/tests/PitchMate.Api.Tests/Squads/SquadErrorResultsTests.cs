@@ -33,7 +33,7 @@ public sealed class SquadErrorResultsTests
         { SquadErrorCode.SquadPendingDeletion, StatusCodes.Status409Conflict },
         { SquadErrorCode.ConcurrencyConflict, StatusCodes.Status409Conflict },
         { SquadErrorCode.InviteUnusable, StatusCodes.Status410Gone },
-        { SquadErrorCode.AlreadyMember, StatusCodes.Status200OK },
+        { SquadErrorCode.AlreadyMember, StatusCodes.Status409Conflict },
     };
 
     [Theory]
@@ -74,15 +74,21 @@ public sealed class SquadErrorResultsTests
         Assert.Equal(expectedStatus, StatusCodeOf(result));
     }
 
-    // The already-member outcome is a success no-op (200) carrying no ProblemDetails body, so a client
-    // redeeming an invite it has already used is not shown a spurious error.
+    // Requirement 6.1, 6.2 — "already a member" is a rejection on every reachable path (guest-claim
+    // initiation and completion), so it answers 409 Conflict with a ProblemDetails body carrying the
+    // stable code, exactly like the other conflict codes of this seam. The redemption no-op stays a
+    // success because RedeemInviteHandler reports it as RedeemOutcome.AlreadyMember, not as an error.
     [Fact]
-    public void ToHttpResult_ReturnsBodylessOk_ForAlreadyMember()
+    public void ToHttpResult_ReturnsConflictWithProblemBody_ForAlreadyMember()
     {
         IResult result = SquadErrorResults.ToHttpResult(new SquadError(SquadErrorCode.AlreadyMember, DiagnosticMessage));
 
-        Assert.Equal(StatusCodes.Status200OK, StatusCodeOf(result));
-        Assert.IsNotType<ProblemHttpResult>(result);
+        var problem = Assert.IsType<ProblemHttpResult>(result);
+        Assert.Equal(StatusCodes.Status409Conflict, StatusCodeOf(result));
+        Assert.Equal(SquadErrorCode.AlreadyMember.ToString(), problem.ProblemDetails.Title);
+        Assert.Equal(DiagnosticMessage, problem.ProblemDetails.Detail);
+        Assert.True(problem.ProblemDetails.Extensions.TryGetValue("code", out object? codeValue));
+        Assert.Equal(SquadErrorCode.AlreadyMember.ToString(), codeValue);
     }
 
     // Every genuine failure carries a ProblemDetails body whose stable code is echoed in the title and

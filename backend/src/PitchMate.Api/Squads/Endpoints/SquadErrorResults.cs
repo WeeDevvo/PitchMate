@@ -73,19 +73,15 @@ internal static class SquadErrorResults
             // The invite is missing, revoked, or expired — the resource is gone.
             SquadErrorCode.InviteUnusable => StatusCodes.Status410Gone,
 
-            // "Already a member" is a success no-op at redemption, not a client error, so it is
-            // reported as 200 rather than a problem body.
-            SquadErrorCode.AlreadyMember => StatusCodes.Status200OK,
+            // The target user already holds a membership in the squad. Every reachable producer of
+            // this code is a guest-claim initiation or completion, where that is a genuine rejection
+            // (Requirement 6.1, 6.2) — the redemption no-op is a success carrying
+            // RedeemOutcome.AlreadyMember and never reaches this seam.
+            SquadErrorCode.AlreadyMember => StatusCodes.Status409Conflict,
 
             // Any unmapped code is a server-side oversight rather than a client error.
             _ => StatusCodes.Status500InternalServerError,
         };
-
-        // The already-member no-op carries no problem body; every other code is a genuine failure.
-        if (statusCode == StatusCodes.Status200OK)
-        {
-            return Results.Ok();
-        }
 
         return Results.Problem(
             detail: error.Message,
