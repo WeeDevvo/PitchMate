@@ -66,7 +66,13 @@ public static class NotificationEndpoints
             }
 
             var command = new GetUnreadCountCommand(userId, squadId);
-            return ToHttpResult(await handler.HandleAsync(command, ct));
+            var result = await handler.HandleAsync(command, ct);
+
+            // The count crosses the wire as a named member of an object body, not as a bare JSON
+            // number; the value itself is exactly what the read model reports (Requirements 7.1, 7.4).
+            return result.IsSuccess
+                ? Results.Ok(new UnreadCountResponse(result.Value))
+                : NotificationErrorResults.ToHttpResult(result.Error!);
         })
             .RequireAuthorization()
             .WithName("GetUnreadNotificationCount");
@@ -103,7 +109,13 @@ public static class NotificationEndpoints
             }
 
             var command = new MarkAllNotificationsReadCommand(userId, squadId);
-            return ToHttpResult(await handler.HandleAsync(command, ct));
+            var result = await handler.HandleAsync(command, ct);
+
+            // The number changed crosses the wire as a named member of an object body, not as a bare
+            // JSON number; the value itself is unchanged (Requirements 7.2, 7.4).
+            return result.IsSuccess
+                ? Results.Ok(new MarkAllReadResponse(result.Value))
+                : NotificationErrorResults.ToHttpResult(result.Error!);
         })
             .RequireAuthorization()
             .WithName("MarkAllNotificationsRead");

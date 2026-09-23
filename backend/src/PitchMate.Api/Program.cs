@@ -1,3 +1,4 @@
+using PitchMate.Api;
 using PitchMate.Api.Auth;
 using PitchMate.Api.Auth.Endpoints;
 using PitchMate.Api.Auth.OpenApi;
@@ -90,8 +91,9 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Basic liveness probe. Real endpoints arrive with feature specs.
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
+// Basic liveness probe. Returns a named transport record rather than an anonymous type, so the probe
+// carries a schematisable body like every other operation (Requirements 7.3, 7.4).
+app.MapGet("/health", () => TypedResults.Ok(new HealthResponse("ok")))
    .WithName("HealthCheck");
 
 // Auth endpoints: public sign-in/registration/verification flows plus the protected
