@@ -13,7 +13,14 @@
         "operationId": "HealthCheck",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -177,6 +184,29 @@
             "description": "OK"
           }
         }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "GetAccount",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountView"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/auth/sign-out": {
@@ -1942,6 +1972,44 @@
   },
   "components": {
     "schemas": {
+      "AccountView": {
+        "required": [
+          "userId",
+          "displayName",
+          "email",
+          "emailVerified",
+          "avatarReference",
+          "linkedIdentities"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "avatarReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "linkedIdentities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinkedIdentityView"
+            }
+          }
+        }
+      },
       "AddGuestParticipantRequest": {
         "required": [
           "guestMembershipId"
@@ -1969,7 +2037,11 @@
         }
       },
       "AuthProvider": {
-        "type": "integer"
+        "enum": [
+          "Password",
+          "Google",
+          "Apple"
+        ]
       },
       "ConfirmMatchRequest": {
         "required": [
@@ -2108,7 +2180,12 @@
         }
       },
       "EventKind": {
-        "type": "integer"
+        "enum": [
+          "GoalScored",
+          "GoalRetracted",
+          "KeeperStintStarted",
+          "KeeperStintRetracted"
+        ]
       },
       "EventSubmissionRequest": {
         "required": [
@@ -2190,6 +2267,17 @@
           }
         }
       },
+      "HealthResponse": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "InitiateGuestClaimRequest": {
         "required": [
           "targetUserId"
@@ -2199,6 +2287,27 @@
           "targetUserId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "LinkedIdentityView": {
+        "required": [
+          "identityId",
+          "provider",
+          "linkedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "identityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/AuthProvider"
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -2354,7 +2463,10 @@
         }
       },
       "ResultFidelity": {
-        "type": "integer"
+        "enum": [
+          "Basic",
+          "Rich"
+        ]
       },
       "SetFeatureFlagRequest": {
         "required": [
@@ -2435,10 +2547,17 @@
         }
       },
       "SkillTier": {
-        "type": "integer"
+        "enum": [
+          "Beginner",
+          "Average",
+          "Strong",
+          null
+        ]
       },
       "SquadFeature": {
-        "type": "integer"
+        "enum": [
+          "LiveMatchTracking"
+        ]
       },
       "SubmitAvailabilityRequest": {
         "required": [

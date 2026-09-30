@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Application.Stats;
 
 namespace PitchMate.Infrastructure.Stats;
@@ -24,8 +25,9 @@ namespace PitchMate.Infrastructure.Stats;
 public static class StatsInfrastructureRegistration
 {
     /// <summary>
-    /// Registers the EF Core stats repository, the display-rating parameter source, and the MVP
-    /// empty rich-stats source behind their Application abstractions.
+    /// Registers the EF Core stats repository, the display-rating parameter source, the MVP
+    /// empty rich-stats source, and the squad membership standing source behind their Application
+    /// abstractions.
     /// </summary>
     /// <param name="services">The service collection to add registrations to.</param>
     /// <returns>The same <paramref name="services"/> for chaining.</returns>
@@ -44,6 +46,13 @@ public static class StatsInfrastructureRegistration
         // The MVP rich-stats source is stateless — it reports "no data" for every membership until the
         // live-tracking spec replaces this registration — so a singleton is safe (Requirement 13.2).
         services.TryAddSingleton<IRichStatsSource, EmptyRichStatsSource>();
+
+        // The squad read path's standing source. Wired here, with the other squad-scoped aggregation
+        // implementations, because EfMembershipStandingSource is internal to this assembly; scoped so it
+        // shares the request scope's DbContext (api-response-contracts Requirement 11.5). It replaces
+        // the placeholder the squads registration used to seed, so exactly one implementation is
+        // registered whichever composition root runs first.
+        services.TryAddScoped<IMembershipStandingSource, EfMembershipStandingSource>();
 
         return services;
     }
