@@ -69,7 +69,9 @@ public class SquadReadProperties
 
             var handler = new GetSquadHandler(
                 new FakeSquadRepository(store),
-                new FakeSquadMembershipRepository(store));
+                new FakeSquadMembershipRepository(store),
+                new FakeMembershipStandingSource(),
+                new SquadThresholdRatingEngine());
 
             Result<SquadData> result = handler
                 .HandleAsync(new GetSquadCommand(requestingUserId, squad.Id), CancellationToken.None)

@@ -1,5 +1,9 @@
 using PitchMate.Domain.Squads;
 
+// Alias the rating classification: the unqualified name would otherwise have to be introduced by
+// importing the whole PitchMate.Domain.Rating namespace, which this read model has no other need of.
+using RatingState = PitchMate.Domain.Rating.RatingState;
+
 namespace PitchMate.Application.Squads.UseCases;
 
 /// <summary>
@@ -20,19 +24,35 @@ public sealed record SquadData(
 
 /// <summary>
 /// A single membership as seen within a squad's data: its identity, display name, role (null for a
-/// guest), lifecycle state, and whether it is a guest membership (Requirement 16.1).
+/// guest), lifecycle state, and whether it is a guest membership (Requirement 16.1), together with the
+/// standing signal that makes "never played" and "still settling" distinguishable in the player list
+/// (api-response-contracts Requirement 10.1).
+/// <para>
+/// <see cref="Appearances"/> is never negative and counts completed matches of this squad only;
+/// <c>0</c> means the membership has never appeared. <see cref="RatingState"/> is
+/// <see langword="null"/> exactly when no rating is established for the membership, and otherwise
+/// carries the Domain classification obtained from <c>IRatingEngine.GetState</c>. Neither field
+/// carries μ, σ, or a display rating number: the rating-display rule stays on the backend
+/// (Requirement 10.7).
+/// </para>
 /// </summary>
 /// <param name="MembershipId">The membership's identity.</param>
 /// <param name="DisplayName">The membership's display name within the squad.</param>
 /// <param name="Role">The membership's role, or <see langword="null"/> for a guest membership.</param>
 /// <param name="State">The membership's lifecycle state.</param>
 /// <param name="IsGuest">Whether the membership is a guest (no backing user).</param>
+/// <param name="Appearances">Appearances in completed matches of this squad; <c>0</c> means never played.</param>
+/// <param name="RatingState">
+/// The rating's classification, or <see langword="null"/> when no rating is established.
+/// </param>
 public sealed record SquadMemberView(
     Guid MembershipId,
     string DisplayName,
     SquadRole? Role,
     MembershipState State,
-    bool IsGuest);
+    bool IsGuest,
+    int Appearances,
+    RatingState? RatingState);
 
 /// <summary>The enabled state of a single <see cref="SquadFeature"/> for a squad (Requirement 16.1).</summary>
 /// <param name="Feature">The feature.</param>

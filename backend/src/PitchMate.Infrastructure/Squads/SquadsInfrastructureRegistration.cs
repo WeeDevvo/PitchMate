@@ -22,8 +22,9 @@ namespace PitchMate.Infrastructure.Squads;
 public static class SquadsInfrastructureRegistration
 {
     /// <summary>
-    /// Registers the EF Core squad repositories, the invite secret service, and the conservative
-    /// membership-history probe behind their Application abstractions.
+    /// Registers the EF Core squad repositories, the invite secret service, the conservative
+    /// membership-history probe, and the membership standing source behind their Application
+    /// abstractions.
     /// </summary>
     /// <param name="services">The service collection to add registrations to.</param>
     /// <returns>The same <paramref name="services"/> for chaining.</returns>
@@ -46,6 +47,12 @@ public static class SquadsInfrastructureRegistration
         // would query; it reports no match history so erasure hard-removes rather than anonymising
         // (Requirement 18.2). Stateless, so a singleton is safe.
         services.TryAddSingleton<IMembershipHistoryProbe, NoMatchHistoryProbe>();
+
+        // Placeholder standing source so GetSquadHandler resolves: it reports no standing, which the
+        // squad read model already defines as Appearances = 0 with no rating state (Requirement 10.4).
+        // Replaced by the EF aggregation (EfMembershipStandingSource) in the next step of the
+        // api-response-contracts spec. Stateless, so a singleton is safe.
+        services.TryAddSingleton<IMembershipStandingSource, NoMembershipStandingSource>();
 
         return services;
     }
