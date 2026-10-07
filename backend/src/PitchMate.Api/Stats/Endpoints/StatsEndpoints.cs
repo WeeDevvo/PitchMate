@@ -57,7 +57,13 @@ public static class StatsEndpoints
             var command = new GetLeaderboardCommand(userId, squadId, ParseStatistic(statistic));
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
-            .WithName("GetSquadLeaderboard");
+            .WithName("GetSquadLeaderboard")
+            // Wholly existence-concealing, and therefore anonymous: a missing token resolves to no
+            // subject and is answered with the same concealed 404 as a squad that does not exist. So
+            // no 401 is declared — this route is one of the two the endpoint-metadata guard lists as
+            // the explicit exception (Requirements 2.8, 3.7, 5.4).
+            .Produces<Leaderboard>(StatusCodes.Status200OK)
+            .WithStatsProblemResponses();
 
         // Per-player profile scoped to the squad, for registered members and guests alike, regardless of
         // the subject's membership state (Requirement 3.1). A subject in another squad is concealed as a
@@ -77,7 +83,11 @@ public static class StatsEndpoints
             var command = new GetPlayerProfileCommand(userId, squadId, membershipId);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
-            .WithName("GetPlayerProfile");
+            .WithName("GetPlayerProfile")
+            // The second of the two listed stats exceptions: concealing, anonymous, and so declaring
+            // no 401 (Requirements 2.8, 3.7, 5.4).
+            .Produces<PlayerProfile>(StatusCodes.Status200OK)
+            .WithStatsProblemResponses();
 
         return group;
     }
@@ -100,5 +110,5 @@ public static class StatsEndpoints
     /// <see cref="StatsErrorResults"/> seam.
     /// </summary>
     private static IResult ToHttpResult<T>(Result<T> result) =>
-        result.IsSuccess ? Results.Ok(result.Value) : StatsErrorResults.ToHttpResult(result.Error!);
+        result.IsSuccess ? TypedResults.Ok(result.Value) : StatsErrorResults.ToHttpResult(result.Error!);
 }

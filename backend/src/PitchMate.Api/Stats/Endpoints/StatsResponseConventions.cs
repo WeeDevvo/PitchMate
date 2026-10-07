@@ -44,6 +44,11 @@ internal static class StatsResponseConventions
     /// Declares the problem statuses of the stats seam on an endpoint, each carrying the single
     /// <c>ProblemDetails</c> body shape. Declares no <c>401</c>: a missing token on a stats read is
     /// answered with the concealed <c>404</c> (Requirement 2.8).
+    /// <para>
+    /// This seam has one variant and it conceals unconditionally, so the convention attaches
+    /// <see cref="ExistenceConcealingMetadata"/> directly: every stats endpoint is existence-sensitive
+    /// (Requirements 2.3, 5.3), and there is no non-concealing variant for one to be confused with.
+    /// </para>
     /// </summary>
     /// <typeparam name="TBuilder">The endpoint convention builder being configured.</typeparam>
     /// <param name="builder">The endpoint (or group) to declare the problem responses on.</param>
@@ -58,6 +63,6 @@ internal static class StatsResponseConventions
             builder.ProducesProblem(statusCode);
         }
 
-        return builder;
+        return builder.WithMetadata(ExistenceConcealingMetadata.Instance);
     }
 }

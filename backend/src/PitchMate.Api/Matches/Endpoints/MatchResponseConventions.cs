@@ -68,13 +68,18 @@ internal static class MatchResponseConventions
     /// Declares the problem statuses of the match seam on an existence-sensitive read, where an
     /// authorisation failure is reported as <c>404</c> so the match's existence is not revealed
     /// (Requirements 2.3, 5.3). <c>403</c> is deliberately absent from the declared set.
+    /// <para>
+    /// Also attaches <see cref="ExistenceConcealingMetadata"/>, so the non-disclosing intent is a fact
+    /// about the endpoint rather than something to be inferred from the absence of a status.
+    /// </para>
     /// </summary>
     /// <typeparam name="TBuilder">The endpoint convention builder being configured.</typeparam>
     /// <param name="builder">The endpoint (or group) to declare the problem responses on.</param>
     /// <returns>The same <paramref name="builder"/> for chaining.</returns>
     public static TBuilder WithMatchConcealedProblemResponses<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder =>
-        builder.Declare(DeclaredConcealedProblemStatuses);
+        builder.Declare(DeclaredConcealedProblemStatuses)
+            .WithMetadata(ExistenceConcealingMetadata.Instance);
 
     private static TBuilder Declare<TBuilder>(this TBuilder builder, IReadOnlyList<int> statusCodes)
         where TBuilder : IEndpointConventionBuilder

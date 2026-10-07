@@ -92,9 +92,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Basic liveness probe. Returns a named transport record rather than an anonymous type, so the probe
-// carries a schematisable body like every other operation (Requirements 7.3, 7.4).
+// carries a schematisable body like every other operation (Requirements 7.3, 7.4). The probe runs no
+// use case and has no error seam, so it declares its 200 contract and no problem status at all
+// (Requirements 1.2, 1.4) — and, being anonymous, deliberately declares neither 401 nor 403
+// (Requirement 2.9).
 app.MapGet("/health", () => TypedResults.Ok(new HealthResponse("ok")))
-   .WithName("HealthCheck");
+   .WithName("HealthCheck")
+   .Produces<HealthResponse>(StatusCodes.Status200OK);
 
 // Auth endpoints: public sign-in/registration/verification flows plus the protected
 // linking, account, and GDPR operations (Requirement 13). Each endpoint delegates to an

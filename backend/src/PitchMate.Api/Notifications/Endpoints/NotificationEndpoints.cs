@@ -51,7 +51,12 @@ public static class NotificationEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("ListNotifications");
+            .WithName("ListNotifications")
+            // Existence-sensitive: the handlers collapse an ownership or squad-scope failure into
+            // NotFound before the seam sees it, so 404 is declared and no 403 is
+            // (Requirements 2.3, 5.3).
+            .Produces<IReadOnlyList<NotificationSummary>>(StatusCodes.Status200OK)
+            .WithNotificationConcealedProblemResponses();
 
         // Count the caller's own unread notifications, optionally scoped to a single squad (Requirements 9.3, 9.4).
         group.MapGet("/unread-count", static async (
@@ -71,11 +76,15 @@ public static class NotificationEndpoints
             // The count crosses the wire as a named member of an object body, not as a bare JSON
             // number; the value itself is exactly what the read model reports (Requirements 7.1, 7.4).
             return result.IsSuccess
-                ? Results.Ok(new UnreadCountResponse(result.Value))
+                ? TypedResults.Ok(new UnreadCountResponse(result.Value))
                 : NotificationErrorResults.ToHttpResult(result.Error!);
         })
             .RequireAuthorization()
-            .WithName("GetUnreadNotificationCount");
+            .WithName("GetUnreadNotificationCount")
+            // The declared contract is the named envelope of task 2, not a bare JSON number
+            // (Requirements 1.5, 7.1).
+            .Produces<UnreadCountResponse>(StatusCodes.Status200OK)
+            .WithNotificationConcealedProblemResponses();
 
         // Mark one of the caller's own notifications read; idempotent and non-disclosing (Requirement 9.5).
         group.MapPost("/{notificationId:guid}/read", static async (
@@ -93,7 +102,10 @@ public static class NotificationEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("MarkNotificationRead");
+            .WithName("MarkNotificationRead")
+            // A valueless success: 204 with no body type (Requirement 1.4).
+            .Produces(StatusCodes.Status204NoContent)
+            .WithNotificationConcealedProblemResponses();
 
         // Mark all the caller's own unread notifications read, optionally squad-scoped, returning the
         // number changed (Requirements 9.6, 9.7).
@@ -114,11 +126,15 @@ public static class NotificationEndpoints
             // The number changed crosses the wire as a named member of an object body, not as a bare
             // JSON number; the value itself is unchanged (Requirements 7.2, 7.4).
             return result.IsSuccess
-                ? Results.Ok(new MarkAllReadResponse(result.Value))
+                ? TypedResults.Ok(new MarkAllReadResponse(result.Value))
                 : NotificationErrorResults.ToHttpResult(result.Error!);
         })
             .RequireAuthorization()
-            .WithName("MarkAllNotificationsRead");
+            .WithName("MarkAllNotificationsRead")
+            // The declared contract is the named envelope of task 2, not a bare JSON number
+            // (Requirements 1.5, 7.2).
+            .Produces<MarkAllReadResponse>(StatusCodes.Status200OK)
+            .WithNotificationConcealedProblemResponses();
 
         return group;
     }
@@ -128,12 +144,12 @@ public static class NotificationEndpoints
     /// mapped problem result on failure.
     /// </summary>
     private static IResult ToHttpResult(Result result) =>
-        result.IsSuccess ? Results.NoContent() : NotificationErrorResults.ToHttpResult(result.Error!);
+        result.IsSuccess ? TypedResults.NoContent() : NotificationErrorResults.ToHttpResult(result.Error!);
 
     /// <summary>
     /// Translates a value-bearing notification <see cref="PitchMate.Domain.Notifications.Result{T}"/> to
     /// <c>200 OK</c> carrying the value on success or a mapped problem result on failure.
     /// </summary>
     private static IResult ToHttpResult<T>(PitchMate.Domain.Notifications.Result<T> result) =>
-        result.IsSuccess ? Results.Ok(result.Value) : NotificationErrorResults.ToHttpResult(result.Error!);
+        result.IsSuccess ? TypedResults.Ok(result.Value) : NotificationErrorResults.ToHttpResult(result.Error!);
 }

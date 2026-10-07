@@ -56,6 +56,21 @@ internal static class SquadResponseConventions
     ];
 
     /// <summary>
+    /// The statuses reachable on the one squad endpoint that is <b>anonymous</b> — the pre-join invite
+    /// preview, which answers from the Api without calling a handler and so never reaches the seam at
+    /// all. Its failures are therefore not the seam's: no <c>404</c>, <c>409</c> or <c>410</c> is
+    /// reachable, and critically no <c>401</c> or <c>403</c>, because the endpoint has no authorisation
+    /// gate and declaring the framework's challenge would advertise one that is not there
+    /// (Requirement 2.9). What remains is <c>400</c>, the framework's own rejection of a malformed
+    /// request, and <c>500</c>, the unhandled fallback.
+    /// </summary>
+    internal static readonly IReadOnlyList<int> DeclaredAnonymousProblemStatuses =
+    [
+        StatusCodes.Status400BadRequest,
+        StatusCodes.Status500InternalServerError,
+    ];
+
+    /// <summary>
     /// Declares the problem statuses of the squad seam on an endpoint that reports an authorisation
     /// failure as <c>403</c>, each carrying the single <c>ProblemDetails</c> body shape.
     /// </summary>
@@ -70,13 +85,31 @@ internal static class SquadResponseConventions
     /// Declares the problem statuses of the squad seam on an existence-sensitive read, where an
     /// authorisation failure is reported as <c>404</c> so the squad's existence is not revealed
     /// (Requirements 2.3, 5.3). <c>403</c> is deliberately absent from the declared set.
+    /// <para>
+    /// Also attaches <see cref="ExistenceConcealingMetadata"/>, so the non-disclosing intent is a fact
+    /// about the endpoint rather than something to be inferred from the absence of a status.
+    /// </para>
     /// </summary>
     /// <typeparam name="TBuilder">The endpoint convention builder being configured.</typeparam>
     /// <param name="builder">The endpoint (or group) to declare the problem responses on.</param>
     /// <returns>The same <paramref name="builder"/> for chaining.</returns>
     public static TBuilder WithSquadConcealedProblemResponses<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder =>
-        builder.Declare(DeclaredConcealedProblemStatuses);
+        builder.Declare(DeclaredConcealedProblemStatuses)
+            .WithMetadata(ExistenceConcealingMetadata.Instance);
+
+    /// <summary>
+    /// Declares the problem statuses of the anonymous pre-join invite preview, which answers without
+    /// reaching the seam and must therefore declare neither <c>401</c> nor <c>403</c>
+    /// (Requirement 2.9). It is not in the endpoint-metadata guard's anonymous-auth exception list, so
+    /// that prohibition applies to it unconditionally.
+    /// </summary>
+    /// <typeparam name="TBuilder">The endpoint convention builder being configured.</typeparam>
+    /// <param name="builder">The endpoint (or group) to declare the problem responses on.</param>
+    /// <returns>The same <paramref name="builder"/> for chaining.</returns>
+    public static TBuilder WithSquadAnonymousProblemResponses<TBuilder>(this TBuilder builder)
+        where TBuilder : IEndpointConventionBuilder =>
+        builder.Declare(DeclaredAnonymousProblemStatuses);
 
     private static TBuilder Declare<TBuilder>(this TBuilder builder, IReadOnlyList<int> statusCodes)
         where TBuilder : IEndpointConventionBuilder

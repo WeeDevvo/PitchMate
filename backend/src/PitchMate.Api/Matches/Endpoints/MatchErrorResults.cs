@@ -70,7 +70,9 @@ internal static class MatchErrorResults
             _ => StatusCodes.Status500InternalServerError,
         };
 
-        return Results.Problem(
+        // TypedResults rather than Results: the same ProblemHttpResult, with the status/payload
+        // pairing checked at compile time where it costs nothing (design D2).
+        return TypedResults.Problem(
             detail: error.Message,
             statusCode: statusCode,
             title: error.Code.ToString(),
@@ -82,7 +84,7 @@ internal static class MatchErrorResults
     /// resolved from the access token. The body is deliberately empty so nothing is disclosed.
     /// </summary>
     public static IResult Unauthenticated() =>
-        Results.Problem(
+        TypedResults.Problem(
             statusCode: StatusCodes.Status401Unauthorized,
             title: "Unauthenticated",
             detail: "Authentication is required.");

@@ -65,7 +65,8 @@ internal static class LiveTrackingResponseConventions
     /// through the one <see cref="LiveTrackingErrorResults.Concealed"/> result, so there is no <c>403</c>
     /// to replace. The variant exists so the non-disclosing intent is explicit at each call site rather
     /// than inferred from the absence of a status, and so the concealing-endpoint guard has something to
-    /// assert against.
+    /// assert against — the <see cref="ExistenceConcealingMetadata"/> this variant attaches, and the
+    /// standard variant does not, is the only thing that distinguishes the two.
     /// </para>
     /// </summary>
     /// <typeparam name="TBuilder">The endpoint convention builder being configured.</typeparam>
@@ -73,7 +74,8 @@ internal static class LiveTrackingResponseConventions
     /// <returns>The same <paramref name="builder"/> for chaining.</returns>
     public static TBuilder WithLiveTrackingConcealedProblemResponses<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder =>
-        builder.Declare(DeclaredProblemStatuses);
+        builder.Declare(DeclaredProblemStatuses)
+            .WithMetadata(ExistenceConcealingMetadata.Instance);
 
     private static TBuilder Declare<TBuilder>(this TBuilder builder, IReadOnlyList<int> statusCodes)
         where TBuilder : IEndpointConventionBuilder

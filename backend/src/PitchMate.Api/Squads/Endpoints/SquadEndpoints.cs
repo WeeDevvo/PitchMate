@@ -63,7 +63,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("CreateSquad");
+            .WithName("CreateSquad")
+            .Produces<CreateSquadResult>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
 
         // List the caller's squads, excluding soft-deleted (Requirement 16.4).
         group.MapGet("/", static async (
@@ -79,7 +81,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(new ListMySquadsCommand(userId), ct));
         })
             .RequireAuthorization()
-            .WithName("ListMySquads");
+            .WithName("ListMySquads")
+            .Produces<IReadOnlyList<MySquadSummary>>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
 
         // Read a squad's data — gated to active members; existence concealed otherwise (Requirement 16.1, 16.2).
         group.MapGet("/{squadId:guid}", static async (
@@ -96,7 +100,11 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(new GetSquadCommand(userId, squadId), ct), concealExistence: true);
         })
             .RequireAuthorization()
-            .WithName("GetSquad");
+            .WithName("GetSquad")
+            // Existence-sensitive: the seam is called with concealExistence, so an authorisation
+            // failure is reported as 404 and no 403 is declared (Requirements 2.3, 5.3).
+            .Produces<SquadData>(StatusCodes.Status200OK)
+            .WithSquadConcealedProblemResponses();
 
         // Soft-delete a squad, setting a grace purge instant (Requirement 17.1). Owner-only.
         group.MapDelete("/{squadId:guid}", static async (
@@ -115,7 +123,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("DeleteSquad");
+            .WithName("DeleteSquad")
+            .Produces<DeleteSquadResult>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
 
         // Reverse a soft-deletion before the purge instant (Requirement 17.4). Owner-only.
         group.MapPost("/{squadId:guid}/restore", static async (
@@ -132,7 +142,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(new ReverseSquadDeletionCommand(userId, squadId), ct));
         })
             .RequireAuthorization()
-            .WithName("ReverseSquadDeletion");
+            .WithName("ReverseSquadDeletion")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
 
         // Export a squad's data (DSAR), offered before purge (Requirement 17.2). Owner-only.
         group.MapGet("/{squadId:guid}/export", static async (
@@ -149,7 +161,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(new ExportSquadCommand(userId, squadId), ct));
         })
             .RequireAuthorization()
-            .WithName("ExportSquad");
+            .WithName("ExportSquad")
+            .Produces<SquadExport>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
     }
 
     /// <summary>Maps promotion, demotion, and ownership transfer (Requirements 5, 6).</summary>
@@ -172,7 +186,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("PromoteToAdmin");
+            .WithName("PromoteToAdmin")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
 
         // Demote an active admin to member; never the owner (Requirement 5.3, 5.6).
         group.MapPost("/{squadId:guid}/members/{membershipId:guid}/demote", static async (
@@ -191,7 +207,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("DemoteToMember");
+            .WithName("DemoteToMember")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
 
         // Transfer ownership to an active registered member as an atomic owner/admin swap (Requirement 6.2).
         group.MapPost("/{squadId:guid}/ownership", static async (
@@ -210,7 +228,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("TransferOwnership");
+            .WithName("TransferOwnership")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
     }
 
     /// <summary>Maps leaving and member removal (Requirements 7, 8).</summary>
@@ -231,7 +251,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(new LeaveSquadCommand(userId, squadId), ct));
         })
             .RequireAuthorization()
-            .WithName("LeaveSquad");
+            .WithName("LeaveSquad")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
 
         // Remove a member or guest; never the owner (Requirement 8).
         group.MapDelete("/{squadId:guid}/members/{membershipId:guid}", static async (
@@ -250,7 +272,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("RemoveMember");
+            .WithName("RemoveMember")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
     }
 
     /// <summary>Maps invite generation, listing, revocation, redemption, and the pre-join preview (Requirements 10, 11, 12).</summary>
@@ -273,7 +297,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("GenerateInvite");
+            .WithName("GenerateInvite")
+            .Produces<GenerateInviteResult>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
 
         // List a squad's invites without any redeemable secret (Requirement 10.5).
         group.MapGet("/{squadId:guid}/invites", static async (
@@ -290,7 +316,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(new ListInvitesCommand(userId, squadId), ct));
         })
             .RequireAuthorization()
-            .WithName("ListInvites");
+            .WithName("ListInvites")
+            .Produces<IReadOnlyList<InviteSummary>>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
 
         // Revoke an invite; idempotent for already revoked/expired (Requirement 12.1, 12.4).
         group.MapPost("/{squadId:guid}/invites/{inviteId:guid}/revoke", static async (
@@ -309,7 +337,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("RevokeInvite");
+            .WithName("RevokeInvite")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
 
         // Redeem an invite to join or reactivate a membership (Requirements 9, 11). The joining user is
         // resolved from the token, and the squad is never named in the request.
@@ -328,15 +358,26 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("RedeemInvite");
+            .WithName("RedeemInvite")
+            // Exactly one 200 contract (Requirement 6.3). Redemption by a caller who already holds an
+            // active membership is still a success carrying RedeemOutcome.AlreadyMember, and the
+            // genuine AlreadyMember rejection of the guest-claim path is now a 409 (task 3.1) — so this
+            // status carries one shape and can be declared.
+            .Produces<RedeemInviteResult>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
 
         // Pre-join preview: anonymous and discloses no squad data. It never touches the store or a
         // handler; it only tells the visitor that joining requires an authenticated user (Requirement 11.6).
-        group.MapGet("/invites/preview", static () => Results.Ok(new InvitePreviewResponse(
+        group.MapGet("/invites/preview", static () => TypedResults.Ok(new InvitePreviewResponse(
                 RequiresAuthentication: true,
                 Message: "Sign in or create an account, then redeem your invite to join the squad.")))
             .AllowAnonymous()
-            .WithName("PreviewInvite");
+            .WithName("PreviewInvite")
+            // The one anonymous squad endpoint. It never reaches the seam, so it declares neither 401
+            // nor 403 — it has no authorisation gate, and advertising the framework's challenge would
+            // say otherwise (Requirement 2.9).
+            .Produces<InvitePreviewResponse>(StatusCodes.Status200OK)
+            .WithSquadAnonymousProblemResponses();
     }
 
     /// <summary>Maps reading and toggling per-squad feature flags (Requirement 13).</summary>
@@ -357,7 +398,10 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(new GetFeatureFlagsCommand(userId, squadId), ct), concealExistence: true);
         })
             .RequireAuthorization()
-            .WithName("GetFeatureFlags");
+            .WithName("GetFeatureFlags")
+            // Existence-sensitive, as GetSquad is: 404 in place of 403 (Requirements 2.3, 5.3).
+            .Produces<IReadOnlyList<SquadFeatureView>>(StatusCodes.Status200OK)
+            .WithSquadConcealedProblemResponses();
 
         // Enable or disable a single feature, leaving the others unchanged (Requirement 13.2).
         group.MapPut("/{squadId:guid}/features", static async (
@@ -376,7 +420,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("SetFeatureFlag");
+            .WithName("SetFeatureFlag")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
     }
 
     /// <summary>Maps guest creation and editing (Requirement 14).</summary>
@@ -400,7 +446,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("CreateGuest");
+            .WithName("CreateGuest")
+            .Produces<CreateGuestResult>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
 
         // Edit a guest's display name and/or skill-tier seed (Requirements 3.2, 14).
         group.MapPatch("/{squadId:guid}/guests/{membershipId:guid}", static async (
@@ -421,7 +469,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("EditGuest");
+            .WithName("EditGuest")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
     }
 
     /// <summary>Maps the guest-claim lifecycle: initiate, consent, complete, reverse (Requirement 15).</summary>
@@ -445,7 +495,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("InitiateGuestClaim");
+            .WithName("InitiateGuestClaim")
+            .Produces<InitiateGuestClaimResult>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
 
         // The target user records their own consent to a pending claim (Requirement 15.3).
         group.MapPost("/{squadId:guid}/guests/{membershipId:guid}/claims/consent", static async (
@@ -464,7 +516,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("RecordClaimConsent");
+            .WithName("RecordClaimConsent")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
 
         // Complete a consented claim, rebinding the guest onto its target user (Requirement 15.1, 15.2).
         group.MapPost("/{squadId:guid}/guests/{membershipId:guid}/claims/complete", static async (
@@ -483,7 +537,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("CompleteGuestClaim");
+            .WithName("CompleteGuestClaim")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
 
         // Reverse a previously completed claim, rebinding back to a guest (Requirement 15.6, 15.8).
         group.MapPost("/{squadId:guid}/guests/{membershipId:guid}/claims/reverse", static async (
@@ -502,7 +558,9 @@ public static class SquadEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("ReverseGuestClaim");
+            .WithName("ReverseGuestClaim")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithSquadProblemResponses();
     }
 
     /// <summary>
@@ -510,7 +568,7 @@ public static class SquadEndpoints
     /// mapped problem result on failure.
     /// </summary>
     private static IResult ToHttpResult(Result result) =>
-        result.IsSuccess ? Results.NoContent() : SquadErrorResults.ToHttpResult(result.Error!);
+        result.IsSuccess ? TypedResults.NoContent() : SquadErrorResults.ToHttpResult(result.Error!);
 
     /// <summary>
     /// Translates a value-bearing use-case <see cref="Result{T}"/> to <c>200 OK</c> carrying the value
@@ -518,5 +576,5 @@ public static class SquadEndpoints
     /// through so existence-sensitive reads mask an authorisation failure as <c>404</c> (Requirement 16.2).
     /// </summary>
     private static IResult ToHttpResult<T>(Result<T> result, bool concealExistence = false) =>
-        result.IsSuccess ? Results.Ok(result.Value) : SquadErrorResults.ToHttpResult(result.Error!, concealExistence);
+        result.IsSuccess ? TypedResults.Ok(result.Value) : SquadErrorResults.ToHttpResult(result.Error!, concealExistence);
 }

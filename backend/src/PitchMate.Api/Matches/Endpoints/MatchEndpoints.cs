@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using PitchMate.Api.Auth.Endpoints;
+using PitchMate.Application.Matches.Abstractions;
 using PitchMate.Application.Matches.UseCases;
 using PitchMate.Domain.Matches;
 
@@ -73,7 +74,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("CreateMatchDraft");
+            .WithName("CreateMatchDraft")
+            .Produces<CreateMatchDraftResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
     }
 
     /// <summary>Maps availability submit/clear/tally under the squad-scoped group (Requirements 4, 5).</summary>
@@ -96,7 +99,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("SubmitAvailabilityResponse");
+            .WithName("SubmitAvailabilityResponse")
+            .Produces<AvailabilityResponse>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
 
         // Clear the acting member's own availability response (Requirement 4.3).
         group.MapDelete("/{matchId:guid}/availability", static async (
@@ -113,7 +118,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(new ClearAvailabilityResponseCommand(userId, matchId), ct));
         })
             .RequireAuthorization()
-            .WithName("ClearAvailabilityResponse");
+            .WithName("ClearAvailabilityResponse")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithMatchProblemResponses();
 
         // Read the availability tally — gated to active members; existence concealed otherwise
         // (Requirement 5.1, 5.5, 5.6, 5.7).
@@ -133,7 +140,11 @@ public static class MatchEndpoints
                 concealExistence: true);
         })
             .RequireAuthorization()
-            .WithName("GetAvailabilityTally");
+            .WithName("GetAvailabilityTally")
+            // Existence-sensitive: the seam is called with concealExistence, so an authorisation
+            // failure is reported as 404 and no 403 is declared (Requirements 2.3, 5.3).
+            .Produces<AvailabilityTally>(StatusCodes.Status200OK)
+            .WithMatchConcealedProblemResponses();
     }
 
     /// <summary>Maps confirmation under the squad-scoped group (Requirement 6).</summary>
@@ -156,7 +167,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("ConfirmMatch");
+            .WithName("ConfirmMatch")
+            .Produces<ConfirmMatchResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
     }
 
     /// <summary>Maps participant add/remove under the squad-scoped group (Requirement 7).</summary>
@@ -179,7 +192,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("AddGuestParticipant");
+            .WithName("AddGuestParticipant")
+            .Produces<AddGuestParticipantResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
 
         // Remove a registered or guest participant from a confirmed match (Requirement 7.2).
         group.MapDelete("/{matchId:guid}/participants/{membershipId:guid}", static async (
@@ -198,7 +213,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("RemoveParticipant");
+            .WithName("RemoveParticipant")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithMatchProblemResponses();
     }
 
     /// <summary>Maps team proposal, adjustment, and locking under the match-scoped group (Requirement 8).</summary>
@@ -219,7 +236,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(new ProposeTeamsCommand(userId, matchId), ct));
         })
             .RequireAuthorization()
-            .WithName("ProposeTeams");
+            .WithName("ProposeTeams")
+            .Produces<TeamProposal>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
 
         // Move a participant between working teams (Requirement 8.3).
         group.MapPost("/teams/moves", static async (
@@ -239,7 +258,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("MoveParticipant");
+            .WithName("MoveParticipant")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithMatchProblemResponses();
 
         // Re-roll a fresh balanced assignment onto the working teams (Requirement 8.3).
         group.MapPost("/teams/reroll", static async (
@@ -257,7 +278,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("ReRollTeams");
+            .WithName("ReRollTeams")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithMatchProblemResponses();
 
         // Set a working team's name; a blank name draws a generated one (Requirement 8.3, 8.4).
         group.MapPut("/teams/{teamId:guid}/name", static async (
@@ -278,7 +301,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("SetTeamName");
+            .WithName("SetTeamName")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithMatchProblemResponses();
 
         // Choose the single bib-wearing working team, clearing the others (Requirement 8.3).
         group.MapPut("/teams/{teamId:guid}/bib", static async (
@@ -297,7 +322,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("SetBibTeam");
+            .WithName("SetBibTeam")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithMatchProblemResponses();
 
         // Lock the working teams, capturing the immutable kickoff lineup (Requirement 8.5, 8.6, 8.7).
         group.MapPost("/teams/lock", static async (
@@ -314,7 +341,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(new LockTeamsCommand(userId, matchId), ct));
         })
             .RequireAuthorization()
-            .WithName("LockTeams");
+            .WithName("LockTeams")
+            .Produces<LockTeamsResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
 
         // Read the team sheet — gated to active members; existence concealed otherwise
         // (Requirement 9.1, 9.2, 9.4, 9.5).
@@ -334,7 +363,11 @@ public static class MatchEndpoints
                 concealExistence: true);
         })
             .RequireAuthorization()
-            .WithName("GetTeamSheet");
+            .WithName("GetTeamSheet")
+            // Existence-sensitive, as the availability tally is: 404 in place of 403
+            // (Requirements 2.3, 5.3).
+            .Produces<TeamSheet>(StatusCodes.Status200OK)
+            .WithMatchConcealedProblemResponses();
     }
 
     /// <summary>Maps start, record-result, complete, and cancel under the match-scoped group (Requirements 11, 12, 13, 15).</summary>
@@ -355,7 +388,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(new StartMatchCommand(userId, matchId), ct));
         })
             .RequireAuthorization()
-            .WithName("StartMatch");
+            .WithName("StartMatch")
+            .Produces<StartMatchResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
 
         // Record the played match's result at Basic or (feature-gated) Rich fidelity (Requirement 11).
         group.MapPost("/result", static async (
@@ -374,7 +409,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("RecordResult");
+            .WithName("RecordResult")
+            .Produces<RecordResultResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
 
         // Complete the in-progress match, applying its single rating update. The client-generated
         // match id in the route makes a retried completion idempotent (Requirement 12, 13.1).
@@ -392,7 +429,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(new CompleteMatchCommand(userId, matchId), ct));
         })
             .RequireAuthorization()
-            .WithName("CompleteMatch");
+            .WithName("CompleteMatch")
+            .Produces<CompleteMatchResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
 
         // Cancel the match before play; allowed only before InProgress (Requirement 15).
         group.MapPost("/cancel", static async (
@@ -409,7 +448,9 @@ public static class MatchEndpoints
             return ToHttpResult(await handler.HandleAsync(new CancelMatchCommand(userId, matchId), ct));
         })
             .RequireAuthorization()
-            .WithName("CancelMatch");
+            .WithName("CancelMatch")
+            .Produces<CancelMatchResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
     }
 
     /// <summary>
@@ -417,7 +458,7 @@ public static class MatchEndpoints
     /// mapped problem result on failure.
     /// </summary>
     private static IResult ToHttpResult(Result result) =>
-        result.IsSuccess ? Results.NoContent() : MatchErrorResults.ToHttpResult(result.Error!);
+        result.IsSuccess ? TypedResults.NoContent() : MatchErrorResults.ToHttpResult(result.Error!);
 
     /// <summary>
     /// Translates a value-bearing use-case <see cref="Result{T}"/> to <c>200 OK</c> carrying the value
@@ -426,5 +467,7 @@ public static class MatchEndpoints
     /// (Requirement 14.4).
     /// </summary>
     private static IResult ToHttpResult<T>(Result<T> result, bool concealExistence = false) =>
-        result.IsSuccess ? Results.Ok(result.Value) : MatchErrorResults.ToHttpResult(result.Error!, concealExistence);
+        result.IsSuccess
+            ? TypedResults.Ok(result.Value)
+            : MatchErrorResults.ToHttpResult(result.Error!, concealExistence);
 }

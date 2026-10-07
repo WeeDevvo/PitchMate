@@ -62,7 +62,13 @@ public static class LiveTrackingEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct), BatchResultResponse.From);
         })
             .RequireAuthorization()
-            .WithName("RecordMatchEvents");
+            .WithName("RecordMatchEvents")
+            // The per-event Duplicate/Rejected outcomes ride in this 200 body rather than failing the
+            // request, so the batch result is the success contract (Requirements 1.1, 1.2).
+            // Existence-sensitive: the seam conceals an authorisation failure as 404 and declares no
+            // 403 (Requirements 2.3, 5.3).
+            .Produces<BatchResultResponse>(StatusCodes.Status200OK)
+            .WithLiveTrackingConcealedProblemResponses();
 
         // Finalise the tracked result while the match is InProgress: derive the Rich result from the
         // running score and drive match-lifecycle completion, which owns the single idempotent rating
@@ -76,7 +82,10 @@ public static class LiveTrackingEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct), FinaliseTrackedResultResponse.From);
         })
             .RequireAuthorization()
-            .WithName("FinaliseTrackedResult");
+            .WithName("FinaliseTrackedResult")
+            // Existence-sensitive, as the whole seam is: 404 in place of 403 (Requirements 2.3, 5.3).
+            .Produces<FinaliseTrackedResultResponse>(StatusCodes.Status200OK)
+            .WithLiveTrackingConcealedProblemResponses();
 
         // Read the match's current running score, derived from the effective events at request time and
         // gated to active squad members; a non-member is concealed as a 404 (Requirement 6.1, 11.3,
@@ -90,7 +99,10 @@ public static class LiveTrackingEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct), RunningScoreResponse.From);
         })
             .RequireAuthorization()
-            .WithName("GetMatchRunningScore");
+            .WithName("GetMatchRunningScore")
+            // Existence-sensitive, as the whole seam is: 404 in place of 403 (Requirements 2.3, 5.3).
+            .Produces<RunningScoreResponse>(StatusCodes.Status200OK)
+            .WithLiveTrackingConcealedProblemResponses();
     }
 
     /// <summary>
@@ -106,6 +118,6 @@ public static class LiveTrackingEndpoints
         Result<TValue> result,
         Func<TValue, TResponse> toResponse) =>
         result.IsSuccess
-            ? Results.Ok(toResponse(result.Value!))
+            ? TypedResults.Ok(toResponse(result.Value!))
             : LiveTrackingErrorResults.ToHttpResult(result.Error!);
 }

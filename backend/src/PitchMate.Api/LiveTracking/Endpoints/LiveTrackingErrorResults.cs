@@ -72,7 +72,7 @@ internal static class LiveTrackingErrorResults
             LiveTrackingErrorCode.TargetNotFound => BadRequest(error),
 
             // Any unmapped code is a server-side oversight rather than a client error.
-            _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError),
+            _ => TypedResults.Problem(statusCode: StatusCodes.Status500InternalServerError),
         };
     }
 
@@ -83,7 +83,7 @@ internal static class LiveTrackingErrorResults
     /// rejection is byte-for-byte identical and discloses neither existence nor any match data.
     /// </summary>
     public static IResult Concealed() =>
-        Results.Problem(
+        TypedResults.Problem(
             detail: ConcealedDetail,
             statusCode: StatusCodes.Status404NotFound,
             title: ConcealedTitle);
@@ -93,7 +93,7 @@ internal static class LiveTrackingErrorResults
     /// resolved from the access token. The body is deliberately minimal so nothing is disclosed.
     /// </summary>
     public static IResult Unauthenticated() =>
-        Results.Problem(
+        TypedResults.Problem(
             statusCode: StatusCodes.Status401Unauthorized,
             title: "Unauthenticated",
             detail: "Authentication is required.");
@@ -106,8 +106,10 @@ internal static class LiveTrackingErrorResults
     private static IResult BadRequest(LiveTrackingError error) =>
         Problem(error, StatusCodes.Status400BadRequest);
 
+    // TypedResults rather than Results: the same ProblemHttpResult, with the status/payload pairing
+    // checked at compile time where it costs nothing (design D2).
     private static IResult Problem(LiveTrackingError error, int statusCode) =>
-        Results.Problem(
+        TypedResults.Problem(
             detail: error.Message,
             statusCode: statusCode,
             title: error.Code.ToString(),
