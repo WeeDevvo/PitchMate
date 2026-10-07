@@ -91,7 +91,9 @@ public static class ErrorSeams
             code => SquadErrorResults.ToHttpResult(
                 new PitchMate.Domain.Squads.SquadError(code, DiagnosticMessage), concealExistence: true),
             ($"{nameof(SquadErrorResults)}.{nameof(SquadErrorResults.Unauthenticated)}()",
-                SquadErrorResults.Unauthenticated())),
+                SquadErrorResults.Unauthenticated()),
+            ($"{nameof(SquadErrorResults)}.{nameof(SquadErrorResults.Concealed)}()",
+                SquadErrorResults.Concealed())),
 
         // Stats — wholly concealing, hence one variant, and the one that declares no 401.
         Variant<PitchMate.Application.Stats.StatsErrorCode>(
@@ -113,7 +115,9 @@ public static class ErrorSeams
             code => NotificationErrorResults.ToHttpResult(
                 new PitchMate.Domain.Notifications.NotificationError(code, DiagnosticMessage)),
             ($"{nameof(NotificationErrorResults)}.{nameof(NotificationErrorResults.Unauthenticated)}()",
-                NotificationErrorResults.Unauthenticated())),
+                NotificationErrorResults.Unauthenticated()),
+            ($"{nameof(NotificationErrorResults)}.{nameof(NotificationErrorResults.Concealed)}()",
+                NotificationErrorResults.Concealed())),
 
         // Notifications — the existence-sensitive reads. The seam has no concealment flag because the
         // handlers conceal before it is reached, so the emissions are the same set; driving the variant
@@ -126,7 +130,9 @@ public static class ErrorSeams
             code => NotificationErrorResults.ToHttpResult(
                 new PitchMate.Domain.Notifications.NotificationError(code, DiagnosticMessage)),
             ($"{nameof(NotificationErrorResults)}.{nameof(NotificationErrorResults.Unauthenticated)}()",
-                NotificationErrorResults.Unauthenticated())),
+                NotificationErrorResults.Unauthenticated()),
+            ($"{nameof(NotificationErrorResults)}.{nameof(NotificationErrorResults.Concealed)}()",
+                NotificationErrorResults.Concealed())),
 
         // Matches — the ordinary mapping, where an authorisation failure is a 403.
         Variant<PitchMate.Domain.Matches.MatchErrorCode>(
@@ -148,7 +154,9 @@ public static class ErrorSeams
             code => MatchErrorResults.ToHttpResult(
                 new PitchMate.Domain.Matches.MatchError(code, DiagnosticMessage), concealExistence: true),
             ($"{nameof(MatchErrorResults)}.{nameof(MatchErrorResults.Unauthenticated)}()",
-                MatchErrorResults.Unauthenticated())),
+                MatchErrorResults.Unauthenticated()),
+            ($"{nameof(MatchErrorResults)}.{nameof(MatchErrorResults.Concealed)}()",
+                MatchErrorResults.Concealed())),
 
         // Live tracking — the ordinary mapping. This seam conceals unconditionally, so both variants
         // share a declared set; both are driven for the same reason as notifications.
