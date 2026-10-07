@@ -225,12 +225,16 @@ public class StatsArchitecturePlacementTests
     public void StatsAggregationImplementations_ResideInInfrastructureAssembly()
     {
         // Req 15.3 — the SQL-aggregation repository and the params/rich sources are Infrastructure
-        // concerns; the concrete implementations must not live inner.
+        // concerns; the concrete implementations must not live inner. The member-standing source joins
+        // them here so every squad-scoped aggregation query stays in one place
+        // (api-response-contracts 11.5); its abstraction lives with its squad-read consumer and its
+        // placement is asserted in full by SquadArchitecturePlacementTests.
         var implementations = new[]
         {
             typeof(EfStatsRepository),
             typeof(SquadDisplayRatingParametersSource),
             typeof(EmptyRichStatsSource),
+            typeof(EfMembershipStandingSource),
         };
 
         var offenders = implementations

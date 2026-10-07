@@ -7,6 +7,7 @@ using PitchMate.Domain.Common;
 using PitchMate.Domain.Squads;
 using PitchMate.Infrastructure.Squads;
 using PitchMate.Infrastructure.Squads.Repositories;
+using PitchMate.Infrastructure.Stats;
 
 namespace PitchMate.Infrastructure.Tests.Architecture;
 
@@ -31,6 +32,15 @@ namespace PitchMate.Infrastructure.Tests.Architecture;
 ///   <item><description>10.7 / 19.3 — the EF Core mappings, repository implementations,
 ///   <c>InviteSecretService</c>, and <c>NoMatchHistoryProbe</c> reside in
 ///   <c>PitchMate.Infrastructure</c> and implement the Application-declared interfaces.</description></item>
+///   <item><description>api-response-contracts 11.3 / 11.4 — <see cref="IMembershipStandingSource"/>
+///   and <see cref="MembershipStanding"/> are declared in the squad Application namespace, with their
+///   squad-read consumer, so the squad read path takes no dependency on the stats use-case
+///   namespace.</description></item>
+///   <item><description>api-response-contracts 11.5 / 11.6 — <c>EfMembershipStandingSource</c> resides
+///   in <c>PitchMate.Infrastructure</c> alongside the existing squad-scoped aggregation
+///   (<c>EfStatsRepository</c>), so all squad-scoped aggregation SQL stays in one place, and it takes
+///   no dependency on the Domain rating-classification surface — classifying a σ is
+///   <c>IRatingEngine.GetState</c>'s job, not the standing source's.</description></item>
 /// </list>
 ///
 /// The approach mirrors <see cref="ArchitectureDependencyTests"/>: anchor types create a hard
@@ -46,6 +56,15 @@ public class SquadArchitecturePlacementTests
 
     private const string SquadDomainNamespace = "PitchMate.Domain.Squads";
     private const string SquadApplicationNamespace = "PitchMate.Application.Squads";
+
+    /// <summary>Where the standing abstraction is declared — with its squad-read consumer, not in the stats namespace.</summary>
+    private const string StandingAbstractionNamespace = "PitchMate.Application.Squads.Abstractions";
+
+    /// <summary>The stats use-case namespace the squad read path must stay independent of (api-response-contracts 11.4).</summary>
+    private const string StatsApplicationNamespace = "PitchMate.Application.Stats";
+
+    /// <summary>The Domain rating namespace holding the classification surface the standing source must not touch (api-response-contracts 11.6).</summary>
+    private const string RatingDomainNamespace = "PitchMate.Domain.Rating";
 
     /// <summary>Full name of the internal squad authorization helper, resolved reflectively since it is not public.</summary>
     private const string SquadAuthorizationFullName = "PitchMate.Application.Squads.SquadAuthorization";
@@ -86,7 +105,11 @@ public class SquadArchitecturePlacementTests
         typeof(SquadErrorCode),
     };
 
-    /// <summary>The squad Application abstractions declared in <c>PitchMate.Application</c> (Req 19.2).</summary>
+    /// <summary>
+    /// The squad Application abstractions declared in <c>PitchMate.Application</c> (Req 19.2), now
+    /// including the member-standing source the squad read decorates its member views from
+    /// (api-response-contracts 11.3).
+    /// </summary>
     private static readonly Type[] SquadApplicationAbstractions =
     {
         typeof(ISquadRepository),
@@ -95,6 +118,7 @@ public class SquadArchitecturePlacementTests
         typeof(IGuestClaimRepository),
         typeof(IInviteSecretService),
         typeof(IMembershipHistoryProbe),
+        typeof(IMembershipStandingSource),
     };
 
     [Fact]
@@ -270,6 +294,98 @@ public class SquadArchitecturePlacementTests
             offenders.Count == 0,
             $"Squad EF mappings, repositories, InviteSecretService, and NoMatchHistoryProbe must " +
             $"reside in {InfrastructureName} (Requirements 10.7, 19.3). Offenders: {Describe(offenders)}.");
+    }
+
+    [Fact]
+    public void MembershipStandingAbstraction_IsDeclaredWithItsSquadApplicationConsumer()
+    {
+        // api-response-contracts 11.3, 11.4 — the standing source and the standing value it reports are
+        // declared in the squad Application namespace, beside the squad read that consumes them, rather
+        // than in the stats use-case namespace.
+        var offenders = new[] { typeof(IMembershipStandingSource), typeof(MembershipStanding) }
+            .Where(type => type.Assembly.GetName().Name != ApplicationName
+                           || type.Namespace != StandingAbstractionNamespace)
+            .Select(type => $"{type.FullName} in '{type.Assembly.GetName().Name}' namespace '{type.Namespace}'")
+            .ToList();
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{nameof(IMembershipStandingSource)} and {nameof(MembershipStanding)} must be declared in " +
+            $"{StandingAbstractionNamespace} (api-response-contracts 11.3, 11.4). Offenders: {Describe(offenders)}.");
+    }
+
+    [Fact]
+    public void SquadApplicationNamespace_DoesNotDependOnTheStatsUseCaseNamespace()
+    {
+        // api-response-contracts 11.4 — placing the standing abstraction with its consumer keeps the
+        // squad read path free of any dependency on the stats use-case namespace.
+        AssertNamespaceHasNoDependencyOn(
+            ApplicationAssembly, SquadApplicationNamespace,
+            "api-response-contracts 11.4",
+            StatsApplicationNamespace);
+    }
+
+    [Fact]
+    public void MembershipStandingSource_IsImplementedInInfrastructureAlongsideTheSquadScopedAggregation()
+    {
+        // api-response-contracts 11.5 — the standing aggregation SQL is an Infrastructure concern and
+        // sits in the same namespace as the existing squad-scoped aggregation (EfStatsRepository), so
+        // every squad-scoped aggregation query stays in one place.
+        var offenders = new List<string>();
+
+        if (typeof(EfMembershipStandingSource).Assembly.GetName().Name != InfrastructureName)
+        {
+            offenders.Add(
+                $"{typeof(EfMembershipStandingSource).FullName} in " +
+                $"'{typeof(EfMembershipStandingSource).Assembly.GetName().Name}'");
+        }
+
+        if (typeof(EfMembershipStandingSource).Namespace != typeof(EfStatsRepository).Namespace)
+        {
+            offenders.Add(
+                $"{typeof(EfMembershipStandingSource).FullName} is in namespace " +
+                $"'{typeof(EfMembershipStandingSource).Namespace}', not beside " +
+                $"{typeof(EfStatsRepository).FullName}");
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"EfMembershipStandingSource must reside in {InfrastructureName} alongside the existing " +
+            $"squad-scoped aggregation (api-response-contracts 11.5). Offenders: {Describe(offenders)}.");
+
+        // The negative half: no standing-source implementation compiled into the inner layers.
+        var misplaced = new[] { DomainAssembly, ApplicationAssembly }
+            .SelectMany(assembly => ConcreteImplementationsIn(assembly, typeof(IMembershipStandingSource)))
+            .Select(type => $"{type.FullName} in '{type.Assembly.GetName().Name}'")
+            .ToList();
+
+        Assert.True(
+            misplaced.Count == 0,
+            $"No {nameof(IMembershipStandingSource)} implementation may reside in {DomainName} or " +
+            $"{ApplicationName} — aggregation SQL belongs to {InfrastructureName} " +
+            $"(api-response-contracts 11.5). Offenders: {Describe(misplaced)}.");
+    }
+
+    [Fact]
+    public void MembershipStandingSource_TakesNoDependencyOnTheRatingClassificationSurface()
+    {
+        // api-response-contracts 11.6 — the standing source reports raw standing only. Classifying a σ
+        // as provisional or established is the Domain rule (IRatingEngine.GetState), applied by the
+        // consuming handler, so the implementation references no type from the Domain rating namespace.
+        var result = Types.InAssembly(InfrastructureAssembly)
+            .That().HaveName(nameof(EfMembershipStandingSource))
+            .Should().NotHaveDependencyOn(RatingDomainNamespace)
+            .GetResult();
+
+        var offenders = result.IsSuccessful
+            ? Array.Empty<string>()
+            : (result.FailingTypeNames?.ToArray() ?? Array.Empty<string>());
+
+        Assert.True(
+            result.IsSuccessful,
+            $"{nameof(EfMembershipStandingSource)} must not depend on {RatingDomainNamespace} — the " +
+            $"provisional classification stays in {DomainName} (api-response-contracts 11.6). " +
+            $"Offending types: {Describe(offenders)}.");
     }
 
     private static void AssertNamespaceHasNoDependencyOn(
