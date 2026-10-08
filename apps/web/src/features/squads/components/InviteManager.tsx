@@ -65,7 +65,7 @@ import {
 import { LiveRegion } from '../../auth';
 import type { AuthState } from '../../auth';
 import type { GenerateInviteRequest, SquadsApi } from '../api/squadsApi';
-import type { InviteStateValue } from '../lib/enumCodes';
+import type { InviteState } from '../lib/wireEnums';
 import {
   formatInviteInstant,
   inviteInstantAttribute,
@@ -160,10 +160,10 @@ export const INVITE_MANAGER_OUTCOME_REGION_ID = 'squads-invite-outcome';
  * The label of each named Invite_State — a total lookup, so none is missable
  * (Requirement 11.2).
  */
-const INVITE_STATE_LABELS: Readonly<Record<InviteStateValue, string>> = {
-  active: INVITE_ACTIVE_STATE_LABEL,
-  revoked: INVITE_REVOKED_STATE_LABEL,
-  expired: INVITE_EXPIRED_STATE_LABEL,
+const INVITE_STATE_LABELS: Readonly<Record<InviteState, string>> = {
+  Active: INVITE_ACTIVE_STATE_LABEL,
+  Revoked: INVITE_REVOKED_STATE_LABEL,
+  Expired: INVITE_EXPIRED_STATE_LABEL,
 };
 
 /**
@@ -472,9 +472,9 @@ export function InviteManager({
           )}
         </span>
 
-        {/* 11.9: a revoke control on an `active` invite, and none on a revoked or
+        {/* 11.9: a revoke control on an `Active` invite, and none on a revoked or
             expired one — there is nothing left to revoke. */}
-        {invite.state === 'active' ? (
+        {invite.state === 'Active' ? (
           <button
             type="button"
             className="squads-invite-entry__revoke"

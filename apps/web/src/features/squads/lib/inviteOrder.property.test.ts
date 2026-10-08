@@ -3,7 +3,7 @@ import fc from 'fast-check';
 
 import { compareInviteSummaries, orderInviteSummaries } from './inviteOrder';
 import type { InviteSummary } from './parse/inviteSummary';
-import type { InviteStateValue } from './enumCodes';
+import { INVITE_STATE_NAMES, type InviteState } from './wireEnums';
 
 /**
  * Property tests for the single pure function that decides the Invite_Order,
@@ -122,10 +122,8 @@ const instantArb: fc.Arbitrary<number> = fc.oneof(
   },
 );
 
-const stateArb: fc.Arbitrary<InviteStateValue> = fc.constantFrom(
-  'active' as const,
-  'revoked' as const,
-  'expired' as const,
+const stateArb: fc.Arbitrary<InviteState> = fc.constantFrom(
+  ...INVITE_STATE_NAMES,
 );
 
 /** The audit actor string, `null` for a system operation. */
@@ -265,7 +263,7 @@ describe('orderInviteSummaries — the result is newest first, then by identity'
           // clause and Requirement 20.6's determinism claim turn on.
           const summaries = identities.map((inviteId) => ({
             inviteId,
-            state: 'active' as const,
+            state: 'Active' as const,
             createdAtMs,
             createdBy: null,
             expiresAtMs: null,
@@ -286,21 +284,21 @@ describe('orderInviteSummaries — the result is newest first, then by identity'
     const ordered = orderInviteSummaries([
       {
         inviteId: 'a',
-        state: 'expired',
+        state: 'Expired',
         createdAtMs: 1_000,
         createdBy: null,
         expiresAtMs: 2_000,
       },
       {
         inviteId: 'b',
-        state: 'active',
+        state: 'Active',
         createdAtMs: 3_000,
         createdBy: 'admin',
         expiresAtMs: null,
       },
       {
         inviteId: 'c',
-        state: 'revoked',
+        state: 'Revoked',
         createdAtMs: 2_000,
         createdBy: 'admin',
         expiresAtMs: null,
@@ -487,7 +485,7 @@ describe('orderInviteSummaries — the ordered listing adds, drops, and duplicat
         // Requirement 11.9 hides the revoke *control* on a non-active invite, not
         // the invite. Ordering is not the place that decision is made, and this is
         // what says so.
-        for (const state of ['active', 'revoked', 'expired'] as const) {
+        for (const state of INVITE_STATE_NAMES) {
           expect(ordered.filter((summary) => summary.state === state)).toHaveLength(
             summaries.filter((summary) => summary.state === state).length,
           );

@@ -49,7 +49,7 @@
  *
  * ### Repeated flags are generated on purpose
  *
- * The Enum_Code_Map names one Squad_Feature, so a collection of more than one flag
+ * The Generated_Enum_Union names one Squad_Feature, so a collection of more than one flag
  * necessarily repeats it — which is what the wire can carry and what the component
  * renders positionally rather than rejecting. Generating those collections is how
  * "one toggle per flag" is checked as a count over the collection rather than over
@@ -89,7 +89,7 @@ import type {
   SquadsApi,
 } from '../api/squadsApi';
 import type { RejectionReason } from '../lib/callOutcome';
-import { codeFromSquadFeature, type SquadFeatureValue } from '../lib/enumCodes';
+import type { SquadFeature } from '../lib/wireEnums';
 import {
   GENERIC_SQUADS_FAILURE,
   NO_OPTIONAL_FEATURES_STATEMENT,
@@ -185,11 +185,11 @@ async function flush(): Promise<void> {
 // --- Generators ---------------------------------------------------------------
 
 /**
- * The one Squad_Feature the Enum_Code_Map names — so a collection longer than one
+ * The one Squad_Feature the Generated_Enum_Union names — so a collection longer than one
  * repeats it, which is a shape the wire can carry and the component renders
  * positionally.
  */
-const FEATURE: SquadFeatureValue = 'live-match-tracking';
+const FEATURE: SquadFeature = 'LiveMatchTracking';
 
 /** A Feature_Flag collection, empty included, each flag in either state. */
 const flagsArb = (minLength: number): fc.Arbitrary<readonly FeatureFlag[]> =>
@@ -390,7 +390,7 @@ function expectOneCommand(
 
   transport.commands.forEach((command, index) => {
     expect(Object.keys(command).sort()).toEqual(['enabled', 'feature']);
-    expect(command.feature).toBe(codeFromSquadFeature(FEATURE));
+    expect(command.feature).toBe(FEATURE);
     expect(command.enabled).toBe(requested[index]);
   });
 

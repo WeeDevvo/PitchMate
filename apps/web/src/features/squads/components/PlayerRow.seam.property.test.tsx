@@ -72,12 +72,7 @@ import {
   PlayerRow,
   type ViewerContext,
 } from './PlayerRow';
-import {
-  codeFromMemberRole,
-  codeFromMembershipState,
-  type MemberRole,
-  type MembershipStateValue,
-} from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { parseSquadDetail } from '../lib/parse/squadDetail';
 import { composePlayerList, type PlayerListRow } from '../lib/playerList';
 import { PLAYER_STATS_ROUTE, playerStatsPath } from '../lib/routePaths';
@@ -198,8 +193,8 @@ const playerNameArb: fc.Arbitrary<string> = fc.oneof(
 interface MemberCase {
   readonly membershipId: string;
   readonly displayName: string;
-  readonly role: MemberRole | null;
-  readonly state: MembershipStateValue;
+  readonly role: SquadRole | null;
+  readonly state: MembershipState;
   readonly isGuest: boolean;
 }
 
@@ -207,8 +202,8 @@ const memberCaseArb: fc.Arbitrary<MemberCase> = fc
   .record({
     membershipId: membershipIdArb,
     displayName: playerNameArb,
-    role: fc.constantFrom<MemberRole | null>('owner', 'admin', 'member', null),
-    state: fc.constantFrom<MembershipStateValue>('active', 'inactive'),
+    role: fc.constantFrom<SquadRole | null>('Owner', 'Admin', 'Member', null),
+    state: fc.constantFrom<MembershipState>('Active', 'Inactive'),
     isGuest: fc.boolean(),
   })
   // A guest carries no role on the wire, which is the shape the parser accepts as
@@ -257,9 +252,11 @@ function composedRowsOf(testCase: SeamCase): readonly PlayerListRow[] {
     members: testCase.members.map((member) => ({
       membershipId: member.membershipId,
       displayName: member.displayName,
-      role: member.role === null ? null : codeFromMemberRole(member.role),
-      state: codeFromMembershipState(member.state),
+      role: member.role === null ? null : member.role,
+      state: member.state,
       isGuest: member.isGuest,
+      appearances: 12,
+      ratingState: 'Established',
     })),
     features: [],
   };

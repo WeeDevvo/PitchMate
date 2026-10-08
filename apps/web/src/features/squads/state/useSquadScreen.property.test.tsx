@@ -49,7 +49,7 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import fc from 'fast-check';
 
 import type { CallResult, SquadsApi } from '../api/squadsApi';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import type { FeatureFlag } from '../lib/parse/featureFlags';
 import type {
   DisplayRatingEntry,
@@ -67,17 +67,17 @@ const identityArb: fc.Arbitrary<string> = fc.oneof(
 );
 
 /** A Member_Role, including the `null` a guest membership carries (16.8). */
-const roleArb: fc.Arbitrary<MemberRole | null> = fc.constantFrom(
-  'owner' as const,
-  'admin' as const,
-  'member' as const,
+const roleArb: fc.Arbitrary<SquadRole | null> = fc.constantFrom(
+  'Owner' as const,
+  'Admin' as const,
+  'Member' as const,
   null,
 );
 
 /** A Membership_State; never absent, since a membership always has one. */
-const stateArb: fc.Arbitrary<MembershipStateValue> = fc.constantFrom(
-  'active' as const,
-  'inactive' as const,
+const stateArb: fc.Arbitrary<MembershipState> = fc.constantFrom(
+  'Active' as const,
+  'Inactive' as const,
 );
 
 /** A Player_Display_Name, including the Anonymised_Placeholder. */
@@ -96,7 +96,7 @@ const nameArb: fc.Arbitrary<string> = fc.oneof(
   { weight: 2, arbitrary: fc.string({ minLength: 0, maxLength: 20 }) },
 );
 
-/** The one Feature_Flag the Enum_Code_Map names, switched either way. */
+/** The one Feature_Flag the Generated_Enum_Union names, switched either way. */
 const featuresArb: fc.Arbitrary<readonly FeatureFlag[]> = fc.oneof(
   fc.constant([] as readonly FeatureFlag[]),
   fc
@@ -104,7 +104,7 @@ const featuresArb: fc.Arbitrary<readonly FeatureFlag[]> = fc.oneof(
     .map(
       (isEnabled) =>
         [
-          { feature: 'live-match-tracking', isEnabled },
+          { feature: 'LiveMatchTracking', isEnabled },
         ] as readonly FeatureFlag[],
     ),
 );
@@ -115,6 +115,8 @@ const memberBodyArb = fc.record({
   role: roleArb,
   state: stateArb,
   isGuest: fc.boolean(),
+  appearances: fc.nat({ max: 200 }),
+  ratingState: fc.constantFrom('Provisional' as const, 'Established' as const, null),
 });
 
 /**

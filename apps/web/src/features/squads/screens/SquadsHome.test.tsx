@@ -161,7 +161,7 @@ function renderHome(api: SquadsApi): void {
 }
 
 function summary(squadId: string, name: string): SquadSummary {
-  return { squadId, name, role: 'owner', state: 'active' };
+  return { squadId, name, role: 'Owner', state: 'Active' };
 }
 
 function cardIdentities(): readonly (string | null)[] {
@@ -347,7 +347,7 @@ describe('SquadsHome — joining a squad', () => {
       // and no squad identity at all.
       redeemOutcome: {
         kind: 'success',
-        value: { membershipId: 'my-membership', outcome: 'joined', squadId: null },
+        value: { membershipId: 'my-membership', outcome: 'Joined', squadId: null },
       },
     });
     const user = userEvent.setup();

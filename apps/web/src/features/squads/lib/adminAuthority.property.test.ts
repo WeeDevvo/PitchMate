@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
 import { resolveAdminAuthority } from './adminAuthority';
-import type { MemberRole, MembershipStateValue } from './enumCodes';
+import type { MembershipState, SquadRole } from './wireEnums';
 import type { SquadSummary } from './parse/squadSummary';
 import type { SquadMember } from './parse/squadDetail';
 
@@ -11,8 +11,8 @@ import type { SquadMember } from './parse/squadDetail';
  * beside the module they cover as the design's Testing Strategy asks, and running
  * well above the 100-iteration floor (Requirements 20.1, 20.9).
  *
- * The input space here is *finite and tiny* — a role in {owner, admin, member,
- * absent} against a state in {active, inactive, absent}, twelve combinations, or
+ * The input space here is *finite and tiny* — a role in {Owner, Admin, Member,
+ * absent} against a state in {Active, Inactive, absent}, twelve combinations, or
  * twenty once `null` and `undefined` are distinguished as two spellings of
  * absence. So these tests do something the larger properties in this feature
  * cannot: they enumerate the space exhaustively **and** generate over it. The
@@ -24,7 +24,7 @@ import type { SquadMember } from './parse/squadDetail';
  *
  * Four claims are made:
  *
- * - **The accepted set is exactly `active` × {owner, admin}.** Stated against an
+ * - **The accepted set is exactly `Active` × {Owner, Admin}.** Stated against an
  *   independently written oracle — a literal set of the two accepted pairs, read
  *   off Requirement 10.1 rather than derived from the two comparisons the module
  *   makes — and cross-checked by counting: of the twenty combinations, exactly
@@ -52,26 +52,26 @@ import type { SquadMember } from './parse/squadDetail';
 
 // --- the input space ---------------------------------------------------------
 
-/** Every Member_Role the Enum_Code_Map names, plus both spellings of absence. */
-const ROLE_CASES: readonly (MemberRole | null | undefined)[] = [
-  'owner',
-  'admin',
-  'member',
+/** Every Member_Role the Generated_Enum_Union names, plus both spellings of absence. */
+const ROLE_CASES: readonly (SquadRole | null | undefined)[] = [
+  'Owner',
+  'Admin',
+  'Member',
   null,
   undefined,
 ];
 
-/** Every Membership_State the Enum_Code_Map names, plus both spellings of absence. */
-const STATE_CASES: readonly (MembershipStateValue | null | undefined)[] = [
-  'active',
-  'inactive',
+/** Every Membership_State the Generated_Enum_Union names, plus both spellings of absence. */
+const STATE_CASES: readonly (MembershipState | null | undefined)[] = [
+  'Active',
+  'Inactive',
   null,
   undefined,
 ];
 
 interface AuthorityCase {
-  readonly role: MemberRole | null | undefined;
-  readonly state: MembershipStateValue | null | undefined;
+  readonly role: SquadRole | null | undefined;
+  readonly state: MembershipState | null | undefined;
 }
 
 /** The full cross product: five roles by four states, twenty combinations. */
@@ -89,13 +89,13 @@ function describeCase({ role, state }: AuthorityCase): string {
 /**
  * The accepted set written straight out of Requirement 10.1 — "the Membership_State
  * is active and the Member_Role is owner or admin" — as two literal pairs rather
- * than as a pair of comparisons. A restatement of the module's `state !== 'active'`
- * / `role === 'owner' || role === 'admin'` body would agree with an inverted
+ * than as a pair of comparisons. A restatement of the module's `state !== 'Active'`
+ * / `role === 'Owner' || role === 'Admin'` body would agree with an inverted
  * comparison; a literal enumeration cannot.
  */
 const ACCEPTED_PAIRS: ReadonlySet<string> = new Set([
-  'owner|active',
-  'admin|active',
+  'Owner|Active',
+  'Admin|Active',
 ]);
 
 /** Whether Requirement 10.1 accepts this combination. */
@@ -105,11 +105,11 @@ function oracleAuthority({ role, state }: AuthorityCase): boolean {
 
 // --- generators --------------------------------------------------------------
 
-const roleArb: fc.Arbitrary<MemberRole | null | undefined> = fc.constantFrom(
+const roleArb: fc.Arbitrary<SquadRole | null | undefined> = fc.constantFrom(
   ...ROLE_CASES,
 );
 
-const stateArb: fc.Arbitrary<MembershipStateValue | null | undefined> =
+const stateArb: fc.Arbitrary<MembershipState | null | undefined> =
   fc.constantFrom(...STATE_CASES);
 
 const caseArb: fc.Arbitrary<AuthorityCase> = fc.record({
@@ -118,9 +118,9 @@ const caseArb: fc.Arbitrary<AuthorityCase> = fc.record({
 });
 
 /** A role that carries authority when the membership is active. */
-const authoritativeRoleArb: fc.Arbitrary<MemberRole> = fc.constantFrom(
-  'owner' as const,
-  'admin' as const,
+const authoritativeRoleArb: fc.Arbitrary<SquadRole> = fc.constantFrom(
+  'Owner' as const,
+  'Admin' as const,
 );
 
 /** Absence in either spelling, for the interchangeability claims. */
@@ -156,8 +156,8 @@ const summaryArb = (squadIdArb: fc.Arbitrary<string>): fc.Arbitrary<SquadSummary
   fc.record({
     squadId: squadIdArb,
     name: fc.string({ minLength: 0, maxLength: 24 }),
-    role: fc.constantFrom('owner' as const, 'admin' as const, 'member' as const, null),
-    state: fc.constantFrom('active' as const, 'inactive' as const, null),
+    role: fc.constantFrom('Owner' as const, 'Admin' as const, 'Member' as const, null),
+    state: fc.constantFrom('Active' as const, 'Inactive' as const, null),
   });
 
 /** A Squad_Member with generated role, state, and Guest_Flag. */
@@ -167,9 +167,15 @@ const memberArb = (
   fc.record({
     membershipId: membershipIdArb,
     displayName: fc.string({ minLength: 0, maxLength: 24 }),
-    role: fc.constantFrom('owner' as const, 'admin' as const, 'member' as const, null),
-    state: fc.constantFrom('active' as const, 'inactive' as const),
+    role: fc.constantFrom('Owner' as const, 'Admin' as const, 'Member' as const, null),
+    state: fc.constantFrom('Active' as const, 'Inactive' as const),
     isGuest: fc.boolean(),
+    appearances: fc.nat({ max: 200 }),
+    ratingState: fc.constantFrom(
+      'Provisional' as const,
+      'Established' as const,
+      null,
+    ),
   });
 
 /**
@@ -223,8 +229,8 @@ describe('resolveAdminAuthority — the accepted set is exactly the active owner
     // twenty combinations in, two out.
     expect(ALL_CASES).toHaveLength(20);
     expect(accepted.map(describeCase)).toEqual([
-      'role=owner state=active',
-      'role=admin state=active',
+      'role=Owner state=Active',
+      'role=Admin state=Active',
     ]);
   });
 
@@ -243,7 +249,7 @@ describe('resolveAdminAuthority — the accepted set is exactly the active owner
   it('holds for an active owner and an active admin', () => {
     fc.assert(
       fc.property(authoritativeRoleArb, (role) => {
-        expect(resolveAdminAuthority(role, 'active')).toBe(true);
+        expect(resolveAdminAuthority(role, 'Active')).toBe(true);
       }),
       { numRuns: 200 },
     );
@@ -254,7 +260,7 @@ describe('resolveAdminAuthority — the accepted set is exactly the active owner
       fc.property(stateArb, (state) => {
         // 10.1: `member` is rejected by the role test, so no state rescues it — a
         // plain member administers nothing.
-        expect(resolveAdminAuthority('member', state)).toBe(false);
+        expect(resolveAdminAuthority('Member', state)).toBe(false);
       }),
       { numRuns: 200 },
     );
@@ -266,7 +272,7 @@ describe('resolveAdminAuthority — the accepted set is exactly the active owner
         // An inactive membership keeps its role for history and replay, so an
         // inactive owner still parses as an owner. The state test is what stops a
         // removed owner from administering the squad they left.
-        expect(resolveAdminAuthority(role, 'inactive')).toBe(false);
+        expect(resolveAdminAuthority(role, 'Inactive')).toBe(false);
       }),
       { numRuns: 200 },
     );
@@ -363,9 +369,11 @@ describe('resolveAdminAuthority — the unidentified caller holds no authority',
             .map((membershipId, index) => ({
               membershipId,
               displayName: `Player ${index}`,
-              role: index % 2 === 0 ? ('owner' as const) : ('admin' as const),
-              state: 'active' as const,
+              role: index % 2 === 0 ? ('Owner' as const) : ('Admin' as const),
+              state: 'Active' as const,
               isGuest: false,
+              appearances: 12,
+              ratingState: 'Established',
             }));
 
           // A squad full of active owners grants the caller nothing: authority is

@@ -113,7 +113,7 @@ import {
 import { SQUAD_CARD_ID_ATTRIBUTE, SquadCard } from './SquadCard';
 import { HOME_ROUTE } from '../../app-shell';
 import { SQUAD_ROUTE, squadPath } from '../lib/routePaths';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import type { SquadSummary } from '../lib/parse/squadSummary';
 
 // --- Landmarks the stand-ins render ------------------------------------------
@@ -174,13 +174,13 @@ const nameArb: fc.Arbitrary<string> = fc.constantFrom(
   'Ålesund FC',
 );
 
-const roleArb: fc.Arbitrary<MemberRole | null> = fc.constantFrom<
-  MemberRole | null
->('owner', 'admin', 'member', null);
+const roleArb: fc.Arbitrary<SquadRole | null> = fc.constantFrom<
+  SquadRole | null
+>('Owner', 'Admin', 'Member', null);
 
-const stateArb: fc.Arbitrary<MembershipStateValue | null> = fc.constantFrom<
-  MembershipStateValue | null
->('active', 'inactive', null);
+const stateArb: fc.Arbitrary<MembershipState | null> = fc.constantFrom<
+  MembershipState | null
+>('Active', 'Inactive', null);
 
 const summaryArb: fc.Arbitrary<SquadSummary> = fc.record({
   squadId: squadIdArb,
@@ -493,8 +493,8 @@ describe('SquadCard navigation property harness', () => {
     {
       squadId: '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f01',
       name: 'Thursday Ballers',
-      role: 'owner',
-      state: 'active',
+      role: 'Owner',
+      state: 'Active',
     },
     {
       squadId: '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f02',

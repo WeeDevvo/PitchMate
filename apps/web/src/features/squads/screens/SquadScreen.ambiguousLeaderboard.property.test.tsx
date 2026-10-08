@@ -81,11 +81,7 @@ import {
   RATING_BADGE_KIND_ATTRIBUTE,
   RATING_BADGE_SELECTOR,
 } from '../components/RatingBadge';
-import {
-  codeFromMemberRole,
-  codeFromMembershipState,
-  type MembershipStateValue,
-} from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { RATING_UNAVAILABLE_LABEL } from '../lib/messages';
 import { parseDisplayRatingLeaderboard } from '../lib/parse/leaderboard';
 import { SQUAD_ROUTE, squadPath } from '../lib/routePaths';
@@ -145,23 +141,23 @@ const NAME_POOL: readonly string[] = [
 const nameArb: fc.Arbitrary<string> = fc.constantFrom(...NAME_POOL);
 
 /**
- * How a `members` element carries its Member_Role: as a code, as `null`, or not at
- * all — the three shapes the backend sends (Requirement 16.8). The codes come from
- * the Enum_Code_Map, the only module allowed to write a numeric enum literal.
+ * How a `members` element carries its Member_Role: as a Wire_Enum_Name, as `null`,
+ * or not at all — the three shapes the backend sends (Requirement 16.8). The names
+ * come from the Generated_Enum_Union, so no numeric enum literal appears here.
  */
-type RoleField = number | null | 'absent';
+type RoleField = SquadRole | null | 'absent';
 
 const roleFieldArb: fc.Arbitrary<RoleField> = fc.constantFrom(
-  codeFromMemberRole('owner'),
-  codeFromMemberRole('admin'),
-  codeFromMemberRole('member'),
+  'Owner',
+  'Admin',
+  'Member',
   null,
   'absent' as const,
 );
 
-const stateArb: fc.Arbitrary<MembershipStateValue> = fc.constantFrom(
-  'active' as const,
-  'inactive' as const,
+const stateArb: fc.Arbitrary<MembershipState> = fc.constantFrom(
+  'Active' as const,
+  'Inactive' as const,
 );
 
 /**
@@ -187,7 +183,7 @@ const valueArb: fc.Arbitrary<number> = fc.oneof(
 interface MemberCase {
   readonly displayName: string;
   readonly role: RoleField;
-  readonly state: MembershipStateValue;
+  readonly state: MembershipState;
   readonly isGuest: boolean;
   /** Whether the leaderboard carries an entry of its own for this membership. */
   readonly hasEntry: boolean;
@@ -263,8 +259,10 @@ function memberBodyOf(member: IdentifiedMember): Record<string, unknown> {
   const body: Record<string, unknown> = {
     membershipId: member.membershipId,
     displayName: member.displayName,
-    state: codeFromMembershipState(member.state),
+    state: member.state,
     isGuest: member.isGuest,
+    appearances: 12,
+    ratingState: 'Established',
   };
 
   if (member.role !== 'absent') {
@@ -418,8 +416,8 @@ function createApi(prepared: PreparedCase, leaderboardBody: unknown): SquadsApi 
     {
       squadId: SQUAD_ID,
       name: SQUAD_NAME,
-      role: codeFromMemberRole('member'),
-      state: codeFromMembershipState('active'),
+      role: 'Member',
+      state: 'Active',
     },
   ];
 

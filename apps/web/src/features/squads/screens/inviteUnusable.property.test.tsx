@@ -360,8 +360,8 @@ async function observeFormOutcome(options: {
   const summary: SquadSummary = {
     squadId: disclosure.squadId,
     name: disclosure.squadName,
-    role: 'owner',
-    state: 'active',
+    role: 'Owner',
+    state: 'Active',
   };
 
   const api: SquadsApi = {

@@ -72,7 +72,7 @@ import { useId, type ReactElement } from 'react';
 
 import { LiveRegion, type AuthState } from '../../auth';
 import type { SquadsApi } from '../api/squadsApi';
-import type { SquadFeatureValue } from '../lib/enumCodes';
+import type { SquadFeature } from '../lib/wireEnums';
 import {
   FEATURE_DISABLED_LABEL,
   FEATURE_ENABLED_LABEL,
@@ -129,11 +129,11 @@ export const FEATURE_TOGGLES_OUTCOME_REGION_ID = 'squads-feature-toggles-outcome
  * The persistently visible label of each named Squad_Feature — a total lookup, so
  * no named feature can reach a toggle without a label (Requirement 14.1).
  *
- * The Response_Parser fails a body carrying a feature the Enum_Code_Map does not
- * name, so this map covers every flag that can arrive.
+ * The Response_Parser fails a body carrying a feature the Generated_Enum_Union
+ * does not name, so this map covers every flag that can arrive.
  */
-const FEATURE_LABELS: Readonly<Record<SquadFeatureValue, string>> = {
-  'live-match-tracking': LIVE_MATCH_TRACKING_FEATURE_LABEL,
+const FEATURE_LABELS: Readonly<Record<SquadFeature, string>> = {
+  LiveMatchTracking: LIVE_MATCH_TRACKING_FEATURE_LABEL,
 };
 
 /**
@@ -143,7 +143,7 @@ const FEATURE_LABELS: Readonly<Record<SquadFeatureValue, string>> = {
  * states without restating the map.
  */
 // eslint-disable-next-line react-refresh/only-export-components -- a toggle and the words it renders are one unit, so the pure lookups stay beside it
-export function featureToggleLabel(feature: SquadFeatureValue): string {
+export function featureToggleLabel(feature: SquadFeature): string {
   return FEATURE_LABELS[feature];
 }
 
@@ -165,7 +165,7 @@ export function featureStateLabel(enabled: boolean): string {
  */
 // eslint-disable-next-line react-refresh/only-export-components -- see featureToggleLabel
 export function featureToggleAnnouncement(
-  feature: SquadFeatureValue,
+  feature: SquadFeature,
   enabled: boolean,
 ): string {
   const statement = enabled

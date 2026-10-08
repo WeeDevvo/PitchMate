@@ -66,12 +66,7 @@ import {
   RATING_BADGE_SHAPE_SELECTOR,
   RatingBadge,
 } from './RatingBadge';
-import {
-  codeFromMemberRole,
-  codeFromMembershipState,
-  type MemberRole,
-  type MembershipStateValue,
-} from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import {
   parseDisplayRatingLeaderboard,
   type DisplayRatingLeaderboard,
@@ -125,15 +120,15 @@ const REASON_PATTERN =
 // --- Generators --------------------------------------------------------------
 
 /** Every Member_Role a Squad_Member can carry, and the guest's absence of one. */
-const ROLE_FORMS: readonly (MemberRole | null)[] = [
-  'owner',
-  'admin',
-  'member',
+const ROLE_FORMS: readonly (SquadRole | null)[] = [
+  'Owner',
+  'Admin',
+  'Member',
   null,
 ];
 
 /** Both Membership_States (Requirement 8.12). */
-const STATE_FORMS: readonly MembershipStateValue[] = ['active', 'inactive'];
+const STATE_FORMS: readonly MembershipState[] = ['Active', 'Inactive'];
 
 /**
  * How many entries the leaderboard carries, or `null` for a leaderboard that was
@@ -167,8 +162,8 @@ const playerNameArb: fc.Arbitrary<string> = fc.oneof(
 interface BandCase {
   readonly membershipId: string;
   readonly playerName: string;
-  readonly role: MemberRole | null;
-  readonly state: MembershipStateValue;
+  readonly role: SquadRole | null;
+  readonly state: MembershipState;
   readonly isGuest: boolean;
   /** Entry count, or `null` for no leaderboard at all. */
   readonly leaderboardSize: number | null;
@@ -193,16 +188,18 @@ const bandCaseArb: fc.Arbitrary<BandCase> = fc.record({
 function parsedMemberOf(testCase: {
   readonly membershipId: string;
   readonly playerName: string;
-  readonly role: MemberRole | null;
-  readonly state: MembershipStateValue;
+  readonly role: SquadRole | null;
+  readonly state: MembershipState;
   readonly isGuest: boolean;
 }): SquadMember {
   const body = {
     membershipId: testCase.membershipId,
     displayName: testCase.playerName,
-    role: testCase.role === null ? null : codeFromMemberRole(testCase.role),
-    state: codeFromMembershipState(testCase.state),
+    role: testCase.role === null ? null : testCase.role,
+    state: testCase.state,
     isGuest: testCase.isGuest,
+    appearances: 12,
+    ratingState: 'Established',
   };
   const parsed = parseSquadMember(body);
 
@@ -291,8 +288,8 @@ function baselineMarkupFor(
   const member = parsedMemberOf({
     membershipId: '00000000-0000-4000-8000-000000000001',
     playerName,
-    role: 'owner',
-    state: 'active',
+    role: 'Owner',
+    state: 'Active',
     isGuest: false,
   });
   const leaderboard = parsedLeaderboardOf(kind === 'provisional' ? 1 : null);
@@ -434,8 +431,8 @@ describe('Property 21 — the band and unavailable presentations are constant, n
           const member = parsedMemberOf({
             membershipId,
             playerName,
-            role: 'member',
-            state: 'active',
+            role: 'Member',
+            state: 'Active',
             isGuest: false,
           });
           const leaderboard = parsedLeaderboardOf(

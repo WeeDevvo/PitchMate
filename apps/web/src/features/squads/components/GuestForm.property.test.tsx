@@ -15,7 +15,7 @@
  * | --- | --- |
  * | 12.2 — a call exactly when the trimmed name is non-empty and within the bound, and the acknowledgement is given | {@link expectCreateCall} |
  * | 12.2 — the submitted name is the trimmed one | {@link expectCreateCall}, {@link expectEditCall} |
- * | 12.5 — the tier is omitted exactly while the no-tier default is selected, and otherwise carries that tier's **0-based** code | {@link expectedCreateCommand}, {@link expectNoTierCodeOutOfRange} |
+ * | 12.5 — the tier is omitted exactly while the no-tier default is selected, and otherwise carries that tier's **member name** | {@link expectedCreateCommand}, {@link expectNoTierCodeOutOfRange} |
  * | 12.9 — an edit states whether the tier changes and carries a tier only then | {@link expectedEditCommand} |
  *
  * ### The command is read at the api seam, not off the form
@@ -24,12 +24,13 @@
  * `useGuestManager` and `lib/skillTier.ts` are what turn that into the wire body.
  * So every assertion below reads the arguments of the `createGuest` / `editGuest`
  * double — the real machine's real command, built by the real mapping. That is
- * what makes the 0-based claim meaningful: the codes `beginner → 0`,
- * `average → 1`, `strong → 2` are written out *here*, independently of
- * `lib/enumCodes.ts`, so a 1-based drift in that table fails this property rather
- * than being restated by it. {@link expectNoTierCodeOutOfRange} adds the reading
- * that catches the same drift from the other side: no command ever carries the
- * code `3`, which a 1-based `strong` would produce.
+ * what makes the vocabulary claim meaningful: the wire values `Beginner`,
+ * `Average`, `Strong` are written out *here*, independently of
+ * `lib/wireEnums.ts`, so a casing or vocabulary drift in that module fails this
+ * property rather than being restated by it.
+ * {@link expectNoTierCodeOutOfRange} adds the reading that catches the same
+ * drift from the other side: no command ever carries a numeric code or a
+ * lower-cased name, which is what the retired code table used to emit.
  *
  * ### Why the field is set rather than typed, and why the expectation is read back
  *
@@ -83,23 +84,37 @@ const GUEST_MEMBERSHIP_ID = '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f0a';
 const DISPLAY_NAME_MAX_LENGTH = 100;
 
 /**
- * The **0-based** `SkillTier` wire codes, written out independently of
- * `lib/enumCodes.ts` (Requirements 12.5, 16.6).
+ * The `SkillTier` wire values, written out independently of `lib/wireEnums.ts`
+ * (Requirements 12.5, 16.6).
+ *
+ * The backend serialises each tier as its **member name verbatim**, so the wire
+ * value is the C# member name and nothing else. Stating it here rather than
+ * reading it from the module under test is what makes the claim an oracle: a
+ * casing or vocabulary drift in that module fails this property rather than
+ * agreeing with itself.
  */
-const EXPECTED_TIER_CODE: Readonly<Record<TierName, number>> = {
-  beginner: 0,
-  average: 1,
-  strong: 2,
+const EXPECTED_TIER_WIRE_VALUE: Readonly<Record<TierName, string>> = {
+  Beginner: 'Beginner',
+  Average: 'Average',
+  Strong: 'Strong',
 };
 
 /**
- * The code a 1-based `SkillTier` table would produce for `strong`, and which no
- * command may ever carry.
+ * Values the retired numeric code table, or a lower-cased reading of the names,
+ * would have produced — and which no command may ever carry.
  */
-const CODE_NO_TIER_HAS = 3;
+const VALUES_NO_TIER_HAS: readonly unknown[] = [
+  0,
+  1,
+  2,
+  3,
+  'beginner',
+  'average',
+  'strong',
+];
 
 /** The three Skill_Tiers, by the names the option model uses. */
-type TierName = 'beginner' | 'average' | 'strong';
+type TierName = 'Beginner' | 'Average' | 'Strong';
 
 /** The create-mode selection: the three tiers, plus the option to seed none. */
 type CreateTierOption = TierName | 'do-not-seed';
@@ -107,7 +122,7 @@ type CreateTierOption = TierName | 'do-not-seed';
 /** The edit-mode selection: the three tiers, plus leaving the tier unchanged. */
 type EditTierOption = TierName | 'leave-unchanged';
 
-const TIER_NAMES: readonly TierName[] = ['beginner', 'average', 'strong'];
+const TIER_NAMES: readonly TierName[] = ['Beginner', 'Average', 'Strong'];
 
 // --- Generators ---------------------------------------------------------------
 
@@ -216,8 +231,10 @@ const GUEST_ROW: PlayerListRow = {
   membershipId: GUEST_MEMBERSHIP_ID,
   displayName: 'Big Dave',
   role: null,
-  state: 'active',
+  state: 'Active',
   isGuest: true,
+  appearances: 12,
+  ratingState: 'Established',
   isFormerPlayer: false,
   leaderboardObtained: false,
   ratingEntry: null,
@@ -307,7 +324,7 @@ function expectedCreateCommand(
 
   // 12.5: the default seeds no tier, so the property is absent altogether.
   if (tier !== 'do-not-seed') {
-    command.skillTier = EXPECTED_TIER_CODE[tier];
+    command.skillTier = EXPECTED_TIER_WIRE_VALUE[tier];
   }
 
   return command;
@@ -326,7 +343,7 @@ function expectedEditCommand(
   return {
     displayName: entered.trim(),
     updateSkillTier: true,
-    skillTier: EXPECTED_TIER_CODE[tier],
+    skillTier: EXPECTED_TIER_WIRE_VALUE[tier],
   };
 }
 
@@ -348,15 +365,15 @@ function expectCommandIsExactly(
 
 /**
  * Requirements 12.5, 12.9, 16.6: any tier a command carries is one of the three
- * 0-based codes, and never the `3` a 1-based table would produce for `strong`.
+ * member names, and never a numeric code or a lower-cased reading of a name.
  */
 function expectNoTierCodeOutOfRange(command: Record<string, unknown>): void {
   if (!('skillTier' in command)) {
     return;
   }
 
-  expect(command.skillTier).not.toBe(CODE_NO_TIER_HAS);
-  expect(Object.values(EXPECTED_TIER_CODE)).toContain(command.skillTier);
+  expect(VALUES_NO_TIER_HAS).not.toContain(command.skillTier);
+  expect(Object.values(EXPECTED_TIER_WIRE_VALUE)).toContain(command.skillTier);
 }
 
 /**
@@ -504,7 +521,7 @@ describe('Property 30 — guest commands carry exactly the acknowledged, trimmed
 
   // Feature: web-squads-screens, Property 30: Guest commands carry exactly the acknowledged, trimmed, and selected values
   // Validates: Requirements 12.5, 12.9
-  it('sends no skill-tier code outside the three 0-based codes, in either mode', async () => {
+  it('sends no skill-tier value outside the three member names, in either mode', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.constantFrom(...TIER_NAMES),
@@ -557,9 +574,9 @@ describe('Property 30 — guest commands carry exactly the acknowledged, trimmed
           expect(commands).toHaveLength(2);
 
           for (const command of commands) {
-            // Both modes carried the tier, and both carried the same 0-based code
-            // — a 1-based table would put `3` here for `strong`.
-            expect(command.skillTier).toBe(EXPECTED_TIER_CODE[tier]);
+            // Both modes carried the tier, and both carried the same member name
+            // — the retired code table would have put a number here.
+            expect(command.skillTier).toBe(EXPECTED_TIER_WIRE_VALUE[tier]);
             expectNoTierCodeOutOfRange(command);
           }
         },

@@ -313,9 +313,11 @@ function memberWithIdentity(membershipId: string, displayName: string): SquadMem
   return {
     membershipId,
     displayName,
-    role: 'member',
-    state: 'active',
+    role: 'Member',
+    state: 'Active',
     isGuest: false,
+    appearances: 12,
+    ratingState: 'Established',
   };
 }
 

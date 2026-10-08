@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
-import { REDEEM_OUTCOME_CODES, redeemOutcomeFromCode } from '../enumCodes';
 import { isSquadIdentifier } from '../identifiers';
+import { REDEEM_OUTCOME_NAMES, isRedeemOutcome } from '../wireEnums';
 import type { ParseResult } from './primitives';
 import { parseRedemption, type Redemption } from './redemption';
 
@@ -14,9 +14,9 @@ import { parseRedemption, type Redemption } from './redemption';
  * This file carries **Property 35** for `redemption.ts`: for any value supplied as a
  * response body — absent, `null`, a primitive of every type, an array, an object
  * with each field missing, an object with each field mistyped, an enum field
- * carrying a code the Enum_Code_Map does not name, and a value nested a hundred
- * levels deep — the parser yields exactly one of a fully populated Redemption and a
- * parse failure, and raises nothing (16.4, 16.6).
+ * carrying a value outside the generated `RedeemOutcome` vocabulary, and a value
+ * nested a hundred levels deep — the parser yields exactly one of a fully populated
+ * Redemption and a parse failure, and raises nothing (12.6, 12.8, 16.4, 16.6).
  *
  * This is the one operation with **two valid wire forms**, and the shape of the
  * assertions follows from that.
@@ -29,11 +29,12 @@ import { parseRedemption, type Redemption } from './redemption';
  * is asserted rather than assumed.
  *
  * **Every field is optional, and none is unvalidated.** A present `membershipId`
- * that is not an identity, and a present `outcome` the map does not name, each fail
- * the body. `RedeemOutcome` is one of the two **0-based** wire enums, so the
- * out-of-range generator leads with `3` — the code a 1-based misreading would name,
- * and the very code the task names for `SkillTier`, which is 0-based for the same
- * reason.
+ * that is not an identity, and a present `outcome` outside the generated
+ * vocabulary, each fail the body. `RedeemOutcome` *was* the more dangerous of the
+ * two **0-based** wire enums — the backend declares no explicit values, so a
+ * 1-based code table shifted every outcome by one in silence. The out-of-range
+ * generator therefore leads with `0`, `1`, `2` and `3`: by name, none of the codes
+ * either reading would have used means anything at all (Requirement 12.8).
  *
  * **`squadId` is read although the backend does not send it.** Requirements 4.6 and
  * 5.8 describe a branch that navigates straight to a redeemed squad when a redemption
@@ -41,7 +42,7 @@ import { parseRedemption, type Redemption } from './redemption';
  * both the absent form (the normal path) and the present form (the branch that lands
  * unchanged when the backend adds it).
  *
- * Requirements: 4.6, 5.8, 16.4, 16.6, 20.10
+ * Requirements: 4.6, 5.8, 12.6, 12.7, 12.8, 16.4, 16.6, 20.10
  */
 
 /* -------------------------------------------------------------------------- */
@@ -243,33 +244,40 @@ const notAPresentIdentityArb: fc.Arbitrary<unknown> = fc.oneof(
 );
 
 /**
- * Present values no Redeem_Outcome code names.
+ * Present values the generated `RedeemOutcome` vocabulary does not carry.
  *
- * `3` leads: `RedeemOutcome` declares no explicit values in the backend, so it is
- * **0-based** and `joined` is `0`. A 1-based reading would name `3` and shift every
- * outcome by one — the same defect the task names against `SkillTier`, which is
- * 0-based for the same reason. `-1` is the near miss on the other side.
+ * `0`, `1`, `2` and `3` lead. The first three are the codes the previous contract
+ * sent for this field and the fourth is the code a 1-based misreading of that
+ * 0-based enum would have named — by name, all four are equally meaningless, which
+ * is the whole point of the change. `'joined'` and `'already-member'` are the
+ * retired vocabulary, and nothing here case-folds or re-spells (Requirement 12.8).
  */
 const unnamedOutcomeCodeArb: fc.Arbitrary<unknown> = fc.oneof(
   {
     weight: 5,
     arbitrary: fc.constantFrom<unknown>(
+      0,
+      1,
+      2,
       3,
-      4,
+      'joined',
+      'reactivated',
+      'already-member',
       -1,
       0.5,
-      1.5,
-      2.5,
       Number.NaN,
       Number.POSITIVE_INFINITY,
       '0',
       '1',
-      'joined',
-      'already-member',
+      'JOINED',
+      'Joined ',
+      'Already-Member',
+      'AlreadyMembers',
+      '',
       true,
       false,
-      [0],
-      { outcome: 0 },
+      ['Joined'],
+      { outcome: 'Joined' },
       0n,
     ),
   },
@@ -277,9 +285,7 @@ const unnamedOutcomeCodeArb: fc.Arbitrary<unknown> = fc.oneof(
     weight: 2,
     arbitrary: anyBodyArb.filter(
       (value) =>
-        value !== null &&
-        value !== undefined &&
-        redeemOutcomeFromCode(value) === undefined,
+        value !== null && value !== undefined && !isRedeemOutcome(value),
     ),
   },
 );
@@ -287,14 +293,6 @@ const unnamedOutcomeCodeArb: fc.Arbitrary<unknown> = fc.oneof(
 /* -------------------------------------------------------------------------- */
 /* Well-formed bodies, and what a populated value must look like              */
 /* -------------------------------------------------------------------------- */
-
-/** The named Redeem_Outcome codes, read from the Enum_Code_Map itself. */
-const NAMED_OUTCOME_CODES: readonly number[] = Object.keys(
-  REDEEM_OUTCOME_CODES,
-).map(Number);
-
-/** The outcome names the Enum_Code_Map carries. */
-const OUTCOME_NAMES: readonly string[] = Object.values(REDEEM_OUTCOME_CODES);
 
 /**
  * A well-formed `RedeemInvite` body in its object form, generated across present,
@@ -309,7 +307,9 @@ const wellFormedArb: fc.Arbitrary<Record<string, unknown>> = fc
     outcome: fc.oneof(
       {
         weight: 3,
-        arbitrary: fc.constantFrom(...NAMED_OUTCOME_CODES) as fc.Arbitrary<unknown>,
+        // 12.11: the generator emits Wire_Enum_Names, read from the generated
+        // vocabulary itself rather than restated here.
+        arbitrary: fc.constantFrom(...REDEEM_OUTCOME_NAMES) as fc.Arbitrary<unknown>,
       },
       { weight: 1, arbitrary: fc.constant<unknown>(null) },
     ),
@@ -363,7 +363,7 @@ function isFullyPopulated(redemption: Redemption): boolean {
     keySignature(redemption) === 'membershipId,outcome,squadId' &&
     (redemption.membershipId === null ||
       isSquadIdentifier(redemption.membershipId)) &&
-    (redemption.outcome === null || OUTCOME_NAMES.includes(redemption.outcome)) &&
+    (redemption.outcome === null || isRedeemOutcome(redemption.outcome)) &&
     (redemption.squadId === null || isSquadIdentifier(redemption.squadId))
   );
 }
@@ -469,10 +469,11 @@ describe('parseRedemption — total, and never partial', () => {
               ? null
               : body.membershipId,
           );
+          // 12.8: the name is carried through unchanged — nothing is mapped.
           expect(outcome.value.outcome).toBe(
             body.outcome === null || body.outcome === undefined
               ? null
-              : redeemOutcomeFromCode(body.outcome),
+              : body.outcome,
           );
           expect(outcome.value.squadId).toBe(
             body.squadId === null || body.squadId === undefined
@@ -489,18 +490,16 @@ describe('parseRedemption — total, and never partial', () => {
     fc.assert(
       fc.property(
         identityArb,
-        fc.constantFrom(...NAMED_OUTCOME_CODES),
-        (membershipId, outcomeCode) => {
+        fc.constantFrom(...REDEEM_OUTCOME_NAMES),
+        (membershipId, outcomeName) => {
           const outcome = settle(
-            () => parseRedemption({ membershipId, outcome: outcomeCode }),
+            () => parseRedemption({ membershipId, outcome: outcomeName }),
             isFullyPopulated,
           );
 
           expect(outcome.ok).toBe(true);
           expect(outcome.ok && outcome.value.membershipId).toBe(membershipId);
-          expect(outcome.ok && outcome.value.outcome).toBe(
-            redeemOutcomeFromCode(outcomeCode),
-          );
+          expect(outcome.ok && outcome.value.outcome).toBe(outcomeName);
           // Not sent by the backend today, so the fallback path — navigate to the
           // Squads_Home and re-list — is the normal one (4.6, 5.8).
           expect(outcome.ok && outcome.value.squadId).toBeNull();
@@ -510,33 +509,25 @@ describe('parseRedemption — total, and never partial', () => {
     );
   });
 
-  it('names each of the three outcomes, so the 0-based table is not read as 1-based', () => {
-    const outcome = settle(
-      () => parseRedemption({ outcome: 0 }),
-      isFullyPopulated,
-    );
-
-    expect(outcome.ok).toBe(true);
-    expect(outcome.ok && outcome.value.outcome).toBe('joined');
-
-    for (const [code, expected] of [
-      [0, 'joined'],
-      [1, 'reactivated'],
-      [2, 'already-member'],
-    ] as const) {
+  it('accepts the three outcome names and refuses the codes that used to carry them', () => {
+    for (const name of REDEEM_OUTCOME_NAMES) {
       const named = settle(
-        () => parseRedemption({ outcome: code }),
+        () => parseRedemption({ outcome: name }),
         isFullyPopulated,
       );
 
-      expect(named.ok && named.value.outcome).toBe(expected);
+      expect(named.ok).toBe(true);
+      expect(named.ok && named.value.outcome).toBe(name);
     }
 
-    // A 1-based reading would name `3`, and the correct table must not.
-    expect(parseRedemption({ outcome: 3 }).ok).toBe(false);
+    // The codes of both readings of the old 0-based table — the correct one and
+    // the 1-based misreading — now name nothing at all.
+    for (const code of [0, 1, 2, 3]) {
+      expect(parseRedemption({ outcome: code }).ok).toBe(false);
+    }
   });
 
-  it('fails when a present outcome code names nothing, 3 included', () => {
+  it('fails when a present outcome is not a member name, the old codes included', () => {
     fc.assert(
       fc.property(wellFormedArb, unnamedOutcomeCodeArb, (body, outcomeCode) => {
         const result = settle(

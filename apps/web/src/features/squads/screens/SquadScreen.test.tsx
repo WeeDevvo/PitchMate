@@ -102,9 +102,11 @@ function member(overrides: Partial<SquadMember> = {}): SquadMember {
   return {
     membershipId: MEMBERSHIP_ID,
     displayName: 'Ada',
-    role: 'member',
-    state: 'active',
+    role: 'Member',
+    state: 'Active',
     isGuest: false,
+    appearances: 12,
+    ratingState: 'Established',
     ...overrides,
   };
 }
@@ -123,8 +125,8 @@ function summary(overrides: Partial<SquadSummary> = {}): SquadSummary {
   return {
     squadId: SQUAD_ID,
     name: 'Thursday Ballers',
-    role: 'member',
-    state: 'active',
+    role: 'Member',
+    state: 'Active',
     ...overrides,
   };
 }
@@ -314,7 +316,7 @@ describe('SquadScreen — the states of the detail slot', () => {
     const { api } = createFakeApi({
       detailOutcomes: [{ kind: 'success', value: detail() }],
       leaderboardOutcome: { kind: 'success', value: leaderboard() },
-      summaries: [summary({ role: 'owner' })],
+      summaries: [summary({ role: 'Owner' })],
       invitesAvailable: true,
     });
 
@@ -338,7 +340,7 @@ describe('SquadScreen — the states of the detail slot', () => {
   it('renders the Not_Found_Treatment alone for a not-found result', async () => {
     const { api } = createFakeApi({
       detailOutcomes: [{ kind: 'not-found' }],
-      summaries: [summary({ role: 'owner' })],
+      summaries: [summary({ role: 'Owner' })],
     });
 
     renderScreen(api);
@@ -405,7 +407,7 @@ describe('SquadScreen — the caller’s own standing', () => {
   it('names the caller’s Member_Role from the ListMySquads summary for this squad', async () => {
     const { api } = createFakeApi({
       detailOutcomes: [{ kind: 'success', value: detail() }],
-      summaries: [summary({ role: 'owner' })],
+      summaries: [summary({ role: 'Owner' })],
       invitesAvailable: true,
     });
 
@@ -439,7 +441,7 @@ describe('SquadScreen — the caller’s own standing', () => {
   it('renders no Admin_Section for a member, and the Player_List unchanged', async () => {
     const { api } = createFakeApi({
       detailOutcomes: [{ kind: 'success', value: detail() }],
-      summaries: [summary({ role: 'member' })],
+      summaries: [summary({ role: 'Member' })],
     });
 
     renderScreen(api);

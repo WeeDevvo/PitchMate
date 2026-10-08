@@ -3,7 +3,7 @@ import fc from 'fast-check';
 
 import { compareSquadSummaries, orderSquadSummaries } from './squadOrder';
 import type { SquadSummary } from './parse/squadSummary';
-import type { MemberRole, MembershipStateValue } from './enumCodes';
+import type { MembershipState, SquadRole } from './wireEnums';
 
 /**
  * Property tests for the single pure function that decides the Squad_Card order,
@@ -155,16 +155,16 @@ const nameArb: fc.Arbitrary<string> = fc.oneof(
   { weight: 3, arbitrary: fc.string({ minLength: 0, maxLength: 24 }) },
 );
 
-const roleArb: fc.Arbitrary<MemberRole | null> = fc.constantFrom(
-  'owner' as const,
-  'admin' as const,
-  'member' as const,
+const roleArb: fc.Arbitrary<SquadRole | null> = fc.constantFrom(
+  'Owner' as const,
+  'Admin' as const,
+  'Member' as const,
   null,
 );
 
-const stateArb: fc.Arbitrary<MembershipStateValue | null> = fc.constantFrom(
-  'active' as const,
-  'inactive' as const,
+const stateArb: fc.Arbitrary<MembershipState | null> = fc.constantFrom(
+  'Active' as const,
+  'Inactive' as const,
   null,
 );
 
@@ -295,8 +295,8 @@ describe('orderSquadSummaries — the result is sorted by name, then by identity
           const summaries = identities.map((squadId, index) => ({
             squadId,
             name: family[index % family.length],
-            role: 'member' as const,
-            state: 'active' as const,
+            role: 'Member' as const,
+            state: 'Active' as const,
           }));
 
           expect(identitiesOf(orderSquadSummaries(summaries))).toEqual(
@@ -313,8 +313,8 @@ describe('orderSquadSummaries — the result is sorted by name, then by identity
     // comparison 'Zebra' would precede 'apple', which is the bug this key avoids.
     const ordered = orderSquadSummaries([
       { squadId: 'a', name: 'Zebra FC', role: null, state: null },
-      { squadId: 'b', name: 'apple FC', role: 'owner', state: 'active' },
-      { squadId: 'c', name: 'Banana FC', role: 'admin', state: 'inactive' },
+      { squadId: 'b', name: 'apple FC', role: 'Owner', state: 'Active' },
+      { squadId: 'c', name: 'Banana FC', role: 'Admin', state: 'Inactive' },
     ]);
 
     expect(ordered.map((summary) => summary.name)).toEqual([

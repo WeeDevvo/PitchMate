@@ -33,8 +33,8 @@ const SQUAD_ID = '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f01';
 const summaryOf = (overrides: Partial<SquadSummary> = {}): SquadSummary => ({
   squadId: SQUAD_ID,
   name: 'Thursday Ballers',
-  role: 'owner',
-  state: 'active',
+  role: 'Owner',
+  state: 'Active',
   ...overrides,
 });
 
@@ -54,9 +54,9 @@ describe('SquadCard', () => {
   // Requirements: 1.5, 19.3
   it('names each Member_Role in text', () => {
     const cases: readonly (readonly [SquadSummary['role'], string])[] = [
-      ['owner', OWNER_ROLE_LABEL],
-      ['admin', ADMIN_ROLE_LABEL],
-      ['member', MEMBER_ROLE_LABEL],
+      ['Owner', OWNER_ROLE_LABEL],
+      ['Admin', ADMIN_ROLE_LABEL],
+      ['Member', MEMBER_ROLE_LABEL],
     ];
 
     for (const [role, label] of cases) {
@@ -72,8 +72,8 @@ describe('SquadCard', () => {
   // Requirements: 1.5, 19.3
   it('names each Membership_State in text', () => {
     const cases: readonly (readonly [SquadSummary['state'], string])[] = [
-      ['active', ACTIVE_STATE_LABEL],
-      ['inactive', INACTIVE_STATE_LABEL],
+      ['Active', ACTIVE_STATE_LABEL],
+      ['Inactive', INACTIVE_STATE_LABEL],
     ];
 
     for (const [state, label] of cases) {

@@ -57,8 +57,10 @@ function row(overrides: Partial<PlayerListRow> = {}): PlayerListRow {
     membershipId: GUEST_ID,
     displayName: 'Big Dave',
     role: null,
-    state: 'active',
+    state: 'Active',
     isGuest: true,
+    appearances: 12,
+    ratingState: 'Established',
     isFormerPlayer: false,
     leaderboardObtained: false,
     ratingEntry: null,
@@ -71,8 +73,10 @@ const ROWS: readonly PlayerListRow[] = [
   row({
     membershipId: MEMBER_ID,
     displayName: 'Registered Ruth',
-    role: 'member',
+    role: 'Member',
     isGuest: false,
+    appearances: 12,
+    ratingState: 'Established',
   }),
   row({
     membershipId: ERASED_GUEST_ID,
@@ -273,7 +277,7 @@ describe('GuestForm create mode — the submitted command (Requirements 12.2, 12
     );
   });
 
-  it('submits the selected tier as its wire code', async () => {
+  it('submits the selected tier as its member name', async () => {
     const user = userEvent.setup();
     const { api, createGuest } = apiDouble();
     render(<Harness api={api} />);
@@ -292,9 +296,9 @@ describe('GuestForm create mode — the submitted command (Requirements 12.2, 12
       string,
       Record<string, unknown>,
     ];
-    // The 0-based `SkillTier` code for `strong`, produced by `lib/skillTier.ts`
-    // through the machine — no component names a numeric enum literal.
-    expect(command.skillTier).toBe(2);
+    // The `SkillTier` member name for the strongest tier, produced by
+    // `lib/skillTier.ts` through the machine — no component names an enum code.
+    expect(command.skillTier).toBe('Strong');
   });
 });
 

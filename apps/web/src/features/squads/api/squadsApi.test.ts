@@ -136,17 +136,17 @@ const GENERATE_INVITE_COMMAND: GenerateInviteRequest = { nonExpiring: true };
 
 const CREATE_GUEST_COMMAND: CreateGuestRequest = {
   displayName: 'BigDave',
-  skillTier: 1,
+  skillTier: 'Average',
   lawfulBasisAcknowledged: true,
 };
 
 const EDIT_GUEST_COMMAND: EditGuestRequest = {
   displayName: 'Big Dave',
   updateSkillTier: true,
-  skillTier: 2,
+  skillTier: 'Strong',
 };
 
-const SET_FEATURE_FLAG_COMMAND: SetFeatureFlagRequest = { feature: 1, enabled: true };
+const SET_FEATURE_FLAG_COMMAND: SetFeatureFlagRequest = { feature: 'LiveMatchTracking', enabled: true };
 
 // --- Transport fake ---------------------------------------------------------
 
@@ -286,11 +286,13 @@ const OPERATIONS: readonly OperationCase[] = [
     path: SQUADS_PATH,
     search: '',
     requestBodyText: '',
-    successBody: [{ squadId: SQUAD_ID, name: 'Thursday Nights', role: 2, state: 1 }],
+    successBody: [
+      { squadId: SQUAD_ID, name: 'Thursday Nights', role: 'Admin', state: 'Active' },
+    ],
     expected: {
       kind: 'success',
       value: [
-        { squadId: SQUAD_ID, name: 'Thursday Nights', role: 'admin', state: 'active' },
+        { squadId: SQUAD_ID, name: 'Thursday Nights', role: 'Admin', state: 'Active' },
       ],
     },
     invoke: (api, signal) => api.listMySquads(signal),
@@ -308,12 +310,14 @@ const OPERATIONS: readonly OperationCase[] = [
         {
           membershipId: MEMBERSHIP_ID,
           displayName: 'Dave',
-          role: 1,
-          state: 1,
+          role: 'Owner',
+          state: 'Active',
           isGuest: false,
+          appearances: 12,
+          ratingState: 'Established',
         },
       ],
-      features: [{ feature: 1, isEnabled: false }],
+      features: [{ feature: 'LiveMatchTracking', isEnabled: false }],
     },
     expected: {
       kind: 'success',
@@ -324,12 +328,14 @@ const OPERATIONS: readonly OperationCase[] = [
           {
             membershipId: MEMBERSHIP_ID,
             displayName: 'Dave',
-            role: 'owner',
-            state: 'active',
+            role: 'Owner',
+            state: 'Active',
             isGuest: false,
+            appearances: 12,
+            ratingState: 'Established',
           },
         ],
-        features: [{ feature: 'live-match-tracking', isEnabled: false }],
+        features: [{ feature: 'LiveMatchTracking', isEnabled: false }],
       },
     },
     invoke: (api, signal) => api.getSquad(SQUAD_ID, signal),
@@ -371,10 +377,10 @@ const OPERATIONS: readonly OperationCase[] = [
     path: REDEEM_INVITE_PATH,
     search: '',
     requestBodyText: JSON.stringify(REDEEM_INVITE_COMMAND),
-    successBody: { membershipId: MEMBERSHIP_ID, outcome: 0 },
+    successBody: { membershipId: MEMBERSHIP_ID, outcome: 'Joined' },
     expected: {
       kind: 'success',
-      value: { membershipId: MEMBERSHIP_ID, outcome: 'joined', squadId: null },
+      value: { membershipId: MEMBERSHIP_ID, outcome: 'Joined', squadId: null },
     },
     invoke: (api, signal) => api.redeemInvite(REDEEM_INVITE_COMMAND, signal),
   },
@@ -400,7 +406,7 @@ const OPERATIONS: readonly OperationCase[] = [
     successBody: [
       {
         inviteId: INVITE_ID,
-        state: 1,
+        state: 'Active',
         createdAt: CREATED_AT,
         createdBy: 'Dave',
         expiresAt: null,
@@ -411,7 +417,7 @@ const OPERATIONS: readonly OperationCase[] = [
       value: [
         {
           inviteId: INVITE_ID,
-          state: 'active',
+          state: 'Active',
           createdAtMs: CREATED_AT_MS,
           createdBy: 'Dave',
           expiresAtMs: null,
@@ -497,10 +503,10 @@ const OPERATIONS: readonly OperationCase[] = [
     path: fill(FEATURES_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
     search: '',
     requestBodyText: '',
-    successBody: [{ feature: 1, isEnabled: true }],
+    successBody: [{ feature: 'LiveMatchTracking', isEnabled: true }],
     expected: {
       kind: 'success',
-      value: [{ feature: 'live-match-tracking', isEnabled: true }],
+      value: [{ feature: 'LiveMatchTracking', isEnabled: true }],
     },
     invoke: (api, signal) => api.getFeatureFlags(SQUAD_ID, signal),
   },
@@ -741,7 +747,7 @@ describe('createSquadsApi — a 2xx body the parser rejects', () => {
     expect(await api.listMySquads()).toEqual({ kind: 'parse-failure' });
   });
 
-  it('settles a member with an unnamed role code as a parse failure', async () => {
+  it('settles a member with an unnamed role name as a parse failure', async () => {
     const { api } = makeApi(() =>
       jsonResponse({
         squadId: SQUAD_ID,
@@ -750,9 +756,13 @@ describe('createSquadsApi — a 2xx body the parser rejects', () => {
           {
             membershipId: MEMBERSHIP_ID,
             displayName: 'Dave',
-            role: 9,
-            state: 1,
+            // Not a member of the generated union: a role name the contract does
+            // not carry fails the whole body.
+            role: 'Chairman',
+            state: 'Active',
             isGuest: false,
+            appearances: 12,
+            ratingState: 'Established',
           },
         ],
         features: [],

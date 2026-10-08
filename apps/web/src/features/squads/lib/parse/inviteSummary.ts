@@ -1,6 +1,6 @@
 /**
  * The `ListInvites` body shape:
- * `[{ inviteId, state: int, createdAt, createdBy: string | null, expiresAt: string | null }]`.
+ * `[{ inviteId, state: name, createdAt, createdBy: string | null, expiresAt: string | null }]`.
  *
  * An invite summary deliberately carries **nothing** from which the redeemable
  * secret could be reconstructed — the backend's `InviteSummary` exposes neither
@@ -8,10 +8,11 @@
  *
  * Three field decisions are worth stating:
  *
- *  - **`state` is required**, and an unnamed code fails the body (Requirement
- *    16.6). The Invite_Manager renders a revoke control only on an `active`
- *    invite, so a defaulted state could offer revocation on an invite that is
- *    already revoked or expired — or hide it from one that is live.
+ *  - **`state` is required**, and a value outside the generated `InviteState`
+ *    vocabulary fails the body (Requirements 12.8, 16.6). The Invite_Manager
+ *    renders a revoke control only on an `Active` invite, so a defaulted state
+ *    could offer revocation on an invite that is already revoked or expired — or
+ *    hide it from one that is live.
  *  - **`createdAt` is required**, because the Invite_Order sorts by it: descending
  *    creation instant with ties broken by identity (Requirement 11.3). An invented
  *    instant would silently reorder the list.
@@ -23,16 +24,11 @@
  * normalised to epoch milliseconds so ordering and expiry presentation compare
  * numbers rather than strings.
  *
- * Requirements: 11.3, 16.4, 16.5, 16.6, 16.9, 16.10
+ * Requirements: 11.3, 12.8, 16.4, 16.5, 16.6, 16.9, 16.10
  */
 
+import { isInviteState, type InviteState } from '../wireEnums';
 import {
-  codeFromInviteState,
-  inviteStateFromCode,
-  type InviteStateValue,
-} from '../enumCodes';
-import {
-  fail,
   ok,
   printInstant,
   readArray,
@@ -42,8 +38,8 @@ import {
   readProperty,
   readString,
   readUuid,
+  readWireEnumName,
   type ParseResult,
-  type ValueReader,
 } from './primitives';
 
 /**
@@ -52,28 +48,11 @@ import {
  */
 export interface InviteSummary {
   readonly inviteId: string;
-  readonly state: InviteStateValue;
+  readonly state: InviteState;
   readonly createdAtMs: number;
   readonly createdBy: string | null;
   readonly expiresAtMs: number | null;
 }
-
-/**
- * A present Invite_State code read as its named value, failing when the
- * Enum_Code_Map names no such code (Requirement 16.6).
- *
- * `expired` is derived by the backend clock and arrives like any other state, so
- * this feature does no expiry arithmetic of its own.
- */
-const readInviteStateValue: ValueReader<InviteStateValue> = (value, label) => {
-  const state = inviteStateFromCode(value);
-
-  if (state === undefined) {
-    return fail(`${label} names no invite state`);
-  }
-
-  return ok(state);
-};
 
 /**
  * One Invite_Summary parsed from a `ListInvites` element.
@@ -82,7 +61,7 @@ const readInviteStateValue: ValueReader<InviteStateValue> = (value, label) => {
  * five validated readings (Requirement 16.4). Extra properties are never read
  * (16.9).
  *
- * Requirements: 16.4, 16.6, 16.9
+ * Requirements: 12.8, 16.4, 16.6, 16.9
  */
 export function parseInviteSummary(body: unknown): ParseResult<InviteSummary> {
   const source = readObject(body, 'invite summary');
@@ -100,9 +79,14 @@ export function parseInviteSummary(body: unknown): ParseResult<InviteSummary> {
     return inviteId;
   }
 
-  const state = readInviteStateValue(
+  // 12.8: the accepted vocabulary is the generated `InviteState` union, pinned to
+  // the Committed_Types at compile time. `Expired` is derived by the backend
+  // clock and arrives like any other name, so this feature does no expiry
+  // arithmetic of its own.
+  const state = readWireEnumName(
     readProperty(source.value, 'state'),
     'invite summary state',
+    isInviteState,
   );
 
   if (!state.ok) {
@@ -183,15 +167,15 @@ export function parseInviteSummaryList(
 
 /**
  * An Invite_Summary rendered back into the wire shape
- * {@link parseInviteSummary} accepts: the state as its code, both instants as
- * ISO-8601 with an explicit `Z`, and each absence as `null`.
+ * {@link parseInviteSummary} accepts: the state as its member name, both
+ * instants as ISO-8601 with an explicit `Z`, and each absence as `null`.
  *
- * Requirements: 16.5
+ * Requirements: 12.11, 16.5
  */
 export function printInviteSummary(summary: InviteSummary): unknown {
   return {
     inviteId: summary.inviteId,
-    state: codeFromInviteState(summary.state),
+    state: summary.state,
     createdAt: printInstant(summary.createdAtMs),
     createdBy: summary.createdBy,
     expiresAt: summary.expiresAtMs === null ? null : printInstant(summary.expiresAtMs),

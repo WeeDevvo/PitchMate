@@ -59,7 +59,6 @@ import {
   RatingBadge,
   ratingBadgeAccessibleName,
 } from './RatingBadge';
-import { codeFromMembershipState } from '../lib/enumCodes';
 import {
   parseDisplayRatingLeaderboard,
   type DisplayRatingLeaderboard,
@@ -166,8 +165,10 @@ function parsedMemberOf(membershipId: string, displayName: string): SquadMember 
     membershipId,
     displayName,
     role: null,
-    state: codeFromMembershipState('active'),
+    state: 'Active',
     isGuest: false,
+    appearances: 12,
+    ratingState: 'Established',
   };
   const parsed = parseSquadMember(body);
 

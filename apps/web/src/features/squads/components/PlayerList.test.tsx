@@ -38,9 +38,11 @@ const rowOf = (
 ): PlayerListRow => ({
   membershipId,
   displayName,
-  role: 'member',
-  state: 'active',
+  role: 'Member',
+  state: 'Active',
   isGuest: false,
+  appearances: 12,
+  ratingState: 'Established',
   isFormerPlayer: false,
   leaderboardObtained: false,
   ratingEntry: null,
@@ -119,11 +121,11 @@ describe('PlayerList', () => {
     // Supplied deliberately backwards: an inactive membership first, names out of
     // order, and two names differing only in case so the identity tie-break decides.
     const rows = [
-      rowOf('m-5', 'Zoe', { state: 'inactive' }),
+      rowOf('m-5', 'Zoe', { state: 'Inactive' }),
       rowOf('m-4', 'dave'),
       rowOf('m-3', 'Dave'),
       rowOf('m-2', 'bev'),
-      rowOf('m-1', 'Ash', { state: 'inactive' }),
+      rowOf('m-1', 'Ash', { state: 'Inactive' }),
     ];
 
     const { container } = renderList(rows);

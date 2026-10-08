@@ -125,16 +125,16 @@
   font-weight: var(--squads-font-weight-label);
 }
 
-.squads-invite-entry__state[data-squads-invite-state='active'] {
+.squads-invite-entry__state[data-squads-invite-state='Active'] {
   border-color: var(--squads-invite-active-accent);
   color: var(--squads-invite-active-text);
 }
 
-.squads-invite-entry__state[data-squads-invite-state='revoked'] {
+.squads-invite-entry__state[data-squads-invite-state='Revoked'] {
   color: var(--squads-invite-revoked-text);
 }
 
-.squads-invite-entry__state[data-squads-invite-state='expired'] {
+.squads-invite-entry__state[data-squads-invite-state='Expired'] {
   color: var(--squads-invite-expired-text);
 }
 

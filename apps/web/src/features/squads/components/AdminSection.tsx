@@ -64,7 +64,7 @@ import { useCallback, useId, type ReactElement, type RefObject } from 'react';
 import type { AuthState } from '../../auth';
 import type { SquadsApi } from '../api/squadsApi';
 import { resolveAdminAuthority } from '../lib/adminAuthority';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import {
   ADMIN_SECTION_HEADING,
   FEATURES_SECTION_HEADING,
@@ -129,10 +129,10 @@ export interface AdminSectionProps {
    * The caller's Member_Role within this squad, or `null` where the membership
    * carries none or was not identified (Requirement 6.10).
    */
-  readonly viewerRole: MemberRole | null;
+  readonly viewerRole: SquadRole | null;
 
   /** The caller's Membership_State within this squad, or `null`. */
-  readonly viewerState: MembershipStateValue | null;
+  readonly viewerState: MembershipState | null;
 
   /**
    * The membership whose Player_Row edit control was activated, or `null`. Owned

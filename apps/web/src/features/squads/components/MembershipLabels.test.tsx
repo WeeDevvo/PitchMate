@@ -20,7 +20,7 @@ import {
   MembershipLabels,
   type MembershipLabelsProps,
 } from './MembershipLabels';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import {
   ACTIVE_STATE_LABEL,
   ADMIN_ROLE_LABEL,
@@ -36,8 +36,8 @@ import {
 const propsOf = (
   overrides: Partial<MembershipLabelsProps> = {},
 ): MembershipLabelsProps => ({
-  role: 'member',
-  state: 'active',
+  role: 'Member',
+  state: 'Active',
   isGuest: false,
   isFormerPlayer: false,
   ...overrides,
@@ -55,10 +55,10 @@ function labelsOfKind(container: HTMLElement, kind: string): readonly string[] {
 describe('MembershipLabels', () => {
   // Requirements: 7.5, 19.3
   it('names each Member_Role in text', () => {
-    const cases: readonly (readonly [MemberRole, string])[] = [
-      ['owner', OWNER_ROLE_LABEL],
-      ['admin', ADMIN_ROLE_LABEL],
-      ['member', MEMBER_ROLE_LABEL],
+    const cases: readonly (readonly [SquadRole, string])[] = [
+      ['Owner', OWNER_ROLE_LABEL],
+      ['Admin', ADMIN_ROLE_LABEL],
+      ['Member', MEMBER_ROLE_LABEL],
     ];
 
     for (const [role, label] of cases) {
@@ -71,9 +71,9 @@ describe('MembershipLabels', () => {
 
   // Requirements: 7.5, 19.3
   it('names each Membership_State in text', () => {
-    const cases: readonly (readonly [MembershipStateValue, string])[] = [
-      ['active', ACTIVE_STATE_LABEL],
-      ['inactive', INACTIVE_STATE_LABEL],
+    const cases: readonly (readonly [MembershipState, string])[] = [
+      ['Active', ACTIVE_STATE_LABEL],
+      ['Inactive', INACTIVE_STATE_LABEL],
     ];
 
     for (const [state, label] of cases) {
@@ -105,7 +105,7 @@ describe('MembershipLabels', () => {
   // Requirements: 7.5
   it('states the Guest_Flag exactly once when a guest also carries a role', () => {
     const { container } = render(
-      <MembershipLabels {...propsOf({ role: 'member', isGuest: true })} />,
+      <MembershipLabels {...propsOf({ role: 'Member', isGuest: true })} />,
     );
 
     expect(labelsOfKind(container, 'guest')).toEqual([GUEST_LABEL]);
@@ -125,7 +125,7 @@ describe('MembershipLabels', () => {
   // Requirements: 7.7, 19.3
   it('leads an inactive membership with a dash glyph beside the Inactive word', () => {
     const { container } = render(
-      <MembershipLabels {...propsOf({ state: 'inactive' })} />,
+      <MembershipLabels {...propsOf({ state: 'Inactive' })} />,
     );
 
     const glyph = container.querySelector(INACTIVE_GLYPH_SELECTOR);
@@ -164,7 +164,7 @@ describe('MembershipLabels', () => {
   it('states every fact in text, so nothing is carried by colour alone', () => {
     const { container } = render(
       <MembershipLabels
-        {...propsOf({ role: null, state: 'inactive', isGuest: true, isFormerPlayer: true })}
+        {...propsOf({ role: null, state: 'Inactive', isGuest: true, isFormerPlayer: true })}
       />,
     );
 

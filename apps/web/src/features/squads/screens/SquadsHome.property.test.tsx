@@ -73,38 +73,33 @@ import {
   SQUAD_CARD_SELECTOR,
 } from '../components/SquadCard';
 import { SQUADS_EMPTY_STATE_SELECTOR } from '../components/SquadsEmptyState';
-import { codeFromMemberRole, codeFromMembershipState } from '../lib/enumCodes';
 import {
   parseSquadSummaryList,
   type SquadSummary,
 } from '../lib/parse/squadSummary';
 import { orderSquadSummaries } from '../lib/squadOrder';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { SquadsHome } from './SquadsHome';
 
 // --- Generators --------------------------------------------------------------
 
 /**
- * How a wire body carries a membership enum: as its code, as `null`, or not at
- * all. The codes come from the Enum_Code_Map, which is the only module in the
- * feature — tests included — allowed to write a numeric enum literal
- * (Requirement 16.7).
+ * How a wire body carries a membership enum: as its Wire_Enum_Name, as `null`, or
+ * not at all. The names come from the Generated_Enum_Unions, so no numeric enum
+ * literal appears here (Requirement 12.8).
  */
-type EnumField = number | null | 'absent';
+type EnumField<TName extends string> = TName | null | 'absent';
 
-const roleFieldArb: fc.Arbitrary<EnumField> = fc.constantFrom(
-  codeFromMemberRole('owner'),
-  codeFromMemberRole('admin'),
-  codeFromMemberRole('member'),
+const roleFieldArb: fc.Arbitrary<EnumField<SquadRole>> = fc.constantFrom(
+  'Owner',
+  'Admin',
+  'Member',
   null,
   'absent' as const,
 );
 
-const stateFieldArb: fc.Arbitrary<EnumField> = fc.constantFrom(
-  codeFromMembershipState('active'),
-  codeFromMembershipState('inactive'),
-  null,
-  'absent' as const,
-);
+const stateFieldArb: fc.Arbitrary<EnumField<MembershipState>> =
+  fc.constantFrom('Active', 'Inactive', null, 'absent' as const);
 
 /**
  * Squad names that collide under the ordering's case-insensitive comparison —
@@ -152,8 +147,8 @@ const identityArb: fc.Arbitrary<string> = fc.oneof(
 interface SummaryCase {
   readonly squadId: string;
   readonly name: string;
-  readonly role: EnumField;
-  readonly state: EnumField;
+  readonly role: EnumField<SquadRole>;
+  readonly state: EnumField<MembershipState>;
 }
 
 /**

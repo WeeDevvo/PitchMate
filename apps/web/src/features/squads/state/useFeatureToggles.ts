@@ -21,8 +21,8 @@
  *    each toggle's disabled and busy state.
  * 2. **One `SetFeatureFlag` per change** (Requirement 14.3), carrying that flag
  *    and the requested enabled state and nothing else. The Squad_Feature is
- *    written to the wire through `codeFromSquadFeature`, so no numeric enum
- *    literal appears here.
+ *    written to the wire as its Wire_Enum_Name, which is exactly what the
+ *    generated request type asks for, so no numeric enum literal appears here.
  * 3. **The refreshed state comes from the `GetSquad` re-read**
  *    (Requirements 14.2, 14.5). A success calls the injected
  *    {@link FeatureTogglesOptions.refresh} — `useSquadScreen`'s `refresh()` — and
@@ -66,7 +66,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import type { AuthState } from '../../auth';
 import type { CallResult, SquadsApi } from '../api/squadsApi';
-import { codeFromSquadFeature, type SquadFeatureValue } from '../lib/enumCodes';
+import type { SquadFeature } from '../lib/wireEnums';
 import type { FeatureFlag } from '../lib/parse/featureFlags';
 
 // --- State ------------------------------------------------------------------
@@ -83,10 +83,10 @@ import type { FeatureFlag } from '../lib/parse/featureFlags';
 export type FeatureToggleOutcome =
   | {
       readonly kind: 'set';
-      readonly feature: SquadFeatureValue;
+      readonly feature: SquadFeature;
       readonly enabled: boolean;
     }
-  | { readonly kind: 'failed'; readonly feature: SquadFeatureValue };
+  | { readonly kind: 'failed'; readonly feature: SquadFeature };
 
 /** Everything the Feature_Toggle set renders from beyond the Squad_Detail. */
 export interface FeatureTogglesState {
@@ -98,7 +98,7 @@ export interface FeatureTogglesState {
    * A collection rather than a flag because the guard is per flag: two toggles may
    * be in flight at once, and neither blocks the other.
    */
-  readonly pending: readonly SquadFeatureValue[];
+  readonly pending: readonly SquadFeature[];
   /**
    * The most recently settled change, or `null` when none has settled since the
    * last clearing — what the live region announces (Requirements 14.5, 14.6).
@@ -132,30 +132,30 @@ export function initialFeatureTogglesState(): FeatureTogglesState {
  * (Requirement 17.2).
  */
 export type FeatureTogglesAction =
-  | { readonly type: 'requested'; readonly feature: SquadFeatureValue }
+  | { readonly type: 'requested'; readonly feature: SquadFeature }
   | {
       readonly type: 'set';
-      readonly feature: SquadFeatureValue;
+      readonly feature: SquadFeature;
       readonly enabled: boolean;
     }
-  | { readonly type: 'failed'; readonly feature: SquadFeatureValue }
+  | { readonly type: 'failed'; readonly feature: SquadFeature }
   | { readonly type: 'flagsAccepted'; readonly flags: readonly FeatureFlag[] }
   | { readonly type: 'outcomeCleared' }
   | { readonly type: 'discarded' };
 
 /** The pending collection with one feature added, at most once. */
 function withPending(
-  pending: readonly SquadFeatureValue[],
-  feature: SquadFeatureValue,
-): readonly SquadFeatureValue[] {
+  pending: readonly SquadFeature[],
+  feature: SquadFeature,
+): readonly SquadFeature[] {
   return pending.includes(feature) ? pending : [...pending, feature];
 }
 
 /** The pending collection with one feature removed. */
 function withoutPending(
-  pending: readonly SquadFeatureValue[],
-  feature: SquadFeatureValue,
-): readonly SquadFeatureValue[] {
+  pending: readonly SquadFeature[],
+  feature: SquadFeature,
+): readonly SquadFeature[] {
   return pending.filter((candidate) => candidate !== feature);
 }
 
@@ -272,7 +272,7 @@ export interface FeatureTogglesMachine extends FeatureTogglesState {
    * toggle's disabled and programmatically determinable busy state
    * (Requirement 14.4).
    */
-  isPending(feature: SquadFeatureValue): boolean;
+  isPending(feature: SquadFeature): boolean;
   /**
    * Submit exactly one `SetFeatureFlag` call conveying one Feature_Flag and the
    * requested enabled state, then — on success — obtain the refreshed state from
@@ -281,7 +281,7 @@ export interface FeatureTogglesMachine extends FeatureTogglesState {
    * A no-op while a call for *that* feature awaits a response
    * (Requirement 14.4), and a no-op once the `discarded` latch has closed.
    */
-  setEnabled(feature: SquadFeatureValue, enabled: boolean): void;
+  setEnabled(feature: SquadFeature, enabled: boolean): void;
   /** Clear the settled outcome once it has been announced. */
   clearOutcome(): void;
 }
@@ -346,7 +346,7 @@ export function useFeatureToggles(
    * can abort every one of them (Requirement 17.5). A Map rather than a single ref
    * because the operation is concurrent across flags.
    */
-  const setControllersRef = useRef(new Map<SquadFeatureValue, AbortController>());
+  const setControllersRef = useRef(new Map<SquadFeature, AbortController>());
   /** The fallback `GetFeatureFlags` call awaiting a response, where one is. */
   const flagsControllerRef = useRef<AbortController | null>(null);
   /**
@@ -437,7 +437,7 @@ export function useFeatureToggles(
    * (Requirement 17.4).
    */
   const issueSetCall = useCallback(
-    (feature: SquadFeatureValue, enabled: boolean): void => {
+    (feature: SquadFeature, enabled: boolean): void => {
       // 17.5: nothing is issued for a discarded machine or outside an
       // authenticated session.
       if (discardedRef.current || authStateRef.current !== 'authenticated') {
@@ -496,9 +496,9 @@ export function useFeatureToggles(
       void apiRef.current
         .setFeatureFlag(
           squadIdRef.current,
-          // 16.12: the wire's numeric code is read from the Enum_Code_Map, so no
-          // numeric enum literal appears in this module.
-          { feature: codeFromSquadFeature(feature), enabled },
+          // 12.8: the request carries the feature's Wire_Enum_Name, which is the
+          // same value the generated request type asks for.
+          { feature, enabled },
           controller.signal,
         )
         .then(settle, () => {
@@ -535,7 +535,7 @@ export function useFeatureToggles(
   }, [discard]);
 
   const setEnabled = useCallback(
-    (feature: SquadFeatureValue, enabled: boolean): void => {
+    (feature: SquadFeature, enabled: boolean): void => {
       issueSetCall(feature, enabled);
     },
     [issueSetCall],
@@ -546,7 +546,7 @@ export function useFeatureToggles(
   }, [dispatch]);
 
   const isPending = useCallback(
-    (feature: SquadFeatureValue): boolean => state.pending.includes(feature),
+    (feature: SquadFeature): boolean => state.pending.includes(feature),
     [state.pending],
   );
 

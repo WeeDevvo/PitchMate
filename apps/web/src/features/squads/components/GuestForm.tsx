@@ -94,7 +94,6 @@ import {
   validateDisplayName,
   type NameValidationFailureReason,
 } from '../lib/nameValidation';
-import type { SkillTierValue } from '../lib/enumCodes';
 import {
   DEFAULT_SKILL_TIER_CREATE_OPTION,
   DEFAULT_SKILL_TIER_EDIT_OPTION,
@@ -107,6 +106,7 @@ import {
   type SkillTierCreateOption,
   type SkillTierEditOption,
 } from '../lib/skillTier';
+import type { SkillTier } from '../lib/wireEnums';
 import type {
   GuestCreateSubmission,
   GuestEditSubmission,
@@ -199,11 +199,11 @@ export interface GuestFormProps {
   readonly headingLevel?: SurfaceHeadingLevel;
 }
 
-/** The three Skill_Tier labels, keyed by the tier names `lib/enumCodes.ts` declares. */
-const TIER_LABELS: Readonly<Record<SkillTierValue, string>> = {
-  beginner: SKILL_TIER_BEGINNER_LABEL,
-  average: SKILL_TIER_AVERAGE_LABEL,
-  strong: SKILL_TIER_STRONG_LABEL,
+/** The three Skill_Tier labels, keyed by the names `lib/wireEnums.ts` declares. */
+const TIER_LABELS: Readonly<Record<SkillTier, string>> = {
+  Beginner: SKILL_TIER_BEGINNER_LABEL,
+  Average: SKILL_TIER_AVERAGE_LABEL,
+  Strong: SKILL_TIER_STRONG_LABEL,
 };
 
 /**

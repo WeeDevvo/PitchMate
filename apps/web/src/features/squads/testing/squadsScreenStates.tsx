@@ -115,7 +115,7 @@ import {
 import { SQUAD_CARD_SELECTOR } from '../components/SquadCard';
 import { SQUADS_EMPTY_STATE_SELECTOR } from '../components/SquadsEmptyState';
 import { resolveAdminAuthority } from '../lib/adminAuthority';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { ANONYMISED_PLACEHOLDER } from '../lib/playerList';
 import type { FeatureFlag } from '../lib/parse/featureFlags';
 import type { GeneratedInvite } from '../lib/parse/generatedInvite';
@@ -264,20 +264,29 @@ export function squadSummary(overrides: Partial<SquadSummary> = {}): SquadSummar
   return {
     squadId: SQUAD_ID,
     name: SQUAD_NAME,
-    role: 'member',
-    state: 'active',
+    role: 'Member',
+    state: 'Active',
     ...overrides,
   };
 }
 
-/** A Squad_Member, defaulted to an ordinary active member. */
+/**
+ * A Squad_Member, defaulted to an ordinary active member with an established
+ * rating and a handful of appearances.
+ *
+ * The two standing fields are carried so the fixture is a complete
+ * `SquadMember`; no state in this module presents them, because telling
+ * never-played apart from provisional is later work.
+ */
 export function squadMember(overrides: Partial<SquadMember> = {}): SquadMember {
   return {
     membershipId: RATED_MEMBERSHIP_ID,
     displayName: 'Ada',
-    role: 'member',
-    state: 'active',
+    role: 'Member',
+    state: 'Active',
     isGuest: false,
+    appearances: 12,
+    ratingState: 'Established',
     ...overrides,
   };
 }
@@ -299,6 +308,8 @@ export const PLAYER_LIST_MEMBERS: readonly SquadMember[] = [
   squadMember({
     membershipId: PROVISIONAL_MEMBERSHIP_ID,
     displayName: 'Grace',
+    appearances: 2,
+    ratingState: 'Provisional',
   }),
   squadMember({
     membershipId: GUEST_MEMBERSHIP_ID,
@@ -309,17 +320,19 @@ export const PLAYER_LIST_MEMBERS: readonly SquadMember[] = [
   squadMember({
     membershipId: INACTIVE_MEMBERSHIP_ID,
     displayName: 'Kay',
-    state: 'inactive',
+    state: 'Inactive',
   }),
   squadMember({
     membershipId: FORMER_MEMBERSHIP_ID,
     displayName: ANONYMISED_PLACEHOLDER,
+    appearances: 0,
+    ratingState: null,
   }),
 ];
 
-/** The one optional capability the Enum_Code_Map names (Requirement 14.1). */
+/** The one optional capability the Generated_Enum_Union names (Req 14.1). */
 export const FEATURE_FLAGS: readonly FeatureFlag[] = [
-  { feature: 'live-match-tracking', isEnabled: true },
+  { feature: 'LiveMatchTracking', isEnabled: true },
 ];
 
 /** A Squad_Detail, defaulted to the fixture squad with the full member list. */
@@ -359,28 +372,28 @@ const FIXED_INSTANT_MS = Date.UTC(2026, 0, 15, 12, 0, 0);
 export const INVITE_SUMMARIES: readonly InviteSummary[] = [
   {
     inviteId: ACTIVE_INVITE_ID,
-    state: 'active',
+    state: 'Active',
     createdAtMs: FIXED_INSTANT_MS,
     createdBy: 'Ada',
     expiresAtMs: FIXED_INSTANT_MS + 7 * 24 * 60 * 60 * 1000,
   },
   {
     inviteId: '77777777-8888-4999-8aaa-bbbbbbbbbbbb',
-    state: 'active',
+    state: 'Active',
     createdAtMs: FIXED_INSTANT_MS - 60_000,
     createdBy: null,
     expiresAtMs: null,
   },
   {
     inviteId: '88888888-9999-4aaa-8bbb-cccccccccccc',
-    state: 'revoked',
+    state: 'Revoked',
     createdAtMs: FIXED_INSTANT_MS - 120_000,
     createdBy: 'Ada',
     expiresAtMs: FIXED_INSTANT_MS,
   },
   {
     inviteId: '99999999-aaaa-4bbb-8ccc-dddddddddddd',
-    state: 'expired',
+    state: 'Expired',
     createdAtMs: FIXED_INSTANT_MS - 180_000,
     createdBy: 'Ada',
     expiresAtMs: FIXED_INSTANT_MS - 60_000,
@@ -576,7 +589,7 @@ export async function renderSquadsHomeState(
               state === 'empty'
                 ? []
                 : [
-                    squadSummary({ role: 'owner' }),
+                    squadSummary({ role: 'Owner' }),
                     squadSummary({
                       squadId: OTHER_SQUAD_ID,
                       name: OTHER_SQUAD_NAME,
@@ -670,8 +683,8 @@ export type SquadScreenStateName =
  * carries it — the whole of `resolveAdminAuthority`'s input (Requirement 6.10).
  */
 export interface CallerStanding {
-  readonly role: MemberRole | null;
-  readonly state: MembershipStateValue | null;
+  readonly role: SquadRole | null;
+  readonly state: MembershipState | null;
 }
 
 /**
@@ -681,7 +694,7 @@ export interface CallerStanding {
  * chosen value: Property 43 quantifies over every resolved authority value and
  * every injected-content combination, so neither can be a constant of the
  * fixture. Omitting them leaves the states exactly as they were — an active
- * `member`, or an active `owner` for the `admin` state, and no injected content.
+ * `Member`, or an active `Owner` for the `admin` state, and no injected content.
  */
 export interface SquadScreenStateOverrides {
   /**
@@ -702,8 +715,8 @@ export interface SquadScreenStateOverrides {
  * Render the Squad_Screen in one state, at its real route.
  *
  * The caller's own standing comes from the `ListMySquads` summary the way the
- * screen resolves it (Requirement 6.10): a `member` for the states that are about
- * the squad itself, and an `owner` for the `admin` state, which is what makes the
+ * screen resolves it (Requirement 6.10): a `Member` for the states that are about
+ * the squad itself, and an `Owner` for the `admin` state, which is what makes the
  * Admin_Section render at all. A caller supplying
  * {@link SquadScreenStateOverrides.caller} replaces that default, and whether the
  * Admin_Section is expected is then `resolveAdminAuthority`'s answer rather than
@@ -720,7 +733,7 @@ export async function renderSquadScreenState(
 ): Promise<RenderedScreen> {
   const caller: CallerStanding =
     overrides.caller ??
-    ({ role: state === 'admin' ? 'owner' : 'member', state: 'active' } as const);
+    ({ role: state === 'admin' ? 'Owner' : 'Member', state: 'Active' } as const);
 
   // 10.2: whether the admin surface is mounted is the pure predicate's answer for
   // this caller, never a restatement of which combinations hold.

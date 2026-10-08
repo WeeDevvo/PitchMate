@@ -3,8 +3,12 @@
  * forms.
  *
  * A redemption that joins or reactivates a membership returns
- * `{ membershipId, outcome }`. The already-a-member no-op returns `200` with an
- * **empty body**, which the transport seam hands to this parser as an absence.
+ * `{ membershipId, outcome }`. The already-a-member no-op used to return `200`
+ * with an **empty body**, which the transport seam hands to this parser as an
+ * absence; the contract now declares one body for that status and reports the
+ * no-op as the `AlreadyMember` outcome (Requirement 6.4). The empty form stays
+ * accepted, because a success a client can no longer read is the one outcome
+ * least worth risking here.
  * Both are successful redemptions, so both parse: failing the empty body would
  * turn "you are already in this squad" into the Generic_Squads_Failure, telling a
  * person their invite did not work when in fact nothing needed doing.
@@ -20,26 +24,21 @@
  * costs nothing now and keeps the screens from needing a change when it lands.
  *
  * A *present* field is still validated: a `membershipId` that is not an identity,
- * or an `outcome` the Enum_Code_Map does not name, fails the body. Optional means
- * absent-or-valid, never unvalidated.
+ * or an `outcome` outside the generated `RedeemOutcome` vocabulary, fails the
+ * body. Optional means absent-or-valid, never unvalidated.
  *
- * Requirements: 4.6, 5.8, 16.4, 16.5, 16.6, 16.9, 16.10
+ * Requirements: 4.6, 5.8, 12.8, 16.4, 16.5, 16.6, 16.9, 16.10
  */
 
+import { isRedeemOutcome, type RedeemOutcome } from '../wireEnums';
 import {
-  codeFromRedeemOutcome,
-  redeemOutcomeFromCode,
-  type RedeemOutcomeValue,
-} from '../enumCodes';
-import {
-  fail,
   ok,
   readObject,
   readOptional,
   readProperty,
   readUuid,
+  readWireEnumName,
   type ParseResult,
-  type ValueReader,
 } from './primitives';
 
 /**
@@ -49,7 +48,7 @@ import {
  */
 export interface Redemption {
   readonly membershipId: string | null;
-  readonly outcome: RedeemOutcomeValue | null;
+  readonly outcome: RedeemOutcome | null;
   readonly squadId: string | null;
 }
 
@@ -58,24 +57,6 @@ const EMPTY_REDEMPTION: Redemption = {
   membershipId: null,
   outcome: null,
   squadId: null,
-};
-
-/**
- * A present Redeem_Outcome code read as its named value, failing when the
- * Enum_Code_Map names no such code (Requirement 16.6).
- *
- * `RedeemOutcome` is one of the two **0-based** wire enums, so `joined` is `0`.
- * Reading it through the Enum_Code_Map rather than comparing numbers here is what
- * keeps that fact in one place.
- */
-const readRedeemOutcomeValue: ValueReader<RedeemOutcomeValue> = (value, label) => {
-  const outcome = redeemOutcomeFromCode(value);
-
-  if (outcome === undefined) {
-    return fail(`${label} names no redemption outcome`);
-  }
-
-  return ok(outcome);
 };
 
 /**
@@ -111,10 +92,14 @@ export function parseRedemption(body: unknown): ParseResult<Redemption> {
     return membershipId;
   }
 
+  // 12.8: a present outcome is a member name of the generated `RedeemOutcome`
+  // union — the enum whose implicit 0-based numbering used to make a code table
+  // the most dangerous reading in the feature. By name there is nothing to get
+  // off by one.
   const outcome = readOptional(
     readProperty(source.value, 'outcome'),
     'redemption outcome',
-    readRedeemOutcomeValue,
+    (field, fieldLabel) => readWireEnumName(field, fieldLabel, isRedeemOutcome),
   );
 
   if (!outcome.ok) {
@@ -149,13 +134,12 @@ export function parseRedemption(body: unknown): ParseResult<Redemption> {
  * yield the same Redemption — printing an object keeps this a single code path
  * while leaving the round trip exact (Requirement 16.5).
  *
- * Requirements: 16.5
+ * Requirements: 12.11, 16.5
  */
 export function printRedemption(redemption: Redemption): unknown {
   return {
     membershipId: redemption.membershipId,
-    outcome:
-      redemption.outcome === null ? null : codeFromRedeemOutcome(redemption.outcome),
+    outcome: redemption.outcome,
     squadId: redemption.squadId,
   };
 }

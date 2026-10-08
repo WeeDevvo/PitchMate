@@ -280,7 +280,7 @@ const redeemOutcomeArb: fc.Arbitrary<CallResult<Redemption>> = fc.oneof(
   // The identity-bearing success the parser already accepts.
   fc.uuid().map<CallResult<Redemption>>((squadId) => ({
     kind: 'success',
-    value: { membershipId: null, outcome: 'joined', squadId },
+    value: { membershipId: null, outcome: 'Joined', squadId },
   })),
   fc.constant<CallResult<Redemption>>({ kind: 'not-found' }),
   fc.constant<CallResult<Redemption>>({
@@ -514,7 +514,7 @@ describe('useInviteRedemption — Property 11 (redemption is attempted at most o
         async (secret, squadId, squadsHomePath, laterStates) => {
           const outcome: CallResult<Redemption> = {
             kind: 'success',
-            value: { membershipId: null, outcome: 'joined', squadId },
+            value: { membershipId: null, outcome: 'Joined', squadId },
           };
           const { api, log } = createRecordingSquadsApi(outcome);
           const { navigate, calls } = createRecordingNavigate();

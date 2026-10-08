@@ -75,11 +75,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider, type SessionManager } from '../../auth';
 import type { CallResult, SquadsApi } from '../api/squadsApi';
 import { PLAYER_ROW_OPEN_SELECTOR } from '../components/PlayerRow';
-import type {
-  MemberRole,
-  MembershipStateValue,
-  SquadFeatureValue,
-} from '../lib/enumCodes';
+import type { MembershipState, SquadFeature, SquadRole } from '../lib/wireEnums';
 import type { FeatureFlag } from '../lib/parse/featureFlags';
 import type { DisplayRatingLeaderboard } from '../lib/parse/leaderboard';
 import type { SquadDetail, SquadMember } from '../lib/parse/squadDetail';
@@ -125,13 +121,13 @@ const MEMBER_NAMES: readonly string[] = [
   'Former player',
 ];
 
-const roleArb: fc.Arbitrary<MemberRole | null> = fc.constantFrom<
-  (MemberRole | null)[]
->('owner', 'admin', 'member', null);
+const roleArb: fc.Arbitrary<SquadRole | null> = fc.constantFrom<
+  (SquadRole | null)[]
+>('Owner', 'Admin', 'Member', null);
 
-const stateArb: fc.Arbitrary<MembershipStateValue> = fc.constantFrom<
-  MembershipStateValue[]
->('active', 'inactive');
+const stateArb: fc.Arbitrary<MembershipState> = fc.constantFrom<
+  MembershipState[]
+>('Active', 'Inactive');
 
 /** One Squad_Member of the generated Squad_Detail, minus its identity. */
 const memberShapeArb = fc.record({
@@ -139,6 +135,8 @@ const memberShapeArb = fc.record({
   role: roleArb,
   state: stateArb,
   isGuest: fc.boolean(),
+  appearances: fc.nat({ max: 200 }),
+  ratingState: fc.constantFrom('Provisional' as const, 'Established' as const, null),
 });
 
 /**
@@ -158,7 +156,7 @@ const detailArb: fc.Arbitrary<SquadDetail> = fc
         fc
           .array(
             fc.record({
-              feature: fc.constant<SquadFeatureValue>('live-match-tracking'),
+              feature: fc.constant<SquadFeature>('LiveMatchTracking'),
               isEnabled: fc.boolean(),
             }),
             { maxLength: 1 },
@@ -186,7 +184,7 @@ const detailArb: fc.Arbitrary<SquadDetail> = fc
  * Requirement 6.10.
  */
 type CallerCase =
-  | { readonly kind: 'this-squad'; readonly role: MemberRole | null; readonly state: MembershipStateValue }
+  | { readonly kind: 'this-squad'; readonly role: SquadRole | null; readonly state: MembershipState }
   | { readonly kind: 'other-squad' }
   | { readonly kind: 'none' };
 
@@ -276,7 +274,7 @@ function holdsAdminAuthority(caller: CallerCase): boolean {
   }
 
   return (
-    caller.state === 'active' && (caller.role === 'owner' || caller.role === 'admin')
+    caller.state === 'Active' && (caller.role === 'Owner' || caller.role === 'Admin')
   );
 }
 
@@ -297,8 +295,8 @@ function summariesOf(caller: CallerCase): readonly SquadSummary[] {
         {
           squadId: OTHER_SQUAD_ID,
           name: 'Other lot',
-          role: 'owner',
-          state: 'active',
+          role: 'Owner',
+          state: 'Active',
         },
       ];
     default:

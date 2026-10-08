@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
-import {
-  MEMBERSHIP_STATE_CODES,
-  MEMBER_ROLE_CODES,
-  memberRoleFromCode,
-  membershipStateFromCode,
-  type MemberRole,
-  type MembershipStateValue,
-} from '../enumCodes';
 import { isSquadIdentifier } from '../identifiers';
+import {
+  MEMBERSHIP_STATE_NAMES,
+  SQUAD_ROLE_NAMES,
+  isMembershipState,
+  isSquadRole,
+  type MembershipState,
+  type SquadRole,
+} from '../wireEnums';
 import type { ParseResult } from './primitives';
 import {
   parseSquadSummary,
@@ -27,9 +27,17 @@ import {
  * This file carries **Property 35** for `squadSummary.ts`: for any value supplied
  * as a response body — absent, `null`, a primitive of every type, an array, an
  * object with each required field missing, an object with each field mistyped, an
- * enum field carrying a code the Enum_Code_Map does not name, and a value nested
- * a hundred levels deep — the parser yields exactly one of a fully populated
- * Squad_Summary and a parse failure, and raises nothing (16.4, 16.6).
+ * enum field carrying a value outside its Generated_Enum_Union, and a value
+ * nested a hundred levels deep — the parser yields exactly one of a fully
+ * populated Squad_Summary and a parse failure, and raises nothing (12.5, 12.6,
+ * 16.4).
+ *
+ * The enum fields are now read **by name** (Requirement 12.8), so the generators
+ * below emit `SquadRole` and `MembershipState` member names and the rejection
+ * generators carry what a name is not: the numeric codes a previous contract
+ * sent, a name in the wrong case, and a name outside the vocabulary. The accepted
+ * set is read from the Generated_Enum_Union's own tuples rather than restated
+ * here, so a vocabulary change reaches these assertions without an edit.
  *
  * Two decisions of this shape are what the assertions are aimed at.
  *
@@ -39,7 +47,8 @@ import {
  * direction is visible on the Squads_Home: failing the body would empty the screen
  * for a caller whose membership could not be resolved, and defaulting the absence
  * would put a role on a card the backend never claimed. Both directions are
- * asserted — the absences parse, and a *present* unnamed code fails.
+ * asserted — the absences parse, and a *present* value outside the vocabulary
+ * fails.
  *
  * **A bad element fails the whole listing.** A silently shortened list would
  * render as complete while omitting a squad the caller belongs to, so the list
@@ -50,7 +59,7 @@ import {
  * value's own key set must be exactly the four declared fields with each of a
  * declared type — never `undefined`, never partial.
  *
- * Requirements: 16.4, 16.6, 20.10
+ * Requirements: 12.5, 12.6, 12.7, 12.8, 16.4, 20.10
  */
 
 /* -------------------------------------------------------------------------- */
@@ -288,34 +297,44 @@ const notAStringArb: fc.Arbitrary<unknown> = fc.oneof(
 );
 
 /**
- * Present values no Member_Role code names, the two absences excluded — an
+ * Present values naming no `SquadRole` member, the two absences excluded — an
  * absence is a *valid* reading here (16.8), so it belongs in the well-formed
  * generator rather than this one.
  *
- * `3` is in range for this table, so the near miss on the high side is `4`. The
- * code `3` the task names appears in the Membership_State generator below, where
- * it is out of range.
+ * The numeric codes the previous contract sent are generated first and by name:
+ * `1`, `2`, and `3` used to *be* the three roles, so a reader that still looked a
+ * number up would accept them and fail here (Requirement 12.8). The lower-case
+ * spellings are generated for the same reason — nothing is case-folded, so
+ * `'owner'` names no member while `'Owner'` does.
  */
-const unnamedRoleCodeArb: fc.Arbitrary<unknown> = fc.oneof(
+const unnamedRoleNameArb: fc.Arbitrary<unknown> = fc.oneof(
   {
     weight: 5,
     arbitrary: fc.constantFrom<unknown>(
+      1,
+      2,
+      3,
       0,
       -0,
       4,
-      5,
       -1,
       1.5,
-      2.5,
       Number.NaN,
       Number.POSITIVE_INFINITY,
       '1',
       '3',
       'owner',
+      'admin',
+      'member',
+      'OWNER',
+      ' Owner',
+      'Owner ',
+      'Captain',
+      '',
       true,
       false,
-      [1],
-      { role: 1 },
+      ['Owner'],
+      { role: 'Owner' },
       1n,
     ),
   },
@@ -323,26 +342,27 @@ const unnamedRoleCodeArb: fc.Arbitrary<unknown> = fc.oneof(
     weight: 2,
     arbitrary: anyBodyArb.filter(
       (value) =>
-        value !== null && value !== undefined && memberRoleFromCode(value) === undefined,
+        value !== null && value !== undefined && !isSquadRole(value),
     ),
   },
 );
 
 /**
- * Present values no Membership_State code names, the two absences excluded.
+ * Present values naming no `MembershipState` member, the two absences excluded.
  *
- * `3` is generated explicitly: it is the Skill_Tier near miss the task names, and
- * it is also the first code past this two-entry table. A reader shifted by one, or
- * one bound to the wrong table, names it.
+ * The old codes `1` and `2` are generated for the same reason as above, together
+ * with `3` — a code past the previous two-entry table, which a reader shifted by
+ * one would have named.
  */
-const unnamedStateCodeArb: fc.Arbitrary<unknown> = fc.oneof(
+const unnamedStateNameArb: fc.Arbitrary<unknown> = fc.oneof(
   {
     weight: 5,
     arbitrary: fc.constantFrom<unknown>(
+      1,
+      2,
+      3,
       0,
       -0,
-      3,
-      4,
       -1,
       1.5,
       Number.NaN,
@@ -350,10 +370,16 @@ const unnamedStateCodeArb: fc.Arbitrary<unknown> = fc.oneof(
       '1',
       '2',
       'active',
+      'inactive',
+      'ACTIVE',
+      ' Active',
+      'Active ',
+      'Removed',
+      '',
       true,
       false,
-      [1],
-      { state: 1 },
+      ['Active'],
+      { state: 'Active' },
       2n,
     ),
   },
@@ -361,9 +387,7 @@ const unnamedStateCodeArb: fc.Arbitrary<unknown> = fc.oneof(
     weight: 2,
     arbitrary: anyBodyArb.filter(
       (value) =>
-        value !== null &&
-        value !== undefined &&
-        membershipStateFromCode(value) === undefined,
+        value !== null && value !== undefined && !isMembershipState(value),
     ),
   },
 );
@@ -374,15 +398,18 @@ const unnamedStateCodeArb: fc.Arbitrary<unknown> = fc.oneof(
 
 /**
  * A well-formed `ListMySquads` element, generated across every combination of
- * present code, explicit `null`, and absent property for both enum fields — the
- * three forms Requirement 16.8 makes valid.
+ * present member name, explicit `null`, and absent property for both enum
+ * fields — the three forms Requirement 16.8 makes valid.
+ *
+ * Every member of each Generated_Enum_Union is generated, read from its own
+ * tuple, so a name added to the contract is exercised here unedited (12.8).
  */
 const wellFormedSummaryArb: fc.Arbitrary<Record<string, unknown>> = fc
   .record({
     squadId: identityArb,
     name: nameArb,
-    role: fc.constantFrom<unknown>(1, 2, 3, null),
-    state: fc.constantFrom<unknown>(1, 2, null),
+    role: fc.constantFrom<unknown>(...SQUAD_ROLE_NAMES, null),
+    state: fc.constantFrom<unknown>(...MEMBERSHIP_STATE_NAMES, null),
     dropRole: fc.boolean(),
     dropState: fc.boolean(),
   })
@@ -400,25 +427,21 @@ const wellFormedSummaryArb: fc.Arbitrary<Record<string, unknown>> = fc
     return body;
   });
 
-/** The role names the Enum_Code_Map carries, read from the map itself. */
-const MEMBER_ROLE_NAMES: readonly string[] = Object.values(MEMBER_ROLE_CODES);
-
-/** The membership-state names the Enum_Code_Map carries. */
-const MEMBERSHIP_STATE_NAMES: readonly string[] = Object.values(
-  MEMBERSHIP_STATE_CODES,
-);
-
 /**
  * Whether a parsed Squad_Summary is fully populated: exactly the four declared
  * fields, each of its declared type, with no field left `undefined`.
+ *
+ * Each enum field is checked against its Generated_Enum_Union's own membership
+ * predicate, so "populated" means "carries a name the contract declares" rather
+ * than "carries a string".
  */
 function isFullyPopulatedSummary(summary: SquadSummary): boolean {
   return (
     keySignature(summary) === 'name,role,squadId,state' &&
     isSquadIdentifier(summary.squadId) &&
     typeof summary.name === 'string' &&
-    (summary.role === null || MEMBER_ROLE_NAMES.includes(summary.role)) &&
-    (summary.state === null || MEMBERSHIP_STATE_NAMES.includes(summary.state))
+    (summary.role === null || isSquadRole(summary.role)) &&
+    (summary.state === null || isMembershipState(summary.state))
   );
 }
 
@@ -517,16 +540,13 @@ describe('parseSquadSummary — total, and never partial', () => {
         if (outcome.ok) {
           expect(outcome.value.squadId).toBe(body.squadId);
           expect(outcome.value.name).toBe(body.name);
-          // 16.8: `null` and an absent property are the same absence.
+          // 12.8: the name arrives unchanged — nothing is mapped, case-folded,
+          // or defaulted. 16.8: `null` and an absent property are one absence.
           expect(outcome.value.role).toBe(
-            body.role === null || body.role === undefined
-              ? null
-              : memberRoleFromCode(body.role),
+            body.role === undefined ? null : body.role,
           );
           expect(outcome.value.state).toBe(
-            body.state === null || body.state === undefined
-              ? null
-              : membershipStateFromCode(body.state),
+            body.state === undefined ? null : body.state,
           );
         }
       }),
@@ -613,22 +633,24 @@ describe('parseSquadSummary — total, and never partial', () => {
     );
   });
 
-  it('fails when a present enum field carries a code the map does not name', () => {
+  it('fails when a present enum field names no member of its union', () => {
     fc.assert(
       fc.property(
         wellFormedSummaryArb,
         fc.oneof(
-          fc.tuple(fc.constant('role'), unnamedRoleCodeArb),
-          fc.tuple(fc.constant('state'), unnamedStateCodeArb),
+          fc.tuple(fc.constant('role'), unnamedRoleNameArb),
+          fc.tuple(fc.constant('state'), unnamedStateNameArb),
         ),
-        (body, [key, code]) => {
+        (body, [key, value]) => {
           const outcome = settle(
-            () => parseSquadSummary({ ...body, [key]: code }),
+            () => parseSquadSummary({ ...body, [key]: value }),
             isFullyPopulatedSummary,
           );
 
-          // 16.6: an unnamed code is a contract mismatch, not an absence — the
-          // one place where reading it as "no role" would be a silent misread.
+          // 12.8, 16.6: a value outside the generated vocabulary is a contract
+          // mismatch, not an absence — the one place where reading it as "no
+          // role" would be a silent misread. The old numeric codes are in this
+          // generator, so a reader still mapping numbers fails here.
           expect(outcome.ok).toBe(false);
         },
       ),
@@ -790,34 +812,44 @@ describe('parseSquadSummaryList — total, and complete or failed', () => {
 // Feature: web-squads-screens, Property 35: Every response parser is total and never yields a partial value
 // Validates: Requirements 16.4, 16.6, 20.10
 describe('the shared membership enum readers are total', () => {
-  it('reads a role exactly when the Enum_Code_Map names one', () => {
+  it('reads a role exactly when the value names a `SquadRole` member', () => {
     fc.assert(
       fc.property(
-        fc.oneof(anyBodyArb, fc.constantFrom<unknown>(1, 2, 3, 0, 4)),
+        fc.oneof(
+          anyBodyArb,
+          fc.constantFrom<unknown>(...SQUAD_ROLE_NAMES),
+          unnamedRoleNameArb,
+        ),
         (value) => {
           const outcome = settle(
             () => readMemberRoleValue(value, 'field'),
-            (role: MemberRole) => MEMBER_ROLE_NAMES.includes(role),
+            (role: SquadRole) => isSquadRole(role),
           );
 
-          expect(outcome.ok).toBe(memberRoleFromCode(value) !== undefined);
+          // 12.8: the accepted set is exactly the Generated_Enum_Union — no
+          // wider, no narrower.
+          expect(outcome.ok).toBe(isSquadRole(value));
         },
       ),
       { numRuns: 500 },
     );
   });
 
-  it('reads a membership state exactly when the Enum_Code_Map names one', () => {
+  it('reads a membership state exactly when the value names a member', () => {
     fc.assert(
       fc.property(
-        fc.oneof(anyBodyArb, fc.constantFrom<unknown>(1, 2, 0, 3)),
+        fc.oneof(
+          anyBodyArb,
+          fc.constantFrom<unknown>(...MEMBERSHIP_STATE_NAMES),
+          unnamedStateNameArb,
+        ),
         (value) => {
           const outcome = settle(
             () => readMembershipStateValue(value, 'field'),
-            (state: MembershipStateValue) => MEMBERSHIP_STATE_NAMES.includes(state),
+            (state: MembershipState) => isMembershipState(state),
           );
 
-          expect(outcome.ok).toBe(membershipStateFromCode(value) !== undefined);
+          expect(outcome.ok).toBe(isMembershipState(value));
         },
       ),
       { numRuns: 500 },

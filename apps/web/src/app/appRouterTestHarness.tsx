@@ -158,10 +158,9 @@ export const SQUADS_REQUESTS = {
 /**
  * The `ListMySquads` body: one summary for the fixture squad.
  *
- * The enum fields are **numeric codes**, as the backend serialises them today —
- * `3` is the member role and `1` the active membership state in the feature's own
- * `lib/enumCodes.ts`, which is the single place that mapping is declared. A member
- * rather than an owner keeps the Squad_Screen's Admin_Section out of these
+ * The enum fields are **member names**, as the backend serialises them: `Member`
+ * is the role and `Active` the membership state, the C# member name verbatim. A
+ * member rather than an owner keeps the Squad_Screen's Admin_Section out of these
  * routing tests: the administration surface has its own tests, and a caller
  * without Admin_Authority issues no admin call.
  */
@@ -169,8 +168,8 @@ const SQUAD_SUMMARIES_BODY: unknown = [
   {
     squadId: SQUADS_FIXTURE.squadId,
     name: SQUADS_FIXTURE.squadName,
-    role: 3,
-    state: 1,
+    role: 'Member',
+    state: 'Active',
   },
 ];
 
@@ -182,9 +181,11 @@ const SQUAD_DETAIL_BODY: unknown = {
     {
       membershipId: SQUADS_FIXTURE.membershipId,
       displayName: SQUADS_FIXTURE.playerName,
-      role: 3,
-      state: 1,
+      role: 'Member',
+      state: 'Active',
       isGuest: false,
+      appearances: 12,
+      ratingState: 'Established',
     },
   ],
   features: [],
