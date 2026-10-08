@@ -249,9 +249,9 @@ export function readString(
  * Negative zero is accepted and preserved; it is the same number as zero for
  * every comparison this feature makes of a wire value.
  *
- * A reading is not constrained to an integer here. The fields that must be whole
- * numbers in this feature are enum codes, which are read through the
- * Enum_Code_Map rather than through this reader.
+ * A reading is not constrained to an integer here. No enum-valued field reaches
+ * this reader at all: every wire enum arrives as a member name and is read
+ * through {@link readWireEnumName} (Requirement 12.4).
  *
  * Requirements: 16.4
  */
