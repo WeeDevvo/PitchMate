@@ -143,12 +143,28 @@ function issueCall(
 
 /**
  * A response the facade would have settled as `success` had it arrived in time:
- * a `200` carrying a body each kind's parser accepts. Used to prove a late
- * arrival is disregarded rather than merely lost.
+ * a `200` carrying, as the already-decoded `data` the generated client hands
+ * back, a body that kind's parser accepts. Used to prove a late arrival is
+ * disregarded rather than merely lost.
  */
 function successfulResponse(kind: CallKind): unknown {
-  const body = kind === 'list' ? '[]' : '7';
-  return { data: body, response: { status: 200 } };
+  const data = decodedBody(kind);
+  return { data, response: { status: 200 } };
+}
+
+/** The decoded success body of each call, in the shape the contract declares. */
+function decodedBody(kind: CallKind): unknown {
+  switch (kind) {
+    case 'list':
+      return [];
+    case 'unreadCount':
+      return { count: 7 };
+    case 'markAllRead':
+      return { markedCount: 7 };
+    case 'markRead':
+      // A `204` carries no body, so the client reports an absent `data`.
+      return undefined;
+  }
 }
 
 // --- Observing settlement without letting time pass -------------------------

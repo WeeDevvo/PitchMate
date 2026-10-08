@@ -251,7 +251,7 @@ function authenticatedSessionManager(): SessionManager {
 function notifications(count: number): NotificationRecord[] {
   return Array.from({ length: count }, (_, index) => ({
     notificationId: `0000000${index}-1111-4111-8111-1111111111${String(index).padStart(2, '0')}`,
-    type: { kind: 'catalogued', value: 'match-confirmed' } as const,
+    type: { kind: 'catalogued', value: 'MatchConfirmed' } as const,
     squadId: SQUAD_IDENTITY,
     title: `Notification ${index + 1}`,
     body: `Body ${index + 1}`,

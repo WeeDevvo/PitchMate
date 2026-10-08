@@ -28,8 +28,9 @@
  *    controller is drivable by `vi.useFakeTimers()`, which is what lets the
  *    timeout be tested rather than waited out.
  * 3. **Settles through the pure mapper, then the pure parser.** The status goes
- *    through `mapCallOutcome`, and only a `success` outcome reads a body — which
- *    then goes through `parseNotificationList` or `parseNonNegativeInteger`. A
+ *    through `mapCallOutcome`, and only a `success` outcome reads a body — the
+ *    client's decoded `data`, which then goes through `parseNotificationList`,
+ *    `parseUnreadCountResponse`, or `parseMarkAllReadResponse`. A
  *    parse failure settles the call as `failure`, so an unschematised body takes
  *    the Generic_Notification_Failure path (Requirements 10.9, 10.10, 11.6).
  *    No failure arm carries a status, a header, or a body value, so the caller
@@ -45,23 +46,41 @@
  * reads no body at all, so an empty successful response can never be mistaken
  * for an uninterpretable one (Requirement 11.7).
  *
- * ### Why the body is read rather than taken from the generated type
+ * ### The typed body is taken, and still validated
  *
- * The committed OpenAPI document declares all four notification responses with
- * **no content schema**, so the generated types promise no body and the client
- * would hand back `undefined` if trusted. The facade therefore asks the client
- * for the response text (`parseAs: 'text'`) and hands the decoded value to the
- * pure parser, which is exactly why Requirement 10's parser is a contract
- * necessity rather than defensive programming. When the backend spec documents
- * these bodies, {@link readResponseBody} is the one place that changes.
+ * The committed OpenAPI document now declares a content schema for each
+ * notification response that carries one — an array of `NotificationSummary`,
+ * an `UnreadCountResponse`, a `MarkAllReadResponse` — so the generated types
+ * describe the body and the client decodes it. This facade therefore takes the
+ * client's **typed `data` value** rather than asking for the response text and
+ * decoding it here (Requirement 12.12). {@link ClientCall} pins each call's
+ * `data` to the response body the document declares for *that* operation, so a
+ * method pointed at the wrong path, or at an operation whose response shape
+ * moved, fails to compile here.
+ *
+ * A *described* body is not a *verified* one: the generated types state the
+ * contract, while a proxy, a cache, or a backend bug can deliver something else.
+ * The pure parsers therefore stay exactly where they were (Requirement 12.5),
+ * and the all-or-nothing rule and the parse-failure-settles-as-failure rule are
+ * unchanged — no Notification_Record and no count is ever produced by asserting
+ * a type onto an undecoded value.
+ *
+ * A `2xx` whose body the client could not decode makes the client's promise
+ * reject. That is caught on the one path every call takes and folded into
+ * `failure`, which is the same outcome a parser reaching the same body would
+ * have produced (Requirements 10.9, 10.10, 11.8).
  *
  * Requirements: 7.5, 9.1, 10.9, 10.10, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6,
- * 11.7, 11.8, 11.9, 11.10, 11.11
+ * 11.7, 11.8, 11.9, 11.10, 11.11, 12.5, 12.12
  */
 
 import type { PitchMateApiClient, operations } from '@pitchmate/api-client';
 
-import { parseNonNegativeInteger } from '../lib/countParsing';
+import {
+  parseMarkAllReadResponse,
+  parseUnreadCountResponse,
+  type CountParse,
+} from '../lib/countParsing';
 import {
   parseNotificationList,
   type NotificationRecord,
@@ -221,10 +240,9 @@ export function createNotificationsApi(
       const settlement = await performCall(
         timeoutMs,
         request.signal,
-        (signal) =>
+        (signal): ClientCall<'ListNotifications'> =>
           client.GET(LIST_PATH, {
             params: { query: listQuery(request.squadId) },
-            parseAs: 'text',
             signal,
           }),
       );
@@ -234,10 +252,9 @@ export function createNotificationsApi(
 
       // 10.10: only an array is a Notification_List; anything else is a parse
       // failure, which settles the call as failed rather than rendering a
-      // partial list.
-      const parsed = parseNotificationList(
-        await readResponseBody(settlement.result),
-      );
+      // partial list. The contract declares an array here, and the parser is
+      // what establishes that one actually arrived (Requirement 12.5).
+      const parsed = parseNotificationList(settlement.body);
       return parsed.kind === 'parsed'
         ? { kind: 'success', value: parsed.records }
         : FAILURE;
@@ -247,26 +264,24 @@ export function createNotificationsApi(
       const settlement = await performCall(
         timeoutMs,
         request.signal,
-        (signal) =>
+        (signal): ClientCall<'GetUnreadNotificationCount'> =>
           client.GET(UNREAD_COUNT_PATH, {
             params: { query: unreadCountQuery(request.squadId) },
-            parseAs: 'text',
             signal,
           }),
       );
-      return settleCount(settlement);
+      return settleCount(settlement, parseUnreadCountResponse);
     },
 
     async markRead(request) {
       const settlement = await performCall(
         timeoutMs,
         request.signal,
-        (signal) =>
+        (signal): ClientCall<'MarkNotificationRead'> =>
           // 7.5: the notification identity is the only value supplied — this
           // call carries no squad identity, scoped or not.
           client.POST(MARK_READ_PATH, {
             params: { path: markReadPath(request.notificationId) },
-            parseAs: 'text',
             signal,
           }),
       );
@@ -284,14 +299,13 @@ export function createNotificationsApi(
       const settlement = await performCall(
         timeoutMs,
         request.signal,
-        (signal) =>
+        (signal): ClientCall<'MarkAllNotificationsRead'> =>
           client.POST(MARK_ALL_READ_PATH, {
             params: { query: markAllReadQuery(request.squadId) },
-            parseAs: 'text',
             signal,
           }),
       );
-      return settleCount(settlement);
+      return settleCount(settlement, parseMarkAllReadResponse);
     },
   };
 }
@@ -325,29 +339,67 @@ function markReadPath(notificationId: NotificationIdentity): MarkReadPath {
 // --- Call plumbing ----------------------------------------------------------
 
 /**
- * The subset of an `openapi-fetch` call result this module reads. The generated
- * types model no response body for these endpoints (see the module note), so the
- * result is read as `unknown` and validated by the pure parsers.
+ * The success body the generated contract declares for one operation, read off
+ * that operation's own `200` response rather than named a second time.
+ *
+ * This is the half of Requirement 12.12 that bites: an operation whose declared
+ * response body changes — renamed, re-shaped, or withdrawn — changes this type,
+ * and the {@link ClientCall} annotation at that operation's call site stops
+ * compiling. An operation declaring a `204` and no content resolves to
+ * `undefined`, which is exactly what the client hands back for one, and so is
+ * what the mark-read call's settlement carries.
  */
-interface ClientCallResult {
-  readonly data?: unknown;
+type SuccessBody<TOperation extends keyof operations> =
+  operations[TOperation]['responses'] extends {
+    200: { content: { 'application/json': infer TBody } };
+  }
+    ? TBody
+    : undefined;
+
+/**
+ * The subset of an `openapi-fetch` call result this module reads.
+ *
+ * `TData` is the operation's declared success body, which is what makes `data`
+ * a **typed** value here rather than an `unknown` this module decodes itself
+ * (Requirement 12.12).
+ *
+ * `error` stays `unknown` and is never read: no failing arm of an
+ * {@link Outcome} carries a status, a header, or a body value, so there is
+ * nothing in a problem body this facade is permitted to pass on
+ * (Requirement 11.10). `response` is narrowed to the one member read — the
+ * status the mapper classifies.
+ */
+interface ClientCallResult<TData> {
+  readonly data?: TData;
   readonly error?: unknown;
-  readonly response?: unknown;
+  readonly response?: { readonly status?: number };
 }
 
 /**
- * A settled call, before its body is interpreted. The success arm carries the
- * raw client result so a valued call can read a body and a valueless call can
- * ignore it; the failing arms are already {@link Outcome} values.
+ * One settled Api_Client call of the named operation, as each method of the
+ * facade annotates its own request.
+ *
+ * The annotation pins `TData` to the contract instead of leaving it to
+ * inference, so the value handed to a parser is the response body the committed
+ * document declares for that operation (Requirement 12.12).
  */
-type CallSettlement =
-  | { readonly kind: 'success'; readonly result: ClientCallResult }
+type ClientCall<TOperation extends keyof operations> = Promise<
+  ClientCallResult<SuccessBody<TOperation>>
+>;
+
+/**
+ * A settled call, before its body is interpreted. The success arm carries the
+ * client's decoded body so a valued call can validate it and a valueless call
+ * can ignore it; the failing arms are already {@link Outcome} values.
+ */
+type CallSettlement<TData> =
+  | { readonly kind: 'success'; readonly body: TData | undefined }
   | { readonly kind: 'unauthenticated' }
   | { readonly kind: 'not-found' }
   | { readonly kind: 'failure' };
 
 /** The one failed settlement, shared like {@link FAILURE}. */
-const FAILED_SETTLEMENT: CallSettlement = { kind: 'failure' };
+const FAILED_SETTLEMENT: CallSettlement<never> = { kind: 'failure' };
 
 /**
  * Issue exactly one request, bounded by the Notification_Call_Timeout, and map
@@ -363,11 +415,11 @@ const FAILED_SETTLEMENT: CallSettlement = { kind: 'failure' };
  * `invoke` is called **once**. There is no retry, re-issue, or fallback for any
  * outcome (Requirement 11.11).
  */
-async function performCall(
+async function performCall<TData>(
   timeoutMs: number,
   callerSignal: AbortSignal | undefined,
-  invoke: (signal: AbortSignal) => Promise<unknown>,
-): Promise<CallSettlement> {
+  invoke: (signal: AbortSignal) => Promise<ClientCallResult<TData>>,
+): Promise<CallSettlement<TData>> {
   const controller = new AbortController();
   const forwardAbort = () => controller.abort();
 
@@ -392,12 +444,15 @@ async function performCall(
     }
   }
 
-  // One request. A thrown transport failure or abort becomes "no response",
-  // which the mapper folds into `failure` (Requirement 11.8). Catching here also
+  // One request. A thrown transport failure, an abort, or the client's own
+  // decode of a `2xx` body failing all become "no response", which the mapper
+  // folds into `failure` (Requirements 10.9, 10.10, 11.8). Catching here also
   // means the abandoned promise can never surface as an unhandled rejection
   // after the timeout has settled the call.
-  const call: Promise<ClientCallResult | null> = invoke(controller.signal).then(
-    (result) => result as ClientCallResult,
+  const call: Promise<ClientCallResult<TData> | null> = invoke(
+    controller.signal,
+  ).then(
+    (result) => result,
     () => null,
   );
 
@@ -414,7 +469,10 @@ async function performCall(
 
     const outcome = mapCallOutcome(readStatus(raced.result));
     if (outcome === 'success' && raced.result !== null) {
-      return { kind: 'success', result: raced.result };
+      // 12.12: the typed body the client decoded, exactly as the generated
+      // contract types it. An absent one — a `204`, or a `200` carrying nothing
+      // — stays `undefined`, which every parser rejects.
+      return { kind: 'success', body: raced.result.data };
     }
     if (outcome === 'unauthenticated') {
       return { kind: 'unauthenticated' };
@@ -431,91 +489,33 @@ async function performCall(
 
 /**
  * Interpret a settled count call: the unread-count and mark-all-read responses
- * both carry nothing but a count, parsed by the one non-negative integer parser.
- * A parse failure settles the call as failed (Requirement 10.9).
+ * each carry nothing but a count, in a **named object** — `{ count }` and
+ * `{ markedCount }` respectively (Requirement 7.6) — read by the envelope parser
+ * the caller supplies. Both parsers apply the same one value rule, so the only
+ * difference between the two calls is the member name. A parse failure settles
+ * the call as failed (Requirement 10.9).
  */
-async function settleCount(
-  settlement: CallSettlement,
-): Promise<CountCallOutcome> {
+function settleCount<TData>(
+  settlement: CallSettlement<TData>,
+  parse: (body: unknown) => CountParse,
+): CountCallOutcome {
   if (settlement.kind !== 'success') {
     return settlement;
   }
-  const parsed = parseNonNegativeInteger(await readResponseBody(settlement.result));
+  const parsed = parse(settlement.body);
   return parsed.kind === 'parsed'
     ? { kind: 'success', value: parsed.value }
     : FAILURE;
 }
 
 /**
- * Decode a successful response body into the `unknown` value the pure parsers
- * validate.
- *
- * Because the contract declares no content schema, the client is asked for text
- * and the JSON decoding happens here. Three shapes are accommodated so that the
- * facade behaves identically against the real generated client and against a
- * client fake in a test:
- *
- * - a string `data` — the response text, decoded here, with an empty body
- *   yielding `undefined` (which every parser rejects);
- * - any other present `data` — a fake that supplies an already-decoded body;
- * - no `data` — the body is read from the response object if it still can be.
- *
- * The function never throws: a malformed body yields `undefined`, which the
- * parsers turn into a parse failure and so into a failed call
- * (Requirements 10.9, 10.10).
- */
-async function readResponseBody(result: ClientCallResult): Promise<unknown> {
-  if (typeof result.data === 'string') {
-    return decodeJson(result.data);
-  }
-  if (result.data !== undefined) {
-    return result.data;
-  }
-
-  const response = result.response;
-  if (!isUnreadBody(response)) {
-    return undefined;
-  }
-  try {
-    return decodeJson(await response.text());
-  } catch {
-    return undefined;
-  }
-}
-
-/** Decode a response text, yielding `undefined` for empty or malformed text. */
-function decodeJson(text: string): unknown {
-  if (text.length === 0) {
-    return undefined;
-  }
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return undefined;
-  }
-}
-
-/** A response whose body is still readable. */
-function isUnreadBody(
-  response: unknown,
-): response is { text(): Promise<string> } {
-  if (typeof response !== 'object' || response === null) {
-    return false;
-  }
-  const candidate = response as { text?: unknown; bodyUsed?: unknown };
-  return typeof candidate.text === 'function' && candidate.bodyUsed !== true;
-}
-
-/**
  * Read the returned response status, or `null` where the call returned no
- * response at all — a transport failure or an abort, which the mapper folds into
- * `failure` (Requirement 11.8).
+ * response at all — a transport failure, an abort, or a `2xx` body the client
+ * could not decode, each of which the mapper folds into `failure`
+ * (Requirement 11.8).
  */
-function readStatus(result: ClientCallResult | null): number | null {
-  if (result === null || typeof result.response !== 'object' || result.response === null) {
-    return null;
-  }
-  const status = (result.response as { status?: unknown }).status;
+function readStatus(result: ClientCallResult<unknown> | null): number | null {
+  const status = result?.response?.status;
   return typeof status === 'number' ? status : null;
 }
 

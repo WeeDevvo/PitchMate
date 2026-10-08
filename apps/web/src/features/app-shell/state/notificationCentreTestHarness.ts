@@ -416,7 +416,7 @@ export async function renderNotificationCentre(
 /** The shape a {@link notificationRecord} starts from. */
 const BASE_RECORD: NotificationRecord = {
   notificationId: '018f3a2b-4c5d-7e6f-8a9b-0c1d2e3f4a5b',
-  type: { kind: 'catalogued', value: 'match-drafted' },
+  type: { kind: 'catalogued', value: 'MatchDrafted' },
   squadId: '018f3a2b-4c5d-7e6f-8a9b-0c1d2e3f4a5c',
   title: 'Match drafted',
   body: 'Respond with your availability.',

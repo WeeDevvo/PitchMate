@@ -2,12 +2,16 @@
  * The App_Shell's single pure notification list parser, its record model, and the
  * matching printer.
  *
- * The committed OpenAPI document describes `GET /notifications` as `200 OK` with
- * **no response schema**, so the generated client hands the shell an `unknown`
- * body. Requirement 10.1 therefore asks for exactly one pure parser — React-free
- * and DOM-free — that turns that unknown value into either a parsed outcome
- * carrying zero or more Notification_Records or a parse-failure outcome, with no
- * Notification_Record ever derived by asserting a type onto an unvalidated value.
+ * `GET /notifications` now answers with a described body — an array of
+ * `NotificationSummary`, whose two enum-valued members are published as named
+ * string schemas — so the generated client types the body rather than handing
+ * back a bare `unknown`. A described body is still not a *verified* one: the
+ * generated types describe the contract, while a proxy, a cache, or a backend
+ * bug can deliver something else. Requirement 12.5 therefore keeps exactly one
+ * pure parser here — React-free and DOM-free — that turns an unverified value
+ * into either a parsed outcome carrying zero or more Notification_Records or a
+ * parse-failure outcome, with no Notification_Record ever derived by asserting a
+ * type onto an unvalidated value.
  *
  * The two outcomes divide as follows:
  *
@@ -21,19 +25,56 @@
  *    — are considered at all (Requirements 10.3, 10.11). One malformed row can
  *    therefore never hide the rows around it.
  *
+ * ### Both enum-valued fields are read as Wire_Enum_Names (Requirement 12.8)
+ *
+ * `type` and `readState` cross the wire as the backend enum member names —
+ * `MatchDrafted`, `Unread` — not as integer codes, and neither is read as a
+ * number and mapped through a table any more. The accepted vocabulary comes from
+ * the Committed_Types: {@link CataloguedNotificationType} is an alias over
+ * `components['schemas']['NotificationType']` and {@link WireReadState} over
+ * `components['schemas']['ReadState']`, so the names are *read from* the
+ * generated client rather than restated here.
+ *
+ * A runtime membership test needs those names as values, and a type alone cannot
+ * be enumerated at runtime, so each union has a readonly tuple of its names
+ * pinned to the generated union from both sides (Requirement 12.3):
+ *
+ * | Direction | Mechanism | What it catches |
+ * | --- | --- | --- |
+ * | No name the contract does not carry | `as const satisfies WireEnumNames<T>` on the tuple | a renamed, removed, or invented member |
+ * | No name the contract carries omitted | an entry in {@link WIRE_ENUM_COVERAGE} | a member added to the backend enum |
+ *
+ * Only together are they a check: the tuple's own `satisfies` would accept a
+ * tuple listing seven of eight members, and the coverage entry would accept a
+ * tuple listing a ninth name that does not exist. Both fail `tsc -b`, so a
+ * vocabulary change is a build failure rather than a runtime surprise — the same
+ * idiom the Squads_Feature's `lib/wireEnums.ts` uses.
+ *
+ * `Read_State` keeps the App_Shell's own `unread`/`read` vocabulary, which its
+ * acceptance criteria are written in and which its components and state hooks
+ * compare against; the wire name is validated and translated at this boundary
+ * and nowhere else, so Requirement 12.1 holds — no screen, component, or state
+ * hook is edited by a wire change.
+ *
+ * ### The rest of the record model
+ *
  * `title` and `body` are retained **untruncated** at their supplied lengths. The
  * truncation to 120 and 500 characters is a display concern applied after
  * parsing, not a parse boundary (Requirement 10.2).
  *
- * `type` is a tagged union rather than a bare number so that a backend code the
+ * `type` is a tagged union rather than a bare name so that a backend type the
  * web app has not been taught about survives parsing, display, and printing with
- * its integer unchanged (Requirements 10.6, 10.7). `createdAtMs` normalises the
+ * its name unchanged (Requirements 10.6, 10.7). `createdAtMs` normalises the
  * wire's ISO-8601 value to an instant in epoch milliseconds; the printer emits it
  * back with an explicit `Z`, which is why the round-trip property compares
  * instants rather than wire strings (Requirement 10.8).
  *
- * Totality (Requirements 10.12, 14.12): every function here yields one of its
- * stated outcomes for every input value and raises nothing — including for an
+ * **All or nothing per record** (Requirement 12.7): a candidate yields either a
+ * fully populated Notification_Record or nothing at all. No field is clamped,
+ * defaulted, coerced, or repaired.
+ *
+ * Totality (Requirements 12.6, 10.12, 14.12): every function here yields one of
+ * its stated outcomes for every input value and raises nothing — including for an
  * absent value, `null`, a value of any other type, and a value nested a hundred
  * levels deep. That is achieved with **iterative type guards and no recursion
  * into unknown structure**: nothing here walks a candidate's interior, so depth
@@ -42,35 +83,72 @@
  * guard is additionally wrapped so that even an accessor property that throws on
  * read costs that one candidate rather than the whole response.
  *
- * This module is React-free, DOM-free, and imports no `@pitchmate/api-client`
- * (Requirements 14.16, 15.5).
+ * ### The one import a module under `lib/` may make
  *
- * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.10, 10.11, 10.12
+ * Every other module under `lib/` imports nothing outside `lib/`. This one takes
+ * a **type-only** import of `@pitchmate/api-client`, which is erased at compile
+ * time: the emitted module has no import at all, so `lib/` keeps the property the
+ * rule exists to protect — no runtime dependency, nothing to construct, testable
+ * with no transport present. `pureLogic.structural.test.ts` admits this module by
+ * name and asserts the import stays type-only (Requirements 14.16, 15.5).
+ *
+ * This module is React-free and DOM-free.
+ *
+ * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.10, 10.11, 10.12,
+ * 12.3, 12.5, 12.6, 12.7, 12.8, 12.11
  */
 
+import type { components } from '@pitchmate/api-client';
+
+// --- The wire enum vocabulary ------------------------------------------------
+
 /**
- * The eight catalogued notification kinds, in the code order the backend
- * serialises them: 0 through 7 (Requirement 10.5).
+ * The names of one wire enum, in the order the backend declares them.
+ *
+ * Non-empty by construction, because an empty tuple would satisfy every
+ * membership test vacuously.
  */
-export type CataloguedNotificationType =
-  | 'member-joined'
-  | 'promoted-to-admin'
-  | 'removed-from-squad'
-  | 'ownership-transferred'
-  | 'match-drafted'
-  | 'match-confirmed'
-  | 'teams-rolled'
-  | 'result-posted';
+type WireEnumNames<TName extends string> = readonly [TName, ...TName[]];
+
+/**
+ * The generated members a tuple of names fails to list, as required properties.
+ *
+ * `Record<never, never>` is `{}` and accepts the `{}` beside it; a union member
+ * missing from the tuple becomes a required property that `{}` cannot provide, so
+ * the `satisfies` fails and names the missing member in the compiler error. This
+ * is the half of Requirement 12.3 the tuple's own `satisfies` cannot state.
+ */
+type UncoveredNames<
+  TUnion extends string,
+  TNames extends readonly string[],
+> = Record<Exclude<TUnion, TNames[number]>, never>;
+
+/**
+ * The eight catalogued notification kinds, as an alias over the generated enum
+ * union of the Committed_Types (Requirements 10.5, 12.8).
+ *
+ * `null` is excluded because absence is this parser's concern, not a member of
+ * the backend enum: the document exporter folds reference-site nullability into
+ * the one shared schema, so a later nullable reference site must not widen the
+ * vocabulary read here.
+ */
+export type CataloguedNotificationType = Exclude<
+  components['schemas']['NotificationType'],
+  null
+>;
+
+/** The wire names of a Read_State, as an alias over the generated enum union. */
+export type WireReadState = Exclude<components['schemas']['ReadState'], null>;
 
 /**
  * A Notification_Type: either one of the eight catalogued kinds, or an
- * unrecognised marker retaining the integer code the backend supplied, so an
- * added backend type is displayed rather than discarded and its code survives
- * printing (Requirements 10.6, 10.7).
+ * unrecognised marker retaining the name the backend supplied, so an added
+ * backend type is displayed rather than discarded and its name survives printing
+ * (Requirements 10.6, 10.7).
  */
 export type NotificationType =
   | { readonly kind: 'catalogued'; readonly value: CataloguedNotificationType }
-  | { readonly kind: 'unrecognised'; readonly code: number };
+  | { readonly kind: 'unrecognised'; readonly name: string };
 
 /** A Notification_Record's read status (Requirement 10.4). */
 export type ReadState = 'unread' | 'read';
@@ -93,25 +171,66 @@ export interface NotificationRecord {
   readonly readState: ReadState;
 }
 
-/** The outcome of parsing a notification list response body (Requirement 10.1). */
+/** The outcome of parsing a notification list response body (Requirement 12.5). */
 export type ListParse =
   | { readonly kind: 'parsed'; readonly records: NotificationRecord[] }
   | { readonly kind: 'parse-failure' };
 
 /**
- * The catalogued kinds indexed by their wire code — index 0 is code 0
- * (Requirement 10.5).
+ * The catalogued kinds, in the order the backend declares them, pinned to the
+ * Generated_Enum_Union (Requirements 10.5, 12.3).
+ *
+ * The declaration order is documentation only — nothing is looked up by position
+ * any more, which is the point of reading names: there is no index left to be off
+ * by one.
  */
-export const CATALOGUED_NOTIFICATION_TYPES: readonly CataloguedNotificationType[] = [
-  'member-joined',
-  'promoted-to-admin',
-  'removed-from-squad',
-  'ownership-transferred',
-  'match-drafted',
-  'match-confirmed',
-  'teams-rolled',
-  'result-posted',
-];
+export const CATALOGUED_NOTIFICATION_TYPES = [
+  'MemberJoined',
+  'PromotedToAdmin',
+  'RemovedFromSquad',
+  'OwnershipTransferred',
+  'MatchDrafted',
+  'MatchConfirmed',
+  'TeamsRolled',
+  'ResultPosted',
+] as const satisfies WireEnumNames<CataloguedNotificationType>;
+
+/** The wire name of an unread record, and of a read one (Requirement 10.4). */
+const WIRE_READ_STATE_UNREAD = 'Unread';
+const WIRE_READ_STATE_READ = 'Read';
+
+/**
+ * The Read_State wire names, pinned to the Generated_Enum_Union
+ * (Requirement 12.3).
+ */
+export const READ_STATE_WIRE_NAMES = [
+  WIRE_READ_STATE_UNREAD,
+  WIRE_READ_STATE_READ,
+] as const satisfies WireEnumNames<WireReadState>;
+
+/**
+ * One `satisfies` per union, asserting that its tuple above omits **no** member
+ * of its Generated_Enum_Union (Requirement 12.3).
+ *
+ * Each value is `{}`, and each target is the set of generated members the tuple
+ * beside it fails to list. While a tuple is complete that target is `{}` and the
+ * entry type-checks; the moment the Committed_Types gain a member the tuple does
+ * not carry, the entry fails `tsc -b` with the missing member named.
+ *
+ * It is one exported value rather than two loose statements so that nothing here
+ * is an unused binding, and so the set of unions this module declares can be read
+ * at runtime.
+ */
+export const WIRE_ENUM_COVERAGE = {
+  NotificationType: {} satisfies UncoveredNames<
+    CataloguedNotificationType,
+    typeof CATALOGUED_NOTIFICATION_TYPES
+  >,
+  ReadState: {} satisfies UncoveredNames<
+    WireReadState,
+    typeof READ_STATE_WIRE_NAMES
+  >,
+} as const;
 
 /** The accepted inclusive bounds on a supplied `title` (Requirement 10.2). */
 export const NOTIFICATION_TITLE_MIN_LENGTH = 1;
@@ -129,10 +248,6 @@ export const NOTIFICATION_BODY_MAX_LENGTH = 2000;
  * the same value and a test keeps them from drifting.
  */
 export const NOTIFICATION_LIST_PARSE_CAP = 200;
-
-/** The wire code for an unread record, and for a read one (Requirement 10.4). */
-const READ_STATE_CODE_UNREAD = 0;
-const READ_STATE_CODE_READ = 1;
 
 /** The one parse-failure value, shared so callers can compare cheaply. */
 const PARSE_FAILURE: ListParse = { kind: 'parse-failure' };
@@ -164,9 +279,10 @@ const MAX_INSTANT_MS = 8_640_000_000_000_000;
 /**
  * Parse a notification list response body.
  *
- * Total over every input and free of exceptions (Requirements 10.12, 14.12).
+ * Total over every input and free of exceptions (Requirements 12.6, 10.12,
+ * 14.12).
  *
- * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.10, 10.11, 10.12
+ * Requirements: 10.2, 10.3, 10.4, 10.5, 10.6, 10.10, 10.11, 10.12, 12.5, 12.8
  */
 export function parseNotificationList(body: unknown): ListParse {
   // 10.10: only an array is a list. Absent, null, and every other shape is a
@@ -198,7 +314,7 @@ export function parseNotificationList(body: unknown): ListParse {
 /**
  * Parse one candidate record, yielding `null` when the candidate is not an
  * object or when any one of the seven properties is absent, null, or outside its
- * accepted form or length (Requirement 10.3).
+ * accepted form or length (Requirements 10.3, 12.7).
  *
  * Exported for the Notifications_Api's single-record paths and for the property
  * tests; the list parser is the only caller that also applies the cap.
@@ -206,7 +322,7 @@ export function parseNotificationList(body: unknown): ListParse {
 export function parseNotificationCandidate(candidate: unknown): NotificationRecord | null {
   // Reading a property is the only place an arbitrary input value could raise —
   // a getter defined on the candidate. Guarding here keeps totality absolute
-  // while costing the malformed candidate only (Requirement 10.12).
+  // while costing the malformed candidate only (Requirements 10.12, 12.6).
   try {
     return readNotificationCandidate(candidate);
   } catch {
@@ -231,7 +347,7 @@ function readNotificationCandidate(candidate: unknown): NotificationRecord | nul
     return null;
   }
 
-  const type = notificationTypeFromCode(fields.type);
+  const type = notificationTypeFromName(fields.type);
   if (type === null) {
     return null;
   }
@@ -259,7 +375,7 @@ function readNotificationCandidate(candidate: unknown): NotificationRecord | nul
     return null;
   }
 
-  const readState = readStateFromCode(fields.readState);
+  const readState = readStateFromName(fields.readState);
   if (readState === null) {
     return null;
   }
@@ -270,15 +386,15 @@ function readNotificationCandidate(candidate: unknown): NotificationRecord | nul
 /**
  * Render a Notification_Record into the wire form the parser accepts: exactly
  * the seven properties of acceptance criterion 10.2, `createdAt` with an
- * explicit UTC designator, `title` and `body` untruncated, and as `type` the
- * catalogued integer code or the code retained by an unrecognised marker
- * (Requirement 10.7).
+ * explicit UTC designator, `title` and `body` untruncated, and as `type` and
+ * `readState` the Wire_Enum_Names of the contract — the catalogued name or the
+ * name retained by an unrecognised marker (Requirements 10.7, 12.11).
  *
  * Total and exception-free for every input, including a value that is not a
  * Notification_Record at all: such a value prints properties the parser then
- * rejects, rather than raising (Requirement 10.12).
+ * rejects, rather than raising (Requirements 10.12, 12.6).
  *
- * Requirements: 10.7, 10.8, 10.12
+ * Requirements: 10.7, 10.8, 10.12, 12.11
  */
 export function printNotificationRecord(record: NotificationRecord): unknown {
   const source: Partial<NotificationRecord> =
@@ -286,69 +402,92 @@ export function printNotificationRecord(record: NotificationRecord): unknown {
 
   return {
     notificationId: source.notificationId,
-    type: notificationTypeCode(source.type as NotificationType),
+    type: notificationTypeName(source.type as NotificationType),
     squadId: source.squadId,
     title: source.title,
     body: source.body,
     createdAt: printIsoInstant(source.createdAtMs),
-    readState: source.readState === 'read' ? READ_STATE_CODE_READ : READ_STATE_CODE_UNREAD,
+    readState:
+      source.readState === 'read' ? WIRE_READ_STATE_READ : WIRE_READ_STATE_UNREAD,
   };
 }
 
 /**
- * Map a wire `type` value to a Notification_Type: codes 0 through 7 to the eight
- * catalogued kinds in their catalogued order, any other integer to an
- * unrecognised marker retaining that code, and any non-integer — including a
- * fractional, non-numeric, string-encoded, `NaN`, or infinite value — to `null`,
- * meaning the field cannot be interpreted (Requirements 10.5, 10.6).
+ * Whether a value is one of the eight catalogued Notification_Type names
+ * (Requirements 10.5, 12.8).
+ *
+ * Total and free of exceptions: a strict comparison against a fixed list of
+ * strings, so nothing is coerced and a hostile `toString` or `valueOf` never
+ * runs. Compared with `===` rather than `includes`, so the candidate stays
+ * `unknown` and no cast is needed to ask the question.
  */
-export function notificationTypeFromCode(code: unknown): NotificationType | null {
-  if (typeof code !== 'number' || !Number.isInteger(code)) {
+export function isCataloguedNotificationType(
+  candidate: unknown,
+): candidate is CataloguedNotificationType {
+  return CATALOGUED_NOTIFICATION_TYPES.some((name) => name === candidate);
+}
+
+/**
+ * Map a wire `type` value to a Notification_Type: one of the eight catalogued
+ * names to that catalogued kind, any other non-empty string to an unrecognised
+ * marker retaining that name, and anything else — absent, `null`, a number, a
+ * boolean, an object, or the empty string — to `null`, meaning the field cannot
+ * be interpreted (Requirements 10.5, 10.6, 12.8).
+ *
+ * The empty string is rejected rather than retained so that every unrecognised
+ * marker carries a name the printer can emit and the parser will read back; a
+ * marker that could not round-trip has no business in the record model.
+ */
+export function notificationTypeFromName(name: unknown): NotificationType | null {
+  if (isCataloguedNotificationType(name)) {
+    return { kind: 'catalogued', value: name };
+  }
+
+  if (typeof name !== 'string' || name.length === 0) {
     return null;
   }
 
-  // `-0` compares equal to `0`, so it is the catalogued code 0.
-  if (code >= 0 && code < CATALOGUED_NOTIFICATION_TYPES.length) {
-    return { kind: 'catalogued', value: CATALOGUED_NOTIFICATION_TYPES[code] };
-  }
-
-  return { kind: 'unrecognised', code };
+  return { kind: 'unrecognised', name };
 }
 
 /**
- * The wire code for a Notification_Type: the catalogued index for a recognised
- * kind, the retained code for an unrecognised marker, and `NaN` for a value that
- * is neither — a code the parser rejects, so a malformed record cannot round-trip
- * into a well-formed one (Requirements 10.5, 10.6, 10.7).
+ * The Wire_Enum_Name for a Notification_Type: the catalogued name for a
+ * recognised kind, the retained name for an unrecognised marker, and the empty
+ * string for a value that is neither — a value the parser rejects, so a malformed
+ * record cannot round-trip into a well-formed one (Requirements 10.5, 10.6,
+ * 10.7).
  */
-export function notificationTypeCode(type: NotificationType): number {
+export function notificationTypeName(type: NotificationType): string {
   if (typeof type !== 'object' || type === null) {
-    return Number.NaN;
+    return '';
   }
 
   if (type.kind === 'catalogued') {
-    const code = CATALOGUED_NOTIFICATION_TYPES.indexOf(type.value);
-    return code === -1 ? Number.NaN : code;
+    return isCataloguedNotificationType(type.value) ? type.value : '';
   }
 
   if (type.kind === 'unrecognised') {
-    return typeof type.code === 'number' ? type.code : Number.NaN;
+    return typeof type.name === 'string' ? type.name : '';
   }
 
-  return Number.NaN;
+  return '';
 }
 
 /**
- * Map a wire `readState` value: 0 to `unread`, 1 to `read`, and every other
- * value — negative, fractional, non-numeric, or string-encoded — to `null`,
- * meaning the field cannot be interpreted (Requirement 10.4).
+ * Map a wire `readState` value: the `Unread` name to `unread`, the `Read` name to
+ * `read`, and every other value — a differently-cased name, the old integer
+ * codes, any other string, or any other type — to `null`, meaning the field
+ * cannot be interpreted (Requirements 10.4, 12.8).
+ *
+ * The comparison is exact, with no case folding: the backend serialises the
+ * member name verbatim, so `unread` is not a name this contract carries.
  */
-function readStateFromCode(code: unknown): ReadState | null {
-  if (code === READ_STATE_CODE_UNREAD) {
+function readStateFromName(name: unknown): ReadState | null {
+  if (name === WIRE_READ_STATE_UNREAD) {
     return 'unread';
   }
 
-  if (code === READ_STATE_CODE_READ) {
+  if (name === WIRE_READ_STATE_READ) {
     return 'read';
   }
 

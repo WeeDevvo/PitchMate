@@ -3,20 +3,30 @@
  *
  * These pin the specific boundaries Requirement 10 names — the top-level shapes
  * that are a parse-failure, the seven properties and their accepted forms, the
- * `type` and `readState` code maps, the 200-element parse cap, and the printer's
- * wire form. The universal properties (totality, candidate acceptance, and the
- * print/parse round trip) are covered by the `fast-check` properties in
+ * `type` and `readState` **Wire_Enum_Names**, the 200-element parse cap, and the
+ * printer's wire form. The universal properties (totality, candidate acceptance,
+ * and the print/parse round trip) are covered by the `fast-check` properties in
  * `notificationParsing.property.test.ts`.
  *
- * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.10, 10.11, 10.12
+ * The two enum-valued fields now cross the wire as the backend's enum member
+ * names rather than as integer codes (Requirement 12.8), so the old codes appear
+ * below as *rejected* values: a `type` of `4` and a `readState` of `0` are no
+ * longer the contract, and a half-migrated client must fail loudly rather than
+ * read a number that no longer means what it used to.
+ *
+ * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.10, 10.11, 10.12,
+ * 12.5, 12.7, 12.8, 12.11
  */
 
 import { describe, expect, it } from 'vitest';
 
 import {
+  CATALOGUED_NOTIFICATION_TYPES,
   NOTIFICATION_LIST_PARSE_CAP,
-  notificationTypeCode,
-  notificationTypeFromCode,
+  READ_STATE_WIRE_NAMES,
+  WIRE_ENUM_COVERAGE,
+  notificationTypeFromName,
+  notificationTypeName,
   parseNotificationList,
   printNotificationRecord,
   type NotificationRecord,
@@ -29,12 +39,12 @@ const SQUAD_ID = 'ABCDEF01-2345-6789-ABCD-EF0123456789';
 function wireRecord(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     notificationId: NOTIFICATION_ID,
-    type: 4,
+    type: 'MatchDrafted',
     squadId: SQUAD_ID,
     title: 'Match drafted',
     body: 'Tell the squad which days you can make.',
     createdAt: '2026-03-01T18:30:00Z',
-    readState: 0,
+    readState: 'Unread',
     ...overrides,
   };
 }
@@ -99,7 +109,7 @@ describe('parseNotificationList candidate acceptance', () => {
   it('parses a well-formed candidate into a Notification_Record (10.2)', () => {
     expect(onlyRecord([wireRecord()])).toEqual({
       notificationId: NOTIFICATION_ID,
-      type: { kind: 'catalogued', value: 'match-drafted' },
+      type: { kind: 'catalogued', value: 'MatchDrafted' },
       squadId: SQUAD_ID,
       title: 'Match drafted',
       body: 'Tell the squad which days you can make.',
@@ -141,12 +151,16 @@ describe('parseNotificationList candidate acceptance', () => {
     ['a createdAt that is not a date-time', wireRecord({ createdAt: 'yesterday' })],
     ['a createdAt naming an impossible day', wireRecord({ createdAt: '2026-02-30T00:00:00Z' })],
     ['a createdAt supplied as epoch milliseconds', wireRecord({ createdAt: 1_772_390_000_000 })],
+    ['an integer type code, which is no longer the contract', wireRecord({ type: 4 })],
     ['a fractional type code', wireRecord({ type: 1.5 })],
-    ['a string-encoded type code', wireRecord({ type: '4' })],
+    ['an empty type name', wireRecord({ type: '' })],
+    ['an integer readState code, which is no longer the contract', wireRecord({ readState: 0 })],
     ['a fractional readState code', wireRecord({ readState: 0.5 })],
     ['a negative readState code', wireRecord({ readState: -1 })],
     ['a string-encoded readState code', wireRecord({ readState: '1' })],
-  ])('drops %s (10.3, 10.4, 10.5)', (_name, candidate) => {
+    ['an unknown readState name', wireRecord({ readState: 'Archived' })],
+    ['a readState name in the wrong letter case', wireRecord({ readState: 'unread' })],
+  ])('drops %s (10.3, 10.4, 10.5, 12.7, 12.8)', (_name, candidate) => {
     expect(parseNotificationList([candidate])).toEqual({ kind: 'parsed', records: [] });
   });
 
@@ -177,37 +191,62 @@ describe('parseNotificationList createdAt offsets', () => {
   });
 });
 
-describe('notification type codes', () => {
-  it.each([
-    [0, 'member-joined'],
-    [1, 'promoted-to-admin'],
-    [2, 'removed-from-squad'],
-    [3, 'ownership-transferred'],
-    [4, 'match-drafted'],
-    [5, 'match-confirmed'],
-    [6, 'teams-rolled'],
-    [7, 'result-posted'],
-  ])('maps code %i to the catalogued type (10.5)', (code, value) => {
-    expect(notificationTypeFromCode(code)).toEqual({ kind: 'catalogued', value });
-    expect(notificationTypeCode({ kind: 'catalogued', value: value as never })).toBe(code);
+describe('notification type names', () => {
+  it('declares exactly the vocabulary the Committed_Types carry (10.5, 12.3)', () => {
+    // The names come from `components['schemas']` and the tuple is `satisfies`-
+    // checked both ways at compile time, so this asserts only what a reader needs
+    // stated outright: the eight kinds, the two read states, and that both
+    // coverage entries exist for the compiler to fail on.
+    expect(CATALOGUED_NOTIFICATION_TYPES).toEqual([
+      'MemberJoined',
+      'PromotedToAdmin',
+      'RemovedFromSquad',
+      'OwnershipTransferred',
+      'MatchDrafted',
+      'MatchConfirmed',
+      'TeamsRolled',
+      'ResultPosted',
+    ]);
+    expect(READ_STATE_WIRE_NAMES).toEqual(['Unread', 'Read']);
+    expect(Object.keys(WIRE_ENUM_COVERAGE).sort()).toEqual([
+      'NotificationType',
+      'ReadState',
+    ]);
   });
 
-  it.each([8, 42, -1])('retains the integer code %i as unrecognised (10.6)', (code) => {
-    expect(notificationTypeFromCode(code)).toEqual({ kind: 'unrecognised', code });
-    expect(notificationTypeCode({ kind: 'unrecognised', code })).toBe(code);
-  });
-
-  it.each([1.5, Number.NaN, Number.POSITIVE_INFINITY, '4', null, undefined, {}])(
-    'treats %o as a type that cannot be interpreted (10.5)',
-    (code) => {
-      expect(notificationTypeFromCode(code)).toBeNull();
+  it.each([...CATALOGUED_NOTIFICATION_TYPES])(
+    'reads the catalogued name %s and prints it back (10.5, 12.8, 12.11)',
+    (value) => {
+      expect(notificationTypeFromName(value)).toEqual({ kind: 'catalogued', value });
+      expect(notificationTypeName({ kind: 'catalogued', value })).toBe(value);
     },
   );
 
-  it('keeps an unrecognised record in the list with its code (10.6)', () => {
-    const record = onlyRecord([wireRecord({ type: 12 })]);
+  // 10.6 is asymmetric with 10.4 on purpose: an unknown *type* is retained and
+  // displayed with a neutral label, because a backend kind this web app has not
+  // been taught about is still a notification. An unknown *readState* fails the
+  // record carrying it, because there is no neutral read status to display.
+  // A string-encoded code and a differently-cased name are therefore retained as
+  // unrecognised names, not dropped.
+  it.each(['MatchCancelled', 'SomethingNew', 'memberJoined', 'matchdrafted', '4'])(
+    'retains the unrecognised name %s (10.6)',
+    (name) => {
+      expect(notificationTypeFromName(name)).toEqual({ kind: 'unrecognised', name });
+      expect(notificationTypeName({ kind: 'unrecognised', name })).toBe(name);
+    },
+  );
 
-    expect(record.type).toEqual({ kind: 'unrecognised', code: 12 });
+  it.each([4, 1.5, Number.NaN, Number.POSITIVE_INFINITY, '', null, undefined, {}, true])(
+    'treats %o as a type that cannot be interpreted (10.5, 12.8)',
+    (name) => {
+      expect(notificationTypeFromName(name)).toBeNull();
+    },
+  );
+
+  it('keeps an unrecognised record in the list with its name (10.6)', () => {
+    const record = onlyRecord([wireRecord({ type: 'MatchCancelled' })]);
+
+    expect(record.type).toEqual({ kind: 'unrecognised', name: 'MatchCancelled' });
   });
 });
 
@@ -235,28 +274,33 @@ describe('the Notification_List parse cap', () => {
 
 describe('printNotificationRecord', () => {
   it('emits exactly the seven wire properties with a UTC designator (10.7)', () => {
-    const record = onlyRecord([wireRecord({ readState: 1 })]);
+    const record = onlyRecord([wireRecord({ readState: 'Read' })]);
 
     expect(printNotificationRecord(record)).toEqual({
       notificationId: NOTIFICATION_ID,
-      type: 4,
+      type: 'MatchDrafted',
       squadId: SQUAD_ID,
       title: 'Match drafted',
       body: 'Tell the squad which days you can make.',
       createdAt: '2026-03-01T18:30:00.000Z',
-      readState: 1,
+      readState: 'Read',
     });
   });
 
-  it('emits the code retained by an unrecognised type marker (10.7)', () => {
-    const record = onlyRecord([wireRecord({ type: 12 })]);
+  it('emits the name retained by an unrecognised type marker (10.7)', () => {
+    const record = onlyRecord([wireRecord({ type: 'MatchCancelled' })]);
 
-    expect(printNotificationRecord(record)).toMatchObject({ type: 12 });
+    expect(printNotificationRecord(record)).toMatchObject({ type: 'MatchCancelled' });
   });
 
   it('round-trips a record through printing and parsing (10.8)', () => {
     const record = onlyRecord([
-      wireRecord({ type: 99, readState: 1, body: '', createdAt: '2026-03-01T13:30:00-05:00' }),
+      wireRecord({
+        type: 'MatchCancelled',
+        readState: 'Read',
+        body: '',
+        createdAt: '2026-03-01T13:30:00-05:00',
+      }),
     ]);
 
     expect(onlyRecord([printNotificationRecord(record)])).toEqual(record);

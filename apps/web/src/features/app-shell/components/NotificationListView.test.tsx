@@ -129,7 +129,7 @@ function notification(index: number): NotificationRecord {
 
   return {
     notificationId: `${identity}-1111-4111-8111-111111111111`,
-    type: { kind: 'catalogued', value: 'match-confirmed' },
+    type: { kind: 'catalogued', value: 'MatchConfirmed' },
     squadId: '22222222-2222-4222-8222-222222222222',
     title: `Notification ${index}`,
     body: `Body ${index}`,

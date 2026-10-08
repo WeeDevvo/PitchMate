@@ -84,17 +84,18 @@ export function unauthenticatedSessionManager(): SessionManager {
 /**
  * An Authenticated_Api_Client stand-in answering every notification call at once.
  *
- * The notifications facade reads the response text and decodes it itself, so the
- * unread-count endpoint answers `0` and the list endpoint an empty array — enough
- * for the frame to render with no call failing and nothing reaching the network.
+ * The notifications facade takes the client's decoded `data`, so this stand-in
+ * supplies decoded bodies as the generated client would: the unread-count
+ * endpoint answers the named `{ count: 0 }` envelope and the list endpoint an
+ * empty array — enough for the frame to render with no call failing and nothing
+ * reaching the network. A `204` carries no body, so `data` is absent.
  */
 export function stubApiClient(): PitchMateApiClient {
-  const ok = (body: unknown) =>
-    Promise.resolve({ data: JSON.stringify(body), response: { status: 200 } });
+  const ok = (body: unknown) => Promise.resolve({ data: body, response: { status: 200 } });
 
   return {
-    GET: (path: string) => ok(path.includes('unread-count') ? 0 : []),
-    POST: () => Promise.resolve({ data: '', response: { status: 204 } }),
+    GET: (path: string) => ok(path.includes('unread-count') ? { count: 0 } : []),
+    POST: () => Promise.resolve({ data: undefined, response: { status: 204 } }),
   } as unknown as PitchMateApiClient;
 }
 
@@ -272,7 +273,7 @@ export function squadsApiClient(): SquadsApiClientStub {
         return json([]);
       default:
         // The notification endpoints, exactly as `stubApiClient` answers them.
-        return json(path.includes('unread-count') ? 0 : []);
+        return json(path.includes('unread-count') ? { count: 0 } : []);
     }
   };
 

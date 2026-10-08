@@ -129,16 +129,16 @@ const readStateArb: fc.Arbitrary<ReadState> = fc.constantFrom(
 const typeArb: fc.Arbitrary<NotificationType> = fc.oneof(
   fc
     .constantFrom(
-      'member-joined' as const,
-      'match-drafted' as const,
-      'match-confirmed' as const,
-      'teams-rolled' as const,
-      'result-posted' as const,
+      'MemberJoined' as const,
+      'MatchDrafted' as const,
+      'MatchConfirmed' as const,
+      'TeamsRolled' as const,
+      'ResultPosted' as const,
     )
     .map((value) => ({ kind: 'catalogued', value }) as const),
   fc
-    .integer({ min: 8, max: 64 })
-    .map((code) => ({ kind: 'unrecognised', code }) as const),
+    .string({ minLength: 1, maxLength: 24 })
+    .map((name) => ({ kind: 'unrecognised', name }) as const),
 );
 
 /** The per-record values that vary; identity and instant come from the position. */

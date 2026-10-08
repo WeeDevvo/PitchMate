@@ -164,19 +164,19 @@ const identityArb: fc.Arbitrary<string> = fc
 const typeArb: fc.Arbitrary<NotificationType> = fc.oneof(
   fc
     .constantFrom(
-      'member-joined' as const,
-      'promoted-to-admin' as const,
-      'removed-from-squad' as const,
-      'ownership-transferred' as const,
-      'match-drafted' as const,
-      'match-confirmed' as const,
-      'teams-rolled' as const,
-      'result-posted' as const,
+      'MemberJoined' as const,
+      'PromotedToAdmin' as const,
+      'RemovedFromSquad' as const,
+      'OwnershipTransferred' as const,
+      'MatchDrafted' as const,
+      'MatchConfirmed' as const,
+      'TeamsRolled' as const,
+      'ResultPosted' as const,
     )
     .map((value) => ({ kind: 'catalogued', value }) as const),
   fc
-    .integer({ min: 8, max: 64 })
-    .map((code) => ({ kind: 'unrecognised', code }) as const),
+    .string({ minLength: 1, maxLength: 24 })
+    .map((name) => ({ kind: 'unrecognised', name }) as const),
 );
 
 const readStateArb: fc.Arbitrary<ReadState> = fc.constantFrom(
@@ -186,7 +186,7 @@ const readStateArb: fc.Arbitrary<ReadState> = fc.constantFrom(
 
 /**
  * A Notification_Record. Every non-`readState` value is generated so that a
- * transition rewriting one of them — or dropping the integer code of an
+ * transition rewriting one of them — or dropping the wire name retained by an
  * unrecognised type marker (Requirement 10.6) — is caught rather than hidden by
  * fixtures that happen to agree.
  */
@@ -391,7 +391,7 @@ describe('applyMarkRead — applying the transition twice equals applying it onc
 
           if (before.notificationId === notificationId) {
             // Only `readState` is rewritten — the unrecognised type marker's
-            // integer code and the untruncated title and body are carried across
+            // retained wire name and the untruncated title and body are carried across
             // (Requirement 10.6).
             expect(after).toEqual({ ...before, readState: 'read' });
           } else {

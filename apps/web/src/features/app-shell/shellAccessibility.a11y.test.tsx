@@ -94,6 +94,7 @@ import {
   SHELL_NOT_FOUND_HEADING,
   UNAVAILABLE_BODY,
 } from './lib/messages';
+import { printUnreadCountResponse } from './lib/countParsing';
 import { NOTIFICATIONS_SUBJECT } from './lib/unreadBadge';
 import {
   printNotificationRecord,
@@ -168,7 +169,7 @@ const SQUAD_ID = 'b1d0f4a2-7c3e-4f51-9a6b-8e2d5c7f0a13';
 const RECORDS: readonly NotificationRecord[] = [
   {
     notificationId: '11111111-1111-4111-8111-111111111111',
-    type: { kind: 'catalogued', value: 'match-confirmed' },
+    type: { kind: 'catalogued', value: 'MatchConfirmed' },
     squadId: SQUAD_ID,
     title: 'Thursday is confirmed',
     body: 'Kick-off at 7pm, Pitch 3.',
@@ -177,7 +178,7 @@ const RECORDS: readonly NotificationRecord[] = [
   },
   {
     notificationId: '22222222-2222-4222-8222-222222222222',
-    type: { kind: 'catalogued', value: 'teams-rolled' },
+    type: { kind: 'catalogued', value: 'TeamsRolled' },
     squadId: SQUAD_ID,
     title: 'Teams are up',
     body: 'You are in bibs. Again.',
@@ -186,7 +187,7 @@ const RECORDS: readonly NotificationRecord[] = [
   },
   {
     notificationId: '33333333-3333-4333-8333-333333333333',
-    type: { kind: 'unrecognised', code: 99 },
+    type: { kind: 'unrecognised', name: 'MatchCancelled' },
     squadId: SQUAD_ID,
     title: 'Something new happened',
     body: '',
@@ -224,26 +225,27 @@ function authenticatedSessionManager(): SessionManager {
 /**
  * An Authenticated_Api_Client stand-in answering every notification call.
  *
- * The facade reads the response text and decodes it itself (the contract declares
- * no content schema), so the count endpoint answers a number and the list
- * endpoint the printed wire form of {@link RECORDS} — printed through the
- * production printer, so the audit renders records the real parser accepted.
+ * The facade takes the client's decoded `data`, so this stand-in supplies
+ * decoded bodies as the generated client would: the count endpoint answers the
+ * named count envelope and the list endpoint the printed wire form of
+ * {@link RECORDS} — both printed through the production printers, so the audit
+ * renders values the real parsers accepted. A `204` carries no body, so `data`
+ * is absent.
  *
  * `status` is the status every call returns: `200` for the ordinary audits, `401`
  * for the session-ended one, which is what begins the handover (Requirement 9.3).
  */
 function stubApiClient(status = 200): PitchMateApiClient {
-  const answer = (body: unknown) =>
-    Promise.resolve({ data: JSON.stringify(body), response: { status } });
+  const answer = (body: unknown) => Promise.resolve({ data: body, response: { status } });
 
   return {
     GET: (path: string) =>
       answer(
         path.includes('unread-count')
-          ? UNREAD_COUNT
+          ? printUnreadCountResponse(UNREAD_COUNT)
           : RECORDS.map(printNotificationRecord),
       ),
-    POST: () => Promise.resolve({ data: '', response: { status: 204 } }),
+    POST: () => Promise.resolve({ data: undefined, response: { status: 204 } }),
   } as unknown as PitchMateApiClient;
 }
 
