@@ -53,7 +53,7 @@
  * | `invite-unusable`      | renders `INVITE_UNUSABLE`, identically for missing, revoked, and expired |
  * | `invite-limit-reached` | tells the admin to revoke an invite before generating another |
  * | `validation`           | presents the backend as the authority on acceptability (3.9) |
- * | `conflict`             | the state moved under the request; the action can be re-submitted |
+ * | `conflict`             | the state is not what the request assumed — it moved under the request, or a claim target already holds a membership — and nothing was changed |
  */
 export type RejectionReason =
   | 'display-name-in-use'
@@ -130,8 +130,9 @@ export type CallOutcomeKind =
  *
  *  - `400` — `ValidationFailed`, `ExpiryRequired`, `UnsupportedStatistic`: all
  *    validation.
- *  - `409` — `DisplayNameInUse` and four state conflicts; a `409` whose code is
- *    unnamed is a conflict rather than a guess at which one.
+ *  - `409` — `DisplayNameInUse` and five state conflicts, `AlreadyMember`
+ *    included; a `409` whose code is unnamed is a conflict rather than a guess
+ *    at which one.
  *  - `410` — emitted for `InviteUnusable` and nothing else, so the status alone
  *    names the reason.
  */
@@ -145,11 +146,25 @@ const REJECTION_REASONS_BY_STATUS: Readonly<Record<number, RejectionReason>> = {
  * The backend problem codes that name a {@link RejectionReason}, read from
  * `SquadErrorCode` and `StatsErrorCode` rather than guessed.
  *
- * `Unauthorized`, `NotAMember`, and `AlreadyMember` are deliberately absent:
- * the first two are answered as `403`/`404` and the third as a `200` no-op, so
- * none of them ever accompanies a rejecting status. A code this table does not
- * name — an unmapped one, or a new one a later backend adds — falls back to the
- * status default, so an outcome is always named and nothing is thrown.
+ * `AlreadyMember` is named here as a `conflict` because the backend answers it
+ * `409` with a ProblemDetails body carrying the code (api-response-contracts
+ * Requirements 6.1, 6.2). Its only producers are guest-claim initiation and
+ * completion, where "the target user already holds a membership" is a genuine
+ * rejection — so it has to present as a rejected input rather than fall through
+ * to a Generic_Squads_Failure (api-response-contracts Requirement 6.6). It is
+ * named explicitly rather than left to the `409` status default so that the
+ * table says which conflict it is, and so a later status change to that code
+ * fails a test here rather than quietly re-routing the outcome.
+ *
+ * The redemption no-op it once shared a status with is unaffected: that path is
+ * a `200` carrying `RedeemOutcome.AlreadyMember` in its *body*, a success this
+ * classifier never sees a problem code for.
+ *
+ * `Unauthorized` and `NotAMember` are deliberately absent: both are answered as
+ * `403`/`404`, so neither ever accompanies a rejecting status. A code this table
+ * does not name — an unmapped one, or a new one a later backend adds — falls
+ * back to the status default, so an outcome is always named and nothing is
+ * thrown.
  */
 const REJECTION_REASONS_BY_PROBLEM_CODE: Readonly<
   Record<string, RejectionReason>
@@ -162,6 +177,7 @@ const REJECTION_REASONS_BY_PROBLEM_CODE: Readonly<
   UnsupportedStatistic: 'validation',
   OwnerConstraint: 'conflict',
   ClaimNotEligible: 'conflict',
+  AlreadyMember: 'conflict',
   SquadPendingDeletion: 'conflict',
   ConcurrencyConflict: 'conflict',
 };

@@ -235,20 +235,26 @@ export interface SquadsApiClientStub {
  * failure, which would make every "this screen resolved here" assertion fail for
  * a reason that has nothing to do with routing.
  *
- * Bodies are handed over as text on `data` with a plain `{ status }` response, the
- * shape {@link stubApiClient} already uses: the transport seam reads a string body
- * itself and decodes it in a guard, and an **empty** body is what the
- * `RedeemInvite` no-op answers with.
+ * Bodies are handed over **already decoded** on `data`, with a plain
+ * `{ status }` response. That is what the real generated client now does: the
+ * squads responses carry a declared content schema, so `openapi-fetch` decodes
+ * the JSON itself and the transport seam takes the typed `data` value rather
+ * than reading and decoding response text. An absent `data` is what a `204` —
+ * and a `200` carrying nothing, the shape a no-op redemption answers with —
+ * looks like from the client.
+ *
+ * The notification endpoints are answered by the same stub and read by the
+ * App_Shell's own seam, which accepts an already-decoded `data` as well as text.
  */
 export function squadsApiClient(): SquadsApiClientStub {
   const requests: string[] = [];
 
   const json = (body: unknown) =>
-    Promise.resolve({ data: JSON.stringify(body), response: { status: 200 } });
+    Promise.resolve({ data: body, response: { status: 200 } });
 
   /** An accepted call carrying no body — the shape a no-op redemption answers with. */
   const accepted = () =>
-    Promise.resolve({ data: '', response: { status: 204 } });
+    Promise.resolve({ data: undefined, response: { status: 204 } });
 
   const answerGet = (path: string) => {
     switch (path) {

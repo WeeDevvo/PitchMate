@@ -15,20 +15,28 @@
  *    {@link SquadsApiDependencies}; this module constructs none and reads no
  *    token, no refresh value, and no session state. Access-token attachment and
  *    renewal stay the Auth_Feature's concern (Requirements 16.1, 16.2).
- * 2. **Request shapes come from the generated contract.** Every request body
- *    type is an alias of `components['schemas'][…]` from
+ * 2. **Request *and* response shapes come from the generated contract.** Every
+ *    request body type is an alias of `components['schemas'][…]` from
  *    `@pitchmate/api-client`, and the leaderboard's `statistic` query value is
  *    typed by `operations['GetSquadLeaderboard']`, so no request shape is
- *    hand-written (Requirement 16.11). Responses are the opposite case — the
- *    committed OpenAPI document declares every squads and stats response as
- *    `200 OK` with no content schema — which is why the raw body is read here
- *    and validated by a pure parser rather than trusted from a generated type.
- * 3. **The raw `Response` is read.** The client is asked for `parseAs: 'stream'`
- *    so it leaves the body untouched; this module reads the response text and
- *    `JSON.parse`s it inside a guard. An **empty body is passed to the parser as
- *    "absent"**, which is how the `RedeemInvite` already-a-member no-op — a
- *    `200` with no body — settles as a successful redemption carrying no
- *    identity rather than as a parse failure.
+ *    hand-written (Requirement 16.11). Responses used to be the opposite case —
+ *    the committed OpenAPI document declared every squads response as `200 OK`
+ *    with **no** content schema, so the raw body had to be read and decoded
+ *    here. The document now declares a content schema on every one of them, so
+ *    the client decodes the body itself and this module takes its **typed
+ *    `data`** value (Requirement 12.12). Nothing is cast: the type the parser is
+ *    handed is the one the generated contract states.
+ * 3. **The parsers still run, because a type is not a check.** A typed `data`
+ *    value is the contract's *promise* about the body, not evidence about it: a
+ *    proxy, a cache, or a backend bug can deliver something the type says is
+ *    impossible. Each operation's `data` therefore goes to the same pure,
+ *    total, all-or-nothing Response_Parser as before (Requirements 12.5–12.7).
+ *    An **absent body reaches the parser as `undefined`** — a `204`, or a `200`
+ *    carrying nothing — which is how the `RedeemInvite` already-a-member no-op
+ *    settles as a successful redemption carrying no identity rather than as a
+ *    parse failure, and how the four valueless operations settle at all. A `2xx`
+ *    body the client itself cannot decode is a parse failure, for the same
+ *    reason a body the parser rejects is: nothing renderable arrived.
  * 4. **One classification point.** The four signals of a settled call (status or
  *    its absence, whether our own timeout fired, the ProblemDetails `code`
  *    extension, and the parser's verdict) go through `classifyOutcome` in
@@ -221,8 +229,10 @@ export interface SquadsApi {
   ): Promise<CallResult<CreatedSquad>>;
 
   /**
-   * `POST /squads/invites/redeem` — redeem a presented Invite_Secret. The
-   * already-a-member no-op answers `200` with an empty body, which settles as a
+   * `POST /squads/invites/redeem` — redeem a presented Invite_Secret.
+   * Redemption by someone who already holds a membership is a **success**, not a
+   * rejection: it answers `200` with a redemption result reporting that outcome.
+   * A `200` carrying no body at all is accepted the same way and settles as a
    * success carrying a Redemption with no identity (Requirement 4.6).
    */
   redeemInvite(
@@ -318,8 +328,8 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
   return {
     listMySquads(signal) {
       return call(
-        (callSignal) =>
-          apiClient.GET(SQUADS_PATH, { parseAs: 'stream', signal: callSignal }),
+        (callSignal): ClientCall<'ListMySquads'> =>
+          apiClient.GET(SQUADS_PATH, { signal: callSignal }),
         parseSquadSummaryList,
         signal,
       );
@@ -327,10 +337,9 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     getSquad(squadId, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'GetSquad'> =>
           apiClient.GET(SQUAD_PATH, {
             params: { path: { squadId } },
-            parseAs: 'stream',
             signal: callSignal,
           }),
         parseSquadDetail,
@@ -340,7 +349,7 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     getDisplayRatingLeaderboard(squadId, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'GetSquadLeaderboard'> =>
           apiClient.GET(LEADERBOARD_PATH, {
             params: {
               path: { squadId },
@@ -348,7 +357,6 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
               // query type rather than by a loose string.
               query: { statistic: DISPLAY_RATING_STATISTIC },
             },
-            parseAs: 'stream',
             signal: callSignal,
           }),
         parseDisplayRatingLeaderboard,
@@ -358,10 +366,9 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     createSquad(command, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'CreateSquad'> =>
           apiClient.POST(SQUADS_PATH, {
             body: command,
-            parseAs: 'stream',
             signal: callSignal,
           }),
         parseCreatedSquad,
@@ -371,14 +378,13 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     redeemInvite(command, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'RedeemInvite'> =>
           apiClient.POST(REDEEM_INVITE_PATH, {
             body: command,
-            parseAs: 'stream',
             signal: callSignal,
           }),
-        // The one parser that accepts an absent body: the already-a-member no-op
-        // answers `200` with nothing, and that is a successful redemption (4.6).
+        // The one parser that accepts an absent body: a `200` carrying nothing
+        // is still a successful redemption, just one with no identity (4.6).
         parseRedemption,
         signal,
       );
@@ -386,9 +392,8 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     previewInvite(signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'PreviewInvite'> =>
           apiClient.GET(PREVIEW_INVITE_PATH, {
-            parseAs: 'stream',
             signal: callSignal,
           }),
         parseInvitePreview,
@@ -398,10 +403,9 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     listInvites(squadId, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'ListInvites'> =>
           apiClient.GET(INVITES_PATH, {
             params: { path: { squadId } },
-            parseAs: 'stream',
             signal: callSignal,
           }),
         parseInviteSummaryList,
@@ -411,11 +415,10 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     generateInvite(squadId, command, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'GenerateInvite'> =>
           apiClient.POST(INVITES_PATH, {
             params: { path: { squadId } },
             body: command,
-            parseAs: 'stream',
             signal: callSignal,
           }),
         parseGeneratedInvite,
@@ -425,10 +428,9 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     revokeInvite(squadId, inviteId, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'RevokeInvite'> =>
           apiClient.POST(REVOKE_INVITE_PATH, {
             params: { path: { squadId, inviteId } },
-            parseAs: 'stream',
             signal: callSignal,
           }),
         acceptNoValue,
@@ -438,11 +440,10 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     createGuest(squadId, command, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'CreateGuest'> =>
           apiClient.POST(GUESTS_PATH, {
             params: { path: { squadId } },
             body: command,
-            parseAs: 'stream',
             signal: callSignal,
           }),
         parseCreatedGuest,
@@ -452,11 +453,10 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     editGuest(squadId, membershipId, command, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'EditGuest'> =>
           apiClient.PATCH(GUEST_PATH, {
             params: { path: { squadId, membershipId } },
             body: command,
-            parseAs: 'stream',
             signal: callSignal,
           }),
         acceptNoValue,
@@ -466,10 +466,9 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     promoteToAdmin(squadId, membershipId, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'PromoteToAdmin'> =>
           apiClient.POST(PROMOTE_PATH, {
             params: { path: { squadId, membershipId } },
-            parseAs: 'stream',
             signal: callSignal,
           }),
         acceptNoValue,
@@ -479,10 +478,9 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     getFeatureFlags(squadId, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'GetFeatureFlags'> =>
           apiClient.GET(FEATURES_PATH, {
             params: { path: { squadId } },
-            parseAs: 'stream',
             signal: callSignal,
           }),
         parseFeatureFlags,
@@ -492,11 +490,10 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
 
     setFeatureFlag(squadId, command, signal) {
       return call(
-        (callSignal) =>
+        (callSignal): ClientCall<'SetFeatureFlag'> =>
           apiClient.PUT(FEATURES_PATH, {
             params: { path: { squadId } },
             body: command,
-            parseAs: 'stream',
             signal: callSignal,
           }),
         acceptNoValue,
@@ -523,17 +520,70 @@ function acceptNoValue(): ParseResult<void> {
 }
 
 /**
+ * The success body the generated contract declares for one operation, read off
+ * the operation's own `200` response rather than named a second time.
+ *
+ * This is the half of Requirement 12.12 that bites: an operation whose declared
+ * response body changes — renamed, re-shaped, or withdrawn — changes this type,
+ * and the `ClientCall` annotation at that operation's call site stops
+ * compiling. An operation that declares a `204` and no content resolves to
+ * `undefined`, which is exactly what the client hands back for one.
+ */
+type SuccessBody<TOperation extends keyof operations> =
+  operations[TOperation]['responses'] extends {
+    200: { content: { 'application/json': infer TBody } };
+  }
+    ? TBody
+    : undefined;
+
+/**
  * The subset of an `openapi-fetch` call result this module reads.
  *
- * The generated types model no response body for these operations (see the
- * module note), so the result is read as `unknown` and validated by the pure
- * parsers rather than trusted.
+ * `TData` is the operation's declared success body, which is what makes `data` a
+ * **typed** value here rather than an `unknown` the module casts (Requirement
+ * 12.12).
+ *
+ * `error` stays `unknown`: it is the rejection's `ProblemDetails` body, and the
+ * only thing read out of it is the `code` extension (Requirement 17.2).
+ * `response` is narrowed to the one member this module reads, so a status that
+ * is somehow not a number is handled rather than assumed.
  */
-interface ClientCallResult {
-  readonly data?: unknown;
+interface ClientCallResult<TData> {
+  readonly data?: TData;
   readonly error?: unknown;
-  readonly response?: unknown;
+  readonly response?: { readonly status?: number };
 }
+
+/**
+ * One settled Api_Client call of the named operation, as each method of the
+ * facade annotates its own request.
+ *
+ * The annotation is what pins `TData` to the contract instead of leaving it to
+ * inference: the client's result must be assignable to the response body the
+ * document declares for *that* operation, so a method pointed at the wrong path
+ * — or at an operation whose response shape moved — fails to compile here rather
+ * than silently handing the parser something else.
+ */
+type ClientCall<TOperation extends keyof operations> = Promise<
+  ClientCallResult<SuccessBody<TOperation>>
+>;
+
+/**
+ * What became of the one request, before any status is interpreted.
+ *
+ * Three cases, because the generated client reports them three ways:
+ *
+ * - `answered` — the client returned, with a decoded `data` or a decoded
+ *   `error`;
+ * - `undecodable-body` — the client **threw** while decoding a successful
+ *   body (see {@link isUndecodableBody});
+ * - `no-response` — the client threw for any other reason: a network failure,
+ *   or an abort from either signal.
+ */
+type ClientSettlement<TData> =
+  | { readonly kind: 'answered'; readonly result: ClientCallResult<TData> }
+  | { readonly kind: 'undecodable-body' }
+  | { readonly kind: 'no-response' };
 
 /**
  * A settled call, reduced to the four signals `classifyOutcome` reads plus the
@@ -543,36 +593,64 @@ interface ClientCallResult {
  * and `problemCode` by the classifier, and neither is carried onto a
  * {@link CallResult} (Requirement 17.2).
  */
-interface Settlement {
+interface Settlement<TData> {
   /** The HTTP status, or `null` when no response reached us. */
   readonly status: number | null;
   /** Whether our own Squad_Call_Timeout fired (Requirement 16.3). */
   readonly timedOut: boolean;
-  /** The decoded body, or `undefined` for an absent or unreadable one. */
-  readonly body: unknown;
+  /** The client's decoded success body, or `undefined` when it carried none. */
+  readonly body: TData | undefined;
   /** The ProblemDetails `code` extension, or `null` when the body carried none. */
   readonly problemCode: string | null;
+  /**
+   * Whether a successful response arrived carrying a body the client could not
+   * decode — the one settlement whose outcome no status can name, because the
+   * status was consumed along with the body (see {@link isUndecodableBody}).
+   */
+  readonly undecodableBody: boolean;
 }
 
 /**
  * Issue one request, settle it, and classify it — the one path every method of
  * the facade takes.
  *
+ * `TData` is inferred from `invoke` alone — `NoInfer` keeps the parser's
+ * deliberately-`unknown` parameter from widening it — so the value handed to
+ * `parse` carries the generated contract's own type for that operation's body
+ * (Requirement 12.12). The parser's parameter stays `unknown` on purpose: its
+ * job is to be **total** over anything that could actually arrive, which is a
+ * stronger obligation than the type describes (Requirement 12.6).
+ *
  * The parser runs on **every** settlement rather than only on a `2xx`, which is
  * deliberate: it keeps the status ranges in `lib/callOutcome.ts` alone, so this
  * module contains no status literal and cannot disagree with the classifier
  * about what counts as a success. Every parser is total and free of exceptions,
- * so running one over a rejection body costs a verdict that is then ignored —
+ * so running one over an absent body costs a verdict that is then ignored —
  * `classifyOutcome` consults `parsed` only for a `2xx` (Requirement 16.4).
  *
- * Requirements: 16.3, 16.4, 17.2, 17.4, 17.8
+ * The one settlement that bypasses the classifier is a successful response whose
+ * body the client could not decode. That is not a status judgement — the status
+ * is unrecoverable by then (see {@link isUndecodableBody}) — it is the same
+ * verdict a parser reaching the same body would have reached, reported from the
+ * one place that can still see it.
+ *
+ * Requirements: 12.6, 12.12, 16.3, 16.4, 17.2, 17.4, 17.8
  */
-async function call<T>(
-  invoke: (signal: AbortSignal) => Promise<unknown>,
-  parse: (body: unknown) => ParseResult<T>,
+async function call<TData, TValue>(
+  invoke: (signal: AbortSignal) => Promise<ClientCallResult<TData>>,
+  parse: (body: NoInfer<TData> | undefined) => ParseResult<TValue>,
   callerSignal: AbortSignal | undefined,
-): Promise<CallResult<T>> {
+): Promise<CallResult<TValue>> {
   const settlement = await performCall(invoke, callerSignal);
+
+  // 16.4: a `2xx` whose body never became a value is a parse failure, whether
+  // the parser rejected it or the client could not decode it in the first
+  // place. Read after `performCall`, which reports it only for a call that was
+  // neither abandoned nor timed out, so the timeout still wins (16.3).
+  if (settlement.undecodableBody) {
+    return { kind: 'parse-failure' };
+  }
+
   const parsed = parse(settlement.body);
 
   const outcome = classifyOutcome({
@@ -591,6 +669,35 @@ async function call<T>(
   // `classifyOutcome` answers `success` only when `parsed` was true; the guard
   // is what makes that reachable in the types without an assertion.
   return parsed.ok ? { kind: 'success', value: parsed.value } : { kind: 'parse-failure' };
+}
+
+/**
+ * Whether a rejection from the generated client is **its own JSON decode**
+ * failing rather than the transport failing.
+ *
+ * The client decodes a successful body itself now that the contract schematises
+ * one, and a body that is not JSON makes that decode throw. By then the response
+ * has been consumed, so neither its status nor its text can be read again — all
+ * that survives is the error, and the fact that the client only decodes a body
+ * it has already established to be a success. That is enough: the call settled,
+ * on a `2xx`, with nothing a parser could have accepted.
+ *
+ * `SyntaxError` is what a failed JSON decode raises, and nothing else on this
+ * path raises one — a network failure rejects with a `TypeError` and an abort
+ * with an `AbortError` — so the three stay distinguishable (Requirement 16.3).
+ * The `name` check is the cross-realm form of the same test.
+ *
+ * Total and free of exceptions over any rejection value, including `null`,
+ * `undefined`, and a non-`Error` thrown by a transport.
+ */
+function isUndecodableBody(reason: unknown): boolean {
+  if (reason instanceof SyntaxError) {
+    return true;
+  }
+  if (typeof reason !== 'object' || reason === null) {
+    return false;
+  }
+  return (reason as { name?: unknown }).name === 'SyntaxError';
 }
 
 /**
@@ -617,10 +724,10 @@ type Abandonment = 'timeout' | 'caller-abort';
  * `invoke` is called **once**. There is no retry, no re-issue, and no fallback
  * request for any outcome (Requirement 17.4).
  */
-async function performCall(
-  invoke: (signal: AbortSignal) => Promise<unknown>,
+async function performCall<TData>(
+  invoke: (signal: AbortSignal) => Promise<ClientCallResult<TData>>,
   callerSignal: AbortSignal | undefined,
-): Promise<Settlement> {
+): Promise<Settlement<TData>> {
   const controller = new AbortController();
 
   // Resolved by whichever of the two abandonments happens first, so the call
@@ -652,19 +759,21 @@ async function performCall(
     }
   }
 
-  // One request. A rejection — a network failure, or an abort from either
-  // signal — becomes "no response". Catching here also means an abandoned
-  // request can never surface as an unhandled rejection after this call has
-  // settled on the timeout.
-  const request: Promise<ClientCallResult | null> = invoke(controller.signal).then(
-    (result) => result as ClientCallResult,
-    () => null,
+  // One request. A rejection is reduced to one of the two non-answering
+  // settlements — the client's own decode failing, or no response at all, which
+  // is what a network failure and an abort from either signal come to. Catching
+  // here also means an abandoned request can never surface as an unhandled
+  // rejection after this call has settled on the timeout.
+  const request: Promise<ClientSettlement<TData>> = invoke(controller.signal).then(
+    (result): ClientSettlement<TData> => ({ kind: 'answered', result }),
+    (reason: unknown): ClientSettlement<TData> =>
+      isUndecodableBody(reason) ? { kind: 'undecodable-body' } : { kind: 'no-response' },
   );
 
   try {
     const raced = await Promise.race([
-      request.then((result) => ({ settled: true as const, result })),
-      abandoned.then(() => ({ settled: false as const, result: null })),
+      request.then((settlement) => ({ settled: true as const, settlement })),
+      abandoned.then(() => ({ settled: false as const, settlement: null })),
     ]);
 
     // An abandoned call settles on the abandonment, whatever the transport does
@@ -676,15 +785,50 @@ async function performCall(
         timedOut: abandonment === 'timeout',
         body: undefined,
         problemCode: null,
+        undecodableBody: false,
       };
     }
 
-    const body = await readSettledBody(raced.result);
+    const settlement = raced.settlement;
+
+    // A `2xx` the client could not decode. The response is gone, so no status
+    // is reported for it; the flag is what `call` reads instead (16.4).
+    if (settlement.kind === 'undecodable-body') {
+      return {
+        status: null,
+        timedOut: false,
+        body: undefined,
+        problemCode: null,
+        undecodableBody: true,
+      };
+    }
+
+    // No response reached us at all — a network failure, or an abort.
+    if (settlement.kind === 'no-response') {
+      return {
+        status: null,
+        timedOut: false,
+        body: undefined,
+        problemCode: null,
+        undecodableBody: false,
+      };
+    }
+
+    // 12.12: the typed success body the client decoded, exactly as the generated
+    // contract types it. An absent one — a `204`, or a `200` carrying nothing —
+    // stays `undefined`, which is what "absent" means to a parser: every parser
+    // but `parseRedemption` rejects it, and `parseRedemption` accepts it as the
+    // already-a-member no-op.
+    //
+    // The problem `code` is read from `error`, where the client puts a rejecting
+    // status' decoded `ProblemDetails`; a success carries no `error` and a
+    // rejection carries no `data`, so the two never both arrive.
     return {
-      status: readStatus(raced.result),
+      status: readStatus(settlement.result),
       timedOut: false,
-      body,
-      problemCode: readProblemCode(body),
+      body: settlement.result.data,
+      problemCode: readProblemCode(settlement.result.error),
+      undecodableBody: false,
     };
   } finally {
     clearTimeout(timer);
@@ -693,90 +837,12 @@ async function performCall(
 }
 
 /**
- * Decode the settled response into the `unknown` value a pure parser validates.
- *
- * The client is asked for `parseAs: 'stream'`, so a successful response arrives
- * with its body **unread** and the raw `Response` is read here. Four shapes are
- * accommodated, in the order they can occur:
- *
- * - a readable `Response` — the normal case for a `2xx`: its text is read and
- *   `JSON.parse`d inside a guard;
- * - a present `error` — a rejecting status, whose body `openapi-fetch` has
- *   already read and decoded, so the response can no longer be read;
- * - a present `data` — a string body decoded here, or an already-decoded value
- *   from a client fake;
- * - nothing at all.
- *
- * An **empty body yields `undefined`**, which is what "absent" means to a
- * parser: every parser but `parseRedemption` rejects it, and `parseRedemption`
- * accepts it as the already-a-member no-op.
- *
- * The function never throws — a malformed body yields `undefined` and so a parse
- * failure (Requirement 16.4).
- */
-async function readSettledBody(result: ClientCallResult | null): Promise<unknown> {
-  if (result === null) {
-    return undefined;
-  }
-
-  if (isReadableBody(result.response)) {
-    try {
-      return decodeJson(await result.response.text());
-    } catch {
-      return undefined;
-    }
-  }
-
-  if (typeof result.error === 'string') {
-    return decodeJson(result.error);
-  }
-  if (result.error !== undefined && result.error !== null) {
-    return result.error;
-  }
-
-  if (typeof result.data === 'string') {
-    return decodeJson(result.data);
-  }
-  return result.data;
-}
-
-/** Decode a body's text, yielding `undefined` for empty or malformed text. */
-function decodeJson(text: string): unknown {
-  if (text.length === 0) {
-    return undefined;
-  }
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return undefined;
-  }
-}
-
-/** A response whose body has not been read and still can be. */
-function isReadableBody(
-  response: unknown,
-): response is { text(): Promise<string> } {
-  if (typeof response !== 'object' || response === null) {
-    return false;
-  }
-  const candidate = response as { text?: unknown; bodyUsed?: unknown };
-  return typeof candidate.text === 'function' && candidate.bodyUsed !== true;
-}
-
-/**
  * Read the response status, or `null` where the call produced no response at
  * all — a network failure or an abort, which the classifier folds into a
  * transport failure.
  */
-function readStatus(result: ClientCallResult | null): number | null {
-  if (result === null) {
-    return null;
-  }
-  const response = result.response;
-  if (typeof response !== 'object' || response === null) {
-    return null;
-  }
-  const status = (response as { status?: unknown }).status;
+function readStatus(result: ClientCallResult<unknown>): number | null {
+  const status = result.response?.status;
   return typeof status === 'number' ? status : null;
 }
 
@@ -786,6 +852,10 @@ function readStatus(result: ClientCallResult | null): number | null {
  * It is handed to `classifyOutcome`, which maps it to one of this feature's own
  * {@link RejectionReason} names; nothing else of the problem body — not
  * `detail`, not `title`, not `instance` — is read anywhere (Requirement 17.2).
+ *
+ * The argument is the client's decoded `error`, which is the rejection's body
+ * when that body was JSON and the raw text otherwise. Both are accommodated
+ * without coercion: a value that is not an object names no code.
  */
 function readProblemCode(body: unknown): string | null {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
