@@ -96,7 +96,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import type { AuthState } from '../../auth';
 import type { CallResult, SquadsApi } from '../api/squadsApi';
 import { resolveAdminAuthority } from '../lib/adminAuthority';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { isSquadIdentifier } from '../lib/identifiers';
 import type { DisplayRatingLeaderboard } from '../lib/parse/leaderboard';
 import type { SquadDetail } from '../lib/parse/squadDetail';
@@ -292,9 +292,9 @@ export function reduceSquadScreen(
 /** The caller's Member_Role and Membership_State within the squad, or absence. */
 export interface CallerMembership {
   /** The caller's Member_Role, or `null` when it was not identified. */
-  readonly role: MemberRole | null;
+  readonly role: SquadRole | null;
   /** The caller's Membership_State, or `null` when it was not identified. */
-  readonly state: MembershipStateValue | null;
+  readonly state: MembershipState | null;
 }
 
 /** Neither result identified the caller's membership (Requirement 6.10). */

@@ -4,7 +4,7 @@ import fc from 'fast-check';
 import * as promotionEligibilityModule from './promotionEligibility';
 import { isPromotable } from './promotionEligibility';
 import { ANONYMISED_PLACEHOLDER } from './playerList';
-import type { MemberRole, MembershipStateValue } from './enumCodes';
+import type { MembershipState, SquadRole } from './wireEnums';
 import type { SquadMember } from './parse/squadDetail';
 
 /**
@@ -31,7 +31,7 @@ import type { SquadMember } from './parse/squadDetail';
  *   combinations, read off the criterion rather than derived from the six
  *   comparisons the module makes — and cross-checked by counting: of the 192
  *   combinations, exactly two are accepted, and both name an active, non-guest,
- *   plainly-named `member` row belonging to somebody other than the caller.
+ *   plainly-named `Member` row belonging to somebody other than the caller.
  * - **Every exclusion of Requirement 13.2 rejects on its own.** Each is asserted
  *   against an otherwise-eligible row, so a test cannot pass because some *other*
  *   conjunct was already saying no. The otherwise-eligible row is asserted
@@ -71,16 +71,16 @@ const MEMBER_ID = '3f2504e0-4f89-11d3-9a0c-0305e82c3301';
 /** A different membership: the caller, when the caller is not this member. */
 const OTHER_MEMBER_ID = '9c5b94b1-35ad-49bb-b118-8e8fc24abf80';
 
-/** Every Member_Role the Enum_Code_Map names, plus the guest's absent role. */
-const ROLE_CASES: readonly (MemberRole | null)[] = [
-  'owner',
-  'admin',
-  'member',
+/** Every Member_Role the Generated_Enum_Union names, plus the guest's absent role. */
+const ROLE_CASES: readonly (SquadRole | null)[] = [
+  'Owner',
+  'Admin',
+  'Member',
   null,
 ];
 
 /** Every Membership_State a parsed Squad_Member can carry; never absent (16.8). */
-const STATE_CASES: readonly MembershipStateValue[] = ['active', 'inactive'];
+const STATE_CASES: readonly MembershipState[] = ['Active', 'Inactive'];
 
 const AUTHORITY_CASES: readonly boolean[] = [true, false];
 
@@ -135,9 +135,9 @@ const ORDINARY_NAMES: readonly string[] = [
 
 interface EligibilityCase {
   readonly authority: boolean;
-  readonly state: MembershipStateValue;
+  readonly state: MembershipState;
   readonly isGuest: boolean;
-  readonly role: MemberRole | null;
+  readonly role: SquadRole | null;
   readonly nameKind: NameKind;
   readonly identityKind: IdentityKind;
 }
@@ -179,7 +179,7 @@ function describeCase(eligibilityCase: EligibilityCase): string {
 /**
  * The accepted set written straight out of Requirement 13.1 — "the caller holds
  * Admin_Authority" and a Player_Row "whose Membership_State is active, whose
- * Guest_Flag is not set, whose Member_Role is member, and whose
+ * Guest_Flag is not set, whose Member_Role is `Member`, and whose
  * Player_Display_Name is not the Anonymised_Placeholder", minus the caller's own
  * membership (13.2) — as literal combinations rather than as a chain of
  * comparisons. A restatement of the module's six early returns would agree with an
@@ -189,8 +189,8 @@ function describeCase(eligibilityCase: EligibilityCase): string {
  * both when another membership identified the caller and when none did.
  */
 const ACCEPTED_COMBINATIONS: ReadonlySet<string> = new Set([
-  'authority=true|active|not-guest|member|ordinary|other',
-  'authority=true|active|not-guest|member|ordinary|no-viewer',
+  'authority=true|Active|not-guest|Member|ordinary|other',
+  'authority=true|Active|not-guest|Member|ordinary|no-viewer',
 ]);
 
 /** The oracle's key for a combination: the same six facts, in a fixed order. */
@@ -233,6 +233,8 @@ function memberFor(eligibilityCase: EligibilityCase, displayName: string): Squad
     role: eligibilityCase.role,
     state: eligibilityCase.state,
     isGuest: eligibilityCase.isGuest,
+    appearances: 12,
+    ratingState: 'Established',
   };
 }
 
@@ -260,9 +262,9 @@ function representativeNameFor(nameKind: NameKind): string {
  */
 const ELIGIBLE_CASE: EligibilityCase = {
   authority: true,
-  state: 'active',
+  state: 'Active',
   isGuest: false,
-  role: 'member',
+  role: 'Member',
   nameKind: 'ordinary',
   identityKind: 'other',
 };
@@ -271,9 +273,9 @@ const ELIGIBLE_CASE: EligibilityCase = {
 
 const authorityArb: fc.Arbitrary<boolean> = fc.boolean();
 
-const stateArb: fc.Arbitrary<MembershipStateValue> = fc.constantFrom(...STATE_CASES);
+const stateArb: fc.Arbitrary<MembershipState> = fc.constantFrom(...STATE_CASES);
 
-const roleArb: fc.Arbitrary<MemberRole | null> = fc.constantFrom(...ROLE_CASES);
+const roleArb: fc.Arbitrary<SquadRole | null> = fc.constantFrom(...ROLE_CASES);
 
 const identityKindArb: fc.Arbitrary<IdentityKind> = fc.constantFrom(...IDENTITY_KINDS);
 
@@ -322,9 +324,9 @@ const caseWithNameArb: fc.Arbitrary<{
 );
 
 /** A role that is not `member`, so the positive role test must reject it. */
-const nonMemberRoleArb: fc.Arbitrary<MemberRole | null> = fc.constantFrom(
-  'owner' as const,
-  'admin' as const,
+const nonSquadRoleArb: fc.Arbitrary<SquadRole | null> = fc.constantFrom(
+  'Owner' as const,
+  'Admin' as const,
   null,
 );
 
@@ -355,8 +357,8 @@ describe('isPromotable — the accepted set is exactly the active, non-guest, pl
     // by a caller no membership identified.
     expect(ALL_CASES).toHaveLength(192);
     expect(accepted.map(describeCase)).toEqual([
-      'authority=true state=active guest=false role=member name=ordinary caller=other',
-      'authority=true state=active guest=false role=member name=ordinary caller=no-viewer',
+      'authority=true state=Active guest=false role=Member name=ordinary caller=other',
+      'authority=true state=Active guest=false role=Member name=ordinary caller=no-viewer',
     ]);
   });
 
@@ -411,7 +413,7 @@ describe('isPromotable — every exclusion of Requirement 13.2 rejects on its ow
         // inactive `member` still parses as a member. The state test is what stops
         // a removed player being promoted.
         expect(
-          eligibilityOf({ ...ELIGIBLE_CASE, state: 'inactive' }, displayName),
+          eligibilityOf({ ...ELIGIBLE_CASE, state: 'Inactive' }, displayName),
         ).toBe(false);
       }),
       { numRuns: 300 },
@@ -434,9 +436,9 @@ describe('isPromotable — every exclusion of Requirement 13.2 rejects on its ow
 
   it('refuses an owner, an admin, and an absent role', () => {
     fc.assert(
-      fc.property(nonMemberRoleArb, ordinaryNameArb, (role, displayName) => {
+      fc.property(nonSquadRoleArb, ordinaryNameArb, (role, displayName) => {
         // 13.2 for owner and admin; 16.8 for the absent role a guest carries. The
-        // module's positive `role === 'member'` test covers all three at once.
+        // module's positive `role === 'Member'` test covers all three at once.
         expect(eligibilityOf({ ...ELIGIBLE_CASE, role }, displayName)).toBe(false);
       }),
       { numRuns: 400 },
@@ -471,26 +473,26 @@ describe('isPromotable — every exclusion of Requirement 13.2 rejects on its ow
   it('refuses a state and a role this feature does not name', () => {
     fc.assert(
       fc.property(
-        fc.string({ minLength: 1, maxLength: 12 }).filter((value) => value !== 'active'),
-        fc.string({ minLength: 1, maxLength: 12 }).filter((value) => value !== 'member'),
+        fc.string({ minLength: 1, maxLength: 12 }).filter((value) => value !== 'Active'),
+        fc.string({ minLength: 1, maxLength: 12 }).filter((value) => value !== 'Member'),
         ordinaryNameArb,
         (unnamedState, unnamedRole, displayName) => {
           const base = memberFor(ELIGIBLE_CASE, displayName);
 
-          // Both tests in the module are positive — `state === 'active'` and
-          // `role === 'member'` — so a value a future backend adds and this feature
+          // Both tests in the module are positive — `state === 'Active'` and
+          // `role === 'Member'` — so a value a future backend adds and this feature
           // does not yet understand is refused rather than admitted. That is the
           // safe direction for an admin affordance.
           expect(
             isPromotable(
-              { ...base, state: unnamedState as MembershipStateValue },
+              { ...base, state: unnamedState as MembershipState },
               OTHER_MEMBER_ID,
               true,
             ),
           ).toBe(false);
           expect(
             isPromotable(
-              { ...base, role: unnamedRole as MemberRole },
+              { ...base, role: unnamedRole as SquadRole },
               OTHER_MEMBER_ID,
               true,
             ),
@@ -554,9 +556,11 @@ describe('isPromotable — the caller is recognised by membership identity', () 
         const member: SquadMember = {
           membershipId: memberId,
           displayName,
-          role: 'member',
-          state: 'active',
+          role: 'Member',
+          state: 'Active',
           isGuest: false,
+          appearances: 12,
+          ratingState: 'Established',
         };
 
         // One predicate, two callers: the member themselves and anybody else.
@@ -575,9 +579,11 @@ describe('isPromotable — the caller is recognised by membership identity', () 
         const member: SquadMember = {
           membershipId: memberId,
           displayName,
-          role: 'member',
-          state: 'active',
+          role: 'Member',
+          state: 'Active',
           isGuest: false,
+          appearances: 12,
+          ratingState: 'Established',
         };
         const upperCased = memberId.toUpperCase();
         const padded = ` ${memberId} `;

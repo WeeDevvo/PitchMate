@@ -6,7 +6,11 @@ import {
   composePlayerList,
   type PlayerListRow,
 } from './playerList';
-import type { MemberRole, MembershipStateValue } from './enumCodes';
+import type {
+  MembershipState,
+  RatingState,
+  SquadRole,
+} from './wireEnums';
 import type { FeatureFlag } from './parse/featureFlags';
 import type {
   DisplayRatingEntry,
@@ -81,8 +85,8 @@ const PLACEHOLDER_LITERAL = 'Former player';
 
 /** The Player_Order written from Requirement 7.4, key by key. */
 function compareOracle(left: PlayerListRow, right: PlayerListRow): number {
-  const leftActive = left.state === 'active' ? 0 : 1;
-  const rightActive = right.state === 'active' ? 0 : 1;
+  const leftActive = left.state === 'Active' ? 0 : 1;
+  const rightActive = right.state === 'Active' ? 0 : 1;
 
   if (leftActive !== rightActive) {
     return leftActive < rightActive ? -1 : 1;
@@ -117,6 +121,8 @@ function composeOracle(
       role: member.role,
       state: member.state,
       isGuest: member.isGuest,
+        appearances: member.appearances,
+        ratingState: member.ratingState,
       isFormerPlayer: member.displayName.trim() === PLACEHOLDER_LITERAL,
       leaderboardObtained: leaderboard !== null,
       ratingEntry:
@@ -131,12 +137,14 @@ function composeOracle(
 
 /** Every property a `PlayerListRow` carries, and no other. */
 const ROW_KEYS: readonly string[] = [
+  'appearances',
   'displayName',
   'isFormerPlayer',
   'isGuest',
   'leaderboardObtained',
   'membershipId',
   'ratingEntry',
+  'ratingState',
   'role',
   'state',
 ];
@@ -237,17 +245,17 @@ const FOREIGN_NAMES: readonly string[] = [
 const foreignNameArb: fc.Arbitrary<string> = fc.constantFrom(...FOREIGN_NAMES);
 
 /** A Member_Role, including the `null` a guest membership carries (16.8). */
-const roleArb: fc.Arbitrary<MemberRole | null> = fc.constantFrom(
-  'owner' as const,
-  'admin' as const,
-  'member' as const,
+const roleArb: fc.Arbitrary<SquadRole | null> = fc.constantFrom(
+  'Owner' as const,
+  'Admin' as const,
+  'Member' as const,
   null,
 );
 
 /** A Membership_State; never absent, since a membership always has one. */
-const stateArb: fc.Arbitrary<MembershipStateValue> = fc.constantFrom(
-  'active' as const,
-  'inactive' as const,
+const stateArb: fc.Arbitrary<MembershipState> = fc.constantFrom(
+  'Active' as const,
+  'Inactive' as const,
 );
 
 /** A finite leaderboard value, as the parser reads one. */
@@ -270,6 +278,8 @@ const memberArb = (
     role: roleArb,
     state: stateArb,
     isGuest: fc.boolean(),
+      appearances: fc.nat({ max: 200 }),
+      ratingState: fc.constantFrom('Provisional' as const, 'Established' as const, null),
   });
 
 /**
@@ -289,7 +299,7 @@ const membersArb = (
 
 const featuresArb: fc.Arbitrary<FeatureFlag[]> = fc.array(
   fc.record({
-    feature: fc.constant('live-match-tracking' as const),
+    feature: fc.constant('LiveMatchTracking' as const),
     isEnabled: fc.boolean(),
   }),
   { maxLength: 2 },
@@ -485,6 +495,8 @@ const rowArb: fc.Arbitrary<PlayerListRow> = fc.record({
   role: roleArb,
   state: stateArb,
   isGuest: fc.boolean(),
+    appearances: fc.nat({ max: 200 }),
+    ratingState: fc.constantFrom('Provisional' as const, 'Established' as const, null),
   // Generated independently of the display name on purpose: the flag is not an
   // ordering key, so an inconsistent one must not move a row.
   isFormerPlayer: fc.boolean(),
@@ -508,9 +520,11 @@ const largeMembersArb: fc.Arbitrary<SquadMember[]> = fc
       // Five names across 200 memberships: forty rows per name, so the identity
       // tie-break decides almost the whole order.
       displayName: ['dave', 'Dave', 'DAVE', 'Former player', 'sám'][index % 5],
-      role: (index % 4 === 0 ? null : 'member') as MemberRole | null,
-      state: (index % 3 === 0 ? 'inactive' : 'active') as MembershipStateValue,
+      role: (index % 4 === 0 ? null : 'Member') as SquadRole | null,
+      state: (index % 3 === 0 ? 'Inactive' : 'Active') as MembershipState,
       isGuest: index % 4 === 0,
+        appearances: index % 5,
+        ratingState: (index % 5 === 0 ? null : 'Established') as RatingState | null,
     })),
   );
 
@@ -600,6 +614,10 @@ describe('composePlayerList — exactly one row per Squad_Member, whatever the l
             expect(row?.role).toBe(member.role);
             expect(row?.state).toBe(member.state);
             expect(row?.isGuest).toBe(member.isGuest);
+            // The two standing fields are carried through unchanged: composition
+            // decides no presentation of either.
+            expect(row?.appearances).toBe(member.appearances);
+            expect(row?.ratingState).toBe(member.ratingState);
             expect(row?.isFormerPlayer).toBe(
               member.displayName.trim() === PLACEHOLDER_LITERAL,
             );
@@ -779,9 +797,11 @@ describe('composePlayerList — the leaderboard decorates the rows, never define
           const members: SquadMember[] = cased.map((membershipId) => ({
             membershipId,
             displayName,
-            role: 'member' as const,
-            state: 'active' as const,
+            role: 'Member' as const,
+            state: 'Active' as const,
             isGuest: false,
+              appearances: 12,
+              ratingState: 'Established',
           }));
           const entries: DisplayRatingEntry[] = cased.map(
             (membershipId, index) => ({
@@ -958,9 +978,11 @@ describe('composePlayerList — the composition is deterministic and leaves its 
             {
               membershipId,
               displayName,
-              role: 'member',
-              state: 'active',
+              role: 'Member',
+              state: 'Active',
               isGuest: false,
+                appearances: 12,
+                ratingState: 'Established',
             },
           ];
           const entries = values.map((value, index) => ({
@@ -996,10 +1018,10 @@ describe('composePlayerList — the rows come back in the Player_Order', () => {
         ({ detail, leaderboard }) => {
           const rows = composePlayerList(detail, leaderboard);
           const lastActive = rows.reduce(
-            (latest, row, index) => (row.state === 'active' ? index : latest),
+            (latest, row, index) => (row.state === 'Active' ? index : latest),
             -1,
           );
-          const firstInactive = rows.findIndex((row) => row.state !== 'active');
+          const firstInactive = rows.findIndex((row) => row.state !== 'Active');
 
           // 7.4, first key: no inactive row precedes an active one.
           if (firstInactive !== -1) {
@@ -1123,30 +1145,38 @@ describe('composePlayerList — the rows come back in the Player_Order', () => {
         {
           membershipId: 'c',
           displayName: 'Zoe',
-          role: 'member',
-          state: 'active',
+          role: 'Member',
+          state: 'Active',
           isGuest: false,
+            appearances: 12,
+            ratingState: 'Established',
         },
         {
           membershipId: 'a',
           displayName: 'alex',
-          role: 'owner',
-          state: 'inactive',
+          role: 'Owner',
+          state: 'Inactive',
           isGuest: false,
+            appearances: 12,
+            ratingState: 'Established',
         },
         {
           membershipId: 'e',
           displayName: 'dave',
           role: null,
-          state: 'active',
+          state: 'Active',
           isGuest: true,
+            appearances: 12,
+            ratingState: 'Established',
         },
         {
           membershipId: 'b',
           displayName: 'Dave',
-          role: 'admin',
-          state: 'active',
+          role: 'Admin',
+          state: 'Active',
           isGuest: false,
+            appearances: 12,
+            ratingState: 'Established',
         },
       ]),
       null,
@@ -1232,8 +1262,8 @@ describe('comparePlayerRows — the comparison is a total order', () => {
   it('ranks an active row before an inactive one whatever their names', () => {
     fc.assert(
       fc.property(rowArb, rowArb, (left, right) => {
-        const active = { ...left, state: 'active' as const };
-        const inactive = { ...right, state: 'inactive' as const };
+        const active = { ...left, state: 'Active' as const };
+        const inactive = { ...right, state: 'Inactive' as const };
 
         // The state key dominates: a membership that left the squad sorts last even
         // if its name would otherwise lead the list.

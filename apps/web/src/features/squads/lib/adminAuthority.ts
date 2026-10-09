@@ -42,14 +42,14 @@
  * Requirements: 6.10, 10.1
  */
 
-import type { MemberRole, MembershipStateValue } from './enumCodes';
+import type { MembershipState, SquadRole } from './wireEnums';
 
 /**
  * Whether the caller holds Admin_Authority within the squad.
  *
- * The accepted set is exactly `active` × {`owner`, `admin`} — two of the twelve
- * combinations of a role in {owner, admin, member, absent} and a state in
- * {active, inactive, absent}. `member` is rejected however active the membership
+ * The accepted set is exactly `Active` × {`Owner`, `Admin`} — two of the twelve
+ * combinations of a role in {Owner, Admin, Member, absent} and a state in
+ * {Active, Inactive, absent}. `Member` is rejected however active the membership
  * is, because a plain member administers nothing.
  *
  * Pure, total, and free of exceptions: the body is two comparisons over values
@@ -73,17 +73,17 @@ import type { MemberRole, MembershipStateValue } from './enumCodes';
  * Requirements: 6.10, 10.1
  */
 export function resolveAdminAuthority(
-  role: MemberRole | null | undefined,
-  state: MembershipStateValue | null | undefined,
+  role: SquadRole | null | undefined,
+  state: MembershipState | null | undefined,
 ): boolean {
   // 10.1: an inactive membership holds no authority, and neither does one whose
   // state is unknown — a removed owner keeps the owner role, so the state is
   // checked in its own right rather than inferred from the role.
-  if (state !== 'active') {
+  if (state !== 'Active') {
     return false;
   }
 
-  // 10.1: only owner and admin carry authority. A `member` role, and an absent
+  // 10.1: only owner and admin carry authority. A `Member` role, and an absent
   // role such as a guest's or an unidentified caller's (6.10), does not.
-  return role === 'owner' || role === 'admin';
+  return role === 'Owner' || role === 'Admin';
 }

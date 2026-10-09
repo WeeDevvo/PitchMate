@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
 import { isSquadIdentifier } from '../identifiers';
+import { SQUAD_ROLE_NAMES, isSkillTier, isSquadRole } from '../wireEnums';
 import {
   MAX_INSTANT_MS,
   fail,
@@ -16,6 +17,7 @@ import {
   readProperty,
   readString,
   readUuid,
+  readWireEnumName,
   type ParseResult,
   type ValueReader,
   type WireObject,
@@ -325,6 +327,21 @@ const READERS: readonly {
       typeof value === 'number' &&
       Number.isInteger(value) &&
       Math.abs(value) <= MAX_INSTANT_MS,
+    preservesInput: false,
+  },
+  {
+    label: 'readWireEnumName of isSquadRole',
+    read: (value, label) => readWireEnumName(value, label, isSquadRole),
+    holdsDeclaredType: (value) => isSquadRole(value),
+    preservesInput: true,
+  },
+  {
+    label: 'readOptional of readWireEnumName',
+    read: (value, label) =>
+      readOptional(value, label, (field, fieldLabel) =>
+        readWireEnumName(field, fieldLabel, isSquadRole),
+      ),
+    holdsDeclaredType: (value) => value === null || isSquadRole(value),
     preservesInput: false,
   },
   {
@@ -678,6 +695,67 @@ describe('reading primitives — each reader accepts exactly its own type', () =
     );
   });
 
+  it('reads an enum name exactly when its own predicate admits it', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          { weight: 2, arbitrary: fc.constantFrom<unknown>(...SQUAD_ROLE_NAMES) },
+          { weight: 3, arbitrary: anyValueArb },
+        ),
+        (value) => {
+          // 12.8: the accepted vocabulary is the predicate's, which is pinned to
+          // the generated union at compile time — nothing is restated here.
+          const outcome = readWireEnumName(value, 'field', isSquadRole);
+
+          expect(outcome.ok).toBe(isSquadRole(value));
+
+          if (outcome.ok) {
+            expect(Object.is(outcome.value, value)).toBe(true);
+          }
+        },
+      ),
+      { numRuns: 500 },
+    );
+  });
+
+  it('rejects the near-misses a name-valued field could carry', () => {
+    // Stated as literals, because a generator filtered by the predicate under
+    // test cannot show that a *specific* wrong value is rejected. The numbers are
+    // what the previous contract sent for this very field, and the strings are
+    // the plausible mis-cases and a member of a different enum.
+    const nearMisses: readonly unknown[] = [
+      0,
+      1,
+      3,
+      '1',
+      'owner',
+      'OWNER',
+      ' Owner',
+      'Owner ',
+      'Captain',
+      'Active',
+      'Beginner',
+      true,
+      ['Owner'],
+      { role: 'Owner' },
+      Object('Owner'),
+    ];
+
+    for (const value of nearMisses) {
+      const outcome = settle(
+        () => readWireEnumName(value, 'squad summary role', isSquadRole),
+        (read) => isSquadRole(read),
+      );
+
+      expect(outcome.ok).toBe(false);
+    }
+
+    // A second predicate, so the reader is shown to carry no vocabulary of its
+    // own: the same value reads differently depending on the enum asked about.
+    expect(readWireEnumName('Beginner', 'tier', isSkillTier).ok).toBe(true);
+    expect(readWireEnumName('Owner', 'tier', isSkillTier).ok).toBe(false);
+  });
+
   it('reads a well-formed identity in either letter case, unchanged', () => {
     fc.assert(
       fc.property(fc.constantFrom(false, true), (upper) => {
@@ -722,6 +800,11 @@ describe('reading primitives — an optional reading is absent-or-valid', () => 
       label: 'readInstantMs',
       reader: readInstantMs,
       holdsDeclaredType: (value) => value === null || typeof value === 'number',
+    },
+    {
+      label: 'readWireEnumName',
+      reader: (value, label) => readWireEnumName(value, label, isSquadRole),
+      holdsDeclaredType: (value) => value === null || isSquadRole(value),
     },
   ];
 

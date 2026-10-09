@@ -16,9 +16,10 @@ namespace PitchMate.Api.Auth.Endpoints;
 /// <para>
 /// The public endpoints (register, sign-in, Google sign-in, refresh, password-reset request, and
 /// email-verification redeem) are reachable without an access token (Requirement 13.6). The protected
-/// endpoints (sign-out, account linking, add-password, unlink, email-verification resend, erasure, and
-/// export) require an authenticated caller and resolve the acting <c>User</c> identity from the access
-/// token's subject claim rather than any client-supplied body value (Requirements 13.1, 13.2). The
+/// endpoints (account read, sign-out, account linking, add-password, unlink, email-verification
+/// resend, erasure, and export) require an authenticated caller and resolve the acting <c>User</c>
+/// identity from the access token's subject claim rather than any client-supplied body value
+/// (Requirements 13.1, 13.2). The
 /// JWT bearer scheme, the uniform unauthenticated response, and the OpenAPI security description are
 /// configured separately with the authentication middleware.
 /// </para>
@@ -54,7 +55,9 @@ public static class AuthEndpoints
             RegisterWithPasswordHandler handler,
             CancellationToken ct) => ToHttpResult(await handler.HandleAsync(command, ct)))
             .AllowAnonymous()
-            .WithName("Register");
+            .WithName("Register")
+            .Produces<RegisterWithPasswordResult>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
 
         // Sign in with email + password (Requirement 6).
         group.MapPost("/sign-in", static async (
@@ -62,7 +65,9 @@ public static class AuthEndpoints
             SignInWithPasswordHandler handler,
             CancellationToken ct) => ToHttpResult(await handler.HandleAsync(command, ct)))
             .AllowAnonymous()
-            .WithName("SignIn");
+            .WithName("SignIn")
+            .Produces<AuthSession>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
 
         // Sign in with Google (Requirement 7).
         group.MapPost("/sign-in/google", static async (
@@ -70,7 +75,9 @@ public static class AuthEndpoints
             SignInWithGoogleHandler handler,
             CancellationToken ct) => ToHttpResult(await handler.HandleAsync(command, ct)))
             .AllowAnonymous()
-            .WithName("SignInWithGoogle");
+            .WithName("SignInWithGoogle")
+            .Produces<AuthSession>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
 
         // Exchange a rotating refresh token for a fresh session (Requirement 9.2).
         group.MapPost("/refresh", static async (
@@ -78,7 +85,9 @@ public static class AuthEndpoints
             RefreshSessionHandler handler,
             CancellationToken ct) => ToHttpResult(await handler.HandleAsync(command, ct)))
             .AllowAnonymous()
-            .WithName("RefreshSession");
+            .WithName("RefreshSession")
+            .Produces<RefreshSessionResult>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
 
         // Request a password reset. The response is deliberately uniform regardless of account
         // existence (Requirement 5.2), so it always reports success.
@@ -87,7 +96,9 @@ public static class AuthEndpoints
             RequestPasswordResetHandler handler,
             CancellationToken ct) => ToHttpResult(await handler.HandleAsync(command, ct)))
             .AllowAnonymous()
-            .WithName("RequestPasswordReset");
+            .WithName("RequestPasswordReset")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithAuthProblemResponses();
 
         // Redeem a password-reset token and set a new password (Requirements 5.3–5.7).
         group.MapPost("/password-reset/redeem", static async (
@@ -95,7 +106,9 @@ public static class AuthEndpoints
             RedeemPasswordResetHandler handler,
             CancellationToken ct) => ToHttpResult(await handler.HandleAsync(command, ct)))
             .AllowAnonymous()
-            .WithName("RedeemPasswordReset");
+            .WithName("RedeemPasswordReset")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithAuthProblemResponses();
 
         // Redeem an email-verification token (Requirements 4.2–4.5). Reachable without a token so a
         // user can verify from the emailed link before signing in.
@@ -104,7 +117,9 @@ public static class AuthEndpoints
             RedeemEmailVerificationHandler handler,
             CancellationToken ct) => ToHttpResult(await handler.HandleAsync(command, ct)))
             .AllowAnonymous()
-            .WithName("RedeemEmailVerification");
+            .WithName("RedeemEmailVerification")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithAuthProblemResponses();
     }
 
     /// <summary>
@@ -113,13 +128,36 @@ public static class AuthEndpoints
     /// </summary>
     private static void MapProtectedEndpoints(RouteGroupBuilder group)
     {
+        // Read the caller's own account and its linked sign-in methods, each carrying the identity id
+        // that unlinking targets (Requirement 8.1). The caller is resolved from the token subject, so
+        // the view can only ever describe the authenticated user. A caller whose user record does not
+        // exist keeps the seam's existing UserNotFound mapping (Requirement 8.6).
+        group.MapGet("/me", static async (
+            ClaimsPrincipal principal,
+            GetAccountHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new GetAccountCommand(userId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("GetAccount")
+            .Produces<AccountView>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
+
         // Sign out, revoking the presented refresh token's whole family (Requirement 9.4).
         group.MapPost("/sign-out", static async (
             SignOutCommand command,
             SignOutHandler handler,
             CancellationToken ct) => ToHttpResult(await handler.HandleAsync(command, ct)))
             .RequireAuthorization()
-            .WithName("SignOut");
+            .WithName("SignOut")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithAuthProblemResponses();
 
         // Link an additional external sign-in method to the authenticated account (Requirement 10.1).
         group.MapPost("/identities/external", static async (
@@ -133,7 +171,9 @@ public static class AuthEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("LinkExternalProvider");
+            .WithName("LinkExternalProvider")
+            .Produces<LinkExternalProviderResult>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
 
         // Add a Password sign-in method to an authenticated account that lacks one (Requirement 10.5).
         group.MapPost("/identities/password", static async (
@@ -147,7 +187,9 @@ public static class AuthEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("AddPasswordCredential");
+            .WithName("AddPasswordCredential")
+            .Produces<AddPasswordCredentialResult>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
 
         // Unlink one of the account's sign-in methods, never the last (Requirements 10.6, 10.7).
         group.MapDelete("/identities/{identityId:guid}", static async (
@@ -161,7 +203,9 @@ public static class AuthEndpoints
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("UnlinkAuthIdentity");
+            .WithName("UnlinkAuthIdentity")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithAuthProblemResponses();
 
         // Resend the caller's own email-verification message (Requirements 4.1, 4.6).
         group.MapPost("/email/verification/request", static async (
@@ -177,7 +221,9 @@ public static class AuthEndpoints
             return ToHttpResult(await handler.HandleAsync(new RequestEmailVerificationCommand(userId), ct));
         })
             .RequireAuthorization()
-            .WithName("RequestEmailVerification");
+            .WithName("RequestEmailVerification")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithAuthProblemResponses();
 
         // Erase (anonymise) the caller's own account (Requirement 14).
         group.MapPost("/erasure", static async (
@@ -193,7 +239,9 @@ public static class AuthEndpoints
             return ToHttpResult(await handler.HandleAsync(new EraseUserCommand(userId), ct));
         })
             .RequireAuthorization()
-            .WithName("EraseUser");
+            .WithName("EraseUser")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithAuthProblemResponses();
 
         // Export the caller's own auth data (DSAR) excluding all secrets (Requirement 14.4).
         group.MapGet("/export", static async (
@@ -209,7 +257,12 @@ public static class AuthEndpoints
             return ToHttpResult(await handler.HandleAsync(new ExportUserDataCommand(userId), ct));
         })
             .RequireAuthorization()
-            .WithName("ExportUserData");
+            .WithName("ExportUserData")
+            // Requirements 9.1, 9.3: the DSAR export's request, status and body are unchanged — the
+            // only edit is declaring the shape it already returns. UserDataExport stays a separate
+            // read model from AccountView, so a field added for account settings cannot reach it.
+            .Produces<UserDataExport>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
     }
 
     /// <summary>
@@ -217,14 +270,14 @@ public static class AuthEndpoints
     /// mapped problem result on failure.
     /// </summary>
     private static IResult ToHttpResult(Result result) =>
-        result.IsSuccess ? Results.NoContent() : AuthErrorResults.ToHttpResult(result.Error!);
+        result.IsSuccess ? TypedResults.NoContent() : AuthErrorResults.ToHttpResult(result.Error!);
 
     /// <summary>
     /// Translates a value-bearing use-case <see cref="Result{T}"/> to <c>200 OK</c> carrying the value
     /// on success or a mapped problem result on failure.
     /// </summary>
     private static IResult ToHttpResult<T>(Result<T> result) =>
-        result.IsSuccess ? Results.Ok(result.Value) : AuthErrorResults.ToHttpResult(result.Error!);
+        result.IsSuccess ? TypedResults.Ok(result.Value) : AuthErrorResults.ToHttpResult(result.Error!);
 
     /// <summary>
     /// The uniform unauthenticated result for a protected endpoint whose caller identity could not be

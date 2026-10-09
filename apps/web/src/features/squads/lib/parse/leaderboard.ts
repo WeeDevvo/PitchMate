@@ -1,6 +1,6 @@
 /**
  * The `GetSquadLeaderboard` body shape for the Display_Rating statistic:
- * `{ statistic: int, entries: [{ membershipId, displayName, value }] }`.
+ * `{ statistic: name, entries: [{ membershipId, displayName, value }] }`.
  *
  * The leaderboard **decorates** the Player_List rather than defining it. Its rows
  * are matched to `GetSquad`'s memberships by identity, a membership with no entry
@@ -19,18 +19,25 @@
  * is neither trimmed nor case-folded before comparison.
  *
  * **`statistic` is not read.** The caller already knows which statistic it asked
- * for — it is in the query string — so the echoed code tells the feature nothing,
- * and its enum is not one the Enum_Code_Map carries. Reading it would mean either
- * a numeric enum literal outside `lib/enumCodes.ts`, which Requirement 16.12
- * forbids, or a seventh table with no user. It is disregarded exactly as any
- * unrecognised property is (16.9), which is also why the printer does not emit it.
+ * for — it is in the query string — so the echoed value tells the feature
+ * nothing. It is a *request* enum: the transport facade types it from
+ * `operations['GetSquadLeaderboard']`, and `lib/wireEnums.ts` deliberately does
+ * not name it, so there is no vocabulary here to validate it against and no user
+ * for one. It is disregarded exactly as any unrecognised property is (16.9),
+ * which is also why the printer does not emit it. This module therefore has no
+ * enum-valued field to read at all — the name migration of Requirement 12.8
+ * leaves its readings unchanged, and that is the whole of its part in it.
+ *
+ * This is also why the echoed value's *form* is immaterial here. It arrives as a
+ * `LeaderboardStatistic` member name now rather than as a number, and a body
+ * carrying either parses to the same value, because neither is looked at.
  *
  * `value` is read as a finite number and nothing else. The rounding to a displayed
  * integer belongs to `lib/ratingPresentation.ts`, and no μ, σ, or scaling constant
  * appears anywhere in this feature: the mapping from the model to a friendly
  * number is the backend's (Requirement 8.9).
  *
- * Requirements: 8.9, 8.11, 16.4, 16.5, 16.9, 16.10, 16.12
+ * Requirements: 8.9, 8.11, 12.5, 12.7, 16.4, 16.5, 16.9, 16.10
  */
 
 import {

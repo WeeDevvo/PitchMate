@@ -53,7 +53,7 @@
  */
 import { type ReactElement } from 'react';
 
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import {
   ACTIVE_STATE_LABEL,
   ADMIN_ROLE_LABEL,
@@ -101,16 +101,16 @@ export const INACTIVE_GLYPH_SELECTOR = '[data-squads-inactive-glyph="true"]';
 const INACTIVE_GLYPH = '\u2013';
 
 /** The label of each named Member_Role — a total lookup, so none is missable. */
-const ROLE_LABELS: Readonly<Record<MemberRole, string>> = {
-  owner: OWNER_ROLE_LABEL,
-  admin: ADMIN_ROLE_LABEL,
-  member: MEMBER_ROLE_LABEL,
+const ROLE_LABELS: Readonly<Record<SquadRole, string>> = {
+  Owner: OWNER_ROLE_LABEL,
+  Admin: ADMIN_ROLE_LABEL,
+  Member: MEMBER_ROLE_LABEL,
 };
 
 /** The label of each named Membership_State. */
-const STATE_LABELS: Readonly<Record<MembershipStateValue, string>> = {
-  active: ACTIVE_STATE_LABEL,
-  inactive: INACTIVE_STATE_LABEL,
+const STATE_LABELS: Readonly<Record<MembershipState, string>> = {
+  Active: ACTIVE_STATE_LABEL,
+  Inactive: INACTIVE_STATE_LABEL,
 };
 
 /** Which fact a rendered label states. */
@@ -127,7 +127,7 @@ interface MembershipLabel {
  * role's own word where a role was carried, or the recorded absence of one
  * (Requirements 7.5, 7.6).
  */
-function roleSlotLabelOf(role: MemberRole | null, isGuest: boolean): MembershipLabel {
+function roleSlotLabelOf(role: SquadRole | null, isGuest: boolean): MembershipLabel {
   // 7.6: a guest carries no role, and the guest label takes the role slot — so no
   // label naming owner, admin, or member is rendered for it.
   if (role === null && isGuest) {
@@ -143,10 +143,10 @@ function roleSlotLabelOf(role: MemberRole | null, isGuest: boolean): MembershipL
 
 export interface MembershipLabelsProps {
   /** The Member_Role, or `null` for a guest membership (Requirement 16.8). */
-  readonly role: MemberRole | null;
+  readonly role: SquadRole | null;
 
   /** The Membership_State; always carried by a parsed Squad_Member. */
-  readonly state: MembershipStateValue;
+  readonly state: MembershipState;
 
   /** Whether this membership is a guest — no account, no `AuthIdentity`. */
   readonly isGuest: boolean;
@@ -192,7 +192,7 @@ export function MembershipLabels({
     <span className="squads-membership-labels" data-squads-membership-labels="true">
       {/* 7.7, 19.3: the non-colour cue of an inactive row, decorative to
           assistive technology because the `Inactive` label states the fact. */}
-      {state === 'inactive' && (
+      {state === 'Inactive' && (
         <span
           className="squads-membership-labels__glyph"
           data-squads-inactive-glyph="true"

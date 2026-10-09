@@ -95,7 +95,7 @@ import { NotFoundTreatment } from '../components/NotFoundTreatment';
 import { PlaceholderSection } from '../components/PlaceholderSection';
 import { PlayerList } from '../components/PlayerList';
 import type { ViewerContext } from '../components/PlayerRow';
-import type { MemberRole } from '../lib/enumCodes';
+import type { SquadRole } from '../lib/wireEnums';
 import {
   ADMIN_ROLE_LABEL,
   MATCHES_PLACEHOLDER_STATEMENT,
@@ -145,10 +145,10 @@ export const PLAYERS_SECTION_SELECTOR = '[data-squads-players-section="true"]';
 export const CALLER_ROLE_SELECTOR = '[data-squads-caller-role="true"]';
 
 /** The label of each named Member_Role — a total lookup, so none is missable. */
-const ROLE_LABELS: Readonly<Record<MemberRole, string>> = {
-  owner: OWNER_ROLE_LABEL,
-  admin: ADMIN_ROLE_LABEL,
-  member: MEMBER_ROLE_LABEL,
+const ROLE_LABELS: Readonly<Record<SquadRole, string>> = {
+  Owner: OWNER_ROLE_LABEL,
+  Admin: ADMIN_ROLE_LABEL,
+  Member: MEMBER_ROLE_LABEL,
 };
 
 /**
@@ -158,7 +158,7 @@ const ROLE_LABELS: Readonly<Record<MemberRole, string>> = {
  * no role, are both stated in text rather than left as a blank space — the same
  * treatment the Squad_Card gives an absent role (Requirement 1.6).
  */
-function roleLabelOf(role: MemberRole | null): string {
+function roleLabelOf(role: SquadRole | null): string {
   return role === null ? NO_ROLE_RECORDED_LABEL : ROLE_LABELS[role];
 }
 

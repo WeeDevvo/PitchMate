@@ -8,7 +8,11 @@
  * `ownerMembershipId` is read for the same reason it is sent: it identifies the
  * caller's own membership in the new squad.
  *
- * Requirements: 16.4, 16.5, 16.9, 16.10
+ * Both fields are identities, so this shape carries **no enum-valued field**: the
+ * named-enum reading of Requirement 12.8 has nothing to apply to here, and the
+ * module is unchanged by that migration rather than exempt from it.
+ *
+ * Requirements: 12.5, 12.7, 16.4, 16.5, 16.9, 16.10
  */
 
 import { ok, readObject, readProperty, readUuid, type ParseResult } from './primitives';

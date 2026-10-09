@@ -77,12 +77,7 @@ import {
   PlayerRow,
   type ViewerContext,
 } from './PlayerRow';
-import {
-  codeFromMemberRole,
-  codeFromMembershipState,
-  type MemberRole,
-  type MembershipStateValue,
-} from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import {
   ACTIVE_STATE_LABEL,
   ADMIN_ROLE_LABEL,
@@ -106,16 +101,16 @@ const VIEWER_MEMBERSHIP_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 // --- The labels under test ----------------------------------------------------
 
 /** The label a named Member_Role must render as (Requirement 7.5). */
-const LABEL_OF_ROLE: Readonly<Record<MemberRole, string>> = {
-  owner: OWNER_ROLE_LABEL,
-  admin: ADMIN_ROLE_LABEL,
-  member: MEMBER_ROLE_LABEL,
+const LABEL_OF_ROLE: Readonly<Record<SquadRole, string>> = {
+  Owner: OWNER_ROLE_LABEL,
+  Admin: ADMIN_ROLE_LABEL,
+  Member: MEMBER_ROLE_LABEL,
 };
 
 /** The label a named Membership_State must render as (Requirement 7.5). */
-const LABEL_OF_STATE: Readonly<Record<MembershipStateValue, string>> = {
-  active: ACTIVE_STATE_LABEL,
-  inactive: INACTIVE_STATE_LABEL,
+const LABEL_OF_STATE: Readonly<Record<MembershipState, string>> = {
+  Active: ACTIVE_STATE_LABEL,
+  Inactive: INACTIVE_STATE_LABEL,
 };
 
 /** The three labels a guest's row may not carry (Requirement 7.6). */
@@ -148,7 +143,7 @@ function sortedLabels(labels: readonly RenderedLabel[]): readonly RenderedLabel[
  * backend serialises, so both are generated (Requirement 16.8).
  */
 type RoleForm =
-  | { readonly kind: 'present'; readonly value: MemberRole }
+  | { readonly kind: 'present'; readonly value: SquadRole }
   | { readonly kind: 'null' }
   | { readonly kind: 'absent' };
 
@@ -156,7 +151,7 @@ const roleFormArb: fc.Arbitrary<RoleForm> = fc.oneof(
   {
     weight: 3,
     arbitrary: fc
-      .constantFrom<MemberRole>('owner', 'admin', 'member')
+      .constantFrom<SquadRole>('Owner', 'Admin', 'Member')
       .map((value) => ({ kind: 'present', value }) as RoleForm),
   },
   { weight: 2, arbitrary: fc.constant({ kind: 'null' } as RoleForm) },
@@ -259,7 +254,7 @@ interface RowCase {
   readonly membershipId: string;
   readonly name: NameCase;
   readonly role: RoleForm;
-  readonly state: MembershipStateValue;
+  readonly state: MembershipState;
   readonly isGuest: boolean;
   readonly rating: RatingForm;
   readonly viewerIsAdmin: boolean;
@@ -270,7 +265,7 @@ const rowCaseArb: fc.Arbitrary<RowCase> = fc.record({
   membershipId: membershipIdArb,
   name: nameCaseArb,
   role: roleFormArb,
-  state: fc.constantFrom<MembershipStateValue>('active', 'inactive'),
+  state: fc.constantFrom<MembershipState>('Active', 'Inactive'),
   isGuest: fc.boolean(),
   rating: ratingFormArb,
   // Weighted towards Admin_Authority so the "no admin action on a Former_Player"
@@ -292,12 +287,14 @@ function memberBodyOf(testCase: RowCase): Record<string, unknown> {
   const body: Record<string, unknown> = {
     membershipId: testCase.membershipId,
     displayName: testCase.name.value,
-    state: codeFromMembershipState(testCase.state),
+    state: testCase.state,
     isGuest: testCase.isGuest,
+    appearances: 12,
+    ratingState: 'Established',
   };
 
   if (testCase.role.kind === 'present') {
-    body.role = codeFromMemberRole(testCase.role.value);
+    body.role = testCase.role.value;
   } else if (testCase.role.kind === 'null') {
     body.role = null;
   }
@@ -518,21 +515,21 @@ function expectNoRoleIsNamed(row: HTMLElement): void {
  * one carries no such cue. The glyph is hidden from assistive technology because
  * the word beside it already carries the fact.
  */
-function expectInactiveCue(row: HTMLElement, state: MembershipStateValue): void {
+function expectInactiveCue(row: HTMLElement, state: MembershipState): void {
   const glyphs = row.querySelectorAll<HTMLElement>(INACTIVE_GLYPH_SELECTOR);
 
-  if (state === 'inactive') {
+  if (state === 'Inactive') {
     expect(glyphs).toHaveLength(1);
     expect(glyphs[0].getAttribute('aria-hidden')).toBe('true');
     expect(glyphs[0].textContent?.trim()).not.toBe('');
     // The state is on the row itself as well, so the muted surface cannot be
     // painted on a row whose label says otherwise.
-    expect(row.getAttribute('data-membership-state')).toBe('inactive');
+    expect(row.getAttribute('data-membership-state')).toBe('Inactive');
     // 7.7: still reachable, so a de-activated membership's stats stay open.
     expect(openControlOf(row)).toBeInTheDocument();
   } else {
     expect(glyphs).toHaveLength(0);
-    expect(row.getAttribute('data-membership-state')).toBe('active');
+    expect(row.getAttribute('data-membership-state')).toBe('Active');
   }
 }
 
@@ -618,7 +615,7 @@ describe('Property 16 — every Player_Row states its membership facts in text',
       fc.property(
         membershipIdArb,
         nameCaseArb,
-        fc.constantFrom<MembershipStateValue>('active', 'inactive'),
+        fc.constantFrom<MembershipState>('Active', 'Inactive'),
         fc.boolean(),
         fc.boolean(),
         (membershipId, name, state, isGuest, viewerIsAdmin) => {

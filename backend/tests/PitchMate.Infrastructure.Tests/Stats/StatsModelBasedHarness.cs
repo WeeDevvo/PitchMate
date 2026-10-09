@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using PitchMate.Application.Stats;
 using PitchMate.Domain.Rating;
 using PitchMate.Infrastructure;
@@ -55,11 +56,10 @@ public sealed class StatsModelBasedHarness
         var databaseName = "stats_" + Guid.NewGuid().ToString("N");
         await MigrationTestSupport.CreateDatabaseAsync(_fixture.ConnectionString, databaseName);
 
+        var connectionString = PooledConnectionString(_fixture.ConnectionString, databaseName);
+
         try
         {
-            var connectionString =
-                MigrationTestSupport.ConnectionStringForDatabase(_fixture.ConnectionString, databaseName);
-
             await using (var schema = CreateContext(connectionString))
             {
                 await schema.Database.MigrateAsync();
@@ -79,9 +79,26 @@ public sealed class StatsModelBasedHarness
         }
         finally
         {
+            // Return this case's pooled sockets before dropping, so the pool cannot outlive the
+            // database and nothing lingers to block the DROP (which also forces any stragglers).
+            NpgsqlConnection.ClearPool(new NpgsqlConnection(connectionString));
             await MigrationTestSupport.DropDatabaseAsync(_fixture.ConnectionString, databaseName);
         }
     }
+
+    /// <summary>
+    /// The connection string for a case's throwaway database with pooling left <em>enabled</em>, so the
+    /// migrate, seed, and read contexts of a case reuse one physical connection instead of opening a new
+    /// socket each time. With a database per generated case, the unpooled alternative exhausts the
+    /// Windows ephemeral port range across a full run and produces spurious <c>Failed to connect</c> /
+    /// <c>WSAEADDRINUSE</c> failures unrelated to any assertion. The pool is cleared before the drop, so
+    /// per-case isolation is unchanged — every case still gets its own freshly migrated database.
+    /// </summary>
+    private static string PooledConnectionString(string baseConnectionString, string databaseName) =>
+        new NpgsqlConnectionStringBuilder(baseConnectionString)
+        {
+            Database = databaseName,
+        }.ConnectionString;
 
     /// <summary>Creates a production <see cref="PitchMateDbContext"/> bound to the throwaway database.</summary>
     private static PitchMateDbContext CreateContext(string connectionString) =>

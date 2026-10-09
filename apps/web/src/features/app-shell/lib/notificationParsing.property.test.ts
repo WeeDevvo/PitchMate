@@ -26,7 +26,7 @@
  *    the claim is exercised: a hostile candidate must cost that one candidate and
  *    leave the rest of the response parsed.
  *
- * Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.10, 10.11, 10.12, 14.12, 14.13
+ * Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.10, 10.11, 10.12, 12.5, 12.6, 12.7, 12.8, 12.11, 14.12, 14.13
  */
 
 import { describe, expect, it } from 'vitest';
@@ -104,7 +104,11 @@ function expectWellShapedRecord(record: NotificationRecord): void {
     expect(CATALOGUED_NOTIFICATION_TYPES).toContain(record.type.value);
   } else {
     expect(record.type.kind).toBe('unrecognised');
-    expect(Number.isInteger(record.type.code)).toBe(true);
+    // A retained wire name is a non-empty string the printer can emit back, and
+    // never one of the catalogued names — those are the other arm (10.5, 10.6).
+    expect(typeof record.type.name).toBe('string');
+    expect(record.type.name.length).toBeGreaterThan(0);
+    expect(CATALOGUED_NOTIFICATION_TYPES).not.toContain(record.type.name);
   }
 }
 
@@ -117,16 +121,20 @@ function expectsParseFailure(body: unknown): boolean {
   return !Array.isArray(body);
 }
 
-/** A wire candidate carrying every property in its accepted form (10.2). */
+/**
+ * A wire candidate carrying every property in its accepted form (10.2), with
+ * both enum-valued members as the Wire_Enum_Names the contract now carries
+ * (Requirement 12.8).
+ */
 function validWireRecord(): Record<string, unknown> {
   return {
     notificationId: VALID_NOTIFICATION_ID,
-    type: 4,
+    type: 'MatchDrafted',
     squadId: VALID_SQUAD_ID,
     title: 'Match drafted',
     body: 'Tell the squad which days you can make.',
     createdAt: '2026-03-01T18:30:00Z',
-    readState: 0,
+    readState: 'Unread',
   };
 }
 
@@ -197,6 +205,13 @@ const fieldValueArb: fc.Arbitrary<unknown> = fc.oneof(
       VALID_NOTIFICATION_ID.toUpperCase(),
       'not-an-identity',
       '',
+      // The Wire_Enum_Names the contract carries, and the integer codes it no
+      // longer carries, so both arms of every enum field are sampled.
+      'MatchDrafted',
+      'MemberJoined',
+      'MatchCancelled',
+      'Unread',
+      'Read',
       0,
       1,
       2,
@@ -385,26 +400,47 @@ describe('parseNotificationList — totality and outcome shape (Property 6)', ()
 // these generators, and one of the properties below walks them one field at a
 // time: titles of 0, 1, 200, and 201 characters; bodies of 0, 2000, and 2001
 // characters; identities in lower, upper, and mixed case, and malformed ones;
-// `createdAt` with no UTC designator; and negative, fractional, and
-// string-encoded `type` and `readState` codes. Arrays of 0, 200, and 201
+// `createdAt` with no UTC designator; and `type` and `readState` values that are
+// catalogued names, unrecognised names, names in the wrong letter case, the
+// empty string, and the integer codes the contract no longer carries. Arrays of
+// 0, 200, and 201
 // elements pin the Notification_List_Cap.
 // ---------------------------------------------------------------------------
 
 /**
- * The eight catalogued kinds in the order acceptance criterion 10.5 names them —
- * member joined, promoted to admin, removed from squad, ownership transferred,
- * match drafted, match confirmed, teams rolled, result posted — restated here so
- * the expectation comes from the requirement rather than from the module.
+ * The eight catalogued kinds acceptance criterion 10.5 names — member joined,
+ * promoted to admin, removed from squad, ownership transferred, match drafted,
+ * match confirmed, teams rolled, result posted — written here as the
+ * Wire_Enum_Names the contract carries, so the expectation comes from the
+ * requirement and the committed vocabulary rather than from the module.
+ *
+ * Nothing is looked up by position any more: with names there is no index left to
+ * be off by one, which is why the order below is documentation rather than part
+ * of any expectation.
  */
-const CATALOGUED_ORDER = [
+const CATALOGUED_NAMES = [
+  'MemberJoined',
+  'PromotedToAdmin',
+  'RemovedFromSquad',
+  'OwnershipTransferred',
+  'MatchDrafted',
+  'MatchConfirmed',
+  'TeamsRolled',
+  'ResultPosted',
+] as const;
+
+/** Wire names outside the catalogued eight: each is retained as unrecognised. */
+const UNRECOGNISED_NAMES = [
+  'MatchCancelled',
+  'SquadRenamed',
+  'GuestClaimed',
+  'memberJoined',
+  'MEMBERJOINED',
   'member-joined',
-  'promoted-to-admin',
-  'removed-from-squad',
-  'ownership-transferred',
-  'match-drafted',
-  'match-confirmed',
-  'teams-rolled',
-  'result-posted',
+  'MemberJoined ',
+  ' MemberJoined',
+  'MemberJoined2',
+  'A',
 ] as const;
 
 /** The inclusive length bounds acceptance criterion 10.2 places on the two texts. */
@@ -570,80 +606,100 @@ const identityCaseArb: fc.Arbitrary<FieldCase<string>> = fc.oneof(
   { weight: 4, arbitrary: fc.constantFrom(...REJECTED_IDENTITY_CASES) },
 );
 
-// --- type (10.5, 10.6): catalogued 0..7, any other integer unrecognised ------
+// --- type (10.5, 10.6, 12.8): the eight catalogued Wire_Enum_Names, any other
+// non-empty name unrecognised, and nothing else readable -----------------------
 
-const CATALOGUED_TYPE_CASES: readonly FieldCase<NotificationType>[] = [
-  ...CATALOGUED_ORDER.map((value, code) =>
-    accepts<NotificationType>(code, { kind: 'catalogued', value }),
-  ),
-  // `-0` is the integer zero, so it is the first catalogued kind.
-  accepts<NotificationType>(-0, { kind: 'catalogued', value: 'member-joined' }),
-];
+const CATALOGUED_TYPE_CASES: readonly FieldCase<NotificationType>[] =
+  CATALOGUED_NAMES.map((value) =>
+    accepts<NotificationType>(value, { kind: 'catalogued', value }),
+  );
 
-const UNRECOGNISED_TYPE_CASES: readonly FieldCase<NotificationType>[] = [
-  8, 9, 42, 2_147_483_647, -1, -8, -2_147_483_648, Number.MAX_SAFE_INTEGER,
-].map((code) => accepts<NotificationType>(code, { kind: 'unrecognised', code }));
+const UNRECOGNISED_TYPE_CASES: readonly FieldCase<NotificationType>[] =
+  UNRECOGNISED_NAMES.map((name) =>
+    accepts<NotificationType>(name, { kind: 'unrecognised', name }),
+  );
 
+/**
+ * Values no `type` member can be read from: the integer codes the contract used
+ * to carry (10.5 is a name now, so a number is no longer interpretable), the
+ * empty string (a marker that could not be printed back and read again is no
+ * record), and every non-string shape.
+ */
 const REJECTED_TYPE_CASES: readonly FieldCase<NotificationType>[] = [
   rejects(OMITTED),
   rejects(undefined),
   rejects(null),
+  rejects(0), // the old catalogued code
+  rejects(4),
+  rejects(7),
+  rejects(12), // the old unrecognised code
+  rejects(-1),
   rejects(1.5), // fractional
   rejects(-0.5),
-  rejects(0.1),
-  rejects('3'), // string-encoded
-  rejects('0'),
-  rejects(''),
+  rejects(''), // empty name
   rejects(Number.NaN),
   rejects(Number.POSITIVE_INFINITY),
   rejects(Number.NEGATIVE_INFINITY),
   rejects(true),
   rejects(BigInt(3)),
-  rejects({ code: 3 }),
-  rejects([3]),
+  rejects({ value: 'MatchDrafted' }),
+  rejects(['MatchDrafted']),
 ];
+
+/**
+ * Any string at all, classified by the criteria: a catalogued name is that kind,
+ * any other non-empty string is retained as unrecognised, and the empty string is
+ * no type at all.
+ */
+const anyTypeNameCaseArb: fc.Arbitrary<FieldCase<NotificationType>> = fc
+  .string({ minLength: 0, maxLength: 24 })
+  .map((name) => {
+    if (name.length === 0) {
+      return rejects(name);
+    }
+
+    return (CATALOGUED_NAMES as readonly string[]).includes(name)
+      ? accepts<NotificationType>(name, {
+          kind: 'catalogued',
+          value: name as (typeof CATALOGUED_NAMES)[number],
+        })
+      : accepts<NotificationType>(name, { kind: 'unrecognised', name });
+  });
 
 const typeCaseArb: fc.Arbitrary<FieldCase<NotificationType>> = fc.oneof(
   { weight: 5, arbitrary: fc.constantFrom(...CATALOGUED_TYPE_CASES) },
   { weight: 3, arbitrary: fc.constantFrom(...UNRECOGNISED_TYPE_CASES) },
-  {
-    weight: 2,
-    arbitrary: fc
-      .integer({ min: -100_000, max: 100_000 })
-      .map((code) =>
-        code >= 0 && code < CATALOGUED_ORDER.length
-          ? accepts<NotificationType>(code, {
-              kind: 'catalogued',
-              value: CATALOGUED_ORDER[code],
-            })
-          : accepts<NotificationType>(code, { kind: 'unrecognised', code }),
-      ),
-  },
+  { weight: 2, arbitrary: anyTypeNameCaseArb },
   { weight: 3, arbitrary: fc.constantFrom(...REJECTED_TYPE_CASES) },
 );
 
-// --- readState (10.4): 0 is unread, 1 is read, nothing else ------------------
+// --- readState (10.4, 12.8): `Unread` and `Read` by name, nothing else -------
 
 const READ_STATE_CASES: readonly FieldCase<ReadState>[] = [
-  accepts<ReadState>(0, 'unread'),
-  accepts<ReadState>(-0, 'unread'),
-  accepts<ReadState>(1, 'read'),
+  accepts<ReadState>('Unread', 'unread'),
+  accepts<ReadState>('Read', 'read'),
   rejects(OMITTED),
   rejects(undefined),
   rejects(null),
+  rejects(0), // the old unread code
+  rejects(1), // the old read code
   rejects(2),
   rejects(-1), // negative
   rejects(0.5), // fractional
   rejects(1.5),
   rejects('0'), // string-encoded
   rejects('1'),
-  rejects('unread'),
+  rejects(''),
+  rejects('unread'), // the model's own vocabulary is not a wire name
+  rejects('read'),
+  rejects('UNREAD'), // letter case is exact
+  rejects('Archived'), // a name this contract does not carry
   rejects(true),
   rejects(false),
   rejects(Number.NaN),
   rejects(Number.POSITIVE_INFINITY),
   rejects(BigInt(0)),
-  rejects([0]),
+  rejects(['Unread']),
   rejects({}),
 ];
 
@@ -934,8 +990,8 @@ const singleFieldCandidateArb: fc.Arbitrary<CandidateCase> = fc
 /**
  * A cheap valid candidate whose identity and title carry its supplied position,
  * so relative order is visible in the parsed records. Built from the shared
- * `validWireRecord` helper: its `type` of 4 is the fifth catalogued kind and its
- * `readState` of 0 is `unread`.
+ * `validWireRecord` helper: its `type` of `MatchDrafted` is a catalogued kind and
+ * its `readState` of `Unread` is `unread`.
  */
 function indexedCandidate(index: number): CandidateCase {
   const base = validWireRecord();
@@ -946,7 +1002,7 @@ function indexedCandidate(index: number): CandidateCase {
     wire: { ...base, notificationId, title },
     accepted: {
       notificationId,
-      type: { kind: 'catalogued', value: 'match-drafted' },
+      type: { kind: 'catalogued', value: 'MatchDrafted' },
       squadId: base.squadId as string,
       title,
       body: base.body as string,
@@ -979,8 +1035,10 @@ function expectedRecords(cases: readonly CandidateCase[]): NotificationRecord[] 
  * so every run compares every boundary acceptance criteria 10.2 to 10.6 turn on:
  * identities in three letter cases and thirteen malformed forms, titles at 0, 1,
  * 199, 200, and 201 characters, bodies at 0, 1999, 2000, and 2001, `createdAt`
- * with and without a UTC designator, and `type` and `readState` codes that are
- * negative, fractional, and string-encoded. The total stays under the
+ * with and without a UTC designator, and `type` and `readState` values that are
+ * catalogued names, unrecognised names, differently-cased names, the empty
+ * string, and the integer codes the contract no longer carries. The total stays
+ * under the
  * Notification_List_Cap so the cap plays no part here.
  */
 function everyBoundaryCandidate(defaults: CandidateFieldCases): CandidateCase[] {
@@ -1137,8 +1195,9 @@ describe('parseNotificationList — candidate acceptance (Property 7)', () => {
 // from the record model: for **any** Notification_Record, printing it and
 // parsing that printed output yields exactly one Notification_Record equal to
 // the original in all seven values acceptance criterion 10.8 names — identity,
-// Notification_Type together with the code retained by an unrecognised marker,
-// squad identity, title character-for-character, body character-for-character,
+// Notification_Type together with the wire name retained by an unrecognised
+// marker, squad identity, title character-for-character, body
+// character-for-character,
 // creation instant as the same instant on the time line, and Read_State — and
 // the printed output itself carries exactly the seven wire properties of 10.7,
 // with `createdAt` bearing an explicit UTC designator and the two texts
@@ -1152,50 +1211,39 @@ describe('parseNotificationList — candidate acceptance (Property 7)', () => {
 //    arrived with, and a fractional part finer than a millisecond truncates on
 //    the way in, so `print ∘ parse` on a wire string is not the identity and is
 //    not claimed. `parse ∘ print` on a record is, and is what 10.8 asks for.
-//  - An unrecognised type marker only ever retains a code **outside** the
-//    catalogued range 0 to 7 — that is the only kind of marker the parser
-//    produces, because a code inside the range is a catalogued kind (10.5,
-//    10.6). The generator is constrained to that input space accordingly; a
-//    hand-built marker retaining code 3 is not a Notification_Record the model
-//    admits, and the printer's own doc comment says a value that is not a
-//    Notification_Record prints something the parser rejects rather than
-//    round-tripping.
+//  - An unrecognised type marker only ever retains a **non-empty name outside
+//    the catalogued eight** — that is the only kind of marker the parser
+//    produces, because a catalogued name is a catalogued kind (10.5, 10.6) and
+//    the empty string is no type at all. The generator is constrained to that
+//    input space accordingly; a hand-built marker retaining `MatchDrafted` or
+//    `''` is not a Notification_Record the model admits, and the printer's own
+//    doc comment says a value that is not a Notification_Record prints something
+//    the parser rejects rather than round-tripping.
 //
-// Boundaries are enumerated rather than left to chance: an unrecognised code at
-// each end of the 32-bit and safe-integer ranges, an empty body, a title and a
-// body at their maxima of 200 and 2000 characters, identities in all three
-// letter cases, both Read_States, and instants at the epoch and at both ends of
-// the representable range (which print with an expanded signed year).
+// Boundaries are enumerated rather than left to chance: unrecognised names that
+// differ from a catalogued one only by letter case, by separators, or by a
+// trailing character, a single-character name, an empty body, a title and a body
+// at their maxima of 200 and 2000 characters, identities in all three letter
+// cases, both Read_States, and instants at the epoch and at both ends of the
+// representable range (which print with an expanded signed year).
 // ---------------------------------------------------------------------------
 
 /** The largest absolute instant a JavaScript date value can represent. */
 const MAX_INSTANT_MS = 8_640_000_000_000_000;
 
 /**
- * An integer code no catalogued kind claims, so a Notification_Type carrying it
- * is an unrecognised marker (10.6). Both ends of the signed 32-bit range and of
- * the safe-integer range are included explicitly.
+ * A non-empty wire name no catalogued kind claims, so a Notification_Type
+ * carrying it is an unrecognised marker (10.6). The enumerated names differ from
+ * a catalogued one in the ways a near miss actually arrives — letter case,
+ * separators, a trailing character — and the generated ones cover arbitrary text.
  */
-const unrecognisedCodeArb: fc.Arbitrary<number> = fc.oneof(
-  {
-    weight: 4,
-    arbitrary: fc.constantFrom(
-      8,
-      9,
-      42,
-      -1,
-      -8,
-      2_147_483_647,
-      -2_147_483_648,
-      Number.MAX_SAFE_INTEGER,
-      Number.MIN_SAFE_INTEGER,
-    ),
-  },
+const unrecognisedNameArb: fc.Arbitrary<string> = fc.oneof(
+  { weight: 4, arbitrary: fc.constantFrom(...UNRECOGNISED_NAMES) },
   {
     weight: 6,
     arbitrary: fc
-      .integer({ min: -1_000_000, max: 1_000_000 })
-      .filter((code) => code < 0 || code >= CATALOGUED_ORDER.length),
+      .string({ minLength: 1, maxLength: 40 })
+      .filter((name) => !(CATALOGUED_NAMES as readonly string[]).includes(name)),
   },
 );
 
@@ -1203,13 +1251,13 @@ const notificationTypeArb: fc.Arbitrary<NotificationType> = fc.oneof(
   {
     weight: 5,
     arbitrary: fc
-      .constantFrom(...CATALOGUED_ORDER)
+      .constantFrom(...CATALOGUED_NAMES)
       .map((value): NotificationType => ({ kind: 'catalogued', value })),
   },
   {
     weight: 5,
-    arbitrary: unrecognisedCodeArb.map(
-      (code): NotificationType => ({ kind: 'unrecognised', code }),
+    arbitrary: unrecognisedNameArb.map(
+      (name): NotificationType => ({ kind: 'unrecognised', name }),
     ),
   },
 );
@@ -1323,12 +1371,17 @@ const roundTripRecordArb: fc.Arbitrary<NotificationRecord> = fc.oneof(
 );
 
 /**
- * The wire `type` code acceptance criterion 10.7 owes a Notification_Type: the
- * catalogued position in the order criterion 10.5 names, restated in this file,
- * or the code the unrecognised marker retains.
+ * The wire `type` name acceptance criterion 10.7 owes a Notification_Type: the
+ * catalogued name itself, or the name the unrecognised marker retains
+ * (Requirement 12.11).
  */
-function owedTypeCode(type: NotificationType): number {
-  return type.kind === 'catalogued' ? CATALOGUED_ORDER.indexOf(type.value) : type.code;
+function owedTypeName(type: NotificationType): string {
+  return type.kind === 'catalogued' ? type.value : type.name;
+}
+
+/** The wire `readState` name acceptance criterion 10.7 owes a Read_State. */
+function owedReadStateName(readState: ReadState): string {
+  return readState === 'read' ? 'Read' : 'Unread';
 }
 
 /** The printed output as a property bag, asserting it is one at all. */
@@ -1382,11 +1435,11 @@ const BOUNDARY_OVERRIDES: readonly Partial<NotificationRecord>[] = [
   { notificationId: VALID_NOTIFICATION_ID }, // lower case
   { squadId: VALID_SQUAD_ID }, // upper case
   { notificationId: mixCase(VALID_NOTIFICATION_ID) }, // mixed case
-  ...CATALOGUED_ORDER.map(
+  ...CATALOGUED_NAMES.map(
     (value): Partial<NotificationRecord> => ({ type: { kind: 'catalogued', value } }),
   ),
-  ...[8, 9, -1, 2_147_483_647, -2_147_483_648, Number.MAX_SAFE_INTEGER].map(
-    (code): Partial<NotificationRecord> => ({ type: { kind: 'unrecognised', code } }),
+  ...UNRECOGNISED_NAMES.map(
+    (name): Partial<NotificationRecord> => ({ type: { kind: 'unrecognised', name } }),
   ),
 ];
 
@@ -1402,25 +1455,25 @@ describe('printNotificationRecord then parseNotificationList — round trip (Pro
     );
   });
 
-  it('preserves the integer code retained by an unrecognised type marker, unchanged', () => {
+  it('preserves the wire name retained by an unrecognised type marker, unchanged', () => {
     fc.assert(
-      fc.property(wellFormedRecordArb, unrecognisedCodeArb, (base, code) => {
-        const record: NotificationRecord = { ...base, type: { kind: 'unrecognised', code } };
+      fc.property(wellFormedRecordArb, unrecognisedNameArb, (base, name) => {
+        const record: NotificationRecord = { ...base, type: { kind: 'unrecognised', name } };
 
-        expect(printedWire(record).type).toBe(code);
-        expect(expectRoundTrips(record).type).toEqual({ kind: 'unrecognised', code });
+        expect(printedWire(record).type).toBe(name);
+        expect(expectRoundTrips(record).type).toEqual({ kind: 'unrecognised', name });
       }),
       { numRuns: 300 },
     );
   });
 
-  it('maps every catalogued kind back to itself through its catalogued integer code', () => {
+  it('maps every catalogued kind back to itself through its wire name', () => {
     fc.assert(
-      fc.property(wellFormedRecordArb, fc.nat({ max: 7 }), (base, code) => {
-        const value = CATALOGUED_ORDER[code];
+      fc.property(wellFormedRecordArb, fc.nat({ max: 7 }), (base, index) => {
+        const value = CATALOGUED_NAMES[index];
         const record: NotificationRecord = { ...base, type: { kind: 'catalogued', value } };
 
-        expect(printedWire(record).type).toBe(code);
+        expect(printedWire(record).type).toBe(value);
         expect(expectRoundTrips(record).type).toEqual({ kind: 'catalogued', value });
       }),
       { numRuns: 200 },
@@ -1437,8 +1490,9 @@ describe('printNotificationRecord then parseNotificationList — round trip (Pro
 
         expect(wire.notificationId).toBe(record.notificationId);
         expect(wire.squadId).toBe(record.squadId);
-        expect(wire.type).toBe(owedTypeCode(record.type));
-        expect(wire.readState).toBe(record.readState === 'read' ? 1 : 0);
+        // 12.8, 12.11: both enum-valued members are printed as Wire_Enum_Names.
+        expect(wire.type).toBe(owedTypeName(record.type));
+        expect(wire.readState).toBe(owedReadStateName(record.readState));
 
         // 10.7: untruncated, character for character and length for length.
         expect(wire.title).toBe(record.title);

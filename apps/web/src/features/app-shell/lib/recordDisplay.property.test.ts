@@ -278,25 +278,27 @@ const cataloguedTypeArb: fc.Arbitrary<NotificationType> = fc
 
 /**
  * A Notification_Type outside the eight catalogued kinds: an unrecognised marker
- * retaining a backend code, and — for the same reason the module checks the label
- * table rather than the tag alone — a marker tagged catalogued that names a kind
- * no label exists for.
+ * retaining a backend wire name, and — for the same reason the module checks the
+ * label table rather than the tag alone — a marker tagged catalogued that names a
+ * kind no label exists for.
  */
 const unrecognisedTypeArb: fc.Arbitrary<NotificationType> = fc.oneof(
   {
     weight: 4,
     arbitrary: fc
       .oneof(
-        fc.integer({ min: CATALOGUED_NOTIFICATION_TYPES.length, max: 1_000_000 }),
-        fc.integer({ min: -1_000_000, max: -1 }),
-        fc.constantFrom(8, 9, 42, -1, 2_147_483_647),
+        fc.string({ minLength: 1, maxLength: 40 }),
+        fc.constantFrom('MatchCancelled', 'SquadRenamed', 'memberJoined', 'A'),
       )
-      .map((code) => ({ kind: 'unrecognised', code }) as NotificationType),
+      .filter(
+        (name) => !(CATALOGUED_NOTIFICATION_TYPES as readonly string[]).includes(name),
+      )
+      .map((name) => ({ kind: 'unrecognised', name }) as NotificationType),
   },
   {
     weight: 1,
     arbitrary: fc
-      .constantFrom('member_joined', 'MATCH-DRAFTED', 'squad-renamed', '')
+      .constantFrom('member_joined', 'MATCH-DRAFTED', 'SquadRenamed', '')
       .map(
         (value) =>
           ({
@@ -381,7 +383,7 @@ const malformedInputArb: fc.Arbitrary<unknown> = fc.oneof(
       { type: { kind: 'catalogued' } },
       { type: null },
       { title: null, body: null, type: undefined },
-      { title: 42, body: [], type: 'member-joined' },
+      { title: 42, body: [], type: 'MemberJoined' },
       { title: { text: 'nested' }, body: { text: 'nested' } },
     ),
   },
@@ -820,14 +822,14 @@ describe('Property 20: record display derives text, fallbacks, and cues without 
     expect(BODY_DISPLAY_MAX_LENGTH).toBe(500);
     expect(NEUTRAL_NOTIFICATION_TYPE_LABEL).toBe('Notification');
     expect(NOTIFICATION_TYPE_LABELS).toStrictEqual({
-      'member-joined': 'Member joined',
-      'promoted-to-admin': 'Promoted to admin',
-      'removed-from-squad': 'Removed from squad',
-      'ownership-transferred': 'Ownership transferred',
-      'match-drafted': 'Match drafted',
-      'match-confirmed': 'Match confirmed',
-      'teams-rolled': 'Teams rolled',
-      'result-posted': 'Result posted',
+      MemberJoined: 'Member joined',
+      PromotedToAdmin: 'Promoted to admin',
+      RemovedFromSquad: 'Removed from squad',
+      OwnershipTransferred: 'Ownership transferred',
+      MatchDrafted: 'Match drafted',
+      MatchConfirmed: 'Match confirmed',
+      TeamsRolled: 'Teams rolled',
+      ResultPosted: 'Result posted',
     });
 
     // A label exists for each of the eight catalogued kinds, and no two kinds
@@ -840,7 +842,7 @@ describe('Property 20: record display derives text, fallbacks, and cues without 
     expect(new Set(labels).size).toBe(8);
     expect(labels).not.toContain(NEUTRAL_NOTIFICATION_TYPE_LABEL);
 
-    const catalogued: NotificationType = { kind: 'catalogued', value: 'match-drafted' };
+    const catalogued: NotificationType = { kind: 'catalogued', value: 'MatchDrafted' };
 
     // The two boundaries, stated outright: 120 and 121, 500 and 501.
     const title120 = 'a'.repeat(120);

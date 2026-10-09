@@ -249,9 +249,9 @@ export function readString(
  * Negative zero is accepted and preserved; it is the same number as zero for
  * every comparison this feature makes of a wire value.
  *
- * A reading is not constrained to an integer here. The fields that must be whole
- * numbers in this feature are enum codes, which are read through the
- * Enum_Code_Map rather than through this reader.
+ * A reading is not constrained to an integer here. No enum-valued field reaches
+ * this reader at all: every wire enum arrives as a member name and is read
+ * through {@link readWireEnumName} (Requirement 12.4).
  *
  * Requirements: 16.4
  */
@@ -301,6 +301,66 @@ export function readBoolean(value: unknown, label: string): ParseResult<boolean>
 export function readUuid(value: unknown, label: string): ParseResult<string> {
   if (!isSquadIdentifier(value)) {
     return fail(`${label} is not an identity`);
+  }
+
+  return ok(value);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Wire enum names                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A membership test over one wire enum's names — the shape of every predicate
+ * `lib/wireEnums.ts` exports.
+ *
+ * Declared structurally rather than imported, so this module keeps its single
+ * import and stays unaware of which enums exist: the reader below is the same
+ * reader for all seven, and the vocabulary it enforces is the predicate's, which
+ * is in turn pinned to the generated union at compile time (Requirement 12.3).
+ */
+export type WireEnumNamePredicate<TName extends string> = (
+  candidate: unknown,
+) => candidate is TName;
+
+/**
+ * A value read as a member name of one wire enum, validated against the
+ * generated vocabulary that `isName` tests (Requirement 12.8).
+ *
+ * Accepted: exactly the names the predicate admits, returned unchanged. Rejected:
+ * every other value — a string outside the union (`'owner'` in the wrong case,
+ * `'Captain'`), a number (including the code a previous contract sent for the
+ * same field), a boolean, `null`, absent, an array, an object, a boxed string.
+ * Nothing is coerced, case-folded, or defaulted, so a name nobody sent never
+ * reaches a value a screen renders.
+ *
+ * Reading **by name** rather than by code is what removes a whole class of
+ * silent error: an unnamed member used to depend on a hand-maintained code table
+ * agreeing with the backend's declaration order, and a table that disagreed
+ * mapped a field to the wrong valid member rather than failing. A name either is
+ * in the generated union or is not.
+ *
+ * Total over every input and free of exceptions. The predicate compares the
+ * candidate against a fixed list of strings with `===`, so the value is never
+ * converted and a hostile `toString` or `valueOf` never runs; nothing here looks
+ * inside the value either, so depth costs one membership test.
+ *
+ * An absence is not this reader's business. Where a `null` or missing field is a
+ * valid absence the caller wraps this reader in {@link readOptional}, and where
+ * it is not the caller calls it directly — which keeps the tolerance a decision
+ * of each field rather than a rule baked in here (Requirement 16.8).
+ *
+ * @param isName a membership predicate from `lib/wireEnums.ts`
+ *
+ * Requirements: 12.6, 12.8, 16.4
+ */
+export function readWireEnumName<TName extends string>(
+  value: unknown,
+  label: string,
+  isName: WireEnumNamePredicate<TName>,
+): ParseResult<TName> {
+  if (!isName(value)) {
+    return fail(`${label} names no member of its wire enum`);
   }
 
   return ok(value);

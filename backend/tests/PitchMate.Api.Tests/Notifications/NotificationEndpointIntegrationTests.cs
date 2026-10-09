@@ -6,6 +6,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PitchMate.Api.Notifications.Endpoints;
 using PitchMate.Api.Tests.Auth;
 using PitchMate.Domain.Auth;
 using PitchMate.Domain.Notifications;
@@ -290,7 +291,11 @@ public sealed class NotificationEndpointIntegrationTests : IClassFixture<Routing
             client, HttpMethod.Get, "/notifications/unread-count", _factory.CreateAccessToken(userId));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return await response.Content.ReadFromJsonAsync<int>();
+
+        // The count is a named member of an object body, not a bare JSON number (Requirement 7.1).
+        UnreadCountResponse? body = await response.Content.ReadFromJsonAsync<UnreadCountResponse>();
+        Assert.NotNull(body);
+        return body.Count;
     }
 
     private static string UniqueEmail() => $"user-{Guid.NewGuid():N}@example.com";

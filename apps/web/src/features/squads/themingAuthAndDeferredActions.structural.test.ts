@@ -699,8 +699,14 @@ const APPEARANCE_RULES: readonly AppearanceRule[] = [
   },
   {
     label: 'a feature-local appearance store, bootstrap, or resolution declaration',
+    // `readAppearance`/`writeAppearance` carry a negative lookahead for `Count`:
+    // the squad detail body now reports an **Appearance_Count** per membership —
+    // the number of completed matches that player appeared in — and a reader of
+    // that tally shares a word with the theme's appearance preference and nothing
+    // else. A feature-local appearance *store* is still caught, by the
+    // `appearancePreference` and `appearanceStorage` alternatives beside these.
     pattern:
-      /\b(?:function|const|let|var|class)\s+\w*(?:resolveTheme|themeFromPreference|themeBootstrap|appearancePreference|appearanceStorage|readAppearance|writeAppearance)\w*/gi,
+      /\b(?:function|const|let|var|class)\s+\w*(?:resolveTheme|themeFromPreference|themeBootstrap|appearancePreference|appearanceStorage|readAppearance(?!Count)|writeAppearance(?!Count))\w*/gi,
     keepsStrings: false,
   },
   {
@@ -713,6 +719,19 @@ const APPEARANCE_RULES: readonly AppearanceRule[] = [
     keepsStrings: true,
   },
 ];
+
+/**
+ * The key-shaped literals this rule admits, and why each is not an appearance
+ * key.
+ *
+ * `appearances` is a **wire field name**: the `SquadMemberView` property carrying
+ * a membership's completed-match tally, read by `lib/parse/squadDetail.ts`. The
+ * name is the contract's, not this feature's choice, and a parser must spell the
+ * property it reads. Exempting it by exact token keeps the rule intact for every
+ * key that is actually about appearance — `'pitchmate.appearance'` and
+ * `'data-theme'` still fire.
+ */
+const APPEARANCE_LITERAL_EXEMPTIONS: readonly string[] = ['appearances'];
 
 /** The names `src/theme` owns, which the feature may use only by importing them. */
 const THEME_OWNED_NAMES = [
@@ -742,6 +761,10 @@ describe('appearance is resolved by src/theme and by nothing in this feature', (
         // rather than across a whole file.
         if (pattern.source.startsWith('^')) {
           for (const literal of stringLiterals(file)) {
+            if (APPEARANCE_LITERAL_EXEMPTIONS.includes(literal)) {
+              continue;
+            }
+
             if (pattern.test(literal)) {
               findings.push({ file: featureRel(file), rule: label, offender: literal });
             }

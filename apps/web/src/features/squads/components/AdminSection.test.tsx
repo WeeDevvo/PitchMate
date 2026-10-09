@@ -33,7 +33,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 
 import type { SquadsApi } from '../api/squadsApi';
 import { resolveAdminAuthority } from '../lib/adminAuthority';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { validateHeadingOutline } from '../lib/headingOutline';
 import {
   ADD_GUEST_HEADING,
@@ -53,7 +53,7 @@ const SQUAD_ID = '7a1c9e02-0000-4000-8000-000000000001';
 const GUEST_ID = '7a1c9e02-0000-4000-8000-00000000000a';
 
 const FLAGS: readonly FeatureFlag[] = [
-  { feature: 'live-match-tracking', isEnabled: false },
+  { feature: 'LiveMatchTracking', isEnabled: false },
 ];
 
 const ROWS: readonly PlayerListRow[] = [
@@ -61,8 +61,10 @@ const ROWS: readonly PlayerListRow[] = [
     membershipId: GUEST_ID,
     displayName: 'Big Dave',
     role: null,
-    state: 'active',
+    state: 'Active',
     isGuest: true,
+    appearances: 12,
+    ratingState: 'Established',
     isFormerPlayer: false,
     leaderboardObtained: false,
     ratingEntry: null,
@@ -70,17 +72,17 @@ const ROWS: readonly PlayerListRow[] = [
 ];
 
 /** Every Member_Role a membership can carry, and its absence (Requirement 6.10). */
-const ROLES: readonly (MemberRole | null)[] = [
-  'owner',
-  'admin',
-  'member',
+const ROLES: readonly (SquadRole | null)[] = [
+  'Owner',
+  'Admin',
+  'Member',
   null,
 ];
 
 /** Every Membership_State, and its absence. */
-const STATES: readonly (MembershipStateValue | null)[] = [
-  'active',
-  'inactive',
+const STATES: readonly (MembershipState | null)[] = [
+  'Active',
+  'Inactive',
   null,
 ];
 
@@ -144,8 +146,8 @@ function Harness({
   state,
 }: {
   readonly api: SquadsApi;
-  readonly role: MemberRole | null;
-  readonly state: MembershipStateValue | null;
+  readonly role: SquadRole | null;
+  readonly state: MembershipState | null;
 }): ReactElement {
   return (
     <div>
@@ -235,7 +237,7 @@ describe('AdminSection — the authority gate', () => {
   it('issues no admin call beyond the invite listing while authority holds', async () => {
     const { api, calls, listInvites } = apiDouble();
 
-    render(<Harness api={api} role="owner" state="active" />);
+    render(<Harness api={api} role="Owner" state="Active" />);
 
     // 11.1: the Invite_Manager's one call per mount, and nothing else. Mounting
     // the section is not itself a mutation of anything.
@@ -253,7 +255,7 @@ describe('AdminSection — the heading outline', () => {
   it('renders one h2 naming administration and one h3 per surface', async () => {
     const { api, listInvites } = apiDouble();
     const { container } = render(
-      <Harness api={api} role="admin" state="active" />,
+      <Harness api={api} role="Admin" state="Active" />,
     );
 
     await waitFor(() => {
@@ -289,7 +291,7 @@ describe('AdminSection — the heading outline', () => {
   it('names each region by its own heading', async () => {
     const { api, listInvites } = apiDouble();
     const { container } = render(
-      <Harness api={api} role="owner" state="active" />,
+      <Harness api={api} role="Owner" state="Active" />,
     );
 
     await waitFor(() => {

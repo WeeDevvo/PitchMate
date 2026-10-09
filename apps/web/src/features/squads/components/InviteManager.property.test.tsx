@@ -27,7 +27,7 @@
  * The property quantifies over a *parsed* collection, so every case starts as a
  * generated `ListInvites` wire body handed to `parseInviteSummaryList`, and the
  * manager renders whatever comes out. Two things stay honest as a result. The
- * state arrives as a numeric code and both instants arrive as ISO-8601 strings —
+ * state arrives as its member name and both instants arrive as ISO-8601 strings —
  * some written with a `Z`, some with a numeric offset — so the ordering is
  * exercised over instants as the backend actually writes them rather than over
  * numbers a test invented. And `expiresAt` is generated as an instant, as `null`,
@@ -85,7 +85,7 @@ import { act, cleanup, render } from '@testing-library/react';
 import fc from 'fast-check';
 
 import type { CallResult, SquadsApi } from '../api/squadsApi';
-import { codeFromInviteState, type InviteStateValue } from '../lib/enumCodes';
+import { INVITE_STATE_NAMES, type InviteState } from '../lib/wireEnums';
 import {
   formatInviteInstant,
   inviteInstantAttribute,
@@ -138,18 +138,17 @@ const INVITE_SUMMARY_KEYS: readonly string[] = [
  * constants rather than read from the component's own lookup — so an entry that
  * labelled a revoked invite "Active" fails rather than agreeing with itself.
  */
-const EXPECTED_STATE_LABELS: Readonly<Record<InviteStateValue, string>> = {
-  active: INVITE_ACTIVE_STATE_LABEL,
-  revoked: INVITE_REVOKED_STATE_LABEL,
-  expired: INVITE_EXPIRED_STATE_LABEL,
+const EXPECTED_STATE_LABELS: Readonly<Record<InviteState, string>> = {
+  Active: INVITE_ACTIVE_STATE_LABEL,
+  Revoked: INVITE_REVOKED_STATE_LABEL,
+  Expired: INVITE_EXPIRED_STATE_LABEL,
 };
 
 // --- Generators --------------------------------------------------------------
 
-const stateArb: fc.Arbitrary<InviteStateValue> = fc.constantFrom(
-  'active' as const,
-  'revoked' as const,
-  'expired' as const,
+/** The three Invite_State names, read from the feature's single declaration. */
+const stateArb: fc.Arbitrary<InviteState> = fc.constantFrom(
+  ...INVITE_STATE_NAMES,
 );
 
 /**
@@ -259,7 +258,7 @@ const allSecretFieldsArb: fc.Arbitrary<SecretShapedFields> = fc.record({
 /** One generated `ListInvites` element, before it becomes a wire body. */
 interface InviteCase {
   readonly inviteId: string;
-  readonly state: InviteStateValue;
+  readonly state: InviteState;
   readonly createdAtMs: number;
   readonly createdAtOffsetMinutes: number;
   /** The expiry instant, or `null` for a non-expiring invite. */
@@ -364,9 +363,9 @@ function instantWireForm(instantMs: number, offsetMinutes: number): string {
 function bodyOf(inviteCase: InviteCase): Record<string, unknown> {
   const body: Record<string, unknown> = {
     inviteId: inviteCase.inviteId,
-    // 16.7: the code comes from the Enum_Code_Map, the one module allowed to
-    // write a numeric enum literal.
-    state: codeFromInviteState(inviteCase.state),
+    // 12.8: the state crosses the wire as its member name, so the generated case
+    // carries it verbatim and nothing maps a code.
+    state: inviteCase.state,
     createdAt: instantWireForm(
       inviteCase.createdAtMs,
       inviteCase.createdAtOffsetMinutes,
@@ -696,7 +695,7 @@ function expectRevokeControlsSitOnActiveEntriesOnly(
     const invite = byIdentity.get(identity) as InviteSummary;
     const revoke = entry.querySelector(INVITE_REVOKE_SELECTOR);
 
-    if (invite.state === 'active') {
+    if (invite.state === 'Active') {
       expect(revoke).not.toBeNull();
       expect(revoke?.getAttribute(REVOKE_ATTRIBUTE)).toBe(identity);
     } else {
@@ -706,7 +705,7 @@ function expectRevokeControlsSitOnActiveEntriesOnly(
 
   expect(
     document.querySelectorAll(INVITE_REVOKE_SELECTOR).length,
-  ).toBe(summaries.filter((summary) => summary.state === 'active').length);
+  ).toBe(summaries.filter((summary) => summary.state === 'Active').length);
 }
 
 /**

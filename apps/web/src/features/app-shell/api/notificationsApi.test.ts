@@ -19,7 +19,16 @@
  * - a response body the pure parsers reject settles the call as `failure`
  *   (Requirements 10.9, 10.10).
  *
- * Requirements: 7.5, 10.9, 10.10, 11.2, 11.7
+ * The facade now takes the client's **decoded `data`** value, the contract
+ * having gained a content schema for each response that carries a body
+ * (Requirement 12.12). Driving the real client is what makes that observable
+ * here: the bodies below are served as wire text and decoded by the client
+ * exactly as they would be in the browser, so a `200` carrying text that is not
+ * JSON exercises the client's own decode failing rather than a hand-rolled
+ * decode in the facade. Either way the call settles as `failure`, which is the
+ * point — a described body is still validated (Requirement 12.5).
+ *
+ * Requirements: 7.5, 10.9, 10.10, 11.2, 11.7, 12.5, 12.12
  */
 
 import { createApiClient, type operations, type paths } from '@pitchmate/api-client';
@@ -73,7 +82,10 @@ function makeApi(reply: (request: RecordedRequest) => Response) {
   return { api: createNotificationsApi(client), requests };
 }
 
-/** A `200 OK` carrying `body` as JSON text — what every valued call reads. */
+/**
+ * A `200 OK` carrying `body` as JSON text — what every valued call reads, and
+ * what the client decodes into the typed `data` the facade takes.
+ */
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status: 200,
@@ -81,7 +93,10 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
-/** A `200 OK` carrying raw text, for the unschematised-body cases. */
+/**
+ * A `200 OK` whose text the client cannot decode into the declared body: either
+ * not JSON at all, or empty where a body was promised.
+ */
 function textResponse(text: string): Response {
   return new Response(text, {
     status: 200,
@@ -98,12 +113,12 @@ function noContent(): Response {
 function wireRecord() {
   return {
     notificationId: NOTIFICATION_ID,
-    type: 0,
+    type: 'MemberJoined',
     squadId: SQUAD_ID,
     title: 'Dave joined the squad',
     body: 'Dave is now a member of Thursday Nights.',
     createdAt: '2025-01-01T00:00:00Z',
-    readState: 0,
+    readState: 'Unread',
   };
 }
 
@@ -146,7 +161,7 @@ describe('createNotificationsApi — markRead request shape', () => {
 
   it('sends the same request while a Squad_Scope is active on the scoped calls', async () => {
     const { api, requests } = makeApi((request) =>
-      request.method === 'POST' ? noContent() : jsonResponse(3),
+      request.method === 'POST' ? noContent() : jsonResponse({ count: 3 }),
     );
 
     // A scoped call first, so any scope the facade could have retained would
@@ -189,7 +204,8 @@ describe('createNotificationsApi — scoped call query parameters', () => {
   });
 
   it('supplies squadId as a query parameter on the unread-count call', async () => {
-    const { api, requests } = makeApi(() => jsonResponse(7));
+    // 7.6: the count arrives in the named `UnreadCountResponse` envelope.
+    const { api, requests } = makeApi(() => jsonResponse({ count: 7 }));
 
     const outcome = await api.unreadCount({ squadId: SQUAD_ID });
 
@@ -201,7 +217,8 @@ describe('createNotificationsApi — scoped call query parameters', () => {
   });
 
   it('supplies squadId as a query parameter on the mark-all-read call', async () => {
-    const { api, requests } = makeApi(() => jsonResponse(0));
+    // 7.6: the marked count arrives in the named `MarkAllReadResponse` envelope.
+    const { api, requests } = makeApi(() => jsonResponse({ markedCount: 0 }));
 
     const outcome = await api.markAllRead({ squadId: SQUAD_ID });
 
@@ -216,7 +233,7 @@ describe('createNotificationsApi — scoped call query parameters', () => {
     const { api, requests } = makeApi((request) =>
       request.method === 'GET' && pathOf(request) === LIST_PATH
         ? jsonResponse([])
-        : jsonResponse(0),
+        : jsonResponse({ count: 0, markedCount: 0 }),
     );
 
     await api.list();
@@ -242,6 +259,8 @@ describe('createNotificationsApi — a rejected body settles the call as failure
   });
 
   it('settles an uninterpretable list body as failure', async () => {
+    // The client's own decode of the `200` body fails. The facade folds that
+    // into the same failed call a rejected body produces (Requirement 10.10).
     const { api } = makeApi(() => textResponse('not json at all'));
 
     expect(await api.list()).toEqual({ kind: 'failure' });
@@ -256,24 +275,40 @@ describe('createNotificationsApi — a rejected body settles the call as failure
   });
 
   it('settles a string-encoded count as failure', async () => {
-    const { api } = makeApi(() => jsonResponse('7'));
+    const { api } = makeApi(() => jsonResponse({ count: '7' }));
 
     expect(await api.unreadCount()).toEqual({ kind: 'failure' });
   });
 
   it('settles a negative count as failure', async () => {
-    const { api } = makeApi(() => jsonResponse(-1));
+    const { api } = makeApi(() => jsonResponse({ count: -1 }));
 
     expect(await api.unreadCount()).toEqual({ kind: 'failure' });
   });
 
   it('settles a fractional mark-all-read count as failure', async () => {
-    const { api } = makeApi(() => jsonResponse(2.5));
+    const { api } = makeApi(() => jsonResponse({ markedCount: 2.5 }));
+
+    expect(await api.markAllRead()).toEqual({ kind: 'failure' });
+  });
+
+  it('settles a bare-number count body as failure, the envelope being named now', async () => {
+    // 7.6: the previous contract's bare number is no longer the shape the
+    // App_Shell reads, so it fails rather than quietly still working.
+    const { api } = makeApi(() => jsonResponse(7));
+
+    expect(await api.unreadCount()).toEqual({ kind: 'failure' });
+  });
+
+  it('settles a mark-all-read body carrying the wrong member as failure', async () => {
+    const { api } = makeApi(() => jsonResponse({ count: 4 }));
 
     expect(await api.markAllRead()).toEqual({ kind: 'failure' });
   });
 
   it('settles an absent count body as failure', async () => {
+    // A `200` carrying nothing decodes to an absent `data`, which the envelope
+    // parser rejects rather than reading as a zero (Requirement 10.9).
     const { api } = makeApi(() => textResponse(''));
 
     expect(await api.unreadCount()).toEqual({ kind: 'failure' });

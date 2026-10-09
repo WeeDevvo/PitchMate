@@ -54,12 +54,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import fc from 'fast-check';
 
 import type { SquadsApi } from '../api/squadsApi';
-import {
-  codeFromMemberRole,
-  codeFromMembershipState,
-  type MemberRole,
-  type MembershipStateValue,
-} from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import {
   EDIT_GUEST_HEADING,
   EDIT_GUEST_LABEL,
@@ -177,7 +172,7 @@ const nameCaseArb: fc.Arbitrary<NameCase> = fc.oneof(
 
 /** How the wire body carries the role: as a code, as `null`, or not at all. */
 type RoleForm =
-  | { readonly kind: 'present'; readonly value: MemberRole }
+  | { readonly kind: 'present'; readonly value: SquadRole }
   | { readonly kind: 'null' }
   | { readonly kind: 'absent' };
 
@@ -185,7 +180,7 @@ const roleFormArb: fc.Arbitrary<RoleForm> = fc.oneof(
   {
     weight: 3,
     arbitrary: fc
-      .constantFrom<MemberRole>('owner', 'admin', 'member')
+      .constantFrom<SquadRole>('Owner', 'Admin', 'Member')
       .map((value) => ({ kind: 'present', value }) as RoleForm),
   },
   { weight: 2, arbitrary: fc.constant({ kind: 'null' } as RoleForm) },
@@ -197,7 +192,7 @@ interface MemberCase {
   readonly membershipId: string;
   readonly name: NameCase;
   readonly role: RoleForm;
-  readonly state: MembershipStateValue;
+  readonly state: MembershipState;
   readonly isGuest: boolean;
 }
 
@@ -207,7 +202,7 @@ const memberCaseArb: fc.Arbitrary<MemberCase> = fc.record({
   role: roleFormArb,
   // Inactive rows are generated deliberately: the affordance does not depend on
   // the Membership_State, so an inactive guest must still offer it.
-  state: fc.constantFrom<MembershipStateValue>('active', 'inactive'),
+  state: fc.constantFrom<MembershipState>('Active', 'Inactive'),
   isGuest: fc.boolean(),
 });
 
@@ -238,12 +233,14 @@ function memberBodyOf(member: MemberCase): Record<string, unknown> {
   const body: Record<string, unknown> = {
     membershipId: member.membershipId,
     displayName: member.name.value,
-    state: codeFromMembershipState(member.state),
+    state: member.state,
     isGuest: member.isGuest,
+    appearances: 12,
+    ratingState: 'Established',
   };
 
   if (member.role.kind === 'present') {
-    body.role = codeFromMemberRole(member.role.value);
+    body.role = member.role.value;
   } else if (member.role.kind === 'null') {
     body.role = null;
   }
@@ -562,22 +559,22 @@ describe('Property 31 — the guest edit affordance appears exactly on editable 
               {
                 membershipId: '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f11',
                 name: { value: 'Registered Ruth', isPlaceholder: false },
-                role: { kind: 'present', value: 'member' },
-                state: 'active',
+                role: { kind: 'present', value: 'Member' },
+                state: 'Active',
                 isGuest: false,
               },
               {
                 membershipId: '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f12',
                 name: { value: 'Former player', isPlaceholder: true },
                 role: { kind: 'null' },
-                state: 'inactive',
+                state: 'Inactive',
                 isGuest: true,
               },
               {
                 membershipId: '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f13',
                 name: { value: 'Big Dave', isPlaceholder: false },
                 role: { kind: 'absent' },
-                state: 'active',
+                state: 'Active',
                 isGuest: true,
               },
             ].filter(

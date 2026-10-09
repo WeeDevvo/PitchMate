@@ -269,7 +269,7 @@ function SessionHarness({
           skillTier: LEAVE_TIER_UNCHANGED,
         }),
       promoteToAdmin: () => promotion.promote(membershipId),
-      setFeatureFlag: () => features.setEnabled('live-match-tracking', true),
+      setFeatureFlag: () => features.setEnabled('LiveMatchTracking', true),
     };
   });
 
@@ -406,8 +406,8 @@ function summariesOf(scenario: Scenario): readonly SquadSummary[] {
     {
       squadId: scenario.squadId,
       name: `Squad ${scenario.summaryNameToken}`,
-      role: 'owner',
-      state: 'active',
+      role: 'Owner',
+      state: 'Active',
     },
   ];
 }
@@ -421,12 +421,14 @@ function detailOf(scenario: Scenario): SquadDetail {
       {
         membershipId: scenario.membershipId,
         displayName: `Player ${scenario.playerNameToken}`,
-        role: 'member',
-        state: 'active',
+        role: 'Member',
+        state: 'Active',
         isGuest: false,
+        appearances: 12,
+        ratingState: 'Established',
       },
     ],
-    features: [{ feature: 'live-match-tracking', isEnabled: true }],
+    features: [{ feature: 'LiveMatchTracking', isEnabled: true }],
   };
 }
 
@@ -448,7 +450,7 @@ function invitesOf(scenario: Scenario): readonly InviteSummary[] {
   return [
     {
       inviteId: scenario.inviteId,
-      state: 'active',
+      state: 'Active',
       createdAtMs: 1_700_000_000_000,
       createdBy: null,
       expiresAtMs: null,
@@ -458,7 +460,7 @@ function invitesOf(scenario: Scenario): readonly InviteSummary[] {
 
 /** A redemption that would navigate, if anything were allowed to. */
 function redemptionOf(scenario: Scenario): Redemption {
-  return { membershipId: scenario.membershipId, outcome: 'joined', squadId: scenario.squadId };
+  return { membershipId: scenario.membershipId, outcome: 'Joined', squadId: scenario.squadId };
 }
 
 /**

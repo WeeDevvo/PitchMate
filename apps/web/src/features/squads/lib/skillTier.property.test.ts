@@ -20,11 +20,7 @@ import {
   type SkillTierCreateOption,
   type SkillTierEditOption,
 } from './skillTier';
-import {
-  codeFromSkillTier,
-  skillTierFromCode,
-  type SkillTierValue,
-} from './enumCodes';
+import { SKILL_TIER_NAMES, isSkillTier, type SkillTier } from './wireEnums';
 
 /**
  * Property tests for the Skill_Tier option model and its request mapping, beside the
@@ -40,15 +36,17 @@ import {
  *   happen to serialise alike, and only the former is what 12.5 asks for. An edit
  *   selection always contributes `updateSkillTier`, and contributes a tier exactly
  *   when that flag is `true`.
- * - **The option ⇄ code mapping round-trips, and rejects code 3.** `SkillTier` is one
- *   of the two **0-based** wire enums, so `beginner` is `0` and `3` names nothing.
- *   Every emitted code is generated and read back through the Enum_Code_Map, and code
- *   `3` is exercised by name: a 1-based misreading would shift every tier by one, and
- *   the option set would silently offer a tier the backend does not have.
+ * - **The option ⇄ wire value mapping round-trips, and admits only the generated
+ *   vocabulary.** The tier now travels as its **member name** — `Beginner`,
+ *   `Average`, `Strong` — so the off-by-one a 0-based code table could suffer has
+ *   no representation left to go wrong in. What remains to state is that the
+ *   value a command carries is a member of the Generated_Enum_Union and reads
+ *   back as the tier that was selected, and that a near-miss in case or spacing
+ *   is not a member.
  * - **The option set is derived, not restated.** "Exactly three Skill_Tier options
  *   together with an option to seed no tier" (12.5) is checked against the tier enum
- *   itself, so a fourth tier landing in the Enum_Code_Map cannot leave the Guest_Form
- *   offering three.
+ *   itself, so a fourth tier landing in the Generated_Enum_Union cannot leave the
+ *   Guest_Form offering three.
  *
  * The rendered clauses — that the Guest_Form *offers* these options, defaults to the
  * sentinel, and issues the command — are claimed by **Property 30** at the rendering
@@ -58,7 +56,7 @@ import {
 // --- generators --------------------------------------------------------------
 
 /** Every Skill_Tier, read from the module's derived list rather than restated. */
-const tierArb: fc.Arbitrary<SkillTierValue> = fc.constantFrom(...SKILL_TIERS);
+const tierArb: fc.Arbitrary<SkillTier> = fc.constantFrom(...SKILL_TIERS);
 
 /** Every create-mode option, sentinel included. */
 const createOptionArb: fc.Arbitrary<SkillTierCreateOption> = fc.constantFrom(
@@ -71,24 +69,37 @@ const editOptionArb: fc.Arbitrary<SkillTierEditOption> = fc.constantFrom(
 );
 
 /**
- * The wire codes worth generating: the three the enum names, **`3` which it does
- * not**, and the neighbours a 1-based or off-by-one reading would reach for.
+ * Candidate wire values worth generating: the three names the enum declares, plus
+ * near-misses in case, spacing, and vocabulary that must name no tier — including
+ * the numbers the retired code table used, which are no longer a tier in any
+ * reading.
  */
-const CODES_TO_EXERCISE: readonly number[] = [-1, 0, 1, 2, 3, 4];
+const WIRE_VALUES_TO_EXERCISE: readonly unknown[] = [
+  ...SKILL_TIER_NAMES,
+  'beginner',
+  'BEGINNER',
+  ' Beginner',
+  'Beginner ',
+  'Elite',
+  0,
+  1,
+  2,
+  3,
+];
 
 /**
  * Values a form control could report that are **not** options: the other mode's
- * sentinel above all, plus near-misses in case and spacing, the wire codes as
- * numbers and as strings, and the absences.
+ * sentinel above all, plus near-misses in case and spacing, the retired wire
+ * codes as numbers and as strings, and the absences.
  */
 const NON_OPTION_VALUES: readonly unknown[] = [
   '',
   ' ',
-  'Beginner',
+  'beginner',
   'BEGINNER',
-  ' beginner',
-  'beginner ',
-  'elite',
+  ' Beginner',
+  'Beginner ',
+  'Elite',
   'do_not_seed',
   'donotseed',
   'leave_unchanged',
@@ -104,7 +115,7 @@ const NON_OPTION_VALUES: readonly unknown[] = [
   undefined,
   [],
   {},
-  ['beginner'],
+  ['Beginner'],
 ];
 
 // Feature: web-squads-screens, Property 30 (pure half): the created command omits
@@ -122,7 +133,7 @@ describe('skillTierFieldsForCreate — the tier is omitted exactly while no tier
     expect(DEFAULT_SKILL_TIER_CREATE_OPTION).toBe(DO_NOT_SEED_TIER);
   });
 
-  it('carries exactly the selected tier code for every other selection', () => {
+  it('carries exactly the selected tier name for every other selection', () => {
     fc.assert(
       fc.property(createOptionArb, (option) => {
         const fields = skillTierFieldsForCreate(option);
@@ -136,9 +147,10 @@ describe('skillTierFieldsForCreate — the tier is omitted exactly while no tier
           return;
         }
 
-        // 16.12: the code comes from the Enum_Code_Map, and this module states no
-        // numeric literal of its own.
-        expect(fields.skillTier).toBe(codeFromSkillTier(tier));
+        // 16.12: the value is the Wire_Enum_Name verbatim, so this module states
+        // no numeric literal of its own and has nothing to get off by one.
+        expect(fields.skillTier).toBe(tier);
+        expect(isSkillTier(fields.skillTier)).toBe(true);
         expect(Object.keys(fields)).toEqual(['skillTier']);
       }),
       { numRuns: 200 },
@@ -175,7 +187,7 @@ describe('skillTierFieldsForEdit — the change flag and the tier agree', () => 
     expect(DEFAULT_SKILL_TIER_EDIT_OPTION).toBe(LEAVE_TIER_UNCHANGED);
   });
 
-  it('reports a change with exactly the selected tier code for every other selection', () => {
+  it('reports a change with exactly the selected tier name for every other selection', () => {
     fc.assert(
       fc.property(editOptionArb, (option) => {
         const fields = skillTierFieldsForEdit(option);
@@ -192,7 +204,8 @@ describe('skillTierFieldsForEdit — the change flag and the tier agree', () => 
           return;
         }
 
-        expect(fields.skillTier).toBe(codeFromSkillTier(tier));
+        expect(fields.skillTier).toBe(tier);
+        expect(isSkillTier(fields.skillTier)).toBe(true);
       }),
       { numRuns: 200 },
     );
@@ -226,10 +239,10 @@ describe('skillTierFieldsForEdit — the change flag and the tier agree', () => 
   });
 });
 
-// Feature: web-squads-screens, Property 30 (pure half): the option ⇄ code mapping
-// round-trips, and no option names SkillTier code 3
+// Feature: web-squads-screens, Property 30 (pure half): the option ⇄ wire value
+// mapping round-trips, and no option names a value outside the generated union
 // Validates: Requirements 12.5, 12.9, 16.7, 16.12, 20.1
-describe('the Skill_Tier option model — option and code map to each other', () => {
+describe('the Skill_Tier option model — option and wire value map to each other', () => {
   it('round-trips a tier through both option unions', () => {
     fc.assert(
       fc.property(tierArb, (tier) => {
@@ -242,24 +255,23 @@ describe('the Skill_Tier option model — option and code map to each other', ()
     );
   });
 
-  it('round-trips an emitted code back to the option that emitted it', () => {
+  it('round-trips an emitted wire value back to the option that emitted it', () => {
     fc.assert(
       fc.property(tierArb, (tier) => {
-        const createdCode = skillTierFieldsForCreate(
+        const createdValue = skillTierFieldsForCreate(
           createOptionForTier(tier),
         ).skillTier;
-        const editedCode = skillTierFieldsForEdit(
+        const editedValue = skillTierFieldsForEdit(
           editOptionForTier(tier),
         ).skillTier;
 
-        expect(createdCode).toBe(codeFromSkillTier(tier));
-        expect(editedCode).toBe(createdCode);
+        expect(createdValue).toBe(tier);
+        expect(editedValue).toBe(createdValue);
 
-        // 16.7: the code the command carries reads back as the tier that was
+        // 16.7: the value the command carries reads back as the tier that was
         // selected, so nothing between the selection and the wire shifts it.
-        const readBack = skillTierFromCode(createdCode);
-        expect(readBack).toBe(tier);
-        expect(createOptionForTier(readBack as SkillTierValue)).toBe(
+        expect(isSkillTier(createdValue)).toBe(true);
+        expect(createOptionForTier(createdValue as SkillTier)).toBe(
           createOptionForTier(tier),
         );
       }),
@@ -267,48 +279,49 @@ describe('the Skill_Tier option model — option and code map to each other', ()
     );
   });
 
-  it('names codes 0, 1, and 2 and never code 3', () => {
-    const emittedCodes = SKILL_TIERS.map(
+  it('emits exactly the generated member names, and no numeric code at all', () => {
+    const emitted = SKILL_TIERS.map(
       (tier) => skillTierFieldsForCreate(createOptionForTier(tier)).skillTier,
     );
 
-    // The 0-based reading, stated as a fact rather than left implicit: a 1-based
-    // table would emit 1, 2, 3 here and this would fail.
-    expect(emittedCodes).toEqual([0, 1, 2]);
-    expect(emittedCodes).not.toContain(3);
-    expect(skillTierFromCode(3)).toBeUndefined();
+    // The names the backend declares, in the order `wireEnums.ts` reads them off
+    // the Committed_Types — and nothing numeric, which is what the migration from
+    // the 0-based code table set out to remove.
+    expect(emitted).toEqual([...SKILL_TIER_NAMES]);
+    expect(emitted.some((value) => typeof value === 'number')).toBe(false);
   });
 
-  it('emits, for every generated code, a tier exactly when the enum names that code', () => {
+  it('offers a tier for every generated wire value exactly when the union names it', () => {
     fc.assert(
       fc.property(
         fc.oneof(
-          { weight: 4, arbitrary: fc.constantFrom(...CODES_TO_EXERCISE) },
-          { weight: 1, arbitrary: fc.integer({ min: -20, max: 20 }) },
+          { weight: 4, arbitrary: fc.constantFrom(...WIRE_VALUES_TO_EXERCISE) },
+          { weight: 1, arbitrary: fc.anything() },
         ),
-        (code) => {
-          const tier = skillTierFromCode(code);
-          const emittedCodes = SKILL_TIERS.map((named) =>
-            codeFromSkillTier(named),
+        (candidate) => {
+          const emitted: readonly unknown[] = SKILL_TIERS.map(
+            (named) =>
+              skillTierFieldsForCreate(createOptionForTier(named)).skillTier,
           );
 
-          if (tier === undefined) {
-            // Code 3 lands here, which is the whole point: no option offers it, so
-            // no `CreateGuest` or `EditGuest` command can carry it.
-            expect(emittedCodes).not.toContain(code);
+          if (!isSkillTier(candidate)) {
+            // A near-miss in case or spacing, and the retired numeric codes, land
+            // here: no option offers any of them, so no `CreateGuest` or
+            // `EditGuest` command can carry one.
+            expect(emitted).not.toContain(candidate);
             return;
           }
 
-          // Every named code is emitted by exactly one option, in each mode.
-          expect(emittedCodes.filter((emitted) => emitted === code)).toHaveLength(
-            1,
-          );
+          // Every named value is emitted by exactly one option, in each mode.
           expect(
-            skillTierFieldsForCreate(createOptionForTier(tier)).skillTier,
-          ).toBe(code);
-          expect(skillTierFieldsForEdit(editOptionForTier(tier)).skillTier).toBe(
-            code,
-          );
+            emitted.filter((value) => value === candidate),
+          ).toHaveLength(1);
+          expect(
+            skillTierFieldsForCreate(createOptionForTier(candidate)).skillTier,
+          ).toBe(candidate);
+          expect(
+            skillTierFieldsForEdit(editOptionForTier(candidate)).skillTier,
+          ).toBe(candidate);
         },
       ),
       { numRuns: 300 },
@@ -323,7 +336,7 @@ describe('the Skill_Tier option model — the offered set', () => {
   it('offers exactly three tiers plus one sentinel in each mode', () => {
     // 12.5: "exactly three Skill_Tier options together with an option to seed no
     // tier" — counted against the tier enum, so a fourth tier arriving in the
-    // Enum_Code_Map cannot leave this at three.
+    // Generated_Enum_Union cannot leave this at three.
     expect(SKILL_TIERS).toHaveLength(3);
     expect(new Set(SKILL_TIERS).size).toBe(3);
 

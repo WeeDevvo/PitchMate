@@ -10,16 +10,23 @@ namespace PitchMate.Api.Notifications.Endpoints;
 /// one place (Requirements 10.2, 13.4).
 /// <para>
 /// The mapping honours the read model's non-disclosure rule: an authorisation or ownership failure is
-/// reported as the uniform <c>404 Not Found</c> — the handlers already collapse "unauthorised",
-/// "not the caller's record", and "squad the caller cannot access" into the single
-/// <see cref="NotificationErrorCode.NotFound"/> so existence is never revealed (Requirements 10.1, 10.3,
-/// 10.4, 10.5). Unauthenticated requests are rejected with <c>401</c> before any handler runs by the JWT
-/// bearer middleware; <see cref="Unauthenticated"/> covers the residual case where an authenticated
-/// principal carries no resolvable subject.
+/// reported as the fixed, code-agnostic <see cref="Concealed"/> <c>404 Not Found</c> — the handlers
+/// already collapse "unauthorised", "not the caller's record", and "squad the caller cannot access"
+/// into the single <see cref="NotificationErrorCode.NotFound"/> so existence is never revealed
+/// (Requirements 10.1, 10.3, 10.4, 10.5). Unauthenticated requests are rejected with <c>401</c> before
+/// any handler runs by the JWT bearer middleware; <see cref="Unauthenticated"/> covers the residual
+/// case where an authenticated principal carries no resolvable subject.
 /// </para>
 /// </summary>
 internal static class NotificationErrorResults
 {
+    // The single, code-agnostic body used for every concealed 404. Because neither the status nor the
+    // body is derived from the error's Code or Message, every failure NotFound collapses — a record
+    // that does not exist, one that is not the caller's, a squad the caller cannot access — produces a
+    // byte-for-byte identical response and cannot be told apart (Requirements 5.1, 5.2).
+    private const string ConcealedTitle = "Not Found";
+    private const string ConcealedDetail = "The requested resource was not found.";
+
     /// <summary>
     /// Maps a read-model handler's <see cref="NotificationError"/> to a <see cref="ProblemDetails"/> HTTP
     /// result. The stable <see cref="NotificationErrorCode"/> is echoed in the problem's <c>title</c> and a
@@ -31,14 +38,19 @@ internal static class NotificationErrorResults
     {
         ArgumentNullException.ThrowIfNull(error);
 
+        // The record is not backed by the caller, or the squad scope is inaccessible. Answered by the
+        // single fixed concealed 404 rather than by a 404 echoing the code, so the response carries no
+        // `code` extension and no value from which the concealed cause could be recovered
+        // (Requirements 10.1, 10.3, 10.4, 10.5, 5.2, 5.6).
+        if (error.Code == NotificationErrorCode.NotFound)
+        {
+            return Concealed();
+        }
+
         int statusCode = error.Code switch
         {
             // No authenticated caller for a request that requires one.
             NotificationErrorCode.Unauthenticated => StatusCodes.Status401Unauthorized,
-
-            // The record is not backed by the caller, or the squad scope is inaccessible. Reported as a
-            // uniform 404 so existence is never disclosed (Requirements 10.1, 10.3, 10.4, 10.5).
-            NotificationErrorCode.NotFound => StatusCodes.Status404NotFound,
 
             // Client-supplied input violated a length/enum/range policy.
             NotificationErrorCode.ValidationFailed => StatusCodes.Status400BadRequest,
@@ -60,7 +72,9 @@ internal static class NotificationErrorResults
             _ => StatusCodes.Status500InternalServerError,
         };
 
-        return Results.Problem(
+        // TypedResults rather than Results: the same ProblemHttpResult, with the status/payload
+        // pairing checked at compile time where it costs nothing (design D2).
+        return TypedResults.Problem(
             detail: error.Message,
             statusCode: statusCode,
             title: error.Code.ToString(),
@@ -68,12 +82,25 @@ internal static class NotificationErrorResults
     }
 
     /// <summary>
+    /// The single existence-concealing <c>404 Not Found</c> result that
+    /// <see cref="NotificationErrorCode.NotFound"/> routes through (Requirements 10.1, 10.3, 10.4,
+    /// 10.5). The body is a fixed, code-agnostic <c>ProblemDetails</c> — no <c>code</c> extension and
+    /// no echo of the error's title or message — so every concealed rejection is byte-for-byte
+    /// identical and discloses neither existence nor the cause (Requirements 5.1, 5.2).
+    /// </summary>
+    public static IResult Concealed() =>
+        TypedResults.Problem(
+            detail: ConcealedDetail,
+            statusCode: StatusCodes.Status404NotFound,
+            title: ConcealedTitle);
+
+    /// <summary>
     /// The uniform unauthenticated result for a protected endpoint whose caller identity could not be
     /// resolved from the access token (Requirement 10.2). The body is deliberately empty so nothing is
     /// disclosed.
     /// </summary>
     public static IResult Unauthenticated() =>
-        Results.Problem(
+        TypedResults.Problem(
             statusCode: StatusCodes.Status401Unauthorized,
             title: "Unauthenticated",
             detail: "Authentication is required.");

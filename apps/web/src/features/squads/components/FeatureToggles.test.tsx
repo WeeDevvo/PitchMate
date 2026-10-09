@@ -75,11 +75,11 @@ function createToggleApi(
 }
 
 const TRACKING_OFF: readonly FeatureFlag[] = [
-  { feature: 'live-match-tracking', isEnabled: false },
+  { feature: 'LiveMatchTracking', isEnabled: false },
 ];
 
 const TRACKING_ON: readonly FeatureFlag[] = [
-  { feature: 'live-match-tracking', isEnabled: true },
+  { feature: 'LiveMatchTracking', isEnabled: true },
 ];
 
 /** The state words rendered beside the switches, in document order. */
@@ -134,9 +134,9 @@ describe('FeatureToggles', () => {
       screen.getByRole('switch', { name: LIVE_MATCH_TRACKING_FEATURE_LABEL }),
     );
 
-    // 14.3: one call, carrying this flag's wire code and the requested state.
+    // 14.3: one call, carrying this flag's Wire_Enum_Name and the requested state.
     await waitFor(() => {
-      expect(commands).toEqual([{ feature: 1, enabled: true }]);
+      expect(commands).toEqual([{ feature: 'LiveMatchTracking', enabled: true }]);
     });
 
     // 14.2, 14.5: the refreshed state comes from the `GetSquad` re-read, so no
@@ -148,7 +148,7 @@ describe('FeatureToggles', () => {
     // 14.5: the announcement names the feature and the accepted state.
     expect(
       screen.getByText(
-        featureToggleAnnouncement('live-match-tracking', true),
+        featureToggleAnnouncement('LiveMatchTracking', true),
       ),
     ).toBeInTheDocument();
   });

@@ -77,12 +77,7 @@ import { LOADING_INDICATION_SELECTOR } from '../components/LoadingIndication';
 import { NOT_FOUND_TREATMENT_SELECTOR } from '../components/NotFoundTreatment';
 import { PLAYER_LIST_SELECTOR } from '../components/PlayerList';
 import { PLAYER_ROW_SELECTOR } from '../components/PlayerRow';
-import {
-  codeFromMemberRole,
-  codeFromMembershipState,
-  type MemberRole,
-  type MembershipStateValue,
-} from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { isSquadIdentifier } from '../lib/identifiers';
 import {
   NOT_FOUND_TREATMENT_BODY,
@@ -194,7 +189,7 @@ const malformedSquadIdArb: fc.Arbitrary<string> = fc
  * the feature cannot identify at all.
  */
 type ListingCase =
-  | { readonly kind: 'summary'; readonly role: MemberRole; readonly state: MembershipStateValue }
+  | { readonly kind: 'summary'; readonly role: SquadRole; readonly state: MembershipState }
   | { readonly kind: 'other-squad' }
   | { readonly kind: 'unavailable' };
 
@@ -203,8 +198,8 @@ const listingArb: fc.Arbitrary<ListingCase> = fc.oneof(
     weight: 3,
     arbitrary: fc.record({
       kind: fc.constant('summary' as const),
-      role: fc.constantFrom<MemberRole>('owner', 'admin', 'member'),
-      state: fc.constantFrom<MembershipStateValue>('active', 'inactive'),
+      role: fc.constantFrom<SquadRole>('Owner', 'Admin', 'Member'),
+      state: fc.constantFrom<MembershipState>('Active', 'Inactive'),
     }),
   },
   { weight: 1, arbitrary: fc.constant({ kind: 'other-squad' as const }) },
@@ -371,8 +366,8 @@ function listingBody(scenario: Scenario): unknown {
       {
         squadId: scenario.requestedSquadId,
         name: scenario.squadName,
-        role: codeFromMemberRole(listing.role),
-        state: codeFromMembershipState(listing.state),
+        role: listing.role,
+        state: listing.state,
       },
     ];
   }
@@ -383,8 +378,8 @@ function listingBody(scenario: Scenario): unknown {
         // A different squad entirely, so no summary identifies the caller here.
         squadId: '00000000-0000-4000-8000-000000000000',
         name: 'Another squad',
-        role: codeFromMemberRole('owner'),
-        state: codeFromMembershipState('active'),
+        role: 'Owner',
+        state: 'Active',
       },
     ];
   }
@@ -592,7 +587,7 @@ const CAUSE_STATING_FRAGMENTS: readonly string[] = [
   'no such squad',
   'not a member',
   'membership',
-  'inactive',
+  'Inactive',
   'forbidden',
   'permission',
   'denied',

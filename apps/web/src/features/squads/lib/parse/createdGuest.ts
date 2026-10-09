@@ -8,7 +8,13 @@
  * a body without a well-formed identity is still a failure, because "created" is
  * a claim this feature should only make about a guest the backend named.
  *
- * Requirements: 16.4, 16.5, 16.9, 16.10
+ * The one field is an identity, so this shape carries **no enum-valued field**:
+ * the named-enum reading of Requirement 12.8 has nothing to apply to here, and
+ * the module is unchanged by that migration rather than exempt from it. The
+ * Skill_Tier an admin seeds a guest with is a *request* field, typed from the
+ * contract by the transport facade, and never comes back in this body.
+ *
+ * Requirements: 12.5, 12.7, 16.4, 16.5, 16.9, 16.10
  */
 
 import { ok, readObject, readProperty, readUuid, type ParseResult } from './primitives';

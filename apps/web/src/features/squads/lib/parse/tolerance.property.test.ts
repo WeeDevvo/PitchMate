@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
-import { MEMBERSHIP_STATE_CODES, MEMBER_ROLE_CODES } from '../enumCodes';
+import {
+  INVITE_STATE_NAMES,
+  MEMBERSHIP_STATE_NAMES,
+  RATING_STATE_NAMES,
+  REDEEM_OUTCOME_NAMES,
+  SQUAD_FEATURE_NAMES,
+  SQUAD_ROLE_NAMES,
+} from '../wireEnums';
 import { parseCreatedGuest } from './createdGuest';
 import { parseCreatedSquad } from './createdSquad';
 import { parseFeatureFlag, parseFeatureFlags } from './featureFlags';
@@ -86,39 +93,39 @@ const isoInstantArb: fc.Arbitrary<string> = fc
   .map((instantMs) => new Date(instantMs).toISOString());
 
 /**
- * A code table's entries as code/name pairs, read from the Enum_Code_Map rather
- * than restated — this file asserts tolerance, not the codes themselves, and the
- * codes have their own property (37).
+ * Every enum-valued field is read **by name** now (Requirement 12.8), so a
+ * well-formed value of one is a member name of its Generated_Enum_Union rather
+ * than a code. Each generator below is read from `lib/wireEnums.ts` — the
+ * feature's single declaration of each union, itself pinned to the
+ * Committed_Types at compile time — rather than restated here.
+ *
+ * Reading them from that declaration is also what keeps the tolerance assertions
+ * non-vacuous: a body that could no longer parse at all would satisfy "extras
+ * change nothing" trivially.
  */
-function entriesOf(
-  table: Readonly<Record<number, string>>,
-): readonly (readonly [number, string])[] {
-  return Object.entries(table).map(([code, named]) => [Number(code), named]);
-}
+const roleNameArb: fc.Arbitrary<string> = fc.constantFrom(...SQUAD_ROLE_NAMES);
 
-const MEMBER_ROLE_ENTRIES = entriesOf(MEMBER_ROLE_CODES);
-const MEMBERSHIP_STATE_ENTRIES = entriesOf(MEMBERSHIP_STATE_CODES);
-
-/** The name a table gives a wire value, or `null` when it gives it none. */
-function nameOf(
-  entries: readonly (readonly [number, string])[],
-  code: unknown,
-): string | null {
-  return entries.find(([candidate]) => candidate === code)?.[1] ?? null;
-}
-
-const roleCodeArb: fc.Arbitrary<number> = fc.constantFrom(
-  ...MEMBER_ROLE_ENTRIES.map(([code]) => code),
+const membershipStateNameArb: fc.Arbitrary<string> = fc.constantFrom(
+  ...MEMBERSHIP_STATE_NAMES,
 );
 
-const membershipStateCodeArb: fc.Arbitrary<number> = fc.constantFrom(
-  ...MEMBERSHIP_STATE_ENTRIES.map(([code]) => code),
+/** A well-formed Rating_State_Signal; its absence means no rating established. */
+const ratingStateNameArb: fc.Arbitrary<string> = fc.constantFrom(
+  ...RATING_STATE_NAMES,
 );
 
-/** `SquadFeature` carries one member; `InviteState` three; `RedeemOutcome` is 0-based. */
-const featureCodeArb: fc.Arbitrary<number> = fc.constant(1);
-const inviteStateCodeArb: fc.Arbitrary<number> = fc.constantFrom(1, 2, 3);
-const redeemOutcomeCodeArb: fc.Arbitrary<number> = fc.constantFrom(0, 1, 2);
+/** A well-formed Appearance_Count: a non-negative whole number (12.9). */
+const appearanceCountArb: fc.Arbitrary<number> = fc.nat({ max: 400 });
+
+const featureNameArb: fc.Arbitrary<string> = fc.constantFrom(
+  ...SQUAD_FEATURE_NAMES,
+);
+const inviteStateNameArb: fc.Arbitrary<string> = fc.constantFrom(
+  ...INVITE_STATE_NAMES,
+);
+const redeemOutcomeNameArb: fc.Arbitrary<string> = fc.constantFrom(
+  ...REDEEM_OUTCOME_NAMES,
+);
 
 const displayNameArb: fc.Arbitrary<string> = fc.oneof(
   fc.string({ maxLength: 24 }),
@@ -183,13 +190,13 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
         uuidArb,
         displayNameArb,
         presenceArb,
-        roleCodeArb,
+        roleNameArb,
         presenceArb,
-        membershipStateCodeArb,
-        (squadId, name, rolePresence, roleCode, statePresence, stateCode) => {
+        membershipStateNameArb,
+        (squadId, name, rolePresence, roleName, statePresence, stateName) => {
           const body: Record<string, unknown> = { squadId, name };
-          writeOptional(body, 'role', rolePresence, roleCode);
-          writeOptional(body, 'state', statePresence, stateCode);
+          writeOptional(body, 'role', rolePresence, roleName);
+          writeOptional(body, 'state', statePresence, stateName);
 
           const result = parseSquadSummary(body);
 
@@ -205,14 +212,9 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
           expect(result.value).toStrictEqual({
             squadId,
             name,
-            role:
-              rolePresence === 'present'
-                ? nameOf(MEMBER_ROLE_ENTRIES, roleCode)
-                : null,
-            state:
-              statePresence === 'present'
-                ? nameOf(MEMBERSHIP_STATE_ENTRIES, stateCode)
-                : null,
+            // 12.8: the name arrives unchanged, with nothing mapped.
+            role: rolePresence === 'present' ? roleName : null,
+            state: statePresence === 'present' ? stateName : null,
           });
         },
       ),
@@ -225,18 +227,19 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
       fc.property(
         uuidArb,
         displayNameArb,
-        membershipStateCodeArb,
-        (squadId, name, stateCode) => {
+        membershipStateNameArb,
+        roleNameArb,
+        (squadId, name, stateName, roleName) => {
           // The distinction a JSON body can express between "sent as null" and
           // "not sent" carries no meaning here, so the two must be
           // indistinguishable in the parsed value rather than merely both valid.
           expect(
-            parseSquadSummary({ squadId, name, role: null, state: stateCode }),
-          ).toStrictEqual(parseSquadSummary({ squadId, name, state: stateCode }));
+            parseSquadSummary({ squadId, name, role: null, state: stateName }),
+          ).toStrictEqual(parseSquadSummary({ squadId, name, state: stateName }));
 
           expect(
-            parseSquadSummary({ squadId, name, role: 1, state: null }),
-          ).toStrictEqual(parseSquadSummary({ squadId, name, role: 1 }));
+            parseSquadSummary({ squadId, name, role: roleName, state: null }),
+          ).toStrictEqual(parseSquadSummary({ squadId, name, role: roleName }));
         },
       ),
       { numRuns: 200 },
@@ -252,8 +255,8 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
         absenceArb,
         (squadId, name, rolePresence, statePresence) => {
           const body: Record<string, unknown> = { squadId, name };
-          writeOptional(body, 'role', rolePresence, 1);
-          writeOptional(body, 'state', statePresence, 1);
+          writeOptional(body, 'role', rolePresence, 'Owner');
+          writeOptional(body, 'state', statePresence, 'Active');
 
           expect(parseSquadSummary(body)).toStrictEqual({
             ok: true,
@@ -273,8 +276,8 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
             {
               squadId: uuidArb,
               name: displayNameArb,
-              role: fc.oneof(fc.constant(null), roleCodeArb),
-              state: fc.oneof(fc.constant(null), membershipStateCodeArb),
+              role: fc.oneof(fc.constant(null), roleNameArb),
+              state: fc.oneof(fc.constant(null), membershipStateNameArb),
             },
             { requiredKeys: ['squadId', 'name'] },
           ),
@@ -296,10 +299,8 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
           for (const [index, summary] of result.value.entries()) {
             const source = summaries[index];
 
-            expect(summary.role).toBe(nameOf(MEMBER_ROLE_ENTRIES, source.role));
-            expect(summary.state).toBe(
-              nameOf(MEMBERSHIP_STATE_ENTRIES, source.state),
-            );
+            expect(summary.role).toBe(source.role ?? null);
+            expect(summary.state).toBe(source.state ?? null);
           }
         },
       ),
@@ -313,16 +314,30 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
         uuidArb,
         displayNameArb,
         absenceArb,
-        membershipStateCodeArb,
+        membershipStateNameArb,
         fc.boolean(),
-        (membershipId, displayName, rolePresence, stateCode, isGuest) => {
+        appearanceCountArb,
+        absenceArb,
+        (
+          membershipId,
+          displayName,
+          rolePresence,
+          stateName,
+          isGuest,
+          appearances,
+          ratingStatePresence,
+        ) => {
           const body: Record<string, unknown> = {
             membershipId,
             displayName,
-            state: stateCode,
+            state: stateName,
             isGuest,
+            appearances,
           };
-          writeOptional(body, 'role', rolePresence, 1);
+          writeOptional(body, 'role', rolePresence, 'Owner');
+          // 12.9: a membership with no rating established carries no rating
+          // state, and that absence is carried the same way a guest's role is.
+          writeOptional(body, 'ratingState', ratingStatePresence, 'Provisional');
 
           expect(parseSquadMember(body)).toStrictEqual({
             ok: true,
@@ -330,8 +345,10 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
               membershipId,
               displayName,
               role: null,
-              state: nameOf(MEMBERSHIP_STATE_ENTRIES, stateCode),
+              state: stateName,
               isGuest,
+              appearances,
+              ratingState: null,
             },
           });
         },
@@ -346,17 +363,27 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
         uuidArb,
         displayNameArb,
         presenceArb,
-        roleCodeArb,
+        roleNameArb,
         absenceArb,
         fc.boolean(),
-        (membershipId, displayName, rolePresence, roleCode, statePresence, isGuest) => {
+        appearanceCountArb,
+        (
+          membershipId,
+          displayName,
+          rolePresence,
+          roleName,
+          statePresence,
+          isGuest,
+          appearances,
+        ) => {
           const body: Record<string, unknown> = {
             membershipId,
             displayName,
             isGuest,
+            appearances,
           };
-          writeOptional(body, 'role', rolePresence, roleCode);
-          writeOptional(body, 'state', statePresence, 1);
+          writeOptional(body, 'role', rolePresence, roleName);
+          writeOptional(body, 'state', statePresence, 'Active');
 
           const result = parseSquadMember(body);
 
@@ -389,10 +416,20 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
               membershipId: uuidArb,
               displayName: displayNameArb,
               role: fc.constant(null),
-              state: membershipStateCodeArb,
+              state: membershipStateNameArb,
               isGuest: fc.constant(true),
+              appearances: appearanceCountArb,
+              ratingState: fc.oneof(fc.constant(null), ratingStateNameArb),
             },
-            { requiredKeys: ['membershipId', 'displayName', 'state', 'isGuest'] },
+            {
+              requiredKeys: [
+                'membershipId',
+                'displayName',
+                'state',
+                'isGuest',
+                'appearances',
+              ],
+            },
           ),
           { maxLength: 6 },
         ),
@@ -451,7 +488,7 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
         fc.string({ minLength: 1, maxLength: 64 }),
         fc.string({ minLength: 1, maxLength: 16 }),
         absenceArb,
-        inviteStateCodeArb,
+        inviteStateNameArb,
         isoInstantArb,
         absenceArb,
         absenceArb,
@@ -684,8 +721,8 @@ const squadSummaryBodyArb = fc.record(
   {
     squadId: uuidArb,
     name: displayNameArb,
-    role: fc.oneof(fc.constant(null), roleCodeArb),
-    state: fc.oneof(fc.constant(null), membershipStateCodeArb),
+    role: fc.oneof(fc.constant(null), roleNameArb),
+    state: fc.oneof(fc.constant(null), membershipStateNameArb),
   },
   { requiredKeys: ['squadId', 'name'] },
 );
@@ -694,15 +731,25 @@ const squadMemberBodyArb = fc.record(
   {
     membershipId: uuidArb,
     displayName: displayNameArb,
-    role: fc.oneof(fc.constant(null), roleCodeArb),
-    state: membershipStateCodeArb,
+    role: fc.oneof(fc.constant(null), roleNameArb),
+    state: membershipStateNameArb,
     isGuest: fc.boolean(),
+    appearances: appearanceCountArb,
+    ratingState: fc.oneof(fc.constant(null), ratingStateNameArb),
   },
-  { requiredKeys: ['membershipId', 'displayName', 'state', 'isGuest'] },
+  {
+    requiredKeys: [
+      'membershipId',
+      'displayName',
+      'state',
+      'isGuest',
+      'appearances',
+    ],
+  },
 );
 
 const featureFlagBodyArb = fc.record({
-  feature: featureCodeArb,
+  feature: featureNameArb,
   isEnabled: fc.boolean(),
 });
 
@@ -729,7 +776,7 @@ const leaderboardBodyArb = fc.record({
 const redemptionBodyArb = fc.record(
   {
     membershipId: fc.oneof(fc.constant(null), uuidArb),
-    outcome: fc.oneof(fc.constant(null), redeemOutcomeCodeArb),
+    outcome: fc.oneof(fc.constant(null), redeemOutcomeNameArb),
     squadId: fc.oneof(fc.constant(null), uuidArb),
   },
   { requiredKeys: [] },
@@ -760,7 +807,7 @@ const invitePreviewBodyArb = fc.record({
 const inviteSummaryBodyArb = fc.record(
   {
     inviteId: uuidArb,
-    state: inviteStateCodeArb,
+    state: inviteStateNameArb,
     createdAt: isoInstantArb,
     createdBy: fc.oneof(fc.constant(null), displayNameArb),
     expiresAt: fc.oneof(fc.constant(null), isoInstantArb),
@@ -1126,14 +1173,14 @@ describe('Response_Parser — absences and extra properties together', () => {
         uuidArb,
         displayNameArb,
         presenceArb,
-        roleCodeArb,
+        roleNameArb,
         presenceArb,
-        membershipStateCodeArb,
+        membershipStateNameArb,
         deepExtrasArb,
-        (squadId, name, rolePresence, roleCode, statePresence, stateCode, extras) => {
+        (squadId, name, rolePresence, roleName, statePresence, stateName, extras) => {
           const body: Record<string, unknown> = { squadId, name };
-          writeOptional(body, 'role', rolePresence, roleCode);
-          writeOptional(body, 'state', statePresence, stateCode);
+          writeOptional(body, 'role', rolePresence, roleName);
+          writeOptional(body, 'state', statePresence, stateName);
 
           const result = parseSquadSummary(withExtras(body, extras));
 
@@ -1148,14 +1195,10 @@ describe('Response_Parser — absences and extra properties together', () => {
           }
 
           expect(result.value.role).toBe(
-            rolePresence === 'present'
-              ? nameOf(MEMBER_ROLE_ENTRIES, roleCode)
-              : null,
+            rolePresence === 'present' ? roleName : null,
           );
           expect(result.value.state).toBe(
-            statePresence === 'present'
-              ? nameOf(MEMBERSHIP_STATE_ENTRIES, stateCode)
-              : null,
+            statePresence === 'present' ? stateName : null,
           );
         },
       ),
@@ -1167,7 +1210,7 @@ describe('Response_Parser — absences and extra properties together', () => {
     fc.assert(
       fc.property(
         leaderboardEntryBodyArb,
-        fc.oneof(roleCodeArb, fc.constant(null), fc.constant('owner')),
+        fc.oneof(roleNameArb, fc.constant(null), fc.constant('owner')),
         (entry, role) => {
           // A leaderboard entry names no role, so a `role` the backend adds must
           // be disregarded rather than read — however plausible its value.

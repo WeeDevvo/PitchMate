@@ -466,7 +466,7 @@ const SEAM_OPERATIONS: readonly SeamOperation[] = [
   { name: 'GetFeatureFlags', invoke: (api) => api.getFeatureFlags(SQUAD_ID) },
   {
     name: 'SetFeatureFlag',
-    invoke: (api) => api.setFeatureFlag(SQUAD_ID, { feature: 1, enabled: true }),
+    invoke: (api) => api.setFeatureFlag(SQUAD_ID, { feature: 'LiveMatchTracking', enabled: true }),
   },
 ];
 
@@ -659,7 +659,7 @@ const MACHINES: readonly MachineCase[] = [
       await flush();
 
       act(() => {
-        view.result.current.setEnabled('live-match-tracking', true);
+        view.result.current.setEnabled('LiveMatchTracking', true);
       });
       await flush();
 

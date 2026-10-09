@@ -95,24 +95,30 @@ export const BODY_DISPLAY_MAX_LENGTH = 500;
  * A user-facing label naming each of the eight catalogued Notification_Types,
  * used as the type indication on a row and as the stand-in for a title that is
  * empty or whitespace-only (Requirement 5.13).
+ *
+ * Keyed by the Wire_Enum_Name of each kind, which is what the record model
+ * carries now that the parser reads `type` as a name validated against the
+ * generated enum union (Requirement 12.8). The key set is pinned by
+ * `Record<CataloguedNotificationType, string>`, so a kind added to the contract
+ * is a compile error here rather than a row that silently reads as neutral.
  */
 export const NOTIFICATION_TYPE_LABELS: Readonly<
   Record<CataloguedNotificationType, string>
 > = {
-  'member-joined': 'Member joined',
-  'promoted-to-admin': 'Promoted to admin',
-  'removed-from-squad': 'Removed from squad',
-  'ownership-transferred': 'Ownership transferred',
-  'match-drafted': 'Match drafted',
-  'match-confirmed': 'Match confirmed',
-  'teams-rolled': 'Teams rolled',
-  'result-posted': 'Result posted',
+  MemberJoined: 'Member joined',
+  PromotedToAdmin: 'Promoted to admin',
+  RemovedFromSquad: 'Removed from squad',
+  OwnershipTransferred: 'Ownership transferred',
+  MatchDrafted: 'Match drafted',
+  MatchConfirmed: 'Match confirmed',
+  TeamsRolled: 'Teams rolled',
+  ResultPosted: 'Result posted',
 };
 
 /**
  * The neutral type indication for a Notification_Type outside the eight
- * catalogued kinds (Requirement 5.10). It names no kind and discloses no integer
- * code, so a backend type this web app has not been taught about reads as a
+ * catalogued kinds (Requirement 5.10). It names no kind and discloses no wire
+ * name, so a backend type this web app has not been taught about reads as a
  * notification rather than as something broken.
  */
 export const NEUTRAL_NOTIFICATION_TYPE_LABEL = 'Notification';

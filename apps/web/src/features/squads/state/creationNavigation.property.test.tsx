@@ -90,7 +90,7 @@ import {
   SQUAD_CARD_ID_ATTRIBUTE,
   SQUAD_CARD_SELECTOR,
 } from '../components/SquadCard';
-import { codeFromRedeemOutcome } from '../lib/enumCodes';
+import { REDEEM_OUTCOME_NAMES } from '../lib/wireEnums';
 import {
   CREATE_SQUAD_HEADING,
   CREATE_SQUAD_SUBMIT_LABEL,
@@ -345,30 +345,23 @@ const createdSquadBodyArb: fc.Arbitrary<unknown> = fc.oneof(
  * A generated `RedeemInvite` wire body: the three successful shapes, one of
  * which carries a squad identity.
  *
- * The Redeem_Outcome codes are written through the Enum_Code_Map, which is the
- * only module in the feature — tests included — allowed to hold a numeric enum
- * literal (Requirement 16.7).
+ * The Redeem_Outcome crosses the wire as its member name, so the bodies below
+ * carry names drawn from the feature's single declaration of that vocabulary
+ * (Requirement 12.8).
  */
 const redemptionBodyArb: fc.Arbitrary<unknown> = fc.oneof(
   // The identity-bearing form the parser already accepts, which the backend may
   // send later (Requirement 4.6).
   fc.record({
     membershipId: fc.uuid(),
-    outcome: fc.constantFrom(
-      codeFromRedeemOutcome('joined'),
-      codeFromRedeemOutcome('reactivated'),
-    ),
+    outcome: fc.constantFrom('Joined', 'Reactivated'),
     squadId: fc.uuid(),
   }),
   // The form the backend sends today: a membership and an outcome, no squad
   // identity (Requirement 4.7).
   fc.record({
     membershipId: fc.uuid(),
-    outcome: fc.constantFrom(
-      codeFromRedeemOutcome('joined'),
-      codeFromRedeemOutcome('reactivated'),
-      codeFromRedeemOutcome('already-member'),
-    ),
+    outcome: fc.constantFrom(...REDEEM_OUTCOME_NAMES),
   }),
   // The already-a-member no-op: `200` with an empty body, and an empty object,
   // both of which parse to a Redemption carrying three absences.
@@ -378,7 +371,7 @@ const redemptionBodyArb: fc.Arbitrary<unknown> = fc.oneof(
 
 /** A Squad_Summary for the collection a re-listing answers with. */
 function summaryOf(squadId: string, name: string): SquadSummary {
-  return { squadId, name, role: 'owner', state: 'active' };
+  return { squadId, name, role: 'Owner', state: 'Active' };
 }
 
 // --- What the property expects of a run -------------------------------------

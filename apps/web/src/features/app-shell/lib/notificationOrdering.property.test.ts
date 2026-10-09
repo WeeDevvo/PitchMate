@@ -172,19 +172,19 @@ const instantArb: fc.Arbitrary<number> = fc.oneof(
 const typeArb: fc.Arbitrary<NotificationType> = fc.oneof(
   fc
     .constantFrom(
-      'member-joined' as const,
-      'promoted-to-admin' as const,
-      'removed-from-squad' as const,
-      'ownership-transferred' as const,
-      'match-drafted' as const,
-      'match-confirmed' as const,
-      'teams-rolled' as const,
-      'result-posted' as const,
+      'MemberJoined' as const,
+      'PromotedToAdmin' as const,
+      'RemovedFromSquad' as const,
+      'OwnershipTransferred' as const,
+      'MatchDrafted' as const,
+      'MatchConfirmed' as const,
+      'TeamsRolled' as const,
+      'ResultPosted' as const,
     )
     .map((value) => ({ kind: 'catalogued', value }) as const),
   fc
-    .integer({ min: 8, max: 64 })
-    .map((code) => ({ kind: 'unrecognised', code }) as const),
+    .string({ minLength: 1, maxLength: 24 })
+    .map((name) => ({ kind: 'unrecognised', name }) as const),
 );
 
 const readStateArb: fc.Arbitrary<ReadState> = fc.constantFrom(
@@ -295,7 +295,7 @@ describe('orderNotifications — the result is sorted newest first, ties by iden
           // the entire order — the case Requirement 14.3 turns on.
           const records = identities.map((notificationId) => ({
             notificationId,
-            type: { kind: 'catalogued', value: 'match-drafted' } as const,
+            type: { kind: 'catalogued', value: 'MatchDrafted' } as const,
             squadId: '018f3a2b-4c5d-7e6f-8a9b-0c1d2e3f4a5b',
             title: 'A match was drafted',
             body: '',

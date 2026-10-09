@@ -49,13 +49,17 @@
  * Requirements: 7.2, 7.3, 7.4, 7.9
  */
 
-import type { MemberRole, MembershipStateValue } from './enumCodes';
 import type {
   DisplayRatingEntry,
   DisplayRatingLeaderboard,
 } from './parse/leaderboard';
 import type { SquadDetail, SquadMember } from './parse/squadDetail';
 import type { Comparison } from './squadOrder';
+import type {
+  MembershipState,
+  RatingState,
+  SquadRole,
+} from './wireEnums';
 
 /**
  * The display name the backend writes over a membership's own name when the
@@ -165,11 +169,25 @@ export interface PlayerListRow {
   /** The Player_Display_Name exactly as parsed; never reformatted. */
   readonly displayName: string;
   /** The Member_Role, or `null` for a guest membership (Requirement 16.8). */
-  readonly role: MemberRole | null;
+  readonly role: SquadRole | null;
   /** The Membership_State; always present, and the primary ordering key. */
-  readonly state: MembershipStateValue;
+  readonly state: MembershipState;
   /** Whether this membership is a guest — no account, no `AuthIdentity`. */
   readonly isGuest: boolean;
+  /**
+   * The Appearance_Count: completed matches this membership has played in this
+   * squad. Carried straight through from the Squad_Member so a row stays
+   * structurally a member; nothing in this module reads it, and no presentation
+   * of it is decided here.
+   */
+  readonly appearances: number;
+  /**
+   * The Rating_State_Signal the backend classified, or `null` when no rating has
+   * been established. Carried through for the same reason as `appearances`: the
+   * row is handed to the rating selector whole, and the classification arrives
+   * already made.
+   */
+  readonly ratingState: RatingState | null;
   /**
    * Whether this row is a Former_Player, i.e. whether its display name is the
    * Anonymised_Placeholder (Requirement 7.8). Derived once here so the row's
@@ -196,11 +214,11 @@ const sign = (value: number): Comparison => (value < 0 ? -1 : value > 0 ? 1 : 0)
 /**
  * The Membership_State sort rank: active rows come first.
  *
- * A positive test on `active` rather than a test against `inactive`, so the rank
+ * A positive test on `Active` rather than a test against `Inactive`, so the rank
  * stays correct — inactive rows last — if a further state is ever named.
  */
-const stateRank = (state: MembershipStateValue): 0 | 1 =>
-  state === 'active' ? 0 : 1;
+const stateRank = (state: MembershipState): 0 | 1 =>
+  state === 'Active' ? 0 : 1;
 
 /**
  * Compares two membership identities by code unit.
@@ -308,6 +326,8 @@ const toPlayerListRow = (
   role: member.role,
   state: member.state,
   isGuest: member.isGuest,
+  appearances: member.appearances,
+  ratingState: member.ratingState,
   isFormerPlayer: isAnonymisedPlaceholder(member.displayName),
   leaderboardObtained,
   ratingEntry,

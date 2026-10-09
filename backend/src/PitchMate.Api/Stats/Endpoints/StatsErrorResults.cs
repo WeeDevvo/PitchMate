@@ -47,7 +47,9 @@ internal static class StatsErrorResults
 
             // The selected ranking statistic is not in the supported set. The message names the
             // offending statistic; this is not existence-sensitive, so the code is echoed (Req 4.7).
-            StatsErrorCode.UnsupportedStatistic => Results.Problem(
+            // TypedResults rather than Results throughout: the same ProblemHttpResult, with the
+            // status/payload pairing checked at compile time where it costs nothing (design D2).
+            StatsErrorCode.UnsupportedStatistic => TypedResults.Problem(
                 detail: error.Message,
                 statusCode: StatusCodes.Status400BadRequest,
                 title: error.Code.ToString(),
@@ -55,14 +57,14 @@ internal static class StatsErrorResults
 
             // Aggregation failed or the store was unavailable. Respond with an error indication only —
             // never a partial or stale statistics payload (Requirement 2.6).
-            StatsErrorCode.ComputationFailed => Results.Problem(
+            StatsErrorCode.ComputationFailed => TypedResults.Problem(
                 detail: "The statistics could not be computed. Please try again later.",
                 statusCode: StatusCodes.Status503ServiceUnavailable,
                 title: error.Code.ToString(),
                 extensions: new Dictionary<string, object?> { ["code"] = error.Code.ToString() }),
 
             // Any unmapped code is a server-side oversight rather than a client error.
-            _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError),
+            _ => TypedResults.Problem(statusCode: StatusCodes.Status500InternalServerError),
         };
     }
 
@@ -74,7 +76,7 @@ internal static class StatsErrorResults
     /// identical and discloses neither existence nor any statistical data.
     /// </summary>
     public static IResult Concealed() =>
-        Results.Problem(
+        TypedResults.Problem(
             detail: ConcealedDetail,
             statusCode: StatusCodes.Status404NotFound,
             title: ConcealedTitle);

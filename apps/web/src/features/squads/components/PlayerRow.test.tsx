@@ -43,9 +43,11 @@ const VIEWER_MEMBERSHIP_ID = '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f03';
 const rowOf = (overrides: Partial<PlayerListRow> = {}): PlayerListRow => ({
   membershipId: MEMBERSHIP_ID,
   displayName: 'Dave',
-  role: 'member',
-  state: 'active',
+  role: 'Member',
+  state: 'Active',
   isGuest: false,
+  appearances: 12,
+  ratingState: 'Established',
   isFormerPlayer: false,
   leaderboardObtained: true,
   ratingEntry: { membershipId: MEMBERSHIP_ID, displayName: 'Dave', value: 1240.4 },
@@ -186,11 +188,11 @@ describe('PlayerRow', () => {
 
   // Requirements: 7.7
   it('carries its Membership_State on the row, and keeps an inactive row navigable', () => {
-    const { container } = renderRow(rowOf({ state: 'inactive' }));
+    const { container } = renderRow(rowOf({ state: 'Inactive' }));
 
     expect(
       container.querySelector(PLAYER_ROW_SELECTOR)?.getAttribute('data-membership-state'),
-    ).toBe('inactive');
+    ).toBe('Inactive');
     expect(container.querySelectorAll(PLAYER_ROW_OPEN_SELECTOR)).toHaveLength(1);
   });
 
@@ -201,6 +203,8 @@ describe('PlayerRow', () => {
         displayName: ANONYMISED_PLACEHOLDER,
         isFormerPlayer: true,
         isGuest: true,
+        appearances: 12,
+        ratingState: 'Established',
         role: null,
       }),
       viewerOf({ isAdmin: true }),
@@ -240,10 +244,10 @@ describe('PlayerRow', () => {
   it('offers no promotion on the caller’s own row, an owner, a guest, or an inactive membership', () => {
     const ineligible: readonly (readonly [string, PlayerListRow])[] = [
       ['own membership', rowOf({ membershipId: VIEWER_MEMBERSHIP_ID })],
-      ['owner', rowOf({ role: 'owner' })],
-      ['admin', rowOf({ role: 'admin' })],
+      ['Owner', rowOf({ role: 'Owner' })],
+      ['Admin', rowOf({ role: 'Admin' })],
       ['guest', rowOf({ role: null, isGuest: true })],
-      ['inactive', rowOf({ state: 'inactive' })],
+      ['Inactive', rowOf({ state: 'Inactive' })],
     ];
 
     for (const [name, row] of ineligible) {

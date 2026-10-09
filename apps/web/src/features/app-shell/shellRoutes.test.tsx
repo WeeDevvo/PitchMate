@@ -93,17 +93,18 @@ function authenticatedSessionManager(): SessionManager {
 /**
  * An Authenticated_Api_Client stand-in answering every notification call at once.
  *
- * The facade reads response text and decodes it itself (the contract declares no
- * content schema), so the count endpoint answers `0` and the list endpoint an
- * empty array — enough for the frame to render without any call failing.
+ * The facade takes the client's decoded `data`, so this stand-in supplies
+ * decoded bodies as the generated client would: the count endpoint answers the
+ * named `{ count: 0 }` envelope and the list endpoint an empty array — enough
+ * for the frame to render without any call failing. A `204` carries no body, so
+ * `data` is absent.
  */
 function stubApiClient(): PitchMateApiClient {
-  const ok = (body: unknown) =>
-    Promise.resolve({ data: JSON.stringify(body), response: { status: 200 } });
+  const ok = (body: unknown) => Promise.resolve({ data: body, response: { status: 200 } });
 
   return {
-    GET: (path: string) => ok(path.includes('unread-count') ? 0 : []),
-    POST: () => Promise.resolve({ data: '', response: { status: 204 } }),
+    GET: (path: string) => ok(path.includes('unread-count') ? { count: 0 } : []),
+    POST: () => Promise.resolve({ data: undefined, response: { status: 204 } }),
   } as unknown as PitchMateApiClient;
 }
 

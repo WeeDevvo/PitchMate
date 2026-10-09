@@ -26,13 +26,19 @@
  *    DOM type (`HTMLElement`, `Event`, `Node`, …), so every one of them is
  *    testable without a browser — which is the reason Requirement 16.10 gives
  *    for the rule.
- * 3. **Nothing from the transport** (Requirements 16.10, 18.3). No such module
- *    imports `@pitchmate/api-client` or any sub-path of it. The generated
- *    request-body types the feature uses are named by `api/squadsApi.ts` and by
- *    the state hooks that build a command; the parsers, the Enum_Code_Map, and
- *    the ordering, rating, authority, and validation functions read nothing from
- *    the client, so the whole of the wire mapping is verifiable with no
- *    transport present.
+ * 3. **Nothing from the transport, bar one type-only import** (Requirements
+ *    16.10, 18.3, 12.2). No module under `lib/` imports `@pitchmate/api-client`
+ *    or any sub-path of it, with exactly one admitted exception:
+ *    {@link WIRE_ENUMS_MODULE}, which aliases the Generated_Enum_Unions and is
+ *    required by `api-response-contracts` Requirement 12.2 to express them as
+ *    `components['schemas'][…]` rather than as a hand-written list. Its import
+ *    is asserted to be **type-only**, which is what preserves the property this
+ *    rule protects: a type-only import is erased at compile time, so the emitted
+ *    module imports nothing, constructs nothing, and is still testable with no
+ *    transport present. Every other module — the parsers, the ordering, rating,
+ *    authority, and validation functions — reads nothing from the client, and
+ *    the generated request-body types the feature uses are still named by
+ *    `api/squadsApi.ts` and by the state hooks that build a command.
  * 4. **Purity is not smuggled in by a relative path.** Invariants 1 to 3 are
  *    asserted against each module's *own* source, which is what the criteria
  *    say. That would be hollow if a `lib/` module could reach a React- or
@@ -110,6 +116,23 @@ const libModules = collectProductionSources(libRoot);
 
 /** Every property test sitting under `lib/`. */
 const libPropertyTests = collectPropertyTests(libRoot);
+
+/**
+ * The one module admitted to invariant 3: the wire enum unions.
+ *
+ * `api-response-contracts` Requirement 12.2 has each named enum union expressed
+ * as an alias over the corresponding Generated_Enum_Union, and Requirement 12.3
+ * has that alias checked against the generated vocabulary at compile time. Both
+ * are statements about `components['schemas']`, which only the generated package
+ * declares — so this module must name it, and the alternative (a hand-written
+ * list of names in `lib/` plus the check somewhere outside it) is the very
+ * duplication the requirement removes.
+ *
+ * The exception is narrow in three ways, each asserted below: it is this one
+ * path, the import is type-only, and the module is still closed under invariants
+ * 1, 2, 4 and 5 like every other.
+ */
+const WIRE_ENUMS_MODULE = 'wireEnums.ts';
 
 /** Path relative to `lib/`, in forward-slash form, for a failure message. */
 function libRel(path: string): string {
@@ -222,12 +245,33 @@ describe('every Squads_Feature lib module is free of React, the DOM, and the tra
     expect(offenders).toEqual([]);
   });
 
-  it('imports nothing from @pitchmate/api-client (Requirements 16.10, 18.3)', () => {
+  it('imports nothing from @pitchmate/api-client, bar the wire enums (16.10, 18.3)', () => {
     const offenders = libModules
+      .filter((file) => libRel(file) !== WIRE_ENUMS_MODULE)
       .filter((file) => API_CLIENT_IMPORT_PATTERN.test(readWithoutComments(file)))
       .map(libRel);
 
     expect(offenders).toEqual([]);
+  });
+
+  it('keeps the wire enums the only holdout, and keeps its import type-only (12.2)', () => {
+    // The positive half of the exception. An admitted holdout that did not
+    // actually import the client would make the rule above look narrower than it
+    // is, and a *value* import would reach the client's factory — so the
+    // allowance is to the erased form only.
+    const wireEnums = libModules.filter((file) => libRel(file) === WIRE_ENUMS_MODULE);
+
+    expect(wireEnums.map(libRel)).toEqual([WIRE_ENUMS_MODULE]);
+
+    const code = readWithoutComments(wireEnums[0]);
+
+    expect(API_CLIENT_IMPORT_PATTERN.test(code)).toBe(true);
+    expect(code).toMatch(
+      /import\s+type\s*\{[^}]*\bcomponents\b[^}]*\}\s*from\s*['"]@pitchmate\/api-client['"]/s,
+    );
+    expect(code).not.toMatch(
+      /^\s*import\s+(?!type\b)[^;]*?from\s*['"]@pitchmate\/api-client(?:\/[^'"]*)?['"]/m,
+    );
   });
 
   it('references no DOM global, no DOM type, and no React namespace (Req 16.10, 18.2)', () => {
@@ -264,18 +308,22 @@ describe('every Squads_Feature lib module is free of React, the DOM, and the tra
     // The three patterns above name React and the client by hand, which catches
     // the two imports the criteria forbid but not the next transport-carrying
     // package someone reaches for. So the rule is stated positively instead: a
-    // module of `lib/` imports nothing but its siblings. Nothing under `lib/`
-    // needs a runtime dependency, and the day one does is the day this rule
-    // should be reconsidered deliberately rather than silently.
+    // module of `lib/` imports nothing but its siblings, with the single erased
+    // type import invariant 3 admits. Nothing under `lib/` needs a *runtime*
+    // dependency, and the day one does is the day this rule should be
+    // reconsidered deliberately rather than silently.
     const offenders: Array<{ module: string; specifier: string }> = [];
     const pattern =
       /(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*)['"]([^'".][^'"]*)['"]/g;
 
     for (const file of libModules) {
       const code = readWithoutComments(file);
+      const admitted =
+        libRel(file) === WIRE_ENUMS_MODULE ? '@pitchmate/api-client' : null;
       pattern.lastIndex = 0;
       let match: RegExpExecArray | null;
       while ((match = pattern.exec(code)) !== null) {
+        if (match[1] === admitted) continue;
         offenders.push({ module: libRel(file), specifier: match[1] });
       }
     }

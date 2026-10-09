@@ -48,7 +48,7 @@
  */
 import { type ReactElement } from 'react';
 
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import type { SquadSummary } from '../lib/parse/squadSummary';
 import {
   ACTIVE_STATE_LABEL,
@@ -79,23 +79,23 @@ export const SQUAD_CARD_SELECTOR = '[data-squads-card="true"]';
 export const SQUAD_CARD_ID_ATTRIBUTE = 'data-squad-id';
 
 /** The label of each named Member_Role — a total lookup, so none is missable. */
-const ROLE_LABELS: Readonly<Record<MemberRole, string>> = {
-  owner: OWNER_ROLE_LABEL,
-  admin: ADMIN_ROLE_LABEL,
-  member: MEMBER_ROLE_LABEL,
+const ROLE_LABELS: Readonly<Record<SquadRole, string>> = {
+  Owner: OWNER_ROLE_LABEL,
+  Admin: ADMIN_ROLE_LABEL,
+  Member: MEMBER_ROLE_LABEL,
 };
 
 /** The label of each named Membership_State. */
-const STATE_LABELS: Readonly<Record<MembershipStateValue, string>> = {
-  active: ACTIVE_STATE_LABEL,
-  inactive: INACTIVE_STATE_LABEL,
+const STATE_LABELS: Readonly<Record<MembershipState, string>> = {
+  Active: ACTIVE_STATE_LABEL,
+  Inactive: INACTIVE_STATE_LABEL,
 };
 
 /**
  * The role label of a summary: the role's own word, or the statement that no
  * role is recorded (Requirements 1.5, 1.6).
  */
-function roleLabelOf(role: MemberRole | null): string {
+function roleLabelOf(role: SquadRole | null): string {
   return role === null ? NO_ROLE_RECORDED_LABEL : ROLE_LABELS[role];
 }
 
@@ -103,7 +103,7 @@ function roleLabelOf(role: MemberRole | null): string {
  * The state label of a summary: the state's own word, or the statement that no
  * membership state is recorded (Requirements 1.5, 1.7).
  */
-function stateLabelOf(state: MembershipStateValue | null): string {
+function stateLabelOf(state: MembershipState | null): string {
   return state === null
     ? NO_MEMBERSHIP_STATE_RECORDED_LABEL
     : STATE_LABELS[state];

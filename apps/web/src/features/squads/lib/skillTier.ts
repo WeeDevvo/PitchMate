@@ -17,7 +17,7 @@
  * single option union could not express both: `'do-not-seed'` on an edit would
  * read as "clear the tier", which is not an operation the backend offers and not
  * what the option means. So there are two unions over one shared set of tiers,
- * and the tiers themselves are the named values of `./enumCodes` rather than a
+ * and the tiers themselves are the Wire_Enum_Names of `./wireEnums` rather than a
  * second list of tier names.
  *
  * **The omission is the mechanism.** While the create default is selected the
@@ -28,12 +28,12 @@
  * keeps the value assignable under `exactOptionalPropertyTypes` if it is ever
  * switched on.
  *
- * **This module names no numeric enum literal.** The 0-based `SkillTier` codes —
- * `0 → beginner`, unlike the four 1-based enums beside it — live in
- * `./enumCodes` and are read from there through `codeFromSkillTier`, which is
- * what keeps Requirement 16.12 true by construction: when the pending
- * `api-response-contracts` chore lands named enum serialisation, that table
- * changes and this module does not.
+ * **This module names no numeric enum literal, and no longer needs to.** The
+ * backend serialises every wire enum by name, so a tier travels as `'Beginner'`,
+ * `'Average'`, or `'Strong'` — the member name verbatim — and the off-by-one risk
+ * of the old 0-based code table is gone rather than merely contained
+ * (Requirement 16.12). The names come from `./wireEnums`, which reads them out of
+ * the generated types, so there is still no second declaration of them here.
  *
  * **The mapping returns plain field values, not a generated request type.**
  * Requirement 16.11 has command bodies typed from `@pitchmate/api-client`, and
@@ -47,7 +47,7 @@
  * `lib/` still imports nothing.
  *
  * This module is React-free and DOM-free like every module under `lib/`, and
- * imports only the tier names and the code reader it delegates to
+ * imports only the tier names it offers
  * (Requirement 18.2). Nothing here is a user-facing string: the option *labels*
  * belong to `lib/messages.ts` and the controls that render them, because these
  * identifiers are values, not copy.
@@ -55,11 +55,7 @@
  * Requirements: 12.5, 12.9, 16.11, 16.12, 18.2
  */
 
-import {
-  codeFromSkillTier,
-  SKILL_TIER_CODES,
-  type SkillTierValue,
-} from './enumCodes';
+import { SKILL_TIER_NAMES, type SkillTier } from './wireEnums';
 
 /**
  * The create-mode sentinel: seed no Skill_Tier at all (Requirement 12.5).
@@ -84,31 +80,29 @@ export const LEAVE_TIER_UNCHANGED = 'leave-unchanged';
 /**
  * The Skill_Tiers in the order they are offered, weakest first.
  *
- * **Read out of the Enum_Code_Map rather than written out again**, so "exactly
+ * **Read out of the Wire_Enum_Names rather than written out again**, so "exactly
  * three options" (Requirement 12.5) is a fact about the tier enum instead of a
  * count this module could fall behind: a fourth tier arriving in
- * `SKILL_TIER_CODES` appears in the Guest_Form without an edit here, and a tier
+ * `SKILL_TIER_NAMES` appears in the Guest_Form without an edit here, and a tier
  * this module invented could not appear at all.
  *
- * The order is `Object.values` over integer-like keys, which the language
- * specifies as ascending numeric key order — so `beginner`, `average`, `strong`,
- * weakest first, deterministically. That the presentation order coincides with the
- * code order is a convenience, not something any caller depends on.
+ * The order is the tuple's own, which `wireEnums.ts` declares weakest first —
+ * `Beginner`, `Average`, `Strong` — so the presentation order is deterministic
+ * without this module asserting anything about it.
  */
-export const SKILL_TIERS: readonly SkillTierValue[] =
-  Object.values(SKILL_TIER_CODES);
+export const SKILL_TIERS: readonly SkillTier[] = SKILL_TIER_NAMES;
 
 /**
  * What the Guest_Form's tier selection can hold while creating a guest: the three
  * tiers, plus the option to seed none (Requirement 12.5).
  */
-export type SkillTierCreateOption = SkillTierValue | typeof DO_NOT_SEED_TIER;
+export type SkillTierCreateOption = SkillTier | typeof DO_NOT_SEED_TIER;
 
 /**
  * What the Guest_Form's tier selection can hold while editing a guest: the three
  * tiers, plus the option to leave the tier unchanged (Requirement 12.9).
  */
-export type SkillTierEditOption = SkillTierValue | typeof LEAVE_TIER_UNCHANGED;
+export type SkillTierEditOption = SkillTier | typeof LEAVE_TIER_UNCHANGED;
 
 /**
  * The create-mode options in the order they are offered, sentinel first.
@@ -155,7 +149,7 @@ export const DEFAULT_SKILL_TIER_EDIT_OPTION: SkillTierEditOption =
  * body while `lib/` imports no client (Requirements 16.11, 18.2).
  */
 export interface CreateGuestSkillTierFields {
-  readonly skillTier?: number;
+  readonly skillTier?: SkillTier;
 }
 
 /**
@@ -164,7 +158,7 @@ export interface CreateGuestSkillTierFields {
  */
 export interface EditGuestSkillTierFields {
   readonly updateSkillTier: boolean;
-  readonly skillTier?: number;
+  readonly skillTier?: SkillTier;
 }
 
 /**
@@ -180,7 +174,7 @@ export interface EditGuestSkillTierFields {
  */
 export function tierOfCreateOption(
   option: SkillTierCreateOption,
-): SkillTierValue | null {
+): SkillTier | null {
   return option === DO_NOT_SEED_TIER ? null : option;
 }
 
@@ -195,7 +189,7 @@ export function tierOfCreateOption(
  */
 export function tierOfEditOption(
   option: SkillTierEditOption,
-): SkillTierValue | null {
+): SkillTier | null {
   return option === LEAVE_TIER_UNCHANGED ? null : option;
 }
 
@@ -203,13 +197,13 @@ export function tierOfEditOption(
  * The create-mode option that names a given Skill_Tier.
  *
  * The reverse of {@link tierOfCreateOption}, so the option model is bidirectional
- * by construction the way the Enum_Code_Map is: a tier read back off the wire has
+ * by construction the way the Wire_Enum_Names are: a tier read back off the wire has
  * exactly one option that names it, and there is no second list to keep in step.
  *
  * Requirements: 12.5
  */
 export function createOptionForTier(
-  tier: SkillTierValue,
+  tier: SkillTier,
 ): SkillTierCreateOption {
   return tier;
 }
@@ -220,7 +214,7 @@ export function createOptionForTier(
  *
  * Requirements: 12.9
  */
-export function editOptionForTier(tier: SkillTierValue): SkillTierEditOption {
+export function editOptionForTier(tier: SkillTier): SkillTierEditOption {
   return tier;
 }
 
@@ -261,15 +255,14 @@ export function isSkillTierEditOption(
  * While the default `'do-not-seed'` is selected the result carries **no**
  * `skillTier` property — the property is absent, not `undefined` — so the
  * submitted body omits the tier and the backend applies its default μ. For any
- * other selection the result carries that tier's 0-based code, read from the
- * Enum_Code_Map.
+ * other selection the result carries that tier's Wire_Enum_Name.
  *
  * Pure and total: three named options and one sentinel, no clock, no exception,
  * and the same fragment for the same selection. A fresh object each call, so no
  * caller can mutate a shared one.
  *
  * @param option the current tier selection
- * @returns `{}` while no tier is to be seeded, otherwise `{ skillTier: code }`
+ * @returns `{}` while no tier is to be seeded, otherwise `{ skillTier: name }`
  *
  * Requirements: 12.5, 16.12
  */
@@ -285,7 +278,7 @@ export function skillTierFieldsForCreate(
     return {};
   }
 
-  return { skillTier: codeFromSkillTier(tier) };
+  return { skillTier: tier };
 }
 
 /**
@@ -294,7 +287,7 @@ export function skillTierFieldsForCreate(
  * While the default `'leave-unchanged'` is selected the result is
  * `{ updateSkillTier: false }` with no `skillTier`, so the call conveys that the
  * tier is not to be changed and carries no value that could overwrite it. For any
- * other selection the result is `{ updateSkillTier: true, skillTier: code }`.
+ * other selection the result is `{ updateSkillTier: true, skillTier: name }`.
  *
  * `updateSkillTier` is always present, because the backend reads the flag rather
  * than inferring intent from an absent tier — an omitted flag would be a
@@ -303,7 +296,7 @@ export function skillTierFieldsForCreate(
  * Pure and total, and a fresh object each call.
  *
  * @param option the current tier selection
- * @returns the change flag, and the tier's code only when the flag is set
+ * @returns the change flag, and the tier's name only when the flag is set
  *
  * Requirements: 12.9, 16.12
  */
@@ -318,5 +311,5 @@ export function skillTierFieldsForEdit(
     return { updateSkillTier: false };
   }
 
-  return { updateSkillTier: true, skillTier: codeFromSkillTier(tier) };
+  return { updateSkillTier: true, skillTier: tier };
 }

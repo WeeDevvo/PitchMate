@@ -1,3 +1,4 @@
+using PitchMate.Api;
 using PitchMate.Api.Auth;
 using PitchMate.Api.Auth.Endpoints;
 using PitchMate.Api.Auth.OpenApi;
@@ -7,6 +8,7 @@ using PitchMate.Api.Matches;
 using PitchMate.Api.Matches.Endpoints;
 using PitchMate.Api.Notifications;
 using PitchMate.Api.Notifications.Endpoints;
+using PitchMate.Api.Serialisation;
 using PitchMate.Api.Squads;
 using PitchMate.Api.Squads.Endpoints;
 using PitchMate.Api.Stats;
@@ -22,6 +24,13 @@ builder.Host.UseDefaultServiceProvider((context, options) =>
     options.ValidateOnBuild = true;
     options.ValidateScopes = true;
 });
+
+// Wire JSON contract: every enum crosses the wire as its C# member name, and an integer presented
+// where an enum is expected is rejected at the boundary. Registered before the endpoints are mapped
+// and before AddOpenApi, because the document exporter derives its enum schemas from these same
+// serializer options — one registration governs both the serialised bodies and the emitted schemas
+// (Requirements 4.1-4.5).
+builder.Services.AddWireJsonContract();
 
 // OpenAPI document (consumed to generate the typed TS client in packages/api-client). The auth
 // transformers declare the bearer security scheme and mark which endpoints require it (Requirement 13.7).
@@ -82,9 +91,14 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Basic liveness probe. Real endpoints arrive with feature specs.
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
-   .WithName("HealthCheck");
+// Basic liveness probe. Returns a named transport record rather than an anonymous type, so the probe
+// carries a schematisable body like every other operation (Requirements 7.3, 7.4). The probe runs no
+// use case and has no error seam, so it declares its 200 contract and no problem status at all
+// (Requirements 1.2, 1.4) — and, being anonymous, deliberately declares neither 401 nor 403
+// (Requirement 2.9).
+app.MapGet("/health", () => TypedResults.Ok(new HealthResponse("ok")))
+   .WithName("HealthCheck")
+   .Produces<HealthResponse>(StatusCodes.Status200OK);
 
 // Auth endpoints: public sign-in/registration/verification flows plus the protected
 // linking, account, and GDPR operations (Requirement 13). Each endpoint delegates to an

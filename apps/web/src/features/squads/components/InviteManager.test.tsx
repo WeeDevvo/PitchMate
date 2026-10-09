@@ -67,7 +67,7 @@ const EXPIRED_INVITE_ID = '33333333-3333-4333-8333-333333333333';
 /** An expiring, live invite — the only kind that carries a revoke control. */
 const ACTIVE_INVITE: InviteSummary = {
   inviteId: ACTIVE_INVITE_ID,
-  state: 'active',
+  state: 'Active',
   createdAtMs: Date.UTC(2025, 2, 1, 10, 0, 0),
   createdBy: 'admin',
   expiresAtMs: Date.UTC(2025, 2, 8, 10, 0, 0),
@@ -76,7 +76,7 @@ const ACTIVE_INVITE: InviteSummary = {
 /** A non-expiring invite that has been revoked. Same creation millisecond as… */
 const REVOKED_INVITE: InviteSummary = {
   inviteId: REVOKED_INVITE_ID,
-  state: 'revoked',
+  state: 'Revoked',
   createdAtMs: Date.UTC(2025, 2, 5, 9, 30, 0),
   createdBy: null,
   expiresAtMs: null,
@@ -85,7 +85,7 @@ const REVOKED_INVITE: InviteSummary = {
 /** …this one, so the identity tie-break decides which of the two sorts first. */
 const EXPIRED_INVITE: InviteSummary = {
   inviteId: EXPIRED_INVITE_ID,
-  state: 'expired',
+  state: 'Expired',
   createdAtMs: Date.UTC(2025, 2, 5, 9, 30, 0),
   createdBy: 'admin',
   expiresAtMs: Date.UTC(2025, 2, 6, 9, 30, 0),
@@ -264,10 +264,10 @@ describe('InviteManager — the listing', () => {
         expect(entry.querySelector(INVITE_NEVER_EXPIRES_SELECTOR)).toBeNull();
       }
 
-      // 11.9: a revoke control on the `active` invite, and on neither of the
+      // 11.9: a revoke control on the `Active` invite, and on neither of the
       // others — there is nothing left to revoke.
       const revoke = entry.querySelector(INVITE_REVOKE_SELECTOR);
-      if (summary.state === 'active') {
+      if (summary.state === 'Active') {
         expect(revoke).not.toBeNull();
       } else {
         expect(revoke).toBeNull();

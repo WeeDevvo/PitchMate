@@ -84,17 +84,18 @@ export function unauthenticatedSessionManager(): SessionManager {
 /**
  * An Authenticated_Api_Client stand-in answering every notification call at once.
  *
- * The notifications facade reads the response text and decodes it itself, so the
- * unread-count endpoint answers `0` and the list endpoint an empty array — enough
- * for the frame to render with no call failing and nothing reaching the network.
+ * The notifications facade takes the client's decoded `data`, so this stand-in
+ * supplies decoded bodies as the generated client would: the unread-count
+ * endpoint answers the named `{ count: 0 }` envelope and the list endpoint an
+ * empty array — enough for the frame to render with no call failing and nothing
+ * reaching the network. A `204` carries no body, so `data` is absent.
  */
 export function stubApiClient(): PitchMateApiClient {
-  const ok = (body: unknown) =>
-    Promise.resolve({ data: JSON.stringify(body), response: { status: 200 } });
+  const ok = (body: unknown) => Promise.resolve({ data: body, response: { status: 200 } });
 
   return {
-    GET: (path: string) => ok(path.includes('unread-count') ? 0 : []),
-    POST: () => Promise.resolve({ data: '', response: { status: 204 } }),
+    GET: (path: string) => ok(path.includes('unread-count') ? { count: 0 } : []),
+    POST: () => Promise.resolve({ data: undefined, response: { status: 204 } }),
   } as unknown as PitchMateApiClient;
 }
 
@@ -158,10 +159,9 @@ export const SQUADS_REQUESTS = {
 /**
  * The `ListMySquads` body: one summary for the fixture squad.
  *
- * The enum fields are **numeric codes**, as the backend serialises them today —
- * `3` is the member role and `1` the active membership state in the feature's own
- * `lib/enumCodes.ts`, which is the single place that mapping is declared. A member
- * rather than an owner keeps the Squad_Screen's Admin_Section out of these
+ * The enum fields are **member names**, as the backend serialises them: `Member`
+ * is the role and `Active` the membership state, the C# member name verbatim. A
+ * member rather than an owner keeps the Squad_Screen's Admin_Section out of these
  * routing tests: the administration surface has its own tests, and a caller
  * without Admin_Authority issues no admin call.
  */
@@ -169,8 +169,8 @@ const SQUAD_SUMMARIES_BODY: unknown = [
   {
     squadId: SQUADS_FIXTURE.squadId,
     name: SQUADS_FIXTURE.squadName,
-    role: 3,
-    state: 1,
+    role: 'Member',
+    state: 'Active',
   },
 ];
 
@@ -182,9 +182,11 @@ const SQUAD_DETAIL_BODY: unknown = {
     {
       membershipId: SQUADS_FIXTURE.membershipId,
       displayName: SQUADS_FIXTURE.playerName,
-      role: 3,
-      state: 1,
+      role: 'Member',
+      state: 'Active',
       isGuest: false,
+      appearances: 12,
+      ratingState: 'Established',
     },
   ],
   features: [],
@@ -234,20 +236,26 @@ export interface SquadsApiClientStub {
  * failure, which would make every "this screen resolved here" assertion fail for
  * a reason that has nothing to do with routing.
  *
- * Bodies are handed over as text on `data` with a plain `{ status }` response, the
- * shape {@link stubApiClient} already uses: the transport seam reads a string body
- * itself and decodes it in a guard, and an **empty** body is what the
- * `RedeemInvite` no-op answers with.
+ * Bodies are handed over **already decoded** on `data`, with a plain
+ * `{ status }` response. That is what the real generated client now does: the
+ * squads responses carry a declared content schema, so `openapi-fetch` decodes
+ * the JSON itself and the transport seam takes the typed `data` value rather
+ * than reading and decoding response text. An absent `data` is what a `204` —
+ * and a `200` carrying nothing, the shape a no-op redemption answers with —
+ * looks like from the client.
+ *
+ * The notification endpoints are answered by the same stub and read by the
+ * App_Shell's own seam, which accepts an already-decoded `data` as well as text.
  */
 export function squadsApiClient(): SquadsApiClientStub {
   const requests: string[] = [];
 
   const json = (body: unknown) =>
-    Promise.resolve({ data: JSON.stringify(body), response: { status: 200 } });
+    Promise.resolve({ data: body, response: { status: 200 } });
 
   /** An accepted call carrying no body — the shape a no-op redemption answers with. */
   const accepted = () =>
-    Promise.resolve({ data: '', response: { status: 204 } });
+    Promise.resolve({ data: undefined, response: { status: 204 } });
 
   const answerGet = (path: string) => {
     switch (path) {
@@ -265,7 +273,7 @@ export function squadsApiClient(): SquadsApiClientStub {
         return json([]);
       default:
         // The notification endpoints, exactly as `stubApiClient` answers them.
-        return json(path.includes('unread-count') ? 0 : []);
+        return json(path.includes('unread-count') ? { count: 0 } : []);
     }
   };
 

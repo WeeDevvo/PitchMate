@@ -4,7 +4,7 @@
  * Requirement 20.11 makes those scans part of the product rather than a courtesy
  * check: the rules they enforce are prohibitions and universals over a directory
  * ("every module lives under `features/squads/`", "only `api/squadsApi.ts` names
- * the client", "no numeric enum literal outside `lib/enumCodes.ts`"), and neither
+ * the client", "no numeric enum literal appears anywhere in the feature"), and neither
  * a prohibition nor a universal can be demonstrated by an example. The design
  * settles the mechanism: read each file's text, strip comments and string
  * literals through the same small state machine, and fail naming the offending

@@ -70,11 +70,7 @@ import {
   PLAYER_ROW_SELECTOR,
   type ViewerContext,
 } from './PlayerRow';
-import {
-  codeFromMemberRole,
-  codeFromMembershipState,
-  type MembershipStateValue,
-} from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { parseDisplayRatingLeaderboard } from '../lib/parse/leaderboard';
 import { parseSquadDetail } from '../lib/parse/squadDetail';
 import {
@@ -101,8 +97,8 @@ const MEMBERSHIP_STATE_ATTRIBUTE = 'data-membership-state';
 const baseCollator = new Intl.Collator(undefined, { sensitivity: 'base' });
 
 /** Active memberships sort first (Requirement 7.4). */
-const stateRank = (state: MembershipStateValue): 0 | 1 =>
-  state === 'active' ? 0 : 1;
+const stateRank = (state: MembershipState): 0 | 1 =>
+  state === 'Active' ? 0 : 1;
 
 /**
  * Requirement 7.4 written out key by key: active before inactive, then display
@@ -139,23 +135,23 @@ function expectedIdentityOrder(rows: readonly PlayerListRow[]): readonly string[
 // --- Generators --------------------------------------------------------------
 
 /**
- * How a `members` element carries its Member_Role: as a code, as `null`, or not at
- * all. The codes come from the Enum_Code_Map, the only module in the feature —
- * tests included — allowed to write a numeric enum literal (Requirement 16.7).
+ * How a `members` element carries its Member_Role: as a Wire_Enum_Name, as
+ * `null`, or not at all. The names come from the Generated_Enum_Union, so no
+ * numeric enum literal appears here (Requirement 12.8).
  */
-type RoleField = number | null | 'absent';
+type RoleField = SquadRole | null | 'absent';
 
 const roleFieldArb: fc.Arbitrary<RoleField> = fc.constantFrom(
-  codeFromMemberRole('owner'),
-  codeFromMemberRole('admin'),
-  codeFromMemberRole('member'),
+  'Owner',
+  'Admin',
+  'Member',
   null,
   'absent' as const,
 );
 
-const stateArb: fc.Arbitrary<MembershipStateValue> = fc.constantFrom(
-  'active' as const,
-  'inactive' as const,
+const stateArb: fc.Arbitrary<MembershipState> = fc.constantFrom(
+  'Active' as const,
+  'Inactive' as const,
 );
 
 /**
@@ -220,7 +216,7 @@ const identityArb: fc.Arbitrary<string> = fc.oneof(
 interface MemberCase {
   readonly displayName: string;
   readonly role: RoleField;
-  readonly state: MembershipStateValue;
+  readonly state: MembershipState;
   readonly isGuest: boolean;
   /** Whether the leaderboard, if obtained, carries an entry for this membership. */
   readonly hasRating: boolean;
@@ -280,9 +276,11 @@ const largeCollectionArb: fc.Arbitrary<readonly IdentifiedMemberCase[]> = fc
     identities.map((membershipId, index) => ({
       membershipId,
       displayName: ['dave', 'Dave', 'DAVE', 'Former player', 'sám'][index % 5],
-      role: (index % 4 === 0 ? null : codeFromMemberRole('member')) as RoleField,
-      state: (index % 3 === 0 ? 'inactive' : 'active') as MembershipStateValue,
+      role: (index % 4 === 0 ? null : 'Member') as RoleField,
+      state: (index % 3 === 0 ? 'Inactive' : 'Active') as MembershipState,
       isGuest: index % 4 === 0,
+      appearances: 12,
+      ratingState: 'Established',
       hasRating: index % 2 === 0,
     })),
   );
@@ -326,8 +324,10 @@ function memberBodyOf(memberCase: IdentifiedMemberCase): Record<string, unknown>
   const body: Record<string, unknown> = {
     membershipId: memberCase.membershipId,
     displayName: memberCase.displayName,
-    state: codeFromMembershipState(memberCase.state),
+    state: memberCase.state,
     isGuest: memberCase.isGuest,
+    appearances: 12,
+    ratingState: 'Established',
   };
 
   if (memberCase.role !== 'absent') {
@@ -469,14 +469,14 @@ function expectRenderedSetMatchesInput(
  * each row rather than from the model, so the claim is about the document.
  */
 function expectActiveRowsRenderFirst(rendered: readonly RenderedRow[]): void {
-  const firstInactive = rendered.findIndex((row) => row.state === 'inactive');
+  const firstInactive = rendered.findIndex((row) => row.state === 'Inactive');
 
   if (firstInactive < 0) {
     return;
   }
 
   for (const row of rendered.slice(firstInactive)) {
-    expect(row.state).toBe('inactive');
+    expect(row.state).toBe('Inactive');
   }
 }
 

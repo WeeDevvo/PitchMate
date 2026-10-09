@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
-import { SQUAD_FEATURE_CODES, squadFeatureFromCode } from '../enumCodes';
+import { SQUAD_FEATURE_NAMES, isSquadFeature } from '../wireEnums';
 import type { ParseResult } from './primitives';
 import {
   parseFeatureFlag,
@@ -17,9 +17,10 @@ import {
  * This file carries **Property 35** for `featureFlags.ts`: for any value supplied
  * as a response body — absent, `null`, a primitive of every type, an array, an
  * object with each required field missing, an object with each field mistyped, an
- * enum field carrying a code the Enum_Code_Map does not name, and a value nested a
- * hundred levels deep — both parsers yield exactly one of a fully populated value
- * and a parse failure, and raise nothing (16.4, 16.6).
+ * enum field carrying a value that names no member of the Generated_Enum_Union,
+ * and a value nested a hundred levels deep — both parsers yield exactly one of a
+ * fully populated value and a parse failure, and raise nothing (12.6, 12.8, 16.4,
+ * 16.6).
  *
  * The module serves two operations — `GetFeatureFlags` and the `features` property
  * of `GetSquad` — so what holds here holds for the Squad_Screen's initial toggle
@@ -27,11 +28,12 @@ import {
  *
  * Two facts of this shape shape the assertions.
  *
- * **The table has one entry.** `SquadFeature` names only `1`, which makes the
- * out-of-range space unusually wide and unusually easy to get wrong: `0` and `2`
- * are both near misses, and `0` is exactly what a 0-based misreading would name.
- * The generator below feeds both, along with `3` — the code the task names for
- * `SkillTier`, which is out of range for this table too.
+ * **The union has one member.** `SquadFeature` names only `LiveMatchTracking`,
+ * which makes the rejected space unusually wide: every numeric code the previous
+ * contract sent for this field (`1` above all), every case variation of the one
+ * name, and every other string. The generator below feeds all three kinds, so the
+ * reading is pinned to the exact generated vocabulary (12.8) rather than to
+ * anything that merely resembles it.
  *
  * **A duplicated feature is not a failure.** Unlike a leaderboard, where two
  * entries for one membership make a rating ambiguous, a repeated flag decides
@@ -190,15 +192,21 @@ const deeplyNestedArb: fc.Arbitrary<unknown> = fc
   .map(([leaf, depth]) => nest(leaf, depth));
 
 /**
- * Values no Feature_Flag code names.
+ * Values that name no member of the `SquadFeature` union.
  *
- * `0` is the near miss a 0-based misreading would name and `2` the one an
- * additional feature would occupy; `3` is the code the task names for `SkillTier`,
- * out of range here as well. `null` and an absence belong here rather than in the
- * well-formed generator: unlike a squad summary's role, a feature is required, so
- * an absent one is a contract mismatch (16.6).
+ * Three kinds matter. **The numbers**: `1` is what the previous contract sent for
+ * this very field, so accepting it would make the migration a half-measure, and
+ * `0`, `2` and `3` are the near misses a code table could drift onto.
+ * **The case variations**: a name is compared exactly, so `'livematchtracking'`
+ * and `'LIVEMATCHTRACKING'` are not the feature. **The old parsed vocabulary**:
+ * `'live-match-tracking'` was this feature's own internal name and is not the
+ * contract's.
+ *
+ * `null` and an absence belong here rather than in the well-formed generator:
+ * unlike a squad summary's role, a feature is required, so an absent one is a
+ * contract mismatch (16.6).
  */
-const unnamedFeatureCodeArb: fc.Arbitrary<unknown> = fc.oneof(
+const unnamedFeatureArb: fc.Arbitrary<unknown> = fc.oneof(
   {
     weight: 5,
     arbitrary: fc.constantFrom<unknown>(
@@ -206,6 +214,7 @@ const unnamedFeatureCodeArb: fc.Arbitrary<unknown> = fc.oneof(
       null,
       0,
       -0,
+      1,
       2,
       3,
       4,
@@ -216,16 +225,21 @@ const unnamedFeatureCodeArb: fc.Arbitrary<unknown> = fc.oneof(
       Number.POSITIVE_INFINITY,
       '1',
       'live-match-tracking',
+      'livematchtracking',
+      'LIVEMATCHTRACKING',
+      'Live-Match-Tracking',
+      ' LiveMatchTracking',
+      'LiveMatchTracking ',
       true,
       false,
-      [1],
-      { feature: 1 },
+      ['LiveMatchTracking'],
+      { feature: 'LiveMatchTracking' },
       1n,
     ),
   },
   {
     weight: 2,
-    arbitrary: anyBodyArb.filter((value) => squadFeatureFromCode(value) === undefined),
+    arbitrary: anyBodyArb.filter((value) => !isSquadFeature(value)),
   },
 );
 
@@ -264,17 +278,15 @@ const notABooleanArb: fc.Arbitrary<unknown> = fc.oneof(
 /* Well-formed bodies, and what a populated value must look like              */
 /* -------------------------------------------------------------------------- */
 
-/** The one named code the Enum_Code_Map carries for this table. */
-const NAMED_FEATURE_CODES: readonly number[] = Object.keys(SQUAD_FEATURE_CODES).map(
-  Number,
-);
+/**
+ * The feature names the contract carries, read from the feature's single
+ * declaration of the union rather than restated here (12.2, 12.8).
+ */
+const FEATURE_NAMES: readonly string[] = SQUAD_FEATURE_NAMES;
 
-/** The feature names the Enum_Code_Map carries, read from the map itself. */
-const FEATURE_NAMES: readonly string[] = Object.values(SQUAD_FEATURE_CODES);
-
-/** A well-formed Feature_Flag element. */
+/** A well-formed Feature_Flag element, carrying the feature as its member name. */
 const wellFormedFlagArb: fc.Arbitrary<Record<string, unknown>> = fc.record({
-  feature: fc.constantFrom(...NAMED_FEATURE_CODES),
+  feature: fc.constantFrom(...SQUAD_FEATURE_NAMES),
   isEnabled: fc.boolean(),
 });
 
@@ -378,7 +390,9 @@ describe('parseFeatureFlag — total, and never partial', () => {
         expect(outcome.ok).toBe(true);
 
         if (outcome.ok) {
-          expect(outcome.value.feature).toBe(squadFeatureFromCode(body.feature));
+          // 12.8: the name arrives unchanged — nothing is coerced, case-folded,
+          // or mapped through a second vocabulary.
+          expect(outcome.value.feature).toBe(body.feature);
           expect(outcome.value.isEnabled).toBe(body.isEnabled);
         }
       }),
@@ -402,16 +416,16 @@ describe('parseFeatureFlag — total, and never partial', () => {
     );
   });
 
-  it('fails when the feature code names nothing, 0 and 2 and 3 included', () => {
+  it('fails when the feature names no member, the old numeric code included', () => {
     fc.assert(
-      fc.property(fc.boolean(), unnamedFeatureCodeArb, (isEnabled, feature) => {
+      fc.property(fc.boolean(), unnamedFeatureArb, (isEnabled, feature) => {
         const outcome = settle(
           () => parseFeatureFlag({ feature, isEnabled }),
           isFullyPopulatedFlag,
         );
 
-        // 16.6: an unnamed feature has no label, so rendering it would mean an
-        // unnamed toggle and dropping it would shorten the admin surface.
+        // 12.7, 16.6: an unnamed feature has no label, so rendering it would mean
+        // an unnamed toggle and dropping it would shorten the admin surface.
         expect(outcome.ok).toBe(false);
       }),
       { numRuns: 500 },
@@ -421,7 +435,7 @@ describe('parseFeatureFlag — total, and never partial', () => {
   it('fails when the state is not a boolean', () => {
     fc.assert(
       fc.property(
-        fc.constantFrom(...NAMED_FEATURE_CODES),
+        fc.constantFrom(...SQUAD_FEATURE_NAMES),
         notABooleanArb,
         (feature, isEnabled) => {
           const outcome = settle(
@@ -527,7 +541,7 @@ describe('parseFeatureFlags — total, and complete or failed', () => {
   it('carries a repeated feature rather than failing on it', () => {
     fc.assert(
       fc.property(
-        fc.constantFrom(...NAMED_FEATURE_CODES),
+        fc.constantFrom(...SQUAD_FEATURE_NAMES),
         fc.array(fc.boolean(), { minLength: 2, maxLength: 6 }),
         (feature, states) => {
           const outcome = settle(

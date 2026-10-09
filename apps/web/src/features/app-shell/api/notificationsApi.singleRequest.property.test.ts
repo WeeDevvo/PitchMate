@@ -171,7 +171,17 @@ const identityArb: fc.Arbitrary<string> = fc.uuid();
 /** A wire notification the pure parser accepts, so the success arm is reachable. */
 const notificationWireArb = fc.record({
   notificationId: identityArb,
-  type: fc.integer({ min: 0, max: 7 }),
+  // Both enum-valued members cross the wire as names (Requirement 12.8).
+  type: fc.constantFrom(
+    'MemberJoined',
+    'PromotedToAdmin',
+    'RemovedFromSquad',
+    'OwnershipTransferred',
+    'MatchDrafted',
+    'MatchConfirmed',
+    'TeamsRolled',
+    'ResultPosted',
+  ),
   squadId: identityArb,
   title: fc.string({ minLength: 1, maxLength: 40 }),
   body: fc.string({ maxLength: 60 }),
@@ -182,13 +192,15 @@ const notificationWireArb = fc.record({
       noInvalidDate: true,
     })
     .map((instant) => instant.toISOString()),
-  readState: fc.integer({ min: 0, max: 1 }),
+  readState: fc.constantFrom('Unread', 'Read'),
 });
 
 /**
- * Response bodies spanning both interpretations the facade attempts and the
- * shapes neither parser accepts, so the parse-failure arm is sampled as densely
- * as the success arm.
+ * Decoded response bodies — what the generated client hands back as `data`
+ * (Requirement 12.12) — spanning the shapes each parser accepts and the shapes
+ * none of them does, so the parse-failure arm is sampled as densely as the
+ * success arm. The bare number is the previous contract's wire form, now a
+ * parse failure; the two named envelopes are the current one.
  */
 const responseBodyArb: fc.Arbitrary<unknown> = fc.oneof(
   fc.array(notificationWireArb, { maxLength: 3 }),
@@ -197,6 +209,7 @@ const responseBodyArb: fc.Arbitrary<unknown> = fc.oneof(
   fc.constant(null),
   fc.constant('not json at all'),
   fc.record({ count: fc.nat() }),
+  fc.record({ markedCount: fc.nat() }),
   fc.integer({ min: -50, max: -1 }),
   fc.double({ min: 0.5, max: 9.5, noNaN: true }),
 );

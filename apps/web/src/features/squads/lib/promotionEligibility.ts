@@ -18,15 +18,15 @@
  * | Excluded case (13.2)                | Conjunct that rejects it            |
  * | ----------------------------------- | ----------------------------------- |
  * | caller holds no Admin_Authority     | `viewerHasAdminAuthority`           |
- * | Membership_State is inactive        | `state === 'active'`                |
+ * | Membership_State is inactive        | `state === 'Active'`                |
  * | Guest_Flag is set                   | `!member.isGuest`                   |
- * | Member_Role is owner or admin       | `role === 'member'`                 |
+ * | Member_Role is owner or admin       | `role === 'Member'`                 |
  * | Anonymised_Placeholder display name | `!isAnonymisedPlaceholder(…)`       |
  * | the caller's own membership         | `membershipId !== viewerMembershipId` |
  *
  * Three of those conjuncts are less obvious than they look:
  *
- * - **`role === 'member'` is a positive test, not "not owner and not admin".**
+ * - **`role === 'Member'` is a positive test, not "not owner and not admin".**
  *   A guest carries no role at all — `null` (Requirement 16.8) — and a positive
  *   test rejects it without relying on the guest flag, so a guest is excluded
  *   twice over rather than by one branch that could be removed. The same test
@@ -71,7 +71,7 @@ import { isAnonymisedPlaceholder } from './playerList';
  * Whether a Player_Row offers the Promotion_Control for this Squad_Member.
  *
  * The accepted set is exactly: the caller holds Admin_Authority, and the member
- * is an active, non-guest membership whose role is `member`, whose display name
+ * is an active, non-guest membership whose role is `Member`, whose display name
  * is not the Anonymised_Placeholder, and whose membership identity is not the
  * caller's own (Requirements 13.1, 13.2).
  *
@@ -104,7 +104,7 @@ export function isPromotable(
 
   // 13.2: an inactive membership is not promoted. It keeps its role for history
   // and replay, so the state is checked in its own right.
-  if (member.state !== 'active') {
+  if (member.state !== 'Active') {
     return false;
   }
 
@@ -116,7 +116,7 @@ export function isPromotable(
   // 13.1: promotion applies to a plain member. A positive test also rejects an
   // owner, an admin, a guest's absent role, and any role this feature does not
   // yet name.
-  if (member.role !== 'member') {
+  if (member.role !== 'Member') {
     return false;
   }
 

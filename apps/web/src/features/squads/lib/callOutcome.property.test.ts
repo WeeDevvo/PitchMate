@@ -234,20 +234,25 @@ const REASON_BY_PROBLEM_CODE: ReadonlyMap<string, RejectionReason> = new Map([
   ['UnsupportedStatistic', 'validation'],
   ['OwnerConstraint', 'conflict'],
   ['ClaimNotEligible', 'conflict'],
+  ['AlreadyMember', 'conflict'],
   ['SquadPendingDeletion', 'conflict'],
   ['ConcurrencyConflict', 'conflict'],
 ]);
 
 /**
  * The backend codes that deliberately name no reason: the first two are answered
- * as `403`/`404` and the third as a `200` no-op, and the last two belong to
- * statuses that are not rejections at all. Each must fall back to the status
- * default rather than being guessed at.
+ * as `403`/`404`, and the last two belong to statuses that are not rejections at
+ * all. Each must fall back to the status default rather than being guessed at.
+ *
+ * `AlreadyMember` is **not** among them any more. It was, while the seam answered
+ * that code with a bodiless `200`; it is now a `409` with a problem body
+ * (api-response-contracts Requirements 6.1, 6.2), so it names a `conflict` in the
+ * table above and the dedicated Property 12 suite at the foot of this file states
+ * the consequence.
  */
 const UNNAMED_BACKEND_CODES: readonly string[] = [
   'Unauthorized',
   'NotAMember',
-  'AlreadyMember',
   'NotFound',
   'ComputationFailed',
 ];
@@ -932,5 +937,138 @@ describe('classifyOutcome — total, pure, and reproducible', () => {
       }),
       { numRuns: 500 },
     );
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* The web conjunct of Property 12                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The problem codes a guest-claim initiation or completion can answer a `409`
+ * with, read from `InitiateGuestClaimHandler` and `CompleteGuestClaimHandler`.
+ *
+ * Both reject "the target user already holds a membership" as `AlreadyMember`
+ * and every other precondition — a non-guest target, a target outside the squad,
+ * a claim with no recorded consent — as `ClaimNotEligible`. `null` is generated
+ * alongside them for the body that carries no `code` extension at all, because a
+ * rejection has to present as a rejection whether or not the code reaches the
+ * classifier.
+ */
+const guestClaimConflictCodeArb: fc.Arbitrary<string | null> = fc.oneof(
+  { weight: 6, arbitrary: fc.constant('AlreadyMember') },
+  { weight: 3, arbitrary: fc.constant('ClaimNotEligible') },
+  { weight: 1, arbitrary: fc.constant(null) },
+);
+
+/**
+ * The three outcomes a screen renders as the Generic_Squads_Failure — the ones a
+ * guest-claim `409` must *not* land in.
+ */
+const GENERIC_FAILURE_KINDS: readonly string[] = [
+  'transport-failure',
+  'timeout',
+  'parse-failure',
+];
+
+// Feature: api-response-contracts, Property 12: Already-member is a rejection on
+// both sides of the wire — the web conjunct. The backend conjunct (the `409` and
+// the problem body) is claimed by `SquadErrorResultsProperties`.
+// Validates: Requirements 6.6
+describe('classifyOutcome — a guest-claim 409 is a rejected input', () => {
+  it('yields rejected-input with the conflict reason, for any guest-claim 409', () => {
+    fc.assert(
+      fc.property(
+        guestClaimConflictCodeArb,
+        fc.boolean(),
+        (problemCode, parsed) => {
+          // 6.6: the whole of the web conjunct. A `409` from a claim initiation
+          // or completion is the feature's rejected-input outcome — named from
+          // the code when the body carried one, and from the status when it did
+          // not — rather than anything a screen renders as a generic failure.
+          const outcome = classifyOutcome({
+            status: 409,
+            timedOut: false,
+            problemCode,
+            parsed,
+          });
+
+          expect(outcome).toEqual({ kind: 'rejected-input', reason: 'conflict' });
+          expect(GENERIC_FAILURE_KINDS).not.toContain(outcome.kind);
+          expect(acceptingShapes(outcome)).toHaveLength(1);
+        },
+      ),
+      { numRuns: 500 },
+    );
+  });
+
+  it('names the reason from the AlreadyMember code itself, not from the status alone', () => {
+    // The status default is `conflict` too, so the assertion above would pass
+    // with the code unmapped. This states the stronger fact — the table names it
+    // — by removing the status's contribution: on a `400`, only the code can
+    // produce `conflict`.
+    expect(
+      classifyOutcome({
+        status: 400,
+        timedOut: false,
+        problemCode: 'AlreadyMember',
+        parsed: false,
+      }),
+    ).toEqual({ kind: 'rejected-input', reason: 'conflict' });
+
+    expect(REASON_BY_PROBLEM_CODE.get('AlreadyMember')).toBe('conflict');
+    expect(UNNAMED_BACKEND_CODES).not.toContain('AlreadyMember');
+  });
+
+  it('carries no status, no code, and no backend wording onto the outcome', () => {
+    fc.assert(
+      fc.property(
+        guestClaimConflictCodeArb,
+        backendTextArb,
+        backendTextArb,
+        (problemCode, detail, title) => {
+          // 17.2 still holds for the corrected status: the rejection carries a
+          // reason this feature declares and nothing of the `409` that produced
+          // it — not the number, not the code, not the backend's sentence.
+          const outcome = classifyOutcome(
+            withProblemBody(
+              { status: 409, timedOut: false, problemCode, parsed: false },
+              {
+                detail,
+                title,
+                status: 409,
+                code: problemCode,
+                instance: '/squads/9c1e-4b2a/claims',
+              },
+            ),
+          );
+          const serialised = JSON.stringify(outcome);
+
+          expect(Object.keys(outcome).sort()).toEqual(['kind', 'reason']);
+          expect(serialised).not.toContain('409');
+          expect(serialised).not.toContain('AlreadyMember');
+          expect(serialised).not.toContain(detail);
+          expect(serialised).not.toContain(title);
+        },
+      ),
+      { numRuns: 500 },
+    );
+  });
+
+  it('would have fallen through to a generic failure under the retired bodiless 200', () => {
+    // Why the correction mattered on this side of the wire. The seam used to
+    // answer `AlreadyMember` with a bodiless `200`, which reaches a parser with
+    // no body and settles as a parse failure — one of the three kinds a screen
+    // renders as the Generic_Squads_Failure, and indistinguishable from a
+    // dropped network. The `409` is what makes the rejection presentable.
+    const underTheOldStatus = classifyOutcome({
+      status: 200,
+      timedOut: false,
+      problemCode: 'AlreadyMember',
+      parsed: false,
+    });
+
+    expect(underTheOldStatus).toEqual({ kind: 'parse-failure' });
+    expect(GENERIC_FAILURE_KINDS).toContain(underTheOldStatus.kind);
   });
 });

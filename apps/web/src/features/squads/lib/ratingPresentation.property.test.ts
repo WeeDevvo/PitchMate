@@ -6,7 +6,7 @@ import {
   selectRatingPresentation,
   type RatingPresentation,
 } from './ratingPresentation';
-import type { MemberRole, MembershipStateValue } from './enumCodes';
+import type { MembershipState, SquadRole } from './wireEnums';
 import type {
   DisplayRatingEntry,
   DisplayRatingLeaderboard,
@@ -75,17 +75,17 @@ import type { SquadMember } from './parse/squadDetail';
 // --- the input space ---------------------------------------------------------
 
 /** Every Member_Role a Squad_Member can carry, plus the guest's absence. */
-const roleArb: fc.Arbitrary<MemberRole | null> = fc.constantFrom(
-  'owner' as const,
-  'admin' as const,
-  'member' as const,
+const roleArb: fc.Arbitrary<SquadRole | null> = fc.constantFrom(
+  'Owner' as const,
+  'Admin' as const,
+  'Member' as const,
   null,
 );
 
 /** Both Membership_States; a parsed Squad_Member always carries one. */
-const stateArb: fc.Arbitrary<MembershipStateValue> = fc.constantFrom(
-  'active' as const,
-  'inactive' as const,
+const stateArb: fc.Arbitrary<MembershipState> = fc.constantFrom(
+  'Active' as const,
+  'Inactive' as const,
 );
 
 /** A display name, including the empty string and a case-varying family. */
@@ -102,6 +102,8 @@ function memberWithIdentity(membershipId: string): fc.Arbitrary<SquadMember> {
     role: roleArb,
     state: stateArb,
     isGuest: fc.boolean(),
+    appearances: fc.nat({ max: 200 }),
+    ratingState: fc.constantFrom('Provisional' as const, 'Established' as const, null),
   });
 }
 

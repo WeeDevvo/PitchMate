@@ -22,7 +22,8 @@
  *
  * | Rule | Requirement |
  * |---|---|
- * | Only `api/squadsApi.ts` names `@pitchmate/api-client`, and `api/` holds it alone | 16.1, 18.3 |
+ * | Only `api/squadsApi.ts` names `@pitchmate/api-client` as a *value*, and `api/` holds it alone | 16.1, 18.3 |
+ * | `lib/wireEnums.ts` may name it type-only, and nothing else may | 16.1, 18.3, 12.2 |
  * | No bare transport — `fetch`, `XMLHttpRequest`, `WebSocket`, … — anywhere in the feature | 16.1 |
  * | No Api_Client method call, endpoint path, or HTTP method literal outside the facade | 16.1, 18.3 |
  * | No Api_Client construction in the feature; the injected client is used | 16.2 |
@@ -47,6 +48,17 @@
  * generated client, so the "only one module names it" rule is a restriction and
  * not an accident of nobody using one; and the feature's tests *do* name it, so
  * the production scoping is a real exemption covering real code.
+ *
+ * ### The one type-only holdout
+ *
+ * `lib/wireEnums.ts` names the package too, and may: `api-response-contracts`
+ * Requirement 12.2 has each named enum union expressed as an alias over
+ * `components['schemas'][…]`, which only the generated package declares. The
+ * holdout is admitted as the **erased** form alone — its import is asserted to be
+ * `import type`, which compiles to no import at all — so what 16.1 and 18.3 are
+ * about is untouched: that module holds no client, calls no method, names no
+ * endpoint path, and cannot issue a request. A *value* import of the package
+ * remains the facade's alone, which is the rule the assertions below now state.
  *
  * The one rule that runs over the *whole* feature, tests included, is the
  * `testing/` harness's membership of the production set: a harness sits in the
@@ -127,6 +139,16 @@ function featureRel(path: string): string {
 /** An import of the generated typed client, root specifier or any sub-path. */
 const API_CLIENT_SPECIFIER = /['"]@pitchmate\/api-client(?:\/[^'"]*)?['"]/;
 
+/**
+ * The one module admitted to name the package type-only (Requirement 12.2): the
+ * wire enum unions, which alias `components['schemas'][…]`.
+ */
+const WIRE_ENUMS_MODULE = 'lib/wireEnums.ts';
+
+/** A *value* import of the generated client — the thing that reaches its factory. */
+const API_CLIENT_VALUE_IMPORT =
+  /^\s*import\s+(?!type\b)[^;]*?from\s*['"]@pitchmate\/api-client(?:\/[^'"]*)?['"]/m;
+
 /** The six generated request bodies this feature sends (Requirement 16.11). */
 const GENERATED_REQUEST_TYPES = [
   'CreateSquadRequest',
@@ -174,12 +196,41 @@ describe('the transport scan sees the Squads_Feature and its seam', () => {
 // ---------------------------------------------------------------------------
 
 describe('only api/squadsApi.ts names the Api_Client (Requirements 16.1, 18.3)', () => {
-  it('names the generated client in exactly that one production module', () => {
+  it('names the generated client in exactly the facade and the wire enums', () => {
     const naming = featureModules
       .filter((file) => API_CLIENT_SPECIFIER.test(readWithoutComments(file)))
       .map(featureRel);
 
-    expect(naming).toEqual([TRANSPORT_MODULE]);
+    expect(naming.sort()).toEqual([WIRE_ENUMS_MODULE, TRANSPORT_MODULE].sort());
+  });
+
+  it('makes no value import of it anywhere in the feature (Requirement 16.2)', () => {
+    // Neither module reaches the package's factory: both imports are type-only,
+    // so no production module of this feature can construct a client at all. The
+    // facade is handed one.
+    const valueImporters = featureModules
+      .filter((file) => API_CLIENT_VALUE_IMPORT.test(readWithoutComments(file)))
+      .map(featureRel);
+
+    expect(valueImporters).toEqual([]);
+  });
+
+  it('lets the wire enums name the schema table and nothing else (12.2)', () => {
+    // What separates the holdout from a second seam is *which* name it takes. It
+    // imports the generated schema table, type-only, and no client type — so it
+    // has nothing to call a method on. The rules below pin the rest: no endpoint
+    // path, no HTTP method literal, no client method call outside the facade.
+    const wireEnumsCode = readWithoutComments(
+      join(squadsRoot, 'lib', 'wireEnums.ts'),
+    );
+
+    expect(wireEnumsCode).toMatch(API_CLIENT_SPECIFIER);
+    expect(wireEnumsCode).not.toMatch(API_CLIENT_VALUE_IMPORT);
+    expect(wireEnumsCode).toMatch(
+      /import\s+type\s*\{\s*components\s*,?\s*\}\s*from\s*['"]@pitchmate\/api-client['"]/,
+    );
+    expect(wireEnumsCode).not.toMatch(/\bPitchMateApiClient\b/);
+    expect(wireEnumsCode).not.toMatch(/\bcreateApiClient\b/);
   });
 
   it('holds the whole transport directory in that one production module', () => {

@@ -412,10 +412,10 @@ const submittableNameArb: fc.Arbitrary<string> = fc
   )
   .map(([head, rest]) => `${head}${rest}`);
 
-/** The one Feature_Flag the Enum_Code_Map names, switched either way. */
+/** The one Feature_Flag the Generated_Enum_Union names, switched either way. */
 const featuresArb: fc.Arbitrary<readonly FeatureFlag[]> = fc
   .boolean()
-  .map((isEnabled) => [{ feature: 'live-match-tracking', isEnabled }] as const);
+  .map((isEnabled) => [{ feature: 'LiveMatchTracking', isEnabled }] as const);
 
 const fixtureArb: fc.Arbitrary<Fixture> = fc
   .record({
@@ -429,8 +429,8 @@ const fixtureArb: fc.Arbitrary<Fixture> = fc
     memberName: submittableNameArb,
     // The parsed collections carry arbitrary display names, blank ones included.
     otherMemberName: nameArb,
-    role: fc.constantFrom('owner' as const, 'admin' as const, 'member' as const),
-    state: fc.constantFrom('active' as const, 'inactive' as const),
+    role: fc.constantFrom('Owner' as const, 'Admin' as const, 'Member' as const),
+    state: fc.constantFrom('Active' as const, 'Inactive' as const),
     features: featuresArb,
     ratingValue: fc.integer({ min: -2000, max: 3000 }),
     createdAtMs: fc.integer({ min: 0, max: 4_000_000_000_000 }),
@@ -443,13 +443,17 @@ const fixtureArb: fc.Arbitrary<Fixture> = fc
         role: raw.role,
         state: raw.state,
         isGuest: false,
+        appearances: 12,
+        ratingState: 'Established',
       },
       {
         membershipId: raw.otherMembershipId,
         displayName: raw.otherMemberName,
         role: null,
-        state: 'active',
+        state: 'Active',
         isGuest: true,
+        appearances: 12,
+        ratingState: 'Established',
       },
     ];
 
@@ -486,7 +490,7 @@ const fixtureArb: fc.Arbitrary<Fixture> = fc
       invites: [
         {
           inviteId: raw.inviteId,
-          state: 'active' as const,
+          state: 'Active' as const,
           createdAtMs: raw.createdAtMs,
           createdBy: null,
           expiresAtMs: null,
@@ -1197,20 +1201,20 @@ const OPERATIONS: readonly OperationCase[] = [
         view.result.current;
 
       act(() => {
-        machine().setEnabled('live-match-tracking', true);
+        machine().setEnabled('LiveMatchTracking', true);
       });
       await flush();
 
       return {
         ...observeGenericFailure(machine().outcome?.kind === 'failed', () => {
-          machine().setEnabled('live-match-tracking', true);
+          machine().setEnabled('LiveMatchTracking', true);
         }),
         // 14.7: no optimistic state outlives the call — `flags` holds only a
         // backend-supplied collection, and no read supplied one here.
         retainedUnchanged:
           refreshes.length === 0 &&
           machine().flags === null &&
-          !machine().isPending('live-match-tracking'),
+          !machine().isPending('LiveMatchTracking'),
         calls: () => transport.count('setFeatureFlag'),
       };
     },

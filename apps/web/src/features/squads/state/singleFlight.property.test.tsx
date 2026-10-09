@@ -69,7 +69,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { HOME_ROUTE } from '../../app-shell';
 import { AuthProvider, type SessionManager } from '../../auth';
 import type { CallResult, SquadsApi } from '../api/squadsApi';
-import type { SquadFeatureValue } from '../lib/enumCodes';
+import type { SquadFeature } from '../lib/wireEnums';
 import {
   CREATE_SQUAD_HEADING,
   CREATE_SQUAD_SUBMIT_LABEL,
@@ -143,11 +143,11 @@ const CREATED_SQUAD_ID = '4e5f6071-8293-4a4b-85c6-d7e8f9012345';
 const GUEST_MEMBERSHIP_ID = '5f607182-93a4-4b5c-86d7-e8f901234567';
 
 /**
- * The one Squad_Feature the Enum_Code_Map names, so every repeat of the
+ * The one Squad_Feature the Generated_Enum_Union names, so every repeat of the
  * set-feature-flag activation targets the same Feature_Flag by construction —
  * which is the form Requirement 14.4 states the guard in.
  */
-const FEATURE: SquadFeatureValue = 'live-match-tracking';
+const FEATURE: SquadFeature = 'LiveMatchTracking';
 
 /** The Invite_Secret the Invite_Landing_Route subject renders a path for. */
 const LANDING_SECRET = 'abcdef123456';
@@ -696,7 +696,7 @@ async function startSubject(scenario: Scenario): Promise<SingleFlightDriver> {
       const { record, recorder, settle } = createRecorder<Redemption>(
         outcomeFor(scenario.outcome, {
           membershipId: MEMBERSHIP_ID,
-          outcome: 'joined',
+          outcome: 'Joined',
           squadId: null,
         }),
       );
@@ -723,7 +723,7 @@ async function startSubject(scenario: Scenario): Promise<SingleFlightDriver> {
       const { record, recorder, settle } = createRecorder<Redemption>(
         outcomeFor(scenario.outcome, {
           membershipId: MEMBERSHIP_ID,
-          outcome: 'joined',
+          outcome: 'Joined',
           squadId: null,
         }),
       );

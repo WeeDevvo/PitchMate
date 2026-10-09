@@ -116,14 +116,14 @@ const REDEEM_INVITE_COMMAND: RedeemInviteRequest = {
 const GENERATE_INVITE_COMMAND: GenerateInviteRequest = { nonExpiring: true };
 const CREATE_GUEST_COMMAND: CreateGuestRequest = {
   displayName: 'BigDave',
-  skillTier: 1,
+  skillTier: 'Average',
   lawfulBasisAcknowledged: true,
 };
 const EDIT_GUEST_COMMAND: EditGuestRequest = {
   displayName: 'Big Dave',
   updateSkillTier: false,
 };
-const SET_FEATURE_FLAG_COMMAND: SetFeatureFlagRequest = { feature: 1, enabled: true };
+const SET_FEATURE_FLAG_COMMAND: SetFeatureFlagRequest = { feature: 'LiveMatchTracking', enabled: true };
 
 /** The seven kinds a settled call may report — used only to prove it settled. */
 const CALL_OUTCOME_KINDS: readonly string[] = [

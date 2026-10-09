@@ -22,11 +22,19 @@
  *    references a DOM/BOM global (`window`, `document`, `localStorage`, …) or a
  *    DOM type (`HTMLElement`, `Event`, `Node`, …), so every one of them is
  *    testable without a browser.
- * 3. **Nothing from the transport** (Requirements 14.16, 15.5). No such module
- *    imports `@pitchmate/api-client` or any sub-path of it, so the pure logic is
- *    verifiable without a transport. This is the criterion `lib/destinations.ts`
- *    carries the *value* of `DEFAULT_AUTHENTICATED_ROUTE` for rather than
- *    importing it: the Auth_Feature barrel transitively carries the client.
+ * 3. **Nothing from the transport, bar one type-only import** (Requirements
+ *    14.16, 15.5, 12.3). No such module imports `@pitchmate/api-client` or any
+ *    sub-path of it, so the pure logic is verifiable without a transport. This is
+ *    the criterion `lib/destinations.ts` carries the *value* of
+ *    `DEFAULT_AUTHENTICATED_ROUTE` for rather than importing it: the Auth_Feature
+ *    barrel transitively carries the client. There is exactly one admitted
+ *    exception, {@link WIRE_ENUMS_MODULE}: the notification parser aliases the
+ *    generated enum unions for `NotificationType` and `ReadState` so the wire
+ *    vocabulary is read from the Committed_Types rather than restated
+ *    (Requirement 12.8), and its import is **type-only**, erased at compile time,
+ *    so the emitted module still carries no transport dependency. The allowance
+ *    is to the erased form only, and the module is held to invariants 1, 2 and 4
+ *    like every other.
  * 4. **A property test beside every module, at 100 iterations or more**
  *    (Requirements 14.1, 14.2). Every production module under `lib/` has an
  *    adjacent `<module>.property.test.ts`; every `fc.assert` in every one of
@@ -289,6 +297,14 @@ const API_CLIENT_IMPORT_PATTERN =
   /(?:\bfrom\s*|\bimport\s*|\brequire\s*\(\s*|\bimport\s*\(\s*)['"]@pitchmate\/api-client(?:\/[^'"]*)?['"]/;
 
 /**
+ * The one module under `lib/` admitted a type-only import of the generated
+ * client: the notification parser, which aliases the Generated_Enum_Unions for
+ * `NotificationType` and `ReadState` rather than restating their names
+ * (Requirements 12.3, 12.8). Held to every other invariant like any other module.
+ */
+const WIRE_ENUMS_MODULE = 'notificationParsing.ts';
+
+/**
  * DOM/BOM globals and DOM types that would couple a pure module to a browser.
  * Matched with word boundaries against fully-stripped code, so the ECMAScript
  * globals the logic legitimately uses (`Error`, `Number`, `Date`, `JSON`,
@@ -540,12 +556,33 @@ describe('every App_Shell lib module is free of React, the DOM, and the transpor
     expect(offenders).toEqual([]);
   });
 
-  it('imports nothing from @pitchmate/api-client (Requirements 14.16, 15.5)', () => {
+  it('imports nothing from @pitchmate/api-client, bar the wire enums (Req 14.16, 15.5)', () => {
     const offenders = libModules
+      .filter((file) => libRel(file) !== WIRE_ENUMS_MODULE)
       .filter((file) => API_CLIENT_IMPORT_PATTERN.test(readWithoutComments(file)))
       .map(libRel);
 
     expect(offenders).toEqual([]);
+  });
+
+  it('keeps the parser the only holdout, and keeps its import type-only (Req 12.3)', () => {
+    // The positive half of the exception. An admitted holdout that did not
+    // actually import the client would make the rule above look narrower than it
+    // is, and a *value* import would reach the client's factory — so the
+    // allowance is to the erased form only.
+    const wireEnums = libModules.filter((file) => libRel(file) === WIRE_ENUMS_MODULE);
+
+    expect(wireEnums.map(libRel)).toEqual([WIRE_ENUMS_MODULE]);
+
+    const code = readWithoutComments(wireEnums[0]);
+
+    expect(API_CLIENT_IMPORT_PATTERN.test(code)).toBe(true);
+    expect(code).toMatch(
+      /import\s+type\s*\{[^}]*\bcomponents\b[^}]*\}\s*from\s*['"]@pitchmate\/api-client['"]/s,
+    );
+    expect(code).not.toMatch(
+      /^\s*import\s+(?!type\b)[^;]*?from\s*['"]@pitchmate\/api-client(?:\/[^'"]*)?['"]/m,
+    );
   });
 
   it('references no DOM global and no DOM type (Requirements 14.16, 15.5)', () => {

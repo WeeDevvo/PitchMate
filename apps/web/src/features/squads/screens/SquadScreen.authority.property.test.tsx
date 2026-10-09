@@ -107,7 +107,7 @@ import {
 import { PROMOTION_CONTROL_SELECTOR } from '../components/PromotionControl';
 import { RATING_BADGE_SELECTOR } from '../components/RatingBadge';
 import { resolveAdminAuthority } from '../lib/adminAuthority';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import {
   ADMIN_SECTION_HEADING,
   MATCHES_PLACEHOLDER_STATEMENT,
@@ -149,12 +149,12 @@ const SQUAD_NAME = 'Thursday Ballers';
 
 /** The caller's own standing, as the `ListMySquads` summary carries it. */
 interface CallerStanding {
-  readonly role: MemberRole | null;
-  readonly state: MembershipStateValue | null;
+  readonly role: SquadRole | null;
+  readonly state: MembershipState | null;
 }
 
 /** An active owner — the authority-holding reference the comparison uses. */
-const AUTHORITY_HOLDER: CallerStanding = { role: 'owner', state: 'active' };
+const AUTHORITY_HOLDER: CallerStanding = { role: 'Owner', state: 'Active' };
 
 // --- Generators ---------------------------------------------------------------
 
@@ -165,8 +165,8 @@ const AUTHORITY_HOLDER: CallerStanding = { role: 'owner', state: 'active' };
  * property is effectively exhaustive over its own quantifier.
  */
 const callerStandingArb: fc.Arbitrary<CallerStanding> = fc.record({
-  role: fc.constantFrom<MemberRole | null>('owner', 'admin', 'member', null),
-  state: fc.constantFrom<MembershipStateValue | null>('active', 'inactive', null),
+  role: fc.constantFrom<SquadRole | null>('Owner', 'Admin', 'Member', null),
+  state: fc.constantFrom<MembershipState | null>('Active', 'Inactive', null),
 });
 
 /** The ten combinations that hold no Admin_Authority (Requirements 10.3, 10.4). */
@@ -192,9 +192,11 @@ const MEMBER_NAMES: readonly string[] = [
 /** One Squad_Member, minus the identity the collection generator assigns. */
 const memberShapeArb = fc.record({
   displayName: fc.constantFrom(...MEMBER_NAMES),
-  role: fc.constantFrom<MemberRole | null>('owner', 'admin', 'member', null),
-  state: fc.constantFrom<MembershipStateValue>('active', 'inactive'),
+  role: fc.constantFrom<SquadRole | null>('Owner', 'Admin', 'Member', null),
+  state: fc.constantFrom<MembershipState>('Active', 'Inactive'),
   isGuest: fc.boolean(),
+  appearances: fc.nat({ max: 200 }),
+  ratingState: fc.constantFrom('Provisional' as const, 'Established' as const, null),
 });
 
 /**
@@ -220,7 +222,7 @@ const membersArb: fc.Arbitrary<readonly SquadMember[]> = fc
   );
 
 /**
- * The squad's Feature_Flag collection. The Enum_Code_Map names one feature, so
+ * The squad's Feature_Flag collection. The Generated_Enum_Union names one feature, so
  * the collection is either empty — which the Feature_Toggle set renders as its
  * "no optional features" statement — or that one flag in either state
  * (Requirement 14.8).
@@ -229,7 +231,7 @@ const featuresArb: fc.Arbitrary<readonly FeatureFlag[]> = fc.oneof(
   fc.constant<readonly FeatureFlag[]>([]),
   fc
     .boolean()
-    .map((isEnabled) => [{ feature: 'live-match-tracking' as const, isEnabled }]),
+    .map((isEnabled) => [{ feature: 'LiveMatchTracking' as const, isEnabled }]),
 );
 
 /** One generated interaction with whatever the screen currently renders. */

@@ -66,7 +66,7 @@ import { FAILURE_NOTICE_SELECTOR } from '../components/FailureNotice';
 import { LOADING_INDICATION_SELECTOR } from '../components/LoadingIndication';
 import { SQUAD_CARD_SELECTOR } from '../components/SquadCard';
 import { SQUADS_EMPTY_STATE_SELECTOR } from '../components/SquadsEmptyState';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import type { Redemption } from '../lib/parse/redemption';
 import type { SquadSummary } from '../lib/parse/squadSummary';
 import {
@@ -99,16 +99,16 @@ const LOAD_STATES: readonly LoadStateName[] = [
 
 const identityArb: fc.Arbitrary<string> = fc.uuid();
 
-const roleArb: fc.Arbitrary<MemberRole | null> = fc.constantFrom(
-  'owner' as const,
-  'admin' as const,
-  'member' as const,
+const roleArb: fc.Arbitrary<SquadRole | null> = fc.constantFrom(
+  'Owner' as const,
+  'Admin' as const,
+  'Member' as const,
   null,
 );
 
-const stateArb: fc.Arbitrary<MembershipStateValue | null> = fc.constantFrom(
-  'active' as const,
-  'inactive' as const,
+const stateArb: fc.Arbitrary<MembershipState | null> = fc.constantFrom(
+  'Active' as const,
+  'Inactive' as const,
   null,
 );
 
@@ -291,7 +291,7 @@ async function reachLoadState(scenario: Scenario): Promise<void> {
             kind: 'success',
             value: {
               membershipId: '11111111-2222-4333-8444-555555555555',
-              outcome: 'joined',
+              outcome: 'Joined',
               squadId: null,
             },
           }

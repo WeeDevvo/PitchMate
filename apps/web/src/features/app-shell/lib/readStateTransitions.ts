@@ -55,8 +55,8 @@
  * the same records in the same order — so a no-op transition gives a React caller
  * nothing to re-render.
  *
- * A record's other values are carried across untouched, including the integer
- * code of an unrecognised type marker (Requirement 10.6) and the untruncated
+ * A record's other values are carried across untouched, including the wire name
+ * retained by an unrecognised type marker (Requirement 10.6) and the untruncated
  * `title` and `body`: only `readState` is rewritten.
  *
  * Identities are compared **exactly**, with no case folding and no trimming.
@@ -153,7 +153,7 @@ export function applyMarkRead(
     marked = true;
 
     // 10.6: every other value is carried across untouched — the unrecognised type
-    // marker's integer code and the untruncated title and body included. A new
+    // marker's retained wire name and the untruncated title and body included. A new
     // object, so the supplied record is not edited (Requirement 6.6 relies on it).
     return { ...record, readState: 'read' } satisfies NotificationRecord;
   });

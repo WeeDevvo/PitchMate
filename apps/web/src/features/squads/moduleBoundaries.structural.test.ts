@@ -149,7 +149,7 @@ const DESIGNED_MODULES: readonly string[] = [
 
   'lib/routePaths.ts',
   'lib/identifiers.ts',
-  'lib/enumCodes.ts',
+  'lib/wireEnums.ts',
   'lib/callOutcome.ts',
   'lib/messages.ts',
   'lib/squadOrder.ts',

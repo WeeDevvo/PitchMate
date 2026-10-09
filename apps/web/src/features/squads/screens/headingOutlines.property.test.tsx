@@ -87,7 +87,7 @@ import {
   ADMIN_SUBSECTION_SELECTOR,
 } from '../components/AdminSection';
 import { resolveAdminAuthority } from '../lib/adminAuthority';
-import type { MemberRole, MembershipStateValue } from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { validateHeadingOutline } from '../lib/headingOutline';
 import {
   ADMIN_SECTION_HEADING,
@@ -361,17 +361,17 @@ const SQUAD_SCREEN_STATES: readonly SquadScreenStateName[] = [
 ];
 
 /** Every Member_Role a caller's summary can carry, absence included. */
-const CALLER_ROLES: readonly (MemberRole | null)[] = [
-  'owner',
-  'admin',
-  'member',
+const CALLER_ROLES: readonly (SquadRole | null)[] = [
+  'Owner',
+  'Admin',
+  'Member',
   null,
 ];
 
 /** Every Membership_State a caller's summary can carry, absence included. */
-const CALLER_STATES: readonly (MembershipStateValue | null)[] = [
-  'active',
-  'inactive',
+const CALLER_STATES: readonly (MembershipState | null)[] = [
+  'Active',
+  'Inactive',
   null,
 ];
 

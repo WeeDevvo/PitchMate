@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
-import { INVITE_STATE_CODES, inviteStateFromCode } from '../enumCodes';
 import { isSquadIdentifier } from '../identifiers';
+import { INVITE_STATE_NAMES, isInviteState } from '../wireEnums';
 import { MAX_INSTANT_MS, readInstantMs, type ParseResult } from './primitives';
 import {
   parseInviteSummary,
@@ -18,18 +18,19 @@ import {
  * This file carries **Property 35** for `inviteSummary.ts`: for any value supplied
  * as a response body — absent, `null`, a primitive of every type, an array, an
  * object with each required field missing, an object with each field mistyped, an
- * enum field carrying a code the Enum_Code_Map does not name, and a value nested a
- * hundred levels deep — both parsers yield exactly one of a fully populated value
- * and a parse failure, and raise nothing (16.4, 16.6).
+ * enum field carrying a value outside the generated `InviteState` vocabulary, and
+ * a value nested a hundred levels deep — both parsers yield exactly one of a fully
+ * populated value and a parse failure, and raise nothing (12.6, 12.8, 16.4, 16.6).
  *
  * Three field decisions of this shape are what the assertions target.
  *
- * **`state` is required and its code must be named.** The Invite_Manager renders a
- * revoke control only on an `active` invite, so a defaulted state could offer
+ * **`state` is required and must be a member name.** The Invite_Manager renders a
+ * revoke control only on an `Active` invite, so a defaulted state could offer
  * revocation on an invite that is already revoked — or hide it from one that is
- * live. `4` and `0` are the near misses of this three-entry table; `3` is *in* range
- * here, which is exactly why the code the task names is generated as an in-range
- * value for this table and out-of-range for others.
+ * live. The near misses generated here are the ones this contract change makes
+ * interesting: the **numeric codes** a previous contract sent for this very field,
+ * and the **lower-case forms** of the right names, neither of which the generated
+ * vocabulary carries.
  *
  * **`createdAt` is required**, because the Invite_Order sorts by it (11.3). An
  * invented instant would silently reorder the list, so `null`, absent, and every
@@ -43,7 +44,7 @@ import {
  * An invite summary carries nothing from which the redeemable secret could be
  * reconstructed, and the reason assertions keep that true for failures too.
  *
- * Requirements: 11.3, 16.4, 16.6, 20.10
+ * Requirements: 11.3, 12.6, 12.7, 12.8, 16.4, 16.6, 20.10
  */
 
 /* -------------------------------------------------------------------------- */
@@ -289,42 +290,48 @@ const notAnIdentityArb: fc.Arbitrary<unknown> = fc.oneof(
 );
 
 /**
- * Values no Invite_State code names, the absences included — this state is
- * required, so `null` and an absent property are contract mismatches.
+ * Values the generated `InviteState` vocabulary does not carry, the absences
+ * included — this state is required, so `null` and an absent property are contract
+ * mismatches.
  *
- * `0` and `4` are the near misses either side of this 1-based three-entry table.
- * `3` is deliberately absent from this list: it names `expired` here, which is why
- * the same code appears in the *unnamed* generators of the two-entry tables.
+ * The first six entries are the ones worth naming. `1`, `2` and `3` are the
+ * **numeric codes** the previous contract sent for this field, and they are now
+ * simply not names; `'active'`, `'revoked'` and `'expired'` are the retired
+ * lower-case vocabulary, and nothing here case-folds (Requirement 12.8).
  */
 const unnamedInviteStateArb: fc.Arbitrary<unknown> = fc.oneof(
   {
     weight: 5,
     arbitrary: fc.constantFrom<unknown>(
+      1,
+      2,
+      3,
+      'active',
+      'revoked',
+      'expired',
       undefined,
       null,
       0,
       -0,
       4,
-      5,
-      -1,
-      1.5,
-      2.5,
       Number.NaN,
       Number.POSITIVE_INFINITY,
       '1',
       '3',
-      'active',
-      'expired',
+      'ACTIVE',
+      'Active ',
+      'Actives',
+      '',
       true,
       false,
-      [1],
-      { state: 1 },
+      ['Active'],
+      { state: 'Active' },
       3n,
     ),
   },
   {
     weight: 2,
-    arbitrary: anyBodyArb.filter((value) => inviteStateFromCode(value) === undefined),
+    arbitrary: anyBodyArb.filter((value) => !isInviteState(value)),
   },
 );
 
@@ -396,14 +403,6 @@ const notAPresentStringArb: fc.Arbitrary<unknown> = fc.oneof(
 /* Well-formed bodies, and what a populated value must look like              */
 /* -------------------------------------------------------------------------- */
 
-/** The named Invite_State codes, read from the Enum_Code_Map itself. */
-const NAMED_INVITE_STATE_CODES: readonly number[] = Object.keys(
-  INVITE_STATE_CODES,
-).map(Number);
-
-/** The invite-state names the Enum_Code_Map carries. */
-const INVITE_STATE_NAMES: readonly string[] = Object.values(INVITE_STATE_CODES);
-
 /**
  * A well-formed `ListInvites` element, generated across the three forms each of the
  * two optional fields may take — present, explicit `null`, and absent.
@@ -411,7 +410,9 @@ const INVITE_STATE_NAMES: readonly string[] = Object.values(INVITE_STATE_CODES);
 const wellFormedArb: fc.Arbitrary<Record<string, unknown>> = fc
   .record({
     inviteId: identityArb,
-    state: fc.constantFrom(...NAMED_INVITE_STATE_CODES),
+    // 12.11: the generator emits Wire_Enum_Names, read from the generated
+    // vocabulary itself rather than restated here.
+    state: fc.constantFrom(...INVITE_STATE_NAMES),
     createdAt: instantTextArb,
     createdBy: fc.oneof(
       { weight: 3, arbitrary: createdByArb as fc.Arbitrary<unknown> },
@@ -470,7 +471,7 @@ function isFullyPopulatedSummary(summary: InviteSummary): boolean {
   return (
     keySignature(summary) === 'createdAtMs,createdBy,expiresAtMs,inviteId,state' &&
     isSquadIdentifier(summary.inviteId) &&
-    INVITE_STATE_NAMES.includes(summary.state) &&
+    isInviteState(summary.state) &&
     isInstant(summary.createdAtMs) &&
     (summary.createdBy === null || typeof summary.createdBy === 'string') &&
     (summary.expiresAtMs === null || isInstant(summary.expiresAtMs))
@@ -569,7 +570,8 @@ describe('parseInviteSummary — total, and never partial', () => {
 
         if (outcome.ok) {
           expect(outcome.value.inviteId).toBe(body.inviteId);
-          expect(outcome.value.state).toBe(inviteStateFromCode(body.state));
+          // 12.8: the name is carried through unchanged — nothing is mapped.
+          expect(outcome.value.state).toBe(body.state);
 
           const createdAt = readInstantMs(body.createdAt, 'createdAt');
 
@@ -616,7 +618,7 @@ describe('parseInviteSummary — total, and never partial', () => {
     );
   });
 
-  it('fails when the state names nothing, 0 and 4 included', () => {
+  it('fails when the state is not a member name, the old numeric codes included', () => {
     fc.assert(
       fc.property(wellFormedArb, unnamedInviteStateArb, (body, state) => {
         const outcome = settle(
@@ -630,22 +632,21 @@ describe('parseInviteSummary — total, and never partial', () => {
     );
   });
 
-  it('names each of the three states the backend declares', () => {
+  it('accepts each of the three states the backend declares', () => {
     fc.assert(
       fc.property(
         wellFormedArb,
-        fc.constantFrom(...NAMED_INVITE_STATE_CODES),
+        fc.constantFrom(...INVITE_STATE_NAMES),
         (body, state) => {
           const outcome = settle(
             () => parseInviteSummary({ ...body, state }),
             isFullyPopulatedSummary,
           );
 
-          // `expired` is derived by the backend clock and arrives like any other
-          // state, so `3` is in range here and this feature does no expiry
-          // arithmetic of its own.
+          // `Expired` is derived by the backend clock and arrives like any other
+          // name, so this feature does no expiry arithmetic of its own.
           expect(outcome.ok).toBe(true);
-          expect(outcome.ok && outcome.value.state).toBe(inviteStateFromCode(state));
+          expect(outcome.ok && outcome.value.state).toBe(state);
         },
       ),
       { numRuns: 300 },
@@ -684,7 +685,7 @@ describe('parseInviteSummary — total, and never partial', () => {
     fc.assert(
       fc.property(
         identityArb,
-        fc.constantFrom(...NAMED_INVITE_STATE_CODES),
+        fc.constantFrom(...INVITE_STATE_NAMES),
         instantTextArb,
         fc.constantFrom('present-null', 'present-undefined', 'absent'),
         fc.constantFrom('present-null', 'present-undefined', 'absent'),
@@ -723,7 +724,7 @@ describe('parseInviteSummary — total, and never partial', () => {
     fc.assert(
       fc.property(
         identityArb,
-        fc.constantFrom(...NAMED_INVITE_STATE_CODES),
+        fc.constantFrom(...INVITE_STATE_NAMES),
         instantTextArb,
         createdByArb,
         (inviteId, state, createdAt, createdBy) => {

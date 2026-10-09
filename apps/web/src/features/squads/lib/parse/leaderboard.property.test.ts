@@ -39,13 +39,17 @@ import {
  * `lib/ratingPresentation.ts` and this parser must not pre-empt it.
  *
  * **`statistic` is not read at all.** The caller knows which statistic it asked for,
- * so the echoed code tells the feature nothing and reading it would mean a numeric enum
- * literal outside `lib/enumCodes.ts` (16.12). The generators therefore feed bodies
- * carrying every kind of `statistic` — named, unnamed, mistyped, and a throwing
- * accessor — and every one of them must parse, which is a stronger statement than
- * discarding the field after reading it.
+ * so the echoed value tells the feature nothing — and it is a *request* enum, which
+ * `lib/wireEnums.ts` deliberately does not name, so there is no vocabulary here to
+ * validate it against and no user for one. The generators therefore feed bodies
+ * carrying every kind of `statistic` — a `LeaderboardStatistic` member name, the
+ * numeric code the previous contract echoed, an unnamed value, a mistyped value, an
+ * absence, and a throwing accessor — and every one of them must parse to the same
+ * value, which is a stronger statement than discarding the field after reading it.
+ * It is also what makes this module's part in the name migration a no-op rather than
+ * an omission: it has no enum-valued field to read (12.8).
  *
- * Requirements: 8.9, 8.11, 16.4, 16.12, 20.10
+ * Requirements: 8.9, 8.11, 12.5, 12.7, 16.4, 20.10
  */
 
 /* -------------------------------------------------------------------------- */
@@ -354,8 +358,9 @@ const notAFiniteNumberArb: fc.Arbitrary<unknown> = fc.oneof(
 );
 
 /**
- * Every kind of `statistic` a body could echo — named, unnamed, mistyped, absent.
- * None is read, so none may change the outcome (16.9, 16.12).
+ * Every kind of `statistic` a body could echo — the member name the contract now
+ * sends, the numeric code it used to send, unnamed, mistyped, absent. None is read,
+ * so none may change the outcome (12.5, 16.9).
  */
 const statisticArb: fc.Arbitrary<unknown> = fc.oneof(
   {
@@ -363,6 +368,12 @@ const statisticArb: fc.Arbitrary<unknown> = fc.oneof(
     arbitrary: fc.constantFrom<unknown>(
       undefined,
       null,
+      'DisplayRating',
+      'Appearances',
+      'WinPercentage',
+      'displayRating',
+      'display-rating',
+      'NotAStatistic',
       0,
       1,
       2,
@@ -371,7 +382,6 @@ const statisticArb: fc.Arbitrary<unknown> = fc.oneof(
       -1,
       0.5,
       Number.NaN,
-      'display-rating',
       '1',
       true,
       [1],
@@ -758,8 +768,9 @@ describe('parseDisplayRatingLeaderboard — total, and unambiguous or failed', (
           });
           const withoutStatistic = parseDisplayRatingLeaderboard({ entries });
 
-          // 16.12: reading it would mean a numeric enum literal outside
-          // `lib/enumCodes.ts`, or a seventh code table with no user.
+          // A request enum with no reader here: the member name the contract now
+          // echoes and the code it used to echo both parse to the same value,
+          // because neither is looked at (12.5, 16.9).
           expect(withStatistic).toEqual(withoutStatistic);
         },
       ),

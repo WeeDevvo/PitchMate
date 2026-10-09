@@ -71,7 +71,7 @@ import {
   PromotionControl,
 } from './PromotionControl';
 import type { CallResult, SquadsApi } from '../api/squadsApi';
-import type { MemberRole } from '../lib/enumCodes';
+import type { SquadRole } from '../lib/wireEnums';
 import {
   ADMIN_ROLE_LABEL,
   GENERIC_SQUADS_FAILURE,
@@ -100,7 +100,7 @@ const TRIGGER_NAME = `${PROMOTE_TO_ADMIN_LABEL}: ${TARGET_NAME}`;
  * A Squad_Detail in which the caller is the active owner and the target carries
  * the given Member_Role — the two responses a promotion sits between.
  */
-function detailWithTargetRole(role: MemberRole): SquadDetail {
+function detailWithTargetRole(role: SquadRole): SquadDetail {
   return {
     squadId: SQUAD_ID,
     name: 'Thursday Nights',
@@ -108,16 +108,20 @@ function detailWithTargetRole(role: MemberRole): SquadDetail {
       {
         membershipId: VIEWER_MEMBERSHIP_ID,
         displayName: VIEWER_NAME,
-        role: 'owner',
-        state: 'active',
+        role: 'Owner',
+        state: 'Active',
         isGuest: false,
+        appearances: 12,
+        ratingState: 'Established',
       },
       {
         membershipId: TARGET_MEMBERSHIP_ID,
         displayName: TARGET_NAME,
         role,
-        state: 'active',
+        state: 'Active',
         isGuest: false,
+        appearances: 12,
+        ratingState: 'Established',
       },
     ],
     features: [],
@@ -285,14 +289,14 @@ function deferredApi(): DeferredApiDouble {
 
 interface DeferredHarnessProps {
   readonly api: SquadsApi;
-  readonly role?: MemberRole;
+  readonly role?: SquadRole;
   readonly refresh?: () => void;
 }
 
 /** The control alone, over a member whose role the test chooses. */
 function DeferredHarness({
   api,
-  role = 'member',
+  role = 'Member',
   refresh = () => {},
 }: DeferredHarnessProps): ReactElement {
   const promotion = usePromotion({ api, squadId: SQUAD_ID, refresh });
@@ -303,8 +307,10 @@ function DeferredHarness({
         membershipId: TARGET_MEMBERSHIP_ID,
         displayName: TARGET_NAME,
         role,
-        state: 'active',
+        state: 'Active',
         isGuest: false,
+        appearances: 12,
+        ratingState: 'Established',
       }}
       viewer={{ membershipId: VIEWER_MEMBERSHIP_ID, isAdmin: true }}
       promotion={promotion}
@@ -367,7 +373,7 @@ describe('PromotionControl — the confirmation (Requirement 13.4)', () => {
   it('renders nothing at all while the row is ineligible and nothing has settled', () => {
     const { api } = deferredApi();
 
-    const { container } = render(<DeferredHarness api={api} role="admin" />);
+    const { container } = render(<DeferredHarness api={api} role="Admin" />);
 
     // 13.2: absent rather than disabled — and with no outcome to announce, the
     // control contributes no region either.
@@ -440,8 +446,8 @@ describe('PromotionControl — the re-read and the promoted label (Requirement 1
   it('issues exactly one further GetSquad and renders the row as an admin', async () => {
     const user = userEvent.setup();
     const { api, getSquadCalls, leaderboardCalls, promoteCalls } = composedApi([
-      detailWithTargetRole('member'),
-      detailWithTargetRole('admin'),
+      detailWithTargetRole('Member'),
+      detailWithTargetRole('Admin'),
     ]);
 
     const { container } = render(<ComposedHarness api={api} />);
@@ -469,8 +475,8 @@ describe('PromotionControl — the re-read and the promoted label (Requirement 1
   it('announces the promotion in a live region that outlives the affordance', async () => {
     const user = userEvent.setup();
     const { api } = composedApi([
-      detailWithTargetRole('member'),
-      detailWithTargetRole('admin'),
+      detailWithTargetRole('Member'),
+      detailWithTargetRole('Admin'),
     ]);
 
     const { container } = render(<ComposedHarness api={api} />);
@@ -512,7 +518,7 @@ describe('PromotionControl — a refused promotion changes nothing (Requirements
         // A second response is scripted deliberately: were a refusal to trigger a
         // re-read, the row would silently turn into an admin and the assertions
         // below would catch it.
-        [detailWithTargetRole('member'), detailWithTargetRole('admin')],
+        [detailWithTargetRole('Member'), detailWithTargetRole('Admin')],
         result,
       );
 

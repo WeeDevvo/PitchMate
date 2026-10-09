@@ -22,7 +22,26 @@ namespace PitchMate.Api.Tests.Auth;
 /// </summary>
 public sealed class AuthApiFactory : WebApplicationFactory<Program>
 {
+    // Environment variables are process-global, but xunit runs test collections in parallel, so two
+    // classes can each hold their own factory at the same time. Without this count the first factory
+    // to be disposed would clear the variables out from under a sibling factory whose host has not
+    // been built yet, failing that host's startup. Every instance sets the same fixed values from
+    // AuthApiTestConfig, so the variables are safe to leave in place until the last one goes away.
+    //
+    // Counting alone is not enough: "decrement, then clear" and "increment, then set" must not
+    // interleave. A bare Interlocked pair leaves a window in which the last factory of one class
+    // decrements to zero, a third class's factory then constructs and sets the variables, and the
+    // first factory's clear runs afterwards — wiping the configuration out from under a host that has
+    // not booted yet. That host then boots from appsettings.Development.json plus user-secrets
+    // instead, so it starts cleanly but validates tokens against the wrong issuer/audience/key, and
+    // every authenticated request answers as unauthenticated. Both halves therefore run under one
+    // lock, and each instance decrements at most once (xunit may dispose a fixture through both the
+    // sync and async paths).
+    private static readonly object EnvironmentGate = new();
+    private static int _liveInstances;
+
     private readonly List<string> _setEnvVarKeys = new();
+    private bool _released;
 
     /// <summary>The fixed clock the running Api uses for token-lifetime validation.</summary>
     public FakeTimeProvider Clock { get; } = new(AuthApiTestConfig.FixedNow);
@@ -34,11 +53,16 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
     /// </summary>
     public AuthApiFactory()
     {
-        foreach ((string key, string? value) in AuthApiTestConfig.Settings)
+        lock (EnvironmentGate)
         {
-            string envKey = key.Replace(":", "__", StringComparison.Ordinal);
-            Environment.SetEnvironmentVariable(envKey, value);
-            _setEnvVarKeys.Add(envKey);
+            _liveInstances++;
+
+            foreach ((string key, string? value) in AuthApiTestConfig.Settings)
+            {
+                string envKey = key.Replace(":", "__", StringComparison.Ordinal);
+                Environment.SetEnvironmentVariable(envKey, value);
+                _setEnvVarKeys.Add(envKey);
+            }
         }
     }
 
@@ -61,12 +85,24 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
     {
         if (disposing)
         {
-            foreach (string envKey in _setEnvVarKeys)
+            lock (EnvironmentGate)
             {
-                Environment.SetEnvironmentVariable(envKey, null);
-            }
+                if (!_released)
+                {
+                    _released = true;
 
-            _setEnvVarKeys.Clear();
+                    // Only the last live factory clears the shared variables (see EnvironmentGate).
+                    if (--_liveInstances == 0)
+                    {
+                        foreach (string envKey in _setEnvVarKeys)
+                        {
+                            Environment.SetEnvironmentVariable(envKey, null);
+                        }
+                    }
+
+                    _setEnvVarKeys.Clear();
+                }
+            }
         }
 
         base.Dispose(disposing);

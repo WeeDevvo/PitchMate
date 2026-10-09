@@ -3,7 +3,7 @@
  * to, and the pair of membership enum readers the Squad_Detail parser reuses.
  *
  * The wire shape, read from `MySquadSummary` in the backend rather than assumed,
- * is `{ squadId, name, role: int | null, state: int | null }`. Both enum fields
+ * is `{ squadId, name, role: name | null, state: name | null }`. Both enum fields
  * are nullable at the source — the handler projects `membership?.Role` and
  * `membership?.State` — which is exactly the case Requirement 16.8 makes a valid
  * parsed **absence** rather than a failure. Getting that wrong in either
@@ -11,10 +11,20 @@
  * Squads_Home for a caller whose membership could not be resolved, and defaulting
  * the absence would put a role on a card that the backend never claimed.
  *
- * A *present* enum field is still validated. An absence is `null` or a missing
- * property and nothing else, so a `role` of `7`, `'owner'`, or `true` fails the
- * summary carrying it rather than reading as "no role" — an unnamed code is a
- * contract mismatch, not an absence (16.6).
+ * A *present* enum field is still validated, now **by name** against the
+ * Generated_Enum_Union rather than by looking a number up in a hand-kept code
+ * table (Requirement 12.8). An absence is `null` or a missing property and
+ * nothing else, so a `role` of `7`, `'owner'` in the wrong case, or `true` fails
+ * the summary carrying it rather than reading as "no role" — a value outside the
+ * generated vocabulary is a contract mismatch, not an absence (12.8, 16.6).
+ *
+ * ### The vocabulary is the contract's own
+ *
+ * A parsed `role` is now a `SquadRole` member name — `Owner`, `Admin`, `Member` —
+ * aliased from the Committed_Types rather than named again here (Requirement
+ * 12.2), and a parsed `state` is a `MembershipState` name. There is no code table
+ * between the wire and the parsed value and no second declaration of either
+ * vocabulary, so the printer emits what the parser read and the two cannot drift.
  *
  * The two present-value readers are declared here and imported by
  * `squadDetail.ts`, so a Member_Role accepted on a card and a Member_Role
@@ -22,19 +32,16 @@
  * is only whether an absence is tolerated, and that decision stays with each
  * field: a summary's `state` may be absent, a member's may not.
  *
- * Requirements: 16.4, 16.5, 16.6, 16.8, 16.9, 16.10
+ * Requirements: 12.1, 12.5, 12.7, 12.8, 16.4, 16.5, 16.8, 16.9, 16.10
  */
 
 import {
-  codeFromMemberRole,
-  codeFromMembershipState,
-  memberRoleFromCode,
-  membershipStateFromCode,
-  type MemberRole,
-  type MembershipStateValue,
-} from '../enumCodes';
+  isMembershipState,
+  isSquadRole,
+  type MembershipState,
+  type SquadRole,
+} from '../wireEnums';
 import {
-  fail,
   ok,
   readArray,
   readObject,
@@ -42,6 +49,7 @@ import {
   readProperty,
   readString,
   readUuid,
+  readWireEnumName,
   type ParseResult,
   type ValueReader,
 } from './primitives';
@@ -53,44 +61,29 @@ import {
 export interface SquadSummary {
   readonly squadId: string;
   readonly name: string;
-  readonly role: MemberRole | null;
-  readonly state: MembershipStateValue | null;
+  readonly role: SquadRole | null;
+  readonly state: MembershipState | null;
 }
 
 /**
- * A present Member_Role code read as its named value, failing when the
- * Enum_Code_Map names no such code (Requirement 16.6).
+ * A present Member_Role read as a Wire_Enum_Name, failing for any value outside
+ * the generated `SquadRole` vocabulary (Requirement 12.8).
  *
  * Handed to `readOptional` wherever an absence is tolerated, and called directly
  * wherever it is not — which is why the tolerance is not baked in here. Also
  * imported by `squadDetail.ts`; see the module note.
  */
-export const readMemberRoleValue: ValueReader<MemberRole> = (value, label) => {
-  const role = memberRoleFromCode(value);
-
-  if (role === undefined) {
-    return fail(`${label} names no role`);
-  }
-
-  return ok(role);
-};
+export const readMemberRoleValue: ValueReader<SquadRole> = (value, label) =>
+  readWireEnumName(value, label, isSquadRole);
 
 /**
- * A present Membership_State code read as its named value, failing when the
- * Enum_Code_Map names no such code (Requirement 16.6).
+ * A present Membership_State read as a Wire_Enum_Name, failing for any value
+ * outside the generated `MembershipState` vocabulary (Requirement 12.8).
  */
-export const readMembershipStateValue: ValueReader<MembershipStateValue> = (
+export const readMembershipStateValue: ValueReader<MembershipState> = (
   value,
   label,
-) => {
-  const state = membershipStateFromCode(value);
-
-  if (state === undefined) {
-    return fail(`${label} names no membership state`);
-  }
-
-  return ok(state);
-};
+) => readWireEnumName(value, label, isMembershipState);
 
 /**
  * One Squad_Summary parsed from a `ListMySquads` element.
@@ -190,15 +183,15 @@ export function parseSquadSummaryList(
 
 /**
  * A Squad_Summary rendered back into the wire shape {@link parseSquadSummary}
- * accepts: exactly the four properties it reads, with each enum as its code and
- * each absence as `null` (Requirement 16.5).
+ * accepts: exactly the four properties it reads, with each enum as its
+ * Wire_Enum_Name and each absence as `null` (Requirements 12.11, 16.5).
  */
 export function printSquadSummary(summary: SquadSummary): unknown {
   return {
     squadId: summary.squadId,
     name: summary.name,
-    role: summary.role === null ? null : codeFromMemberRole(summary.role),
-    state: summary.state === null ? null : codeFromMembershipState(summary.state),
+    role: summary.role,
+    state: summary.state,
   };
 }
 

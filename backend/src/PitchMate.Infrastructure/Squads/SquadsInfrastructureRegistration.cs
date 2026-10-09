@@ -23,7 +23,9 @@ public static class SquadsInfrastructureRegistration
 {
     /// <summary>
     /// Registers the EF Core squad repositories, the invite secret service, and the conservative
-    /// membership-history probe behind their Application abstractions.
+    /// membership-history probe behind their Application abstractions. The squad read path's
+    /// membership standing source is wired by <c>AddStatsInfrastructure</c>, where the other
+    /// squad-scoped aggregation implementations live.
     /// </summary>
     /// <param name="services">The service collection to add registrations to.</param>
     /// <returns>The same <paramref name="services"/> for chaining.</returns>
@@ -46,6 +48,12 @@ public static class SquadsInfrastructureRegistration
         // would query; it reports no match history so erasure hard-removes rather than anonymising
         // (Requirement 18.2). Stateless, so a singleton is safe.
         services.TryAddSingleton<IMembershipHistoryProbe, NoMatchHistoryProbe>();
+
+        // IMembershipStandingSource is deliberately NOT registered here. The placeholder that used to
+        // sit at this line was replaced by the EF aggregation (EfMembershipStandingSource), which is
+        // wired by AddStatsInfrastructure alongside the other squad-scoped aggregation
+        // implementations (api-response-contracts Requirement 11.5). Registering it in both roots
+        // would make the resolved implementation depend on which root ran first.
 
         return services;
     }

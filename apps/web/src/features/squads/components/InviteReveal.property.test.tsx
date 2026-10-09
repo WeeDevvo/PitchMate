@@ -107,7 +107,7 @@ const SQUAD_ID = '9f1b3c1e-6d2a-4c6f-9b57-2c1a0d5e7f31';
  */
 const LISTED_INVITE: InviteSummary = {
   inviteId: '11111111-1111-4111-8111-111111111111',
-  state: 'active',
+  state: 'Active',
   createdAtMs: Date.UTC(2025, 2, 1, 10, 0, 0),
   createdBy: 'admin',
   expiresAtMs: Date.UTC(2025, 2, 8, 10, 0, 0),

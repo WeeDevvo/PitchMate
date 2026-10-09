@@ -59,12 +59,7 @@ import { cleanup, render, within } from '@testing-library/react';
 import fc from 'fast-check';
 
 import { SQUAD_CARD_SELECTOR, SquadCard } from './SquadCard';
-import {
-  codeFromMemberRole,
-  codeFromMembershipState,
-  type MemberRole,
-  type MembershipStateValue,
-} from '../lib/enumCodes';
+import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { parseSquadSummary, type SquadSummary } from '../lib/parse/squadSummary';
 import {
   ACTIVE_STATE_LABEL,
@@ -94,16 +89,16 @@ const STATE_LABELS: readonly string[] = [
 ];
 
 /** The label a named Member_Role must render as (Requirement 1.5). */
-const LABEL_OF_ROLE: Readonly<Record<MemberRole, string>> = {
-  owner: OWNER_ROLE_LABEL,
-  admin: ADMIN_ROLE_LABEL,
-  member: MEMBER_ROLE_LABEL,
+const LABEL_OF_ROLE: Readonly<Record<SquadRole, string>> = {
+  Owner: OWNER_ROLE_LABEL,
+  Admin: ADMIN_ROLE_LABEL,
+  Member: MEMBER_ROLE_LABEL,
 };
 
 /** The label a named Membership_State must render as (Requirement 1.5). */
-const LABEL_OF_STATE: Readonly<Record<MembershipStateValue, string>> = {
-  active: ACTIVE_STATE_LABEL,
-  inactive: INACTIVE_STATE_LABEL,
+const LABEL_OF_STATE: Readonly<Record<MembershipState, string>> = {
+  Active: ACTIVE_STATE_LABEL,
+  Inactive: INACTIVE_STATE_LABEL,
 };
 
 // --- Generators --------------------------------------------------------------
@@ -118,8 +113,8 @@ type FieldForm<T> =
   | { readonly kind: 'null' }
   | { readonly kind: 'absent' };
 
-const NAMED_ROLES: readonly MemberRole[] = ['owner', 'admin', 'member'];
-const NAMED_STATES: readonly MembershipStateValue[] = ['active', 'inactive'];
+const NAMED_ROLES: readonly SquadRole[] = ['Owner', 'Admin', 'Member'];
+const NAMED_STATES: readonly MembershipState[] = ['Active', 'Inactive'];
 
 function formArb<T>(values: readonly T[]): fc.Arbitrary<FieldForm<T>> {
   return fc.oneof(
@@ -179,8 +174,8 @@ const squadIdArb: fc.Arbitrary<string> = fc.oneof(
 interface SummaryCase {
   readonly squadId: string;
   readonly name: string;
-  readonly role: FieldForm<MemberRole>;
-  readonly state: FieldForm<MembershipStateValue>;
+  readonly role: FieldForm<SquadRole>;
+  readonly state: FieldForm<MembershipState>;
 }
 
 const summaryCaseArb: fc.Arbitrary<SummaryCase> = fc.record({
@@ -200,13 +195,13 @@ function bodyOf(testCase: SummaryCase): Record<string, unknown> {
   };
 
   if (testCase.role.kind === 'present') {
-    body.role = codeFromMemberRole(testCase.role.value);
+    body.role = testCase.role.value;
   } else if (testCase.role.kind === 'null') {
     body.role = null;
   }
 
   if (testCase.state.kind === 'present') {
-    body.state = codeFromMembershipState(testCase.state.value);
+    body.state = testCase.state.value;
   } else if (testCase.state.kind === 'null') {
     body.state = null;
   }
@@ -233,12 +228,12 @@ function parsedSummaryOf(testCase: SummaryCase): SquadSummary {
 }
 
 /** The label the card must carry for a case's role (Requirements 1.5, 1.6). */
-function expectedRoleLabel(role: FieldForm<MemberRole>): string {
+function expectedRoleLabel(role: FieldForm<SquadRole>): string {
   return role.kind === 'present' ? LABEL_OF_ROLE[role.value] : NO_ROLE_RECORDED_LABEL;
 }
 
 /** The label the card must carry for a case's state (Requirements 1.5, 1.7). */
-function expectedStateLabel(state: FieldForm<MembershipStateValue>): string {
+function expectedStateLabel(state: FieldForm<MembershipState>): string {
   return state.kind === 'present'
     ? LABEL_OF_STATE[state.value]
     : NO_MEMBERSHIP_STATE_RECORDED_LABEL;
@@ -377,7 +372,7 @@ describe('Property 2 — every Squad_Card states name, role, and state in text, 
   it('renders a null field and an absent field identically', () => {
     fc.assert(
       fc.property(squadIdArb, nameArb, (squadId, name) => {
-        const markupFor = (role: FieldForm<MemberRole>, state: FieldForm<MembershipStateValue>) => {
+        const markupFor = (role: FieldForm<SquadRole>, state: FieldForm<MembershipState>) => {
           const { container } = render(
             <SquadCard
               summary={parsedSummaryOf({ squadId, name, role, state })}
@@ -397,11 +392,11 @@ describe('Property 2 — every Squad_Card states name, role, and state in text, 
 
         // Each field on its own, and both together: the parser makes `null` and
         // a missing property one absence, so the card cannot tell them apart.
-        expect(markupFor(nulled, { kind: 'present', value: 'active' })).toBe(
-          markupFor(absent, { kind: 'present', value: 'active' }),
+        expect(markupFor(nulled, { kind: 'present', value: 'Active' })).toBe(
+          markupFor(absent, { kind: 'present', value: 'Active' }),
         );
-        expect(markupFor({ kind: 'present', value: 'owner' }, nulled)).toBe(
-          markupFor({ kind: 'present', value: 'owner' }, absent),
+        expect(markupFor({ kind: 'present', value: 'Owner' }, nulled)).toBe(
+          markupFor({ kind: 'present', value: 'Owner' }, absent),
         );
         expect(markupFor(nulled, nulled)).toBe(markupFor(absent, absent));
       }),

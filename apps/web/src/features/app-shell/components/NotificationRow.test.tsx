@@ -52,7 +52,7 @@ function notification(
 ): NotificationRecord {
   return {
     notificationId: '11111111-1111-4111-8111-111111111111',
-    type: { kind: 'catalogued', value: 'match-confirmed' },
+    type: { kind: 'catalogued', value: 'MatchConfirmed' },
     squadId: '22222222-2222-4222-8222-222222222222',
     title: 'Thursday match confirmed',
     body: 'Kick-off 7pm at Goals Sheffield.',
@@ -194,7 +194,7 @@ describe('NotificationRow', () => {
     it('displays the type name once in place of a whitespace-only title', () => {
       const { part } = renderRow(notification({ title: '   \t\n  ' }));
 
-      const typeName = NOTIFICATION_TYPE_LABELS['match-confirmed'];
+      const typeName = NOTIFICATION_TYPE_LABELS['MatchConfirmed'];
       expect(part('title')).toHaveTextContent(typeName);
       // Said once, not twice: the separate type indication is redundant here.
       expect(part('type')).toBeNull();
@@ -219,22 +219,22 @@ describe('NotificationRow', () => {
 
     it('displays a neutral label for an uncatalogued type, title and body unchanged', () => {
       const { part } = renderRow(
-        notification({ type: { kind: 'unrecognised', code: 42 } }),
+        notification({ type: { kind: 'unrecognised', name: 'MatchCancelled' } }),
       );
 
       expect(part('type')).toHaveTextContent(NEUTRAL_NOTIFICATION_TYPE_LABEL);
       expect(control()).toHaveAttribute('data-type-recognised', 'false');
       expect(part('title')).toHaveTextContent('Thursday match confirmed');
       expect(part('body')).toHaveTextContent('Kick-off 7pm at Goals Sheffield.');
-      // No integer code is disclosed anywhere in the row.
-      expect(control().textContent).not.toContain('42');
+      // No wire name is disclosed anywhere in the row.
+      expect(control().textContent).not.toContain('MatchCancelled');
     });
 
     it('displays the catalogued type name for a catalogued type', () => {
       const { part } = renderRow();
 
       expect(part('type')).toHaveTextContent(
-        NOTIFICATION_TYPE_LABELS['match-confirmed'],
+        NOTIFICATION_TYPE_LABELS['MatchConfirmed'],
       );
       expect(control()).toHaveAttribute('data-type-recognised', 'true');
     });
