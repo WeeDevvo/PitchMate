@@ -144,6 +144,17 @@ const INVITE_PREVIEW_PATH = '/squads/invites/preview';
 const REDEEM_INVITE_PATH = '/squads/invites/redeem';
 
 /**
+ * The `GetPlayerProfile` path, as the generated contract keys it — the same
+ * string `features/player-stats/api/playerStatsApi.ts` hands the client.
+ *
+ * It lives beside the squads paths because the same Api_Client stand-in answers
+ * it: the Player_Stats_Route is nested into the shell's `/app` layout route
+ * alongside the Squad_Route, so a routing test that follows a Player_Row from
+ * one screen to the other needs both features answered by one client.
+ */
+const PLAYER_PROFILE_PATH = '/squads/{squadId}/members/{membershipId}/profile';
+
+/**
  * The entries {@link SquadsApiClientStub.requests} records for the calls a
  * routing test counts, so the count is written against the same strings the stub
  * records rather than against a second copy of each path.
@@ -154,6 +165,21 @@ export const SQUADS_REQUESTS = {
   leaderboard: `GET ${SQUAD_LEADERBOARD_PATH}`,
   previewInvite: `GET ${INVITE_PREVIEW_PATH}`,
   redeemInvite: `POST ${REDEEM_INVITE_PATH}`,
+} as const;
+
+/**
+ * The entry {@link SquadsApiClientStub.requests} records for the one call the
+ * Player_Stats_Feature makes.
+ *
+ * Which call a rendered address produced is the sharpest discriminator a routing
+ * test has, and it is sharper still here: the Player_Stats_Screen cannot resolve
+ * without a `GetPlayerProfile`, and the App_Shell's `/app/*` not-found — the
+ * surface that answered this address before the route existed — issues none. So
+ * counting this entry tells "the screen registered here resolved" from "the
+ * shell's not-found resolved" without either surface's copy being read.
+ */
+export const PLAYER_STATS_REQUESTS = {
+  getPlayerProfile: `GET ${PLAYER_PROFILE_PATH}`,
 } as const;
 
 /**
@@ -209,6 +235,101 @@ const INVITE_PREVIEW_BODY: unknown = {
   message: SQUADS_FIXTURE.invitePreviewMessage,
 };
 
+// --- The player-stats feature's own seam ------------------------------------
+
+/**
+ * What the answered Player_Profile is built from.
+ *
+ * {@link SQUADS_FIXTURE} already carries the squad and the membership a
+ * Player_Row links to; what this adds is a **second** membership of the same
+ * squad, so a routing test can tell "the screen resolved for the row's
+ * membership" from "the screen resolved for some membership".
+ */
+export const PLAYER_STATS_FIXTURE = {
+  /**
+   * A second membership of the fixture squad, named by no Squad_Member — so an
+   * address carrying it reaches a profile the Squad_Screen never linked to.
+   */
+  otherMembershipId: '99999999-8888-4777-8666-555544443333',
+  /** What {@link playerProfileName} prefixes a membership identity with. */
+  namePrefix: 'Profile of ',
+} as const;
+
+/**
+ * The Player_Display_Name the stand-in answers for one membership.
+ *
+ * Keyed on the identity rather than fixed, which is what makes the rendered
+ * surface say *which subject* resolved: the screen heads itself with the parsed
+ * display name (player-stats Requirement 5.1), so a heading built from the
+ * membership in the address is direct evidence that the call was issued for that
+ * membership and its answer parsed — a stronger claim than a fixed name, which
+ * would read the same for every subject.
+ *
+ * It is deliberately unlike {@link SQUADS_FIXTURE.playerName}: the squads
+ * routing tests assert that no squads screen resolved at this address by
+ * checking that name is absent, and a profile that echoed it would make that
+ * check pass for the wrong reason.
+ */
+export function playerProfileName(membershipId: string): string {
+  return `${PLAYER_STATS_FIXTURE.namePrefix}${membershipId}`;
+}
+
+/**
+ * The `GetPlayerProfile` body for one membership, in the shape the feature's
+ * Response_Parser accepts.
+ *
+ * The enum fields are **member names**, as the backend serialises them, exactly
+ * as the squads bodies above spell theirs. The five collections are empty and
+ * `rich` is absent, which keeps the resolved screen to one link (the control
+ * back to the squad) and one level-one heading — the two discriminators the
+ * routing tests read — without any section being missing: an empty
+ * Pairwise_Section and an absent rich block are states the screen states in
+ * words. The wire's rating-model members are omitted because the parser never
+ * names them, so sending them would demonstrate nothing here.
+ */
+function playerProfileBody(membershipId: string): unknown {
+  return {
+    membershipId,
+    displayName: playerProfileName(membershipId),
+    state: 'Active',
+    isGuest: false,
+    record: { appearances: 12, wins: 7, draws: 2, losses: 3 },
+    winPercentage: 58.3,
+    rating: { state: 'Established', displayRating: 1204 },
+    progression: [
+      { completedAt: '2026-01-08T19:30:00.000Z', displayRating: 1180 },
+      { completedAt: '2026-01-15T19:30:00.000Z', displayRating: 1204 },
+    ],
+    winStreak: 3,
+    unbeatenStreak: 5,
+    mostPlayedWith: [],
+    mostPlayedAgainst: [],
+    bestPartnerships: [],
+    bogeyOpponents: [],
+    bibAppearances: 4,
+    rich: null,
+  };
+}
+
+/**
+ * The membership identity a `GetPlayerProfile` request carries.
+ *
+ * `openapi-fetch` takes path parameters under `params.path`, which is how the
+ * transport seam hands over the two identities — the recorded request itself
+ * carries only the contract's path *template*, so this is the one place the
+ * resolved subject is visible. Read defensively: a request shaped otherwise
+ * yields the empty string, which answers a profile named for no membership
+ * rather than throwing inside the client stand-in.
+ */
+function requestedMembershipId(init: unknown): string {
+  const params = (
+    init as { params?: { path?: Record<string, unknown> } } | undefined
+  )?.params?.path;
+  const membershipId = params?.['membershipId'];
+
+  return typeof membershipId === 'string' ? membershipId : '';
+}
+
 /** An Authenticated_Api_Client stand-in together with the requests it received. */
 export interface SquadsApiClientStub {
   /** The client to hand to {@link assembleRoutes}. */
@@ -246,6 +367,14 @@ export interface SquadsApiClientStub {
  *
  * The notification endpoints are answered by the same stub and read by the
  * App_Shell's own seam, which accepts an already-decoded `data` as well as text.
+ *
+ * `GetPlayerProfile` is answered here too, for the same reason: the
+ * Player_Stats_Route is nested into the shell's `/app` layout route beside the
+ * Squad_Route, so following a Player_Row from one screen to the other crosses
+ * both features and one client has to answer both. An unanswered profile call
+ * would leave that address rendering the feature's generic failure, which would
+ * make every "this screen resolved here" assertion fail for a reason that has
+ * nothing to do with routing.
  */
 export function squadsApiClient(): SquadsApiClientStub {
   const requests: string[] = [];
@@ -257,7 +386,7 @@ export function squadsApiClient(): SquadsApiClientStub {
   const accepted = () =>
     Promise.resolve({ data: undefined, response: { status: 204 } });
 
-  const answerGet = (path: string) => {
+  const answerGet = (path: string, init: unknown) => {
     switch (path) {
       case SQUADS_LIST_PATH:
         return json(SQUAD_SUMMARIES_BODY);
@@ -271,6 +400,10 @@ export function squadsApiClient(): SquadsApiClientStub {
         return json([]);
       case SQUAD_FEATURES_PATH:
         return json([]);
+      case PLAYER_PROFILE_PATH:
+        // Answered for whichever membership the request names, so the resolved
+        // screen's own heading says which subject it loaded.
+        return json(playerProfileBody(requestedMembershipId(init)));
       default:
         // The notification endpoints, exactly as `stubApiClient` answers them.
         return json(path.includes('unread-count') ? { count: 0 } : []);
@@ -282,9 +415,9 @@ export function squadsApiClient(): SquadsApiClientStub {
   };
 
   const client = {
-    GET: (path: string) => {
+    GET: (path: string, init?: unknown) => {
       record('GET', path);
-      return answerGet(path);
+      return answerGet(path, init);
     },
     POST: (path: string) => {
       record('POST', path);

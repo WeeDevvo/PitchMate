@@ -1,0 +1,59 @@
+/*
+ * The Player_Stats_Screen's own presentation — the wrapper, the fallback
+ * level-one heading, and nothing else.
+ *
+ * Almost every surface the screen renders is styled where it is built: the main
+ * content region, the three boundary states, and the `StatSection` wrapper in
+ * `../components/surfaces.css`, and each panel in its own stylesheet beside its
+ * component. What is left for this file is the frame around them, which is why
+ * it is short.
+ *
+ * Every value resolves from a custom property declared in
+ * `../styles/playerStatsTokens.css`, layered over the shared `src/theme`
+ * tables, so this file carries **no colour literal** and no fixed width
+ * (Requirements 15.1, 15.2, 15.7).
+ *
+ * Three choices worth stating:
+ *
+ *  - **No frame and no gutter of its own.** The screen renders inside the
+ *    App_Shell's content region, which owns the page's padding; declaring a
+ *    second one here would double the inset on a narrow viewport.
+ *  - **The section order is a fact of the markup.** The stack is a plain
+ *    document-order column — no `order`, no `grid-area`, no `row-reverse` — so
+ *    the reading order a screen reader and a keyboard follow is the order the
+ *    design fixes, and no stylesheet can quietly reorder it (Requirement 16.3).
+ *  - **The way-out control takes the shared `.player-stats-squad-link` shape**
+ *    from `../components/surfaces.css` rather than a style of its own, because
+ *    it is the same affordance the Not_Found_Treatment renders and the two must
+ *    not look like controls from different screens (Requirement 1.6).
+ *
+ * Requirements: 15.2, 15.7, 16.3
+ */
+
+.player-stats-screen {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--player-stats-gap);
+  width: 100%;
+  max-width: 100%;
+  /* A long display name or a wide table must shrink rather than push the
+     column out, so the flex item is allowed to be narrower than its content. */
+  min-width: 0;
+}
+
+/*
+ * The level-one heading the loading and failed bodies render, where there is no
+ * Player_Display_Name to carry it yet.
+ *
+ * Shaped like the Not_Found_Treatment's heading and the identity header's, so
+ * the heading does not jump in size as the screen settles.
+ */
+.player-stats-screen__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--player-stats-font-size-screen-heading);
+  font-weight: var(--player-stats-font-weight-heading);
+  line-height: var(--player-stats-line-height-heading);
+  overflow-wrap: break-word;
+}

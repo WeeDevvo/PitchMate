@@ -173,7 +173,7 @@ const surroundingTextArb: fc.Arbitrary<string> = fc.oneof(
       '',
       ' ',
       'Ratings unavailable',
-      'No settled rating yet',
+      'Rating still settling',
       'Something went wrong just now. Please try again.',
     ),
   },
@@ -398,13 +398,42 @@ describe('messages — the detectors catch what they claim to catch', () => {
 });
 
 describe('messages — the pinned copy is the copy the requirements name', () => {
-  it('states the two rating labels literally', () => {
+  it('states the three rating labels literally', () => {
     // The generated properties read these from the module, so they could not
     // catch a reworded label on their own. The wording is pinned because
     // Requirement 8.4 fixes what the band may state and 8.13 fixes that the
     // unavailable label speaks of ratings in general.
-    expect(messages.PROVISIONAL_BAND_LABEL).toBe('No settled rating yet');
+    //
+    // The band now **asserts** the provisional condition rather than reporting a
+    // bare absence: `web-player-stats-screen` Requirement 17.3 splits the player
+    // who has never played out of it, so the label no longer stands for two
+    // situations at once and is free to name the one it means.
+    expect(messages.PROVISIONAL_BAND_LABEL).toBe('Rating still settling');
+    expect(messages.NEVER_PLAYED_BAND_LABEL).toBe('No matches played yet');
     expect(messages.RATING_UNAVAILABLE_LABEL).toBe('Ratings unavailable');
+  });
+
+  it('keeps the three rating labels pairwise distinct, none containing another', () => {
+    const labels = [
+      messages.PROVISIONAL_BAND_LABEL,
+      messages.NEVER_PLAYED_BAND_LABEL,
+      messages.RATING_UNAVAILABLE_LABEL,
+    ];
+
+    // `web-player-stats-screen` Requirement 17.3: a player who has played
+    // nothing, a rating still settling, and a rating that could not be obtained
+    // are three statements, so a reader must be able to tell them apart — and a
+    // label that contained another would be ambiguous to a substring assertion
+    // as well as to a person skimming the column.
+    expect(new Set(labels).size).toBe(labels.length);
+
+    for (const label of labels) {
+      for (const other of labels) {
+        if (label !== other) {
+          expect(label).not.toContain(other);
+        }
+      }
+    }
   });
 
   it('keeps the three rating and failure presentations distinguishable', () => {

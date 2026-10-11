@@ -26,6 +26,7 @@
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
     "src/test",
-    "src/features/squads/structural"
+    "src/features/squads/structural",
+    "src/features/player-stats/structural"
   ]
 }

@@ -107,6 +107,19 @@ const appWiringRoot = join(srcRoot, 'app');
  * barrel only (see ADR 0001).
  */
 const squadsRoot = join(srcRoot, 'features', 'squads');
+/**
+ * The player-stats feature root — the second feature admitted as a shell
+ * consumer, on the same terms as the squads feature above.
+ *
+ * The web-player-stats-screen design declares the same edge for the same two
+ * reasons: the Player_Stats_Screen nests inside the shell's Home Destination, so
+ * it derives its child path from `HOME_ROUTE`, and it publishes the Squad_Scope
+ * through `usePublishSquadScopeFromRoute` with `SQUAD_SCOPE_ROUTE_PARAMETER`
+ * rather than restating the shell's squad-scope contract. The edge runs one way
+ * — nothing in the shell imports the player-stats feature — and it is admitted
+ * at the barrel only.
+ */
+const playerStatsRoot = join(srcRoot, 'features', 'player-stats');
 
 /** Normalise an absolute path to forward slashes for stable comparisons. */
 function norm(path: string): string {
@@ -470,20 +483,26 @@ describe('the dependency direction runs one way to the App_Shell (Requirement 15
     expect(offenders).toEqual([]);
   });
 
-  it('is imported by the application-level router wiring and the squads feature only', () => {
-    // Two admitted consumers, and no third. `src/app/**` is the application-level
-    // router wiring. `features/squads/**` is admitted because the
-    // web-squads-screens design declares the dependency edge `app` → `squads` →
-    // `app-shell`: the squads screens mount inside the shell's Home Destination
-    // and take `HOME_ROUTE`, `SQUAD_SCOPE_ROUTE_PARAMETER`, and
-    // `usePublishSquadScopeFromRoute` from the shell's barrel instead of
-    // restating the shell's route path and squad-scope contract. The admission is
-    // narrow: a squads module reaching a deeper shell path than the barrel is
-    // still an offender here, as it is in the public-entry-point check above.
+  it('is imported by the application-level router wiring and the two admitted features only', () => {
+    // Three admitted consumers, and no fourth. `src/app/**` is the
+    // application-level router wiring. `features/squads/**` and
+    // `features/player-stats/**` are admitted because both designs declare the
+    // dependency edge `app` → feature → `app-shell`: each feature's screens mount
+    // inside the shell's Home Destination and take `HOME_ROUTE`,
+    // `SQUAD_SCOPE_ROUTE_PARAMETER`, and `usePublishSquadScopeFromRoute` from the
+    // shell's barrel instead of restating the shell's route path and squad-scope
+    // contract. The admission is narrow: a module of either feature reaching a
+    // deeper shell path than the barrel is still an offender here, as it is in
+    // the public-entry-point check above.
+    const admittedFeatureRoots = [squadsRoot, playerStatsRoot];
+
     const offenders = inboundImports
       .filter(({ file, target }) => {
         if (isWithin(appWiringRoot, file)) return false;
-        if (isWithin(squadsRoot, file) && targetsBarrelOf(shellRoot, target)) {
+        if (
+          admittedFeatureRoots.some((root) => isWithin(root, file)) &&
+          targetsBarrelOf(shellRoot, target)
+        ) {
           return false;
         }
         return true;

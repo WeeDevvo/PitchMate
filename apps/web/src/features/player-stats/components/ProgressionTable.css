@@ -1,0 +1,72 @@
+/*
+ * Presentation for the Progression_Table.
+ *
+ * Every value is read from a custom property declared in
+ * `styles/playerStatsTokens.css`, so **no colour value is written here**
+ * (Requirements 15.1, 15.2).
+ *
+ * Three choices worth stating:
+ *
+ *  - **It stays a table.** No `display: block` or `display: grid` on the table
+ *    or its rows: those discard the table semantics in several engines, which is
+ *    exactly what the accessible representation of the chart cannot afford
+ *    (Requirement 8.5). A narrow viewport is handled by the two columns being
+ *    narrow — a date and an integer — rather than by restructuring them.
+ *  - **No fixed width.** The table fills its section and the rating column
+ *    shrinks to its content, so nothing here can overflow a 360px viewport
+ *    (Requirement 15.7).
+ *  - **No colour carries a meaning.** The headings are weighted rather than
+ *    hued, and the figures are ordinary body text: a rating that went up and one
+ *    that went down read alike here, because the direction is the chart's job and
+ *    the numbers are this table's (Requirement 16.6).
+ *
+ * Requirements: 15.2, 15.7, 16.6
+ */
+
+.player-stats-progression-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text);
+  font-size: var(--player-stats-font-size-body);
+  line-height: var(--player-stats-line-height-body);
+  text-align: left;
+}
+
+.player-stats-progression-table__heading {
+  padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
+  border-bottom: var(--player-stats-border-width) solid
+    var(--player-stats-card-border);
+  color: var(--muted-text);
+  font-size: var(--player-stats-font-size-meta);
+  font-weight: var(--player-stats-font-weight-label);
+  text-align: left;
+}
+
+.player-stats-progression-table__date {
+  padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
+  color: var(--text);
+  font-weight: var(--player-stats-font-weight-body);
+  text-align: left;
+  /* A date never needs to break mid-word, and keeping it whole stops the column
+     collapsing to one character on a narrow viewport. */
+  white-space: nowrap;
+}
+
+.player-stats-progression-table__rating {
+  padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
+  color: var(--text);
+  font-weight: var(--player-stats-font-weight-label);
+  /* The column shrinks to its digits, leaving the date column the remainder. */
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* The no-history statement that stands in for the whole section
+   (Requirement 8.6). */
+.player-stats-progression-table__empty {
+  margin: 0;
+  max-width: var(--player-stats-measure);
+  color: var(--muted-text);
+  font-size: var(--player-stats-font-size-body);
+  line-height: var(--player-stats-line-height-body);
+}

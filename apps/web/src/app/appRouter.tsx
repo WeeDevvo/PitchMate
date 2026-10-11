@@ -17,6 +17,7 @@
  * | `/app`, `/app/notifications`, `/app/settings`, `/app/profile`, `/app/*` | the App_Shell table via `createShellRoutes` | 3.1, 3.9, 3.10, 15.4 |
  * | `/app` (index) | the Squads_Feature's `SquadsHome`, injected as the shell's Home_Slot content | squads 1.12, 18.6 |
  * | `/app/squads/:squadId` | the Squads_Feature's `SquadScreen`, nested into the shell's `/app` layout route | squads 18.5 |
+ * | `/app/squads/:squadId/players/:membershipId` | the Player_Stats_Feature's `PlayerStatsScreen`, nested into the same `/app` layout route | player-stats 1.1 |
  * | `/join/:code` | the Squads_Feature's `InviteLandingScreen`, outside the Route_Guard and the shell frame | squads 5.1, 18.5 |
  * | `*` | {@link AppNotFound} | 15.9 |
  *
@@ -42,6 +43,22 @@
  * The Squads_Home is **not** a route. It is the shell's injected Home_Slot
  * content, so exactly one screen resolves at the Default_Authenticated_Route
  * (squads Requirement 18.6).
+ *
+ * ### How the Player_Stats_Feature's table is placed
+ *
+ * The same way, and in the same call. The Player_Stats_Route is squad-scoped and
+ * member-only, so it belongs behind the Route_Guard and inside the frame
+ * (player-stats Requirement 1.1) and has no public counterpart. Its children are
+ * passed to the one {@link withNestedRoutes} call alongside the squads children,
+ * so there is a single place the shell's `/app` layout route is assembled.
+ *
+ * Neither the pattern nor any literal of it appears under `src/app`: the feature
+ * derives its child path from the pattern the Squads_Feature's barrel publishes,
+ * and this module reaches the feature through its barrel alone (player-stats
+ * Requirements 1.2, 14.7). `react-router` ranks the two-dynamic-segment pattern
+ * above both `squads/:squadId` and the shell's `/app/*` splat, so registering it
+ * takes the path away from the shell's not-found handling with no shell or squads
+ * file changing.
  *
  * ### Why the auth table's own `*` child is not registered here
  *
@@ -123,6 +140,10 @@ import {
   createSquadsPublicRoutes,
   createSquadsShellRoutes,
 } from '../features/squads';
+import {
+  createPlayerStatsApi,
+  createPlayerStatsShellRoutes,
+} from '../features/player-stats';
 import LandingPage from '../features/landing/LandingPage';
 import { AppNotFound } from './AppNotFound';
 import { APP_CATCH_ALL_ROUTE, LANDING_ROUTE } from './appRoutePaths';
@@ -361,6 +382,12 @@ export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
   // needs no bearer. The feature constructs no client and no facade of its own.
   const squadsApi = createSquadsApi({ apiClient });
 
+  // player-stats 12.1, 14.7: one Player_Stats_Api over the same
+  // Authenticated_Api_Client, built once here and handed to the feature's route
+  // table. The feature constructs no client and no facade of its own, and is
+  // reached through its barrel alone.
+  const playerStatsApi = createPlayerStatsApi({ apiClient });
+
   const shellRoutes = withNestedRoutes(
     createShellRoutes({
       apiClient,
@@ -380,9 +407,14 @@ export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
       now: options.now,
     }),
     HOME_ROUTE,
-    // squads 18.5: behind the Route_Guard and inside the frame, by nesting rather
-    // than by the feature restating either.
-    createSquadsShellRoutes({ api: squadsApi }),
+    // squads 18.5, player-stats 1.1: behind the Route_Guard and inside the frame,
+    // by nesting rather than by either feature restating either. One nesting call
+    // takes both features' children, so the shell's `/app` layout route is
+    // assembled in a single place.
+    [
+      ...createSquadsShellRoutes({ api: squadsApi }),
+      ...createPlayerStatsShellRoutes({ api: playerStatsApi }),
+    ],
   );
 
   return [

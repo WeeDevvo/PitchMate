@@ -1,0 +1,279 @@
+/*
+ * Theme tokens for the player stats screen.
+ *
+ * This file is the **only** place in the feature where a colour value is
+ * written. Every component and every stylesheet of `features/player-stats/`
+ * references these custom properties and never a literal colour, so a Theme
+ * change is a change of one attribute on the document element and nothing else
+ * (Requirement 15.2).
+ *
+ * The feature declares **no appearance storage key, no pre-paint bootstrap, and
+ * no theme resolution function** (Requirement 15.1). Appearance is resolved once
+ * for the whole application by `src/theme`, which sets `data-theme` on the
+ * document element; this file only says what each Theme looks like. Dark is the
+ * default because that shared module resolves it that way, and because the dark
+ * table is applied to `:root` as well as to `[data-theme='dark']` — an absent or
+ * unresolved attribute renders dark.
+ *
+ * Shape and naming follow `features/squads/styles/squadsTokens.css`, which in
+ * turn follows the App_Shell's and the Auth_Feature's tables: the ten shared
+ * token names keep their names *and* their values here, layered over the shared
+ * `src/theme` tables, so a control looks the same on an auth screen, inside the
+ * shell, on a squads screen, and here. The Player_Stats_Screen always renders
+ * inside the App_Shell frame, so re-declaring the shared ten is for
+ * self-containment rather than necessity — Requirement 15.3 and the
+ * `ratingAndThemingBoundaries` scan verify every painted custom property against
+ * **this** feature's two tables, so a token this feature paints has to be
+ * declared here even when the frame would have supplied it.
+ *
+ * ## Palette (brand.md)
+ *
+ *   Pitch Green  #5bbf36  fills, and green marks on a *dark* surface
+ *   Green Dark   #3e8f24  green marks on a *light* surface
+ *   Green Light  #8fd96f  highlights — the dark Theme's focus ring
+ *   Ink          #141414  the dark background, and text on a light surface
+ *   Draw amber   #e0a82e  a draw, and the Provisional_Rating — "unsettled"
+ *   Loss red     #e5484d  a loss
+ *   Info blue    #4c8dd6  the Guest_Flag label — informational, not a result
+ *
+ * ## Feature tokens
+ *
+ * Nine tokens extend the shared table (design.md → Theming):
+ *
+ *   --player-stats-card-surface       the section-panel and chart-panel surface
+ *   --player-stats-card-border        that surface's edge, and a chip's outline
+ *   --player-stats-win-icon           the Result_Breakdown's win icon mark
+ *   --player-stats-draw-icon          the Result_Breakdown's draw icon mark
+ *   --player-stats-loss-icon          the Result_Breakdown's loss icon mark
+ *   --player-stats-provisional-text   the Provisional_Rating label and badge text
+ *   --player-stats-provisional-border that badge's outline (graphical, 3:1)
+ *   --player-stats-guest-text         the Guest_Flag label
+ *   --player-stats-chart-line         the Progression_Chart's plotted line
+ *   --player-stats-chart-point        the Progression_Chart's point marks
+ *   --player-stats-chart-grid         the Progression_Chart's grid rules
+ *
+ * Two of the shared ten are declared for parity with the other three tables and
+ * the feature paints with **neither**:
+ *
+ *   --surface       the shell's own panel surface; a player-stats surface takes
+ *                   `--player-stats-card-surface`
+ *   --accent-fill   Pitch Green in *both* Themes, so 2.35:1 on a light control —
+ *                   below the 3:1 floor a graphical cue owes. Nothing here fills
+ *                   with green; every green mark takes a surface-keyed token.
+ *
+ * ## Colour is never the only carrier (Requirements 15.5, 15.6, 16.6)
+ *
+ * The Result_Breakdown renders `W`, `D`, and `L` as **letters in `--text`** with
+ * an adjacent icon glyph carrying the semantic hue. An icon is non-text under
+ * WCAG 1.4.11 and so owes 3:1 rather than 4.5:1, which is what lets the brand
+ * hues be used at all — the letter carries the meaning and the hue reinforces it.
+ * The Provisional_Rating is a badge *and* a label, both stating the condition in
+ * words from `lib/messages.ts`. The Progression_Chart's line and point marks
+ * convey their values by position and shape — a stroked polyline with a circular
+ * mark per point, every value of which is also stated textually by the
+ * Progression_Table — so the chart's hues are reinforcement, never the carrier.
+ *
+ * ## Green is chosen from the surface, not from the Theme (Requirement 15.5)
+ *
+ * Green marks take Pitch Green below a surface relative luminance of 0.05 and
+ * Green Dark at or above it, whichever Theme is active — the rule
+ * `greenTokenForSurface(luminance)` in `src/theme` implements, and the rule the
+ * three green-valued tokens below are read through rather than being picked by
+ * hand. The dark Theme's two surfaces sit far below the boundary (`--bg` #141414
+ * = 0.0070, `--player-stats-card-surface` #1e1e1e = 0.0130) and the light Theme's
+ * two far above it (#ffffff = 1.0000, #f4f4f4 = 0.9047), so `--accent-text`,
+ * `--player-stats-win-icon`, and `--player-stats-chart-line` are Pitch Green in
+ * the dark table and Green Dark in the light one. Green on any *other* surface
+ * must not assume the Theme's answer: the component calls `greenTokenForSurface`
+ * from `src/theme` with that surface's own luminance rather than picking a hex
+ * itself. **Green never paints text in either Theme** — Pitch Green reaches only
+ * 2.35:1 on a light surface and Green Dark only 4.07:1, so neither clears the
+ * 4.5:1 text floor there, and both are reserved for icons, marks, and lines.
+ *
+ * ## Contrast (WCAG 2.1 relative luminance) for the exact values below
+ *
+ * Floors: 4.5:1 for text and interactive controls, 3:1 for focus indications and
+ * graphical cues (Requirement 15.4). Every token is measured against **both**
+ * surfaces it can land on, because a figure may be rendered directly on the
+ * screen background or inside a section panel.
+ *
+ *   DARK  (--bg #141414, card #1e1e1e):
+ *     --text                            #f5f5f5  16.90 / 15.29  (>= 4.5)
+ *     --muted-text                      #c7c7c7  10.90 /  9.86  (>= 4.5)
+ *     --control-text  #f5f5f5 vs --control-bg #1e1e1e  = 15.29  (>= 4.5)
+ *     --control-border                  #8a8a8a   5.34 /  4.83  (>= 3)
+ *     --accent-text                     #5bbf36   7.85 /  7.11  (>= 4.5)
+ *     --focus-ring                      #8fd96f  10.81 /  9.78  (>= 3)
+ *     --player-stats-card-border        #8a8a8a   5.34 /  4.83  (>= 3)
+ *     --player-stats-win-icon           #5bbf36   7.85 /  7.11  (>= 3)
+ *     --player-stats-draw-icon          #e0a82e   8.61 /  7.79  (>= 3)
+ *     --player-stats-loss-icon          #ef6a6f   6.11 /  5.53  (>= 3)
+ *     --player-stats-provisional-text   #e0a82e   8.61 /  7.79  (>= 4.5)
+ *     --player-stats-provisional-border #e0a82e   8.61 /  7.79  (>= 3)
+ *     --player-stats-guest-text         #4c8dd6   5.34 /  4.83  (>= 4.5)
+ *     --player-stats-chart-line         #5bbf36   7.85 /  7.11  (>= 3)
+ *     --player-stats-chart-point        #5bbf36   7.85 /  7.11  (>= 3)
+ *     --player-stats-chart-grid         #8a8a8a   5.34 /  4.83  (>= 3)
+ *
+ *   LIGHT (--bg #ffffff, card #f4f4f4):
+ *     --text                            #141414  18.42 / 16.75  (>= 4.5)
+ *     --muted-text                      #595959   7.00 /  6.37  (>= 4.5)
+ *     --control-text  #141414 vs --control-bg #ffffff  = 18.42  (>= 4.5)
+ *     --control-border                  #767676   4.54 /  4.13  (>= 3)
+ *     --accent-text                     #3e8f24   4.07 /  3.70  (>= 3)
+ *     --focus-ring                      #3e8f24   4.07 /  3.70  (>= 3)
+ *     --player-stats-card-border        #767676   4.54 /  4.13  (>= 3)
+ *     --player-stats-win-icon           #3e8f24   4.07 /  3.70  (>= 3)
+ *     --player-stats-draw-icon          #8a5a00   5.93 /  5.39  (>= 3)
+ *     --player-stats-loss-icon          #b42a2f   6.34 /  5.76  (>= 3)
+ *     --player-stats-provisional-text   #8a5a00   5.93 /  5.39  (>= 4.5)
+ *     --player-stats-provisional-border #8a5a00   5.93 /  5.39  (>= 3)
+ *     --player-stats-guest-text         #2b66a8   5.88 /  5.35  (>= 4.5)
+ *     --player-stats-chart-line         #3e8f24   4.07 /  3.70  (>= 3)
+ *     --player-stats-chart-point        #3e8f24   4.07 /  3.70  (>= 3)
+ *     --player-stats-chart-grid         #767676   4.54 /  4.13  (>= 3)
+ *
+ * ### Why three semantic hues shift between the Themes
+ *
+ * The substitutions are the squads table's, already proven against the same two
+ * surfaces, rather than the raw brand hues:
+ *
+ * - **Draw amber** #e0a82e carries comfortably on the dark surfaces (7.79:1 at
+ *   worst) but reaches only **1.95:1** on a light surface — below even the 3:1
+ *   floor an icon owes, so it cannot be a light-Theme mark at all. The light
+ *   table darkens it to #8a5a00. The same value serves the Provisional_Rating,
+ *   which is a *label* and so owes the 4.5:1 text floor; #8a5a00 clears it.
+ * - **Loss red** #e5484d reaches 4.71:1 on `--bg` but 4.26:1 on the card surface,
+ *   below the text floor exactly where a record is panelled, so the dark table
+ *   lightens it to #ef6a6f and the light table darkens it to #b42a2f. The loss
+ *   icon only owes 3:1, but taking the squads values keeps one red across the two
+ *   features and leaves the hue usable should it ever letter.
+ * - **Info blue** #4c8dd6 clears the text floor on both dark surfaces (4.83:1 at
+ *   worst). The light table uses #2b66a8 so the Guest_Flag label clears 4.5:1 on
+ *   the panelled surface as well as on the background.
+ *
+ * ## Scale tokens
+ *
+ * Spacing, radii, target sizes, chart geometry, and type sizes do not vary by
+ * Theme, so they are declared once on `:root` rather than duplicated into both
+ * tables. They mirror the squads and shell frame tokens (a 44px minimum pointer
+ * target, 8px between adjacent targets, `clamp()`-based gutters) so this screen
+ * measures the same as the shell around it and as the squad screen it is reached
+ * from. Every size is fluid or a *maximum* — no token states a fixed width above
+ * 360px — so the screen introduces no horizontal overflow between 360 and 1920
+ * pixels of viewport width (Requirement 15.7).
+ *
+ * Requirements: 15.1, 15.2, 15.3, 15.5
+ */
+
+/* ------------------------------------------------------------------ *
+ * Scale: spacing, shape, chart geometry, typography (Theme-invariant)
+ * ------------------------------------------------------------------ */
+
+:root {
+  /* Spacing. `clamp()` rather than a fixed step, so no region carries a width
+     that could exceed a 360px viewport (Requirement 15.7). */
+  --player-stats-gutter: clamp(0.75rem, 4vw, 2rem);
+  --player-stats-gap: clamp(0.5rem, 2vw, 1.5rem);
+  --player-stats-gap-tight: 0.5rem;
+  --player-stats-gap-hairline: 0.125rem;
+
+  /* The minimum pointer target, and the minimum space between two adjacent
+     targets. Same values as the shell frame and the squads screens. */
+  --player-stats-touch-target: 44px;
+  --player-stats-touch-gap: 8px;
+
+  /* Radii and edges. */
+  --player-stats-radius: 0.5rem;
+  --player-stats-radius-chip: 0.75rem;
+  --player-stats-border-width: 1px;
+  --player-stats-focus-width: 3px;
+  --player-stats-focus-offset: 2px;
+
+  /* Progression_Chart geometry. The stroke and the mark radius are the chart's
+     non-colour cues (Requirement 15.6): a point is a shape on a line, not a
+     colour. The view box is fluid — the chart scales to its container — so these
+     are stroke and mark dimensions only and state no chart width. */
+  --player-stats-chart-line-width: 2px;
+  --player-stats-chart-point-radius: 3.5px;
+  --player-stats-chart-grid-width: 1px;
+
+  /* Bounds. Each is a *maximum*, not a fixed width: a stat grid tracks from the
+     minimum, and prose is bounded to a readable measure rather than to the
+     viewport. */
+  --player-stats-stat-min-width: 9rem;
+  --player-stats-measure: 40rem;
+
+  /* Typography. Sizes are relative, so a browser text-size preference scales
+     them; weights are the non-colour cue that pairs with a semantic hue. */
+  --player-stats-font-size-screen-heading: clamp(1.5rem, 4vw, 2rem);
+  --player-stats-font-size-section-heading: 1.25rem;
+  --player-stats-font-size-subsection-heading: 1rem;
+  --player-stats-font-size-figure: clamp(1.25rem, 3vw, 1.75rem);
+  --player-stats-font-size-body: 1rem;
+  --player-stats-font-size-meta: 0.875rem;
+  --player-stats-font-size-chip: 0.75rem;
+  --player-stats-line-height-body: 1.5;
+  --player-stats-line-height-heading: 1.25;
+  --player-stats-font-weight-body: 400;
+  --player-stats-font-weight-label: 600;
+  --player-stats-font-weight-heading: 700;
+}
+
+/* ------------------------------------------------------------------ *
+ * Dark Theme — the default (Requirement 15.3)
+ * ------------------------------------------------------------------ */
+
+:root,
+[data-theme='dark'] {
+  --bg: #141414;
+  --surface: #1e1e1e;
+  --text: #f5f5f5;
+  --muted-text: #c7c7c7;
+  --control-bg: #1e1e1e;
+  --control-text: #f5f5f5;
+  --control-border: #8a8a8a;
+  --accent-fill: #5bbf36;
+  --accent-text: #5bbf36;
+  --focus-ring: #8fd96f;
+  --player-stats-card-surface: #1e1e1e;
+  --player-stats-card-border: #8a8a8a;
+  --player-stats-win-icon: #5bbf36;
+  --player-stats-draw-icon: #e0a82e;
+  --player-stats-loss-icon: #ef6a6f;
+  --player-stats-provisional-text: #e0a82e;
+  --player-stats-provisional-border: #e0a82e;
+  --player-stats-guest-text: #4c8dd6;
+  --player-stats-chart-line: #5bbf36;
+  --player-stats-chart-point: #5bbf36;
+  --player-stats-chart-grid: #8a8a8a;
+}
+
+/* ------------------------------------------------------------------ *
+ * Light Theme — opt-in, applied only while the shared appearance
+ * preference resolves to light (Requirement 15.3)
+ * ------------------------------------------------------------------ */
+
+[data-theme='light'] {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --text: #141414;
+  --muted-text: #595959;
+  --control-bg: #ffffff;
+  --control-text: #141414;
+  --control-border: #767676;
+  --accent-fill: #5bbf36;
+  --accent-text: #3e8f24;
+  --focus-ring: #3e8f24;
+  --player-stats-card-surface: #f4f4f4;
+  --player-stats-card-border: #767676;
+  --player-stats-win-icon: #3e8f24;
+  --player-stats-draw-icon: #8a5a00;
+  --player-stats-loss-icon: #b42a2f;
+  --player-stats-provisional-text: #8a5a00;
+  --player-stats-provisional-border: #8a5a00;
+  --player-stats-guest-text: #2b66a8;
+  --player-stats-chart-line: #3e8f24;
+  --player-stats-chart-point: #3e8f24;
+  --player-stats-chart-grid: #767676;
+}
