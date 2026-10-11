@@ -1,0 +1,63 @@
+/*
+ * Presentation for the Progression_Chart.
+ *
+ * Its own stylesheet beside the component, like the identity header's: it is a
+ * piece of the screen's contents rather than part of the frame `surfaces.css`
+ * owns.
+ *
+ * Every value is read from a custom property declared in
+ * `styles/playerStatsTokens.css`, so **no colour value is written here**
+ * (Requirements 15.1, 15.2). The one geometry figure the component owns — the
+ * point mark's radius — is an SVG attribute set in `ProgressionChart.tsx`
+ * rather than a declaration here, because the CSS geometry properties are not
+ * universally supported and a mark that silently collapses to a zero radius
+ * would take away the chart's non-colour cue.
+ *
+ * Two choices worth stating:
+ *
+ *  - **The chart is fluid and has no fixed width.** The `viewBox` is a
+ *    coordinate space, not a size: the element fills its section's width and the
+ *    drawing scales to it, so the chart cannot overflow a 360px viewport
+ *    (Requirement 15.7). The height is held by an `aspect-ratio` rather than by
+ *    a pixel figure for the same reason.
+ *  - **The hues reinforce; they never carry.** The line's slope and each mark's
+ *    position and shape state the reading (Requirement 15.6), and every figure
+ *    is also stated in words by the Progression_Table beside it. The line and
+ *    mark tokens are the surface-keyed green of the token table — Pitch Green on
+ *    the dark surfaces, Green Dark on the light ones — so a mark clears the 3:1
+ *    non-text floor in both Themes and green never paints text
+ *    (Requirement 15.5).
+ *
+ * Requirements: 15.2, 15.5, 15.6, 15.7
+ */
+
+.player-stats-progression-chart {
+  display: block;
+  /* Fluid: the drawing scales, the element never states a width. */
+  width: 100%;
+  height: auto;
+  /* Matches the component's own viewBox ratio, so the drawing is not distorted
+     by a container with a different shape. */
+  aspect-ratio: 16 / 5;
+}
+
+/* The bounds of the rating domain the line was scaled against — a frame for the
+   data, which is drawn only when there is data. */
+.player-stats-progression-chart__grid {
+  stroke: var(--player-stats-chart-grid);
+  stroke-width: var(--player-stats-chart-grid-width);
+}
+
+/* The direction of travel, carried by the slope. */
+.player-stats-progression-chart__line {
+  fill: none;
+  stroke: var(--player-stats-chart-line);
+  stroke-width: var(--player-stats-chart-line-width);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* One reading, carried by a shape at a position. */
+.player-stats-progression-chart__point {
+  fill: var(--player-stats-chart-point);
+}

@@ -1,0 +1,106 @@
+/*
+ * Presentation for the Result_Breakdown: the win, draw, and loss marks.
+ *
+ * Every value is read from a custom property declared in
+ * `styles/playerStatsTokens.css`, so **no colour value is written here**
+ * (Requirements 15.1, 15.2).
+ *
+ * The one rule this stylesheet exists to hold:
+ *
+ *  - **The hue paints the icon and never the letter.** `__letter` takes `--text`
+ *    and `__icon` takes the outcome's semantic token. An icon is non-text under
+ *    WCAG 1.4.11 and owes 3:1, which every one of the three hues clears against
+ *    both of this feature's surfaces in both Themes; as *text* they would owe
+ *    4.5:1, which green does not reach on a light surface in either of its
+ *    values (Requirement 15.5). So the letter carries the meaning in the body
+ *    text colour and the hue agrees with it from the glyph beside it. Changing
+ *    `__letter` to a semantic token would break that, which is why the two
+ *    declarations sit next to each other.
+ *
+ * The markers are removed because the three marks read as a row of figures
+ * rather than as a bulleted list, which is why `ResultBreakdown.tsx` states
+ * `role="list"` — WebKit drops list semantics from a list styled this way.
+ *
+ * The row wraps and carries no fixed width, so three marks stack rather than
+ * overflow a 360px viewport (Requirement 15.7).
+ *
+ * Requirements: 6.2, 15.2, 15.5, 15.7, 16.6
+ */
+
+.player-stats-result-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--player-stats-gap);
+  margin: 0;
+  padding: 0;
+  /* A row of figures, not prose. See the module note. */
+  list-style: none;
+}
+
+.player-stats-result-breakdown__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--player-stats-gap-tight);
+  color: var(--text);
+  font-size: var(--player-stats-font-size-body);
+  line-height: var(--player-stats-line-height-body);
+}
+
+/* ------------------------------------------------------------------ *
+ * The two visible carriers (Requirements 6.2, 15.5, 16.6)
+ * ------------------------------------------------------------------ */
+
+/* The letter: the body text colour, at the text contrast floor. Never a
+   semantic hue — see the module note. */
+.player-stats-result-breakdown__letter {
+  color: var(--text);
+  font-weight: var(--player-stats-font-weight-label);
+}
+
+/* The icon: the semantic hue, on a non-text mark. The weight is a second
+   non-colour cue, so the glyph still reads as a mark in greyscale. */
+.player-stats-result-breakdown__icon {
+  font-weight: var(--player-stats-font-weight-heading);
+}
+
+.player-stats-result-breakdown__item--win .player-stats-result-breakdown__icon {
+  color: var(--player-stats-win-icon);
+}
+
+.player-stats-result-breakdown__item--draw .player-stats-result-breakdown__icon {
+  color: var(--player-stats-draw-icon);
+}
+
+.player-stats-result-breakdown__item--loss .player-stats-result-breakdown__icon {
+  color: var(--player-stats-loss-icon);
+}
+
+/* ------------------------------------------------------------------ *
+ * The count (Requirement 6.1)
+ * ------------------------------------------------------------------ */
+
+.player-stats-result-breakdown__count {
+  color: var(--text);
+  font-size: var(--player-stats-font-size-figure);
+  font-weight: var(--player-stats-font-weight-heading);
+  line-height: var(--player-stats-line-height-heading);
+}
+
+/* ------------------------------------------------------------------ *
+ * The announced name (Requirement 16.6)
+ * ------------------------------------------------------------------ */
+
+/* Conveyed to assistive technology in place of the letter, and not shown: the
+   letter and the icon already say it on screen. Same mechanism as the
+   App_Shell's announcement surface, so one clipping idiom serves the app. */
+.player-stats-result-breakdown__name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

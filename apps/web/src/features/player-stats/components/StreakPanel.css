@@ -1,0 +1,79 @@
+/*
+ * Presentation for the streak panel: two labelled figures, each with the
+ * no-run-recorded statement where its value is zero.
+ *
+ * Its own stylesheet beside the component rather than a block in
+ * `surfaces.css`, which is the screen's *frame* — the main region, the three
+ * boundary states, and the section wrapper. This is one section's contents, and
+ * the two are edited for different reasons.
+ *
+ * Every value is read from a custom property declared in
+ * `styles/playerStatsTokens.css`, so **no colour value is written here** and a
+ * Theme change is a change of one attribute on the document element
+ * (Requirements 15.1, 15.2).
+ *
+ * Three choices worth stating:
+ *
+ *  - **One column, term above figure.** The two entries stack rather than
+ *    sitting in a label/value grid, so nothing here carries a width that could
+ *    exceed a 360px viewport and a long label wraps instead of squeezing the
+ *    figure beside it (Requirement 15.7).
+ *  - **The figure is distinguished by size and weight, not by hue.** It takes
+ *    `--text` like the label; the only hue difference on the panel is the muted
+ *    tone of the no-run statement, which is a note about the figure rather than
+ *    a meaning of its own, so nothing here is conveyed by colour
+ *    (Requirement 16.6).
+ *  - **The zero statement sits inside its own entry.** It is a block within the
+ *    description it explains, so the association survives a wrap and a reader
+ *    never has to work out which of the two figures a stray sentence belongs to
+ *    (Requirement 9.3).
+ *
+ * No control is styled here, because the panel renders none.
+ *
+ * Requirements: 9.3, 15.2, 15.7, 16.6
+ */
+
+.player-stats-streaks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--player-stats-gap-tight);
+  margin: 0;
+  max-width: var(--player-stats-measure);
+}
+
+/* ------------------------------------------------------------------ *
+ * The two labels (Requirements 9.1, 9.2)
+ * ------------------------------------------------------------------ */
+
+.player-stats-streaks__label {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--player-stats-font-size-meta);
+  font-weight: var(--player-stats-font-weight-label);
+  line-height: var(--player-stats-line-height-body);
+}
+
+/* ------------------------------------------------------------------ *
+ * The two figures, and the statement a zero carries (Requirement 9.3)
+ * ------------------------------------------------------------------ */
+
+.player-stats-streaks__value {
+  display: flex;
+  flex-direction: column;
+  gap: var(--player-stats-gap-hairline);
+  /* A `dd` carries a user-agent indent; the grid column is the layout here. */
+  margin: 0 0 var(--player-stats-gap-tight);
+}
+
+.player-stats-streaks__figure {
+  color: var(--text);
+  font-size: var(--player-stats-font-size-figure);
+  font-weight: var(--player-stats-font-weight-heading);
+  line-height: var(--player-stats-line-height-heading);
+}
+
+.player-stats-streaks__no-run {
+  color: var(--muted-text);
+  font-size: var(--player-stats-font-size-meta);
+  line-height: var(--player-stats-line-height-body);
+}

@@ -1,0 +1,104 @@
+/*
+ * Presentation for the identity header: the screen's level-one heading, the
+ * membership labels, and the squad-scope statement.
+ *
+ * Its own stylesheet rather than a block in `surfaces.css`, because that file is
+ * the screen's *frame* — the main region, the three boundary states, and the
+ * section wrapper — and this is the first piece of the screen's contents. The
+ * two are edited for different reasons.
+ *
+ * Every value is read from a custom property declared in
+ * `styles/playerStatsTokens.css`, so **no colour value is written here** and a
+ * Theme change is a change of one attribute on the document element
+ * (Requirements 15.1, 15.2).
+ *
+ * Three choices worth stating:
+ *
+ *  - **The name wraps; it is never truncated.** A display name is rendered
+ *    exactly as parsed (Requirement 5.1), so a long or hyphen-free one is
+ *    handled by `overflow-wrap: anywhere` rather than by an ellipsis, which
+ *    would hide part of the subject's name and could exceed a 360px viewport if
+ *    the name were left unbreakable (Requirement 15.7).
+ *  - **The labels wrap rather than shrink.** A profile can carry three of them
+ *    at once — a state, a guest label, and the Former_Player label — so the row
+ *    wraps and they stack on a narrow viewport instead of overflowing it.
+ *  - **The hues are reinforcement, never the carrier.** Each label states its
+ *    condition in words from `lib/messages.ts`, and the guest and Former_Player
+ *    hues only colour words that already say it (Requirements 5.2, 16.6). The
+ *    outline is a second non-colour cue: a label reads as a label in greyscale
+ *    and under a forced-colours mode.
+ *
+ * No control is styled here, because the header renders none for any profile
+ * (Requirement 5.5).
+ *
+ * Requirements: 5.2, 5.6, 15.2, 15.7, 16.6
+ */
+
+.player-stats-identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--player-stats-gap-tight);
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------ *
+ * The level-one heading (Requirement 5.1)
+ * ------------------------------------------------------------------ */
+
+.player-stats-identity__name {
+  margin: 0;
+  max-width: var(--player-stats-measure);
+  color: var(--text);
+  font-size: var(--player-stats-font-size-screen-heading);
+  font-weight: var(--player-stats-font-weight-heading);
+  line-height: var(--player-stats-line-height-heading);
+  /* A name is rendered whole. See the module note. */
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ *
+ * The membership labels (Requirements 5.2, 5.3, 5.4, 5.5)
+ * ------------------------------------------------------------------ */
+
+.player-stats-identity__labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--player-stats-gap-tight);
+  margin: 0;
+}
+
+.player-stats-identity__label {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
+  border: var(--player-stats-border-width) solid var(--player-stats-card-border);
+  border-radius: var(--player-stats-radius-chip);
+  color: var(--text);
+  font-size: var(--player-stats-font-size-chip);
+  font-weight: var(--player-stats-font-weight-label);
+  line-height: var(--player-stats-line-height-body);
+}
+
+/* Informational, not a result: the guest hue is the info blue of the token
+   table, and the word "Guest" carries the meaning without it. */
+.player-stats-identity__label--guest {
+  color: var(--player-stats-guest-text);
+}
+
+/* An erased membership is stated plainly and not emphasised; the label is a
+   note about the record rather than a warning. */
+.player-stats-identity__label--former-player {
+  color: var(--muted-text);
+}
+
+/* ------------------------------------------------------------------ *
+ * The squad-scope statement (Requirement 5.6)
+ * ------------------------------------------------------------------ */
+
+.player-stats-identity__scope {
+  margin: 0;
+  max-width: var(--player-stats-measure);
+  color: var(--muted-text);
+  font-size: var(--player-stats-font-size-meta);
+  line-height: var(--player-stats-line-height-body);
+}

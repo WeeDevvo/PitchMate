@@ -1,0 +1,142 @@
+/*
+ * Presentation for the rating panel: the badge shape, the rating text, and the
+ * squad-scope statement beneath them.
+ *
+ * Its own stylesheet rather than a block in `surfaces.css`, because that file is
+ * the screen's *frame* — the main region, the three boundary states, and the
+ * section wrapper — and this is the body of one section. The two are edited for
+ * different reasons.
+ *
+ * Every colour is read from a custom property declared in
+ * `styles/playerStatsTokens.css`, so **no colour value is written here** and a
+ * Theme change is a change of one attribute on the document element
+ * (Requirements 15.1, 15.2). No new token is introduced: the panel paints with
+ * `--text`, `--muted-text`, and the two already-declared provisional tokens.
+ *
+ * ## The badge shapes are the non-colour cue (Requirements 7.3, 16.6)
+ *
+ * Each condition's badge is a different *shape*, so the four are distinguishable
+ * in greyscale, under a forced-colours mode, and to anyone who reads the words
+ * rather than the hue:
+ *
+ *   established   a filled disc        — the rating has landed on a value
+ *   provisional   a dashed ring        — present, but not settled
+ *   never-played  a hollow square      — nothing has been played
+ *   absent        a dotted diamond     — appearances exist, no rating recorded
+ *
+ * Only the first is filled, and only the provisional one is amber; the other two
+ * take the muted text colour, because neither is a result and neither should
+ * compete with the figure above it. A badge is a non-text graphical object, so it
+ * owes 3:1 rather than 4.5:1 under WCAG 1.4.11 — and every token used here
+ * clears the text floor anyway, as the measurements in the token table record.
+ *
+ * The shapes are sized in `em` so they scale with the text beside them under a
+ * browser text-size preference, and the hollow shapes declare no background at
+ * all rather than naming a transparent one.
+ *
+ * ## No fixed width (Requirement 15.7)
+ *
+ * The badge-and-text composite wraps, and the statement below it is bounded by
+ * `--player-stats-measure` through `max-width` rather than by a fixed width, so
+ * nothing here can exceed a 360px viewport.
+ *
+ * Requirements: 7.3, 7.9, 15.2, 15.7, 16.6
+ */
+
+.player-stats-rating {
+  display: flex;
+  flex-direction: column;
+  gap: var(--player-stats-gap-tight);
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------ *
+ * The badge-and-text composite (Requirements 7.2, 7.3)
+ * ------------------------------------------------------------------ */
+
+.player-stats-rating__presentation {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--player-stats-gap-tight);
+}
+
+.player-stats-rating__badge {
+  flex: none;
+  box-sizing: border-box;
+  width: 0.75em;
+  height: 0.75em;
+  border-width: var(--player-stats-border-width);
+  border-style: solid;
+}
+
+/* A settled rating: a filled disc, the only badge with a fill. */
+.player-stats-rating__badge--established {
+  border-color: var(--text);
+  border-radius: 50%;
+  background: var(--text);
+}
+
+/* Still settling: a ring, and a dashed one — an outline that has not closed. */
+.player-stats-rating__badge--provisional {
+  border-color: var(--player-stats-provisional-border);
+  border-style: dashed;
+  border-radius: 50%;
+}
+
+/* Nothing played: a hollow square. Square against the two round badges, so the
+   difference reads at a glance and without colour. */
+.player-stats-rating__badge--never-played {
+  border-color: var(--muted-text);
+}
+
+/* No rating recorded: the square turned on its point and dotted, so it is told
+   apart from the never-played badge by orientation as well as by edge. */
+.player-stats-rating__badge--absent {
+  border-color: var(--muted-text);
+  border-style: dotted;
+  transform: rotate(45deg);
+}
+
+/* ------------------------------------------------------------------ *
+ * The rating text (Requirements 7.2, 7.3, 7.4, 7.5)
+ * ------------------------------------------------------------------ */
+
+.player-stats-rating__text {
+  color: var(--text);
+  font-size: var(--player-stats-font-size-body);
+  font-weight: var(--player-stats-font-weight-label);
+  line-height: var(--player-stats-line-height-body);
+  /* A statement can be long and a figure can be wide; neither overflows. */
+  overflow-wrap: anywhere;
+}
+
+/* The one condition with a number to show, sized as the section's figure. */
+.player-stats-rating__text--established {
+  font-size: var(--player-stats-font-size-figure);
+  font-weight: var(--player-stats-font-weight-heading);
+  line-height: var(--player-stats-line-height-heading);
+}
+
+/* Amber is reinforcement over words that already state the condition. */
+.player-stats-rating__text--provisional {
+  color: var(--player-stats-provisional-text);
+}
+
+/* Neither absence is a result, so neither is emphasised. */
+.player-stats-rating__text--never-played,
+.player-stats-rating__text--absent {
+  color: var(--muted-text);
+}
+
+/* ------------------------------------------------------------------ *
+ * The squad-scope statement (Requirement 7.9)
+ * ------------------------------------------------------------------ */
+
+.player-stats-rating__scope {
+  margin: 0;
+  max-width: var(--player-stats-measure);
+  color: var(--muted-text);
+  font-size: var(--player-stats-font-size-meta);
+  line-height: var(--player-stats-line-height-body);
+}

@@ -1,0 +1,47 @@
+/*
+ * Presentation for the bib-appearances figure: one label and one whole number.
+ *
+ * Its own stylesheet beside the component rather than a block in
+ * `surfaces.css`, which is the screen's *frame* — the main region, the three
+ * boundary states, and the section wrapper. This is one section's contents.
+ *
+ * Every value is read from a custom property declared in
+ * `styles/playerStatsTokens.css`, so **no colour value is written here** and a
+ * Theme change is a change of one attribute on the document element
+ * (Requirements 15.1, 15.2).
+ *
+ * Measured to match the streak panel it sits beside — the same label size and
+ * weight, the same figure size, the same stacking — because the two are read as
+ * one group and a fun statistic presented differently from a serious one looks
+ * like a different application's work. Nothing carries a fixed width, so a long
+ * label wraps rather than overflowing a 360px viewport (Requirement 15.7), and
+ * no hue carries meaning: both the label and the figure take `--text`
+ * (Requirement 16.6).
+ *
+ * Requirements: 15.2, 15.7, 16.6
+ */
+
+.player-stats-bibs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--player-stats-gap-hairline);
+  margin: 0;
+  max-width: var(--player-stats-measure);
+}
+
+.player-stats-bibs__label {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--player-stats-font-size-meta);
+  font-weight: var(--player-stats-font-weight-label);
+  line-height: var(--player-stats-line-height-body);
+}
+
+.player-stats-bibs__value {
+  /* A `dd` carries a user-agent indent; the grid column is the layout here. */
+  margin: 0;
+  color: var(--text);
+  font-size: var(--player-stats-font-size-figure);
+  font-weight: var(--player-stats-font-weight-heading);
+  line-height: var(--player-stats-line-height-heading);
+}

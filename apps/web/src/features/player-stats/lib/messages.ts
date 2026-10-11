@@ -231,6 +231,43 @@ export const NO_WIN_PERCENTAGE = 'No win percentage yet';
 export const NO_MATCHES_PLAYED_STATEMENT =
   'This player has played no matches in this squad yet.';
 
+/**
+ * The label naming the Appearance_Count (Requirement 6.1).
+ *
+ * "Appearances" rather than "matches played", because the same word names the
+ * same figure in the Bib_Appearance_Count beside it and in the squad's own
+ * leaderboard — a record is easier to read when one quantity has one name.
+ */
+export const APPEARANCES_LABEL = 'Appearances';
+
+/**
+ * The label naming the win count (Requirement 6.1).
+ *
+ * The Result_Breakdown renders `W` as its visible letter, which is the
+ * convention a football table uses and far too terse to announce on its own.
+ * This is the word behind that letter: the letter and its icon carry the meaning
+ * on screen, and this label carries it to a screen reader (Requirements 6.2,
+ * 16.6). The three are worded as plain plurals so they read correctly whatever
+ * the count beside them is, including zero.
+ */
+export const WINS_LABEL = 'Wins';
+
+/** The label naming the draw count. See {@link WINS_LABEL}. */
+export const DRAWS_LABEL = 'Draws';
+
+/** The label naming the loss count. See {@link WINS_LABEL}. */
+export const LOSSES_LABEL = 'Losses';
+
+/**
+ * The label naming the Win_Percentage (Requirements 6.3, 6.4).
+ *
+ * It carries no `%` of its own: the explicit percentage indication belongs to
+ * the figure and is produced by `formatWinPercentage`, so the label reads the
+ * same beside a percentage and beside {@link NO_WIN_PERCENTAGE} — which is what
+ * the panel renders in its place when there is none.
+ */
+export const WIN_PERCENTAGE_LABEL = 'Win percentage';
+
 /* -------------------------------------------------------------------------- */
 /* The four Rating_Conditions (Requirement 7)                                 */
 /* -------------------------------------------------------------------------- */
