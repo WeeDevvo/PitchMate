@@ -29,6 +29,7 @@ import { RATING_BADGE_KIND_ATTRIBUTE, RATING_BADGE_SELECTOR } from './RatingBadg
 import { ANONYMISED_PLACEHOLDER, type PlayerListRow } from '../lib/playerList';
 import {
   EDIT_GUEST_LABEL,
+  NEVER_PLAYED_BAND_LABEL,
   PROMOTE_TO_ADMIN_LABEL,
   PROVISIONAL_BAND_LABEL,
   RATING_UNAVAILABLE_LABEL,
@@ -288,11 +289,24 @@ describe('PlayerRow', () => {
     const cases: readonly (readonly [PlayerListRow, string, string])[] = [
       // The entry's value, rounded upstream, as a plain decimal integer.
       [rowOf(), 'rating', '1240'],
-      // No entry for this membership: a band, and no number.
+      // A rating that is still settling: a band, and no number, whatever the
+      // leaderboard carries for this membership.
       [
-        rowOf({ ratingEntry: null }),
+        rowOf({ ratingState: 'Provisional' }),
         'provisional',
         PROVISIONAL_BAND_LABEL,
+      ],
+      // No completed match in this squad: its own statement, not the band.
+      [
+        rowOf({ appearances: 0 }),
+        'never-played',
+        NEVER_PLAYED_BAND_LABEL,
+      ],
+      // Played, settled, and still no entry for this membership.
+      [
+        rowOf({ ratingEntry: null }),
+        'unavailable',
+        RATING_UNAVAILABLE_LABEL,
       ],
       // No leaderboard at all: the same label on every row.
       [

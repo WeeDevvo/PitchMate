@@ -184,6 +184,12 @@ const bandCaseArb: fc.Arbitrary<BandCase> = fc.record({
  * The parsed Squad_Member a case describes. Parsing is asserted rather than
  * assumed, so a generator that wandered outside the accepted wire shape reports
  * itself instead of narrowing the property.
+ *
+ * The Appearance_Count is positive and the Rating_State is provisional on every
+ * case, because this file is about the two **non-rating** presentations: a
+ * provisional Rating_State is what sends a row to the band now that a zero
+ * Appearance_Count has a presentation of its own, and a positive count keeps the
+ * never-played condition out of the way of the claim being made here.
  */
 function parsedMemberOf(testCase: {
   readonly membershipId: string;
@@ -199,7 +205,7 @@ function parsedMemberOf(testCase: {
     state: testCase.state,
     isGuest: testCase.isGuest,
     appearances: 12,
-    ratingState: 'Established',
+    ratingState: 'Provisional',
   };
   const parsed = parseSquadMember(body);
 
@@ -215,8 +221,9 @@ function parsedMemberOf(testCase: {
 /**
  * A leaderboard identity that is well formed and **cannot** collide with a
  * generated `fc.uuid()`: its version nibble is `0`, and `fc.uuid()` only produces
- * versions 1 to 5. So no entry ever matches the member under test, and the
- * presentation stays provisional by construction rather than by probability.
+ * versions 1 to 5. So no entry ever matches the member under test, which — with
+ * the provisional Rating_State every generated member carries — keeps the
+ * presentation non-numeric by construction rather than by probability.
  */
 function otherIdentity(index: number): string {
   return `ffffffff-0000-0000-0000-${String(index).padStart(12, '0')}`;

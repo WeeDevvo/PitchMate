@@ -159,8 +159,20 @@ type PresentationKind = 'rating' | 'provisional' | 'unavailable';
 
 // --- From a generated case to a presentation ---------------------------------
 
-/** A parsed Squad_Member with the given identity and name. */
-function parsedMemberOf(membershipId: string, displayName: string): SquadMember {
+/**
+ * A parsed Squad_Member with the given identity, name, and Rating_State.
+ *
+ * The Rating_State is a parameter because it is now what distinguishes the band
+ * from a rating: a member with a settled state and no matching entry presents as
+ * unavailable rather than as a band. The Appearance_Count stays positive on every
+ * case, so the never-played condition — which has a presentation of its own and a
+ * test of its own — never competes with the three kinds claimed here.
+ */
+function parsedMemberOf(
+  membershipId: string,
+  displayName: string,
+  ratingState: 'Provisional' | 'Established',
+): SquadMember {
   const body = {
     membershipId,
     displayName,
@@ -168,7 +180,7 @@ function parsedMemberOf(membershipId: string, displayName: string): SquadMember 
     state: 'Active',
     isGuest: false,
     appearances: 12,
-    ratingState: 'Established',
+    ratingState,
   };
   const parsed = parseSquadMember(body);
 
@@ -219,7 +231,11 @@ function presentationFor(
   displayName: string,
   value: number,
 ): RatingPresentation {
-  const member = parsedMemberOf(membershipId, displayName);
+  const member = parsedMemberOf(
+    membershipId,
+    displayName,
+    kind === 'provisional' ? 'Provisional' : 'Established',
+  );
   const leaderboard =
     kind === 'unavailable'
       ? null
