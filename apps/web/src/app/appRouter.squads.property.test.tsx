@@ -57,9 +57,8 @@
  *
  * That each path reaches its own screen is the app-shell feature's Property 37
  * and this feature's routing integration tests; that an unregistered path under
- * `/app` — the Player_Stats_Route seam among them — falls to the shell's
- * `/app/*` handling is Requirement 9.7's. Nothing here renders: the claim is
- * about the table, so the table is all that is built.
+ * `/app` falls to the shell's `/app/*` handling is Requirement 9.7's. Nothing
+ * here renders: the claim is about the table, so the table is all that is built.
  *
  * Feature: web-squads-screens, Property 48: Every registered route path is registered exactly once
  * Validates: Requirements 18.10
@@ -121,17 +120,20 @@ function matchShape(pattern: string): string {
  * resolves to this absolute pattern once nested into the shell's `/app` layout
  * route, which is the form the flattened table reports.
  *
- * The Player_Stats_Route is absent because the feature registers no screen for it
- * (Requirement 9.6). It is imported all the same, to pin in the guard below that
- * this feature's two registered patterns are distinguishable from the seam that
- * extends one of them.
+ * The Player_Stats_Route is absent because this feature registers no screen for
+ * it (Requirement 9.6): the pattern is a seam this feature *declares* and the
+ * Player_Stats_Feature registers, so it is counted among the other tables' paths
+ * below and is imported here to pin in the guard that this feature's two
+ * registered patterns are distinguishable from the one that extends them.
  */
 const FEATURE_PATHS: readonly string[] = [SQUAD_ROUTE, INVITE_LANDING_ROUTE];
 
 /**
- * Every path the other three contributors register: the marketing landing route,
- * the Auth_Feature's table, and the App_Shell's — its four Destinations plus its
- * own not-found child, which sits under `/app` and so claims `/app/*`.
+ * Every path the other contributors register: the marketing landing route, the
+ * Auth_Feature's table, the App_Shell's — its four Destinations plus its own
+ * not-found child, which sits under `/app` and so claims `/app/*` — and the
+ * Player_Stats_Feature's one route, nested into the same `/app` layout route
+ * this feature's Squad_Route is (player-stats Requirement 1.1).
  *
  * Read from each contributor's own exports rather than restated, and the shell's
  * not-found is *derived* from the two constants that produce it, so a path moving
@@ -142,6 +144,7 @@ const OTHER_TABLE_PATHS: readonly string[] = [
   LANDING_ROUTE,
   ...AUTH_ROUTE_PATHS,
   ...SHELL_DESTINATIONS.map((destination) => destination.path),
+  PLAYER_STATS_ROUTE,
   `${HOME_ROUTE}/${APP_CATCH_ALL_ROUTE}`,
   APP_CATCH_ALL_ROUTE,
 ];
@@ -237,8 +240,8 @@ describe('appRouter — Property 48 (every route path registered exactly once)',
     expect(matchShape(SQUAD_ROUTE)).toBe(matchShape('/APP/squads/:id'));
 
     // And nothing more. A splat is not a dynamic segment, the two catch-alls are
-    // different claims, and the Player_Stats_Route seam extends the Squad_Route
-    // rather than competing with it.
+    // different claims, and the Player_Stats_Route extends the Squad_Route rather
+    // than competing with it.
     expect(matchShape(APP_CATCH_ALL_ROUTE)).not.toBe(
       matchShape(`${HOME_ROUTE}/${APP_CATCH_ALL_ROUTE}`),
     );

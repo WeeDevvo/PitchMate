@@ -138,6 +138,74 @@ export const PROFILE_LOADING_LABEL = 'Loading player stats';
 export const PLAYER_STATS_HEADING = 'Player stats';
 
 /* -------------------------------------------------------------------------- */
+/* The screen's section headings (Requirement 16.3)                           */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Each heading names one `StatSection` — the region's accessible name and its
+ * one level-two heading are the same string, so a person moving through the
+ * screen by its regions hears the words that are on screen (Requirement 16.3).
+ *
+ * The four Pairwise_Section headings are *not* here; they are declared with the
+ * rest of Requirement 10's copy further down, because the sections they name
+ * are rendered by `PairwiseSection` rather than by the screen directly. Six
+ * headings here plus those four are the ten sections the screen renders.
+ */
+
+/**
+ * The record section's heading (Requirements 6.1, 16.3).
+ *
+ * The football word for the appearances, wins, draws, and losses taken
+ * together, which is what the section carries.
+ */
+export const RECORD_SECTION_HEADING = 'Record';
+
+/**
+ * The rating section's heading (Requirements 7.2, 16.3).
+ *
+ * Names the quantity rather than its condition, because all four
+ * Rating_Conditions are rendered under it — including the two that assert no
+ * number at all.
+ */
+export const RATING_SECTION_HEADING = 'Rating';
+
+/**
+ * The progression section's heading (Requirements 8.2, 16.3).
+ *
+ * Says *rating* progression rather than just "progression" so the section is
+ * not read as a count of matches or a run of form; it is the same quantity the
+ * section above reports, over time.
+ */
+export const PROGRESSION_SECTION_HEADING = 'Rating progression';
+
+/**
+ * The streaks section's heading (Requirements 9.1, 16.3).
+ *
+ * Plural, because the section carries both the Win_Streak and the
+ * Unbeaten_Streak, each separately labelled inside it (Requirement 9.2).
+ */
+export const STREAKS_SECTION_HEADING = 'Streaks';
+
+/**
+ * The bib-appearances section's heading (Requirements 9.4, 16.3).
+ *
+ * A section of its own rather than a line inside the streaks section: it counts
+ * something else entirely, and keeping it separate means the screen's shape is
+ * the same for a squad that has never handed anyone a bib.
+ */
+export const BIBS_SECTION_HEADING = 'Bibs';
+
+/**
+ * The rich-statistics section's heading (Requirements 11.1, 16.3).
+ *
+ * Names what the section is about — the detail captured during play — rather
+ * than naming the feature that captures it, and it reads correctly in all three
+ * tracking conditions: the heading stays while the body states that this squad
+ * records no live detail, or that it records it and has none yet.
+ */
+export const RICH_STATS_SECTION_HEADING = 'Live match detail';
+
+/* -------------------------------------------------------------------------- */
 /* Identity: squad scope, membership state, guest, former player              */
 /* -------------------------------------------------------------------------- */
 

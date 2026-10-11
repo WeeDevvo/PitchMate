@@ -12,7 +12,7 @@
  * | --- | --- |
  * | `/app` resolves the Squads_Home as the shell's Home_Slot content, inside the frame | 18.6 |
  * | `/app/squads/:squadId` resolves the Squad_Screen behind the Route_Guard and inside the frame | 18.5 |
- * | `/app/squads/:squadId/players/:membershipId` is registered by nobody and falls to the shell's `/app` not-found | 9.6, 9.7 |
+ * | `/app/squads/:squadId/players/:membershipId` is registered by no table of *this* feature, and resolves no screen of it | 9.6 |
  * | `/join/:code` resolves outside the guard and outside the frame | 18.5 |
  * | every feature screen is reachable at its registered path | 20.12 |
  * | in-app navigation performs no full-document reload | 9.4, 20.12 |
@@ -38,7 +38,9 @@
  * The recorded request log is the second discriminator, and the sharper one for a
  * negative claim: the Squad_Screen cannot resolve without a `GetSquad`, so an
  * address that issues none rendered something else. That is precisely what
- * Requirement 9.6 says about the Player_Stats_Route.
+ * Requirement 9.6 says about the Player_Stats_Route — this feature declares the
+ * pattern for the Player_Stats_Feature to register and resolves no screen of its
+ * own there.
  *
  * ### How "no full-document reload" is asserted
  *
@@ -282,18 +284,23 @@ describe('the Squad_Route entered directly', () => {
   });
 });
 
-// --- The Player_Stats_Route seam (Requirements 9.6, 9.7) --------------------
+// --- The Player_Stats_Route seam (Requirement 9.6) --------------------------
 
-describe('the Player_Stats_Route, which nothing registers', () => {
-  it('is registered by no route of the assembled table', () => {
-    // 9.6: the pattern is exported as a seam for the later player-stats feature
-    // and is deliberately absent from the table.
+describe('the Player_Stats_Route, which this feature declares but never registers', () => {
+  it('is claimed exactly once, by the feature that owns it rather than by this one', () => {
+    // 9.6: this feature exports the pattern as a seam and registers no screen
+    // for it; the Player_Stats_Feature's table is what the application nests
+    // into the shell's `/app` layout route (player-stats Requirement 1.1). Once
+    // in the assembled table is the claim — a second registration would mean one
+    // of the two contributors had restated the other's route.
     const { routes } = assembleWithSquads();
 
-    expect(registeredPaths(routes)).not.toContain(PLAYER_STATS_ROUTE);
+    expect(
+      registeredPaths(routes).filter((path) => path === PLAYER_STATS_ROUTE),
+    ).toHaveLength(1);
   });
 
-  it('falls to the shell’s /app not-found rather than to any feature screen', async () => {
+  it('resolves no screen of this feature', async () => {
     const { routes, requests } = assembleWithSquads();
     const requested = playerStatsPath(
       SQUADS_FIXTURE.squadId,
@@ -303,10 +310,48 @@ describe('the Player_Stats_Route, which nothing registers', () => {
     const router = await renderAt(routes, requested);
     await flush();
 
-    // 9.7: the App_Shell's own handling for a path beneath `/app` — inside the
-    // frame, one heading, and a control to the Home_Destination. `react-router`
-    // ranks the dynamic `/app/squads/:squadId` above the splat `/app/*`, and this
-    // address matches neither the Squad_Route nor anything else, so the splat wins.
+    // Inside the frame and at the requested address: `react-router` ranks the
+    // two-dynamic-segment pattern above `/app/squads/:squadId` and above the
+    // shell's `/app/*` splat, so neither claims it.
+    expectShellFrame();
+    expect(router.state.location.pathname).toBe(requested);
+    expect(levelOneHeadings()).toHaveLength(1);
+
+    // 9.6: no screen of *this* feature resolved. The Squad_Screen would have
+    // issued a `GetSquad` and rendered the Squad_Name as its heading; the
+    // Squads_Home would have rendered a Squad_Card. Neither happened.
+    expect(issued(requests, SQUADS_REQUESTS.getSquad)).toBe(0);
+    expect(issued(requests, SQUADS_REQUESTS.leaderboard)).toBe(0);
+    expect(screen.queryByText(SQUADS_FIXTURE.squadName)).toBeNull();
+    expect(screen.queryByText(SQUADS_FIXTURE.playerName)).toBeNull();
+
+    // Nor did either not-found surface: the shell's `/app` handling offers the
+    // Home_Destination and the application catch-all offers the marketing
+    // landing route, while the screen registered here offers the way back to the
+    // squad the address names. What is asserted is only where that control
+    // points — everything about the profile surface itself belongs to the
+    // player-stats feature's own routing test.
+    const main = within(screen.getByRole('main'));
+    expect(main.getByRole('link')).toHaveAttribute(
+      'href',
+      squadPath(SQUADS_FIXTURE.squadId),
+    );
+    expect(
+      screen.queryByRole('link', { name: APP_NOT_FOUND_CONTROL_LABEL }),
+    ).toBeNull();
+  });
+
+  it('leaves an unregistered path beneath it to the shell’s /app not-found', async () => {
+    const { routes, requests } = assembleWithSquads();
+    // One segment short of the Player_Stats_Route and one past the Squad_Route,
+    // so it matches no registered pattern under `/app`.
+    const requested = `${squadPath(SQUADS_FIXTURE.squadId)}/players`;
+
+    const router = await renderAt(routes, requested);
+    await flush();
+
+    // 9.7: the App_Shell's own handling for an unmatched path beneath `/app` —
+    // inside the frame, one heading, and a control to the Home_Destination.
     expectShellFrame();
     expect(router.state.location.pathname).toBe(requested);
     expect(levelOneHeadings()).toHaveLength(1);
@@ -314,16 +359,9 @@ describe('the Player_Stats_Route, which nothing registers', () => {
     const main = within(screen.getByRole('main'));
     expect(main.getByRole('link')).toHaveAttribute('href', HOME_ROUTE);
 
-    // 9.6: no feature screen resolved. The Squad_Screen would have issued a
-    // `GetSquad` and rendered the Squad_Name as its heading; the Squads_Home
-    // would have rendered a Squad_Card. Neither happened.
+    // And no feature screen resolved on the way there.
     expect(issued(requests, SQUADS_REQUESTS.getSquad)).toBe(0);
     expect(issued(requests, SQUADS_REQUESTS.leaderboard)).toBe(0);
-    expect(screen.queryByText(SQUADS_FIXTURE.squadName)).toBeNull();
-    expect(screen.queryByText(SQUADS_FIXTURE.playerName)).toBeNull();
-
-    // Nor did the *application* catch-all claim it: that surface renders no frame
-    // and offers the marketing landing route instead of the Home_Destination.
     expect(
       screen.queryByRole('link', { name: APP_NOT_FOUND_CONTROL_LABEL }),
     ).toBeNull();
@@ -443,7 +481,7 @@ describe('in-app navigation through the feature', () => {
     expect(document.documentElement).toBe(documentElement);
   });
 
-  it('follows a Player_Row control to the Player_Stats_Route, reaching the shell’s not-found', async () => {
+  it('follows a Player_Row control to the Player_Stats_Route without reloading', async () => {
     const { routes } = assembleWithSquads();
 
     const router = await renderAt(routes, squadPath(SQUADS_FIXTURE.squadId));
@@ -466,12 +504,13 @@ describe('in-app navigation through the feature', () => {
     expect(document.documentElement).toBe(documentElement);
     expect(screen.getByRole('banner')).toBe(banner);
 
-    // … and 9.7: the address it reaches is handled by the shell's `/app`
-    // not-found, with no feature-local not-found screen of its own.
+    // … and the Squad_Screen it came from is gone, replaced inside the same
+    // frame by the screen the Player_Stats_Feature registers at that address,
+    // whose way out leads back to this squad.
     await waitFor(() => {
       expect(
         within(screen.getByRole('main')).getByRole('link'),
-      ).toHaveAttribute('href', HOME_ROUTE);
+      ).toHaveAttribute('href', squadPath(SQUADS_FIXTURE.squadId));
     });
     expect(screen.queryByText(SQUADS_FIXTURE.squadName)).toBeNull();
   });
