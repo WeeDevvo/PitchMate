@@ -1,0 +1,208 @@
+/*
+ * Presentation for the feature's shared surfaces: the main content region that
+ * `surfaceFocus.ts` places focus into, the three boundary states (loading,
+ * failed, not-found), and the `StatSection` wrapper every profile section is
+ * rendered inside.
+ *
+ * One stylesheet for all five, rather than one per component, because they are
+ * the screen's frame rather than its contents: a section panel, the failure that
+ * replaces the whole stack of them, and the not-found treatment that replaces it
+ * too all have to measure and sit alike, and splitting them across five files
+ * would invite exactly the drift that makes a failure state look like it came
+ * from a different application.
+ *
+ * Every value is read from a declared custom property — the feature's own tokens
+ * in `styles/playerStatsTokens.css` layered over the shared `src/theme` tables —
+ * so **no colour value is written here** and a Theme change is a change of one
+ * attribute on the document element (Requirements 15.1, 15.2).
+ *
+ * Three choices worth stating:
+ *
+ *  - **No fixed width anywhere.** Prose is bounded by `--player-stats-measure`
+ *    through `max-width` and otherwise fills its column, and the failure's action
+ *    row wraps rather than shrinking, so two controls at the minimum pointer
+ *    target stack instead of overflowing. Nothing here can exceed a 360px
+ *    viewport (Requirement 15.7).
+ *  - **No colour carries a meaning.** The failure notice and the not-found
+ *    treatment are deliberately *not* painted in a warning hue: each is a
+ *    statement whose words already carry it, and a second carrier would be a
+ *    colour-only cue for anyone who reads the hue and not the sentence
+ *    (Requirement 16.6). The feature's semantic hues are reserved for marks that
+ *    sit beside a label.
+ *  - **A pending retry is `aria-disabled`, not `disabled`.** The styling for that
+ *    state therefore hangs off the ARIA attribute, which is also what assistive
+ *    technology reads, and the control stays reachable in the keyboard order
+ *    (Requirements 4.5, 16.4).
+ *
+ * Requirements: 15.2, 15.7, 16.4, 16.5, 16.6
+ */
+
+/* ------------------------------------------------------------------ *
+ * The main content region (Requirement 16.5)
+ * ------------------------------------------------------------------ */
+
+/*
+ * The element `useConditionFocus` focuses when a change of rendered condition
+ * would otherwise have dropped focus to the document body.
+ *
+ * It carries `tabIndex="-1"`, so it is never a tab stop and a programmatic focus
+ * move does not match `:focus-visible` — which is why only the keyboard-visible
+ * state is styled below. Painting a ring on the repair itself would put a box
+ * around the whole screen every time a response arrived, which says nothing a
+ * keyboard user needs and distracts everyone else.
+ */
+.player-stats-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--player-stats-gap);
+  width: 100%;
+}
+
+.player-stats-main:focus-visible {
+  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline-offset: var(--player-stats-focus-offset);
+}
+
+/* ------------------------------------------------------------------ *
+ * StatSection — the wrapper every profile section renders inside
+ * (Requirement 16.3)
+ * ------------------------------------------------------------------ */
+
+.player-stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--player-stats-gap-tight);
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--player-stats-gutter);
+  border: var(--player-stats-border-width) solid var(--player-stats-card-border);
+  border-radius: var(--player-stats-radius);
+  background: var(--player-stats-card-surface);
+  color: var(--text);
+  font-size: var(--player-stats-font-size-body);
+  line-height: var(--player-stats-line-height-body);
+}
+
+.player-stats-section__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--player-stats-font-size-section-heading);
+  font-weight: var(--player-stats-font-weight-heading);
+  line-height: var(--player-stats-line-height-heading);
+}
+
+/* ------------------------------------------------------------------ *
+ * The loading indication (Requirement 2.2)
+ * ------------------------------------------------------------------ */
+
+/*
+ * A statement rather than a spinner, so there is no animation to exempt from a
+ * reduced-motion preference and nothing decorative for a program to mistake for
+ * content. The busy state lives on the element, not in the paint.
+ */
+.player-stats-loading {
+  margin: 0;
+  max-width: var(--player-stats-measure);
+  color: var(--muted-text);
+  font-size: var(--player-stats-font-size-body);
+  font-weight: var(--player-stats-font-weight-body);
+  line-height: var(--player-stats-line-height-body);
+}
+
+/* ------------------------------------------------------------------ *
+ * The failure notice (Requirements 4.1, 4.4, 4.5)
+ * ------------------------------------------------------------------ */
+
+.player-stats-failure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--player-stats-gap-tight);
+  max-width: var(--player-stats-measure);
+}
+
+.player-stats-failure__message {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--player-stats-font-size-body);
+  line-height: var(--player-stats-line-height-body);
+}
+
+/* Wrapping rather than shrinking, so the retry and any control beside it stack
+   on a narrow viewport instead of overflowing it (Requirement 15.7). */
+.player-stats-failure__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--player-stats-touch-gap);
+}
+
+.player-stats-failure__retry {
+  min-height: var(--player-stats-touch-target);
+  padding: 0 var(--player-stats-gap-tight);
+  border: var(--player-stats-border-width) solid var(--control-border);
+  border-radius: var(--player-stats-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  font-weight: var(--player-stats-font-weight-label);
+  cursor: pointer;
+}
+
+.player-stats-failure__retry:focus-visible {
+  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline-offset: var(--player-stats-focus-offset);
+}
+
+/* The pending state is carried by `aria-busy` and by the control refusing to
+   issue a second call; the cursor is a redundant cue, never the only one. */
+.player-stats-failure__retry[aria-disabled='true'] {
+  cursor: default;
+}
+
+/* ------------------------------------------------------------------ *
+ * The not-found treatment (Requirements 3.5, 3.6)
+ * ------------------------------------------------------------------ */
+
+.player-stats-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--player-stats-gap-tight);
+  max-width: var(--player-stats-measure);
+}
+
+.player-stats-not-found__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--player-stats-font-size-screen-heading);
+  font-weight: var(--player-stats-font-weight-heading);
+  line-height: var(--player-stats-line-height-heading);
+}
+
+.player-stats-not-found__statement {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: var(--player-stats-font-size-body);
+  line-height: var(--player-stats-line-height-body);
+}
+
+/* The way back to the squad, shaped as the same control the failure notice
+   renders so the two boundary states offer one recognisable affordance. */
+.player-stats-squad-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--player-stats-touch-target);
+  padding: 0 var(--player-stats-gap-tight);
+  border: var(--player-stats-border-width) solid var(--control-border);
+  border-radius: var(--player-stats-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font-size: var(--player-stats-font-size-body);
+  font-weight: var(--player-stats-font-weight-label);
+  text-decoration: none;
+}
+
+.player-stats-squad-link:focus-visible {
+  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline-offset: var(--player-stats-focus-offset);
+}

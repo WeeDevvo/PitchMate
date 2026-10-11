@@ -72,6 +72,24 @@ export const appShellRoot: string = join(srcRoot, 'features', 'app-shell');
 export const authRoot: string = join(srcRoot, 'features', 'auth');
 export const landingRoot: string = join(srcRoot, 'features', 'landing');
 
+/**
+ * The player-stats feature — the second admitted consumer of this feature's
+ * barrel.
+ *
+ * This feature declares the Player_Stats_Route pattern and its path builder and
+ * exports both as "the seam the later player-stats feature registers its screen
+ * against" (Requirement 9.3, and `index.ts`'s own table). That feature now
+ * exists: it registers its screen at the pattern, and its screen and components
+ * build the Squad_Path and sibling Player_Stats_Paths through the builders
+ * exported here rather than restating a path literal.
+ *
+ * So the dependency edge `player-stats` → `squads` is the published seam being
+ * used, not a boundary being crossed. What the scan still holds is the part that
+ * matters: the edge runs *one way* (nothing here imports player-stats), it
+ * reaches no deeper than the barrel, and no other feature reaches in at all.
+ */
+export const playerStatsRoot: string = join(srcRoot, 'features', 'player-stats');
+
 /** The one shared Theme module (Requirement 18.8). */
 export const themeRoot: string = join(srcRoot, 'theme');
 

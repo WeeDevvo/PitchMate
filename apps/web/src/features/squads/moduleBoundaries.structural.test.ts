@@ -31,8 +31,11 @@
  *    surface can be read off the source rather than inferred.
  * 3. **The barrel is the only way in** (Requirement 18.7). Every file outside the
  *    feature that imports it imports the barrel, never a deeper path, and every
- *    such file lives under `src/app/` — the one application-level consumer. A
- *    single entry point is only single if reaching past it fails here.
+ *    such file lives under one of the two admitted consumers: `src/app/`, the
+ *    application-level router wiring, and `features/player-stats/`, the feature
+ *    this one published `PLAYER_STATS_ROUTE` and `playerStatsPath` *for*
+ *    (Requirement 9.3). Both are checked to be reached, so neither allowance is
+ *    vacuous. A single entry point is only single if reaching past it fails here.
  * 4. **Nothing surplus crosses from `lib/` or `api/`** (Requirement 18.7). The
  *    barrel names exactly six modules, and the names it carries out of `lib/` and
  *    `api/` are exactly the eight the design justifies: the three route patterns,
@@ -64,6 +67,7 @@ import {
   isWithin,
   inAppImports,
   norm,
+  playerStatsRoot,
   readCodeOnly,
   readWithoutComments,
   reExports,
@@ -345,14 +349,38 @@ describe('the feature is imported through its barrel only (Requirement 18.7)', (
     expect(offenders).toEqual([]);
   });
 
-  it('is imported by the application-level router wiring only', () => {
-    // One consumer, and no second. The App_Shell, the Auth_Feature, and the
-    // marketing landing feature import nothing of this feature — the edge runs
-    // `app` → `squads`, never the reverse and never sideways.
+  it('is imported by the router wiring and the published player-stats seam only', () => {
+    // Two consumers, and no third.
+    //
+    //  - `src/app/` — the application-level router wiring, which builds the
+    //    facade and registers the three route tables.
+    //  - `features/player-stats/` — the feature this one published
+    //    `PLAYER_STATS_ROUTE` and `playerStatsPath` *for* (Requirement 9.3). It
+    //    registers its screen at that pattern and builds the Squad_Path and
+    //    sibling profile paths through these builders instead of restating a
+    //    path literal, which is the whole purpose of exporting them.
+    //
+    // The App_Shell, the Auth_Feature, and the marketing landing feature import
+    // nothing of this feature, and neither edge runs the other way: `squads`
+    // reaches into neither `src/app/` nor `player-stats`, which the containment
+    // invariant above is what holds.
     const offenders = inboundImports
-      .filter(({ file }) => !isWithin(appWiringRoot, file))
+      .filter(
+        ({ file }) =>
+          !isWithin(appWiringRoot, file) && !isWithin(playerStatsRoot, file),
+      )
       .map(({ file, specifier }) => ({ file: relTo(srcRoot, file), specifier }));
     expect(offenders).toEqual([]);
+  });
+
+  it('is reached from both admitted consumers, so neither allowance is vacuous', () => {
+    const consumers = new Set(
+      inboundImports.map(({ file }) =>
+        isWithin(appWiringRoot, file) ? 'app-wiring' : 'player-stats',
+      ),
+    );
+
+    expect([...consumers].sort()).toEqual(['app-wiring', 'player-stats']);
   });
 });
 
