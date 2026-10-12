@@ -25,7 +25,7 @@ public sealed class TeamSheet
 {
     private readonly List<TeamSheetTeam> _teams;
 
-    private TeamSheet(string location, CandidateDay confirmedDay, IEnumerable<TeamSheetTeam> teams)
+    private TeamSheet(string location, DateTimeOffset confirmedDay, IEnumerable<TeamSheetTeam> teams)
     {
         Location = location;
         ConfirmedDay = confirmedDay;
@@ -35,8 +35,13 @@ public sealed class TeamSheet
     /// <summary>The trimmed place the match is played, shown on the sheet (Requirement 9.1).</summary>
     public string Location { get; }
 
-    /// <summary>The confirmed scheduled day-and-time of the match (Requirement 9.1).</summary>
-    public CandidateDay ConfirmedDay { get; }
+    /// <summary>
+    /// The confirmed scheduled day-and-time of the match, as the single UTC instant the match's
+    /// <see cref="CandidateDay"/> holds (Requirement 9.1, and Requirements 9.1 and 9.2 of
+    /// match-read-models). Carried as a bare instant rather than the wrapping value type so every day,
+    /// confirmed day and completion instant a match read reports shares one wire shape.
+    /// </summary>
+    public DateTimeOffset ConfirmedDay { get; }
 
     /// <summary>
     /// The teams on the sheet, in their locked order, each with its name, bib flag, and roster of
@@ -71,6 +76,6 @@ public sealed class TeamSheet
                     ? displayName
                     : string.Empty)));
 
-        return new TeamSheet(match.Location, match.ConfirmedDay!.Value, teams);
+        return new TeamSheet(match.Location, match.ConfirmedDay!.Value.Instant, teams);
     }
 }

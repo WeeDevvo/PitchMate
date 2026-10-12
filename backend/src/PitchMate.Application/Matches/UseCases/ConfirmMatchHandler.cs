@@ -201,8 +201,10 @@ public sealed class ConfirmMatchHandler
 
         AvailabilityTally tally = AvailabilityTally.Compute(match.CandidateDays, scoped);
 
+        // The tally reports each day as a bare UTC instant; DateTimeOffset equality compares the
+        // instant, so this matches the CandidateDay's by-instant equality it replaced.
         var confirmedDay = new CandidateDay(day);
-        DayAvailability? entry = tally.Days.FirstOrDefault(d => d.Day.Equals(confirmedDay));
+        DayAvailability? entry = tally.Days.FirstOrDefault(d => d.Day == confirmedDay.Instant);
         return entry?.Count ?? 0;
     }
 

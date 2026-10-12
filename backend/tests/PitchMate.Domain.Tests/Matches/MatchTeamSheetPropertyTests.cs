@@ -87,7 +87,9 @@ public class MatchTeamSheetPropertyTests
             var sheet = result.Value!;
 
             // Location and confirmed day reflect the match (Requirement 9.1).
-            if (sheet.Location != match.Location || !sheet.ConfirmedDay.Equals(match.ConfirmedDay!.Value))
+            // The sheet reports the confirmed day as a bare UTC instant; DateTimeOffset equality
+            // compares the instant, so this is the same by-instant comparison CandidateDay defined.
+            if (sheet.Location != match.Location || sheet.ConfirmedDay != match.ConfirmedDay!.Value.Instant)
             {
                 return false;
             }
