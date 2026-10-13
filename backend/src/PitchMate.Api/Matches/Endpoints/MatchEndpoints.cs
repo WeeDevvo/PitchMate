@@ -84,6 +84,7 @@ public static class MatchEndpoints
     {
         // Submit or replace the acting member's availability response (Requirement 4.1, 4.2).
         group.MapPut("/{matchId:guid}/availability", static async (
+            Guid squadId,
             Guid matchId,
             SubmitAvailabilityRequest request,
             ClaimsPrincipal principal,
@@ -95,16 +96,20 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            var command = new SubmitAvailabilityResponseCommand(userId, matchId, request.MarkedDays ?? []);
+            var command = new SubmitAvailabilityResponseCommand(userId, squadId, matchId, request.MarkedDays ?? []);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
             .WithName("SubmitAvailabilityResponse")
-            .Produces<AvailabilityResponse>(StatusCodes.Status200OK)
+            // Declares the Application response contract, not the AvailabilityResponse persistence
+            // entity: the entity put its BaseEntity-declared audit and soft-delete members on the
+            // wire (Requirements 8.1, 8.3, 8.5).
+            .Produces<SubmitAvailabilityResult>(StatusCodes.Status200OK)
             .WithMatchProblemResponses();
 
         // Clear the acting member's own availability response (Requirement 4.3).
         group.MapDelete("/{matchId:guid}/availability", static async (
+            Guid squadId,
             Guid matchId,
             ClaimsPrincipal principal,
             ClearAvailabilityResponseHandler handler,
@@ -115,7 +120,8 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            return ToHttpResult(await handler.HandleAsync(new ClearAvailabilityResponseCommand(userId, matchId), ct));
+            return ToHttpResult(
+                await handler.HandleAsync(new ClearAvailabilityResponseCommand(userId, squadId, matchId), ct));
         })
             .RequireAuthorization()
             .WithName("ClearAvailabilityResponse")
@@ -125,6 +131,7 @@ public static class MatchEndpoints
         // Read the availability tally — gated to active members; existence concealed otherwise
         // (Requirement 5.1, 5.5, 5.6, 5.7).
         group.MapGet("/{matchId:guid}/availability/tally", static async (
+            Guid squadId,
             Guid matchId,
             ClaimsPrincipal principal,
             GetAvailabilityTallyHandler handler,
@@ -136,7 +143,7 @@ public static class MatchEndpoints
             }
 
             return ToHttpResult(
-                await handler.HandleAsync(new GetAvailabilityTallyCommand(userId, matchId), ct),
+                await handler.HandleAsync(new GetAvailabilityTallyCommand(userId, squadId, matchId), ct),
                 concealExistence: true);
         })
             .RequireAuthorization()
@@ -152,6 +159,7 @@ public static class MatchEndpoints
     {
         // Confirm the match on one of its candidate days (Requirement 6.1).
         group.MapPost("/{matchId:guid}/confirm", static async (
+            Guid squadId,
             Guid matchId,
             ConfirmMatchRequest request,
             ClaimsPrincipal principal,
@@ -163,7 +171,7 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            var command = new ConfirmMatchCommand(userId, matchId, request.Day);
+            var command = new ConfirmMatchCommand(userId, squadId, matchId, request.Day);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
@@ -177,6 +185,7 @@ public static class MatchEndpoints
     {
         // Add a guest participant to a confirmed match (Requirement 7.1).
         group.MapPost("/{matchId:guid}/participants", static async (
+            Guid squadId,
             Guid matchId,
             AddGuestParticipantRequest request,
             ClaimsPrincipal principal,
@@ -188,7 +197,7 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            var command = new AddGuestParticipantCommand(userId, matchId, request.GuestMembershipId);
+            var command = new AddGuestParticipantCommand(userId, squadId, matchId, request.GuestMembershipId);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
@@ -198,6 +207,7 @@ public static class MatchEndpoints
 
         // Remove a registered or guest participant from a confirmed match (Requirement 7.2).
         group.MapDelete("/{matchId:guid}/participants/{membershipId:guid}", static async (
+            Guid squadId,
             Guid matchId,
             Guid membershipId,
             ClaimsPrincipal principal,
@@ -209,7 +219,7 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            var command = new RemoveParticipantCommand(userId, matchId, membershipId);
+            var command = new RemoveParticipantCommand(userId, squadId, matchId, membershipId);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()

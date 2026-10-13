@@ -29,6 +29,13 @@ namespace PitchMate.Application.Matches.UseCases;
 /// through <see cref="IUnitOfWork.SaveChangesAsync"/>; any failure adds no participant. This action
 /// raises no notification.
 /// </para>
+/// <para>
+/// Immediately after the match load and <em>before</em> the membership is resolved, the handler
+/// refuses a command whose <c>SquadId</c> — the squad named in the request path — is not the squad
+/// the match records, returning the same uniform authorisation failure and adding nothing. Because
+/// the check precedes the gate, the path squad is never an input to the gate's decision and the
+/// acting membership is always resolved from the match's own squad (Requirement 7.3, 7.4, 7.6).
+/// </para>
 /// </summary>
 public sealed class AddGuestParticipantHandler
 {
@@ -74,6 +81,16 @@ public sealed class AddGuestParticipantHandler
         // (Requirement 14.1, 14.2).
         Match? match = await _matches.GetByIdAsync(command.MatchId, cancellationToken);
         if (match is null)
+        {
+            return Unauthorized();
+        }
+
+        // The path's squad must be the match's own squad. The check runs before the membership is
+        // resolved, so the path squadId is never an input to the gate's decision and binding a
+        // caller-supplied squad id grants no access the match's own squad would not grant. A mismatch
+        // is refused with the same uniform authorisation failure and adds nothing, so it discloses
+        // neither the match's existence nor which squad it belongs to (Requirement 7.3, 7.4, 7.6).
+        if (command.SquadId != match.SquadId)
         {
             return Unauthorized();
         }

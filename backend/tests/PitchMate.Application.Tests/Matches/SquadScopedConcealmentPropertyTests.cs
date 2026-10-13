@@ -70,22 +70,23 @@ public class SquadScopedConcealmentPropertyTests
             var availability = new ConcealmentAvailabilityRepository();
 
             // 1. Active member of the match's squad -> success (the view is returned, subject to state).
-            var active = Invoke(scenario.Handler, matches, memberships, availability, member.UserId!.Value, match.Id);
+            var active = Invoke(
+                scenario.Handler, matches, memberships, availability, member.UserId!.Value, squadId, match.Id);
 
             // 2. An inactive membership of the squad -> uniform non-disclosing failure (Requirement 14.4).
-            var inactiveOutcome =
-                Invoke(scenario.Handler, matches, memberships, availability, inactive.UserId!.Value, match.Id);
+            var inactiveOutcome = Invoke(
+                scenario.Handler, matches, memberships, availability, inactive.UserId!.Value, squadId, match.Id);
 
             // 3. A non-member (a user with no membership in the squad) -> uniform non-disclosing failure
             //    (Requirement 5.5, 9.4, 14.3).
-            var nonMemberOutcome =
-                Invoke(scenario.Handler, matches, memberships, availability, Guid.NewGuid(), match.Id);
+            var nonMemberOutcome = Invoke(
+                scenario.Handler, matches, memberships, availability, Guid.NewGuid(), squadId, match.Id);
 
             // 4. A GENUINE member requesting a match that does not exist -> uniform non-disclosing failure.
             //    This is the crux of concealment: the failure is indistinguishable from the non-member's,
             //    so a rejection never reveals whether the match exists (Requirement 5.6, 5.7, 9.5, 14.4).
-            var missingOutcome =
-                Invoke(scenario.Handler, matches, memberships, availability, member.UserId!.Value, Guid.NewGuid());
+            var missingOutcome = Invoke(
+                scenario.Handler, matches, memberships, availability, member.UserId!.Value, squadId, Guid.NewGuid());
 
             // The active member is admitted.
             var memberAdmitted = active.Success;
@@ -116,7 +117,9 @@ public class SquadScopedConcealmentPropertyTests
 
     /// <summary>
     /// Invokes the chosen read handler for <paramref name="requestingUserId"/> against
-    /// <paramref name="matchId"/> and normalises the result to an <see cref="Outcome"/>.
+    /// <paramref name="matchId"/> within <paramref name="squadId"/> and normalises the result to an
+    /// <see cref="Outcome"/>. Every scenario here supplies the match's own squad, so the squad-mismatch
+    /// refusal is not what is being observed — the actor's membership is.
     /// </summary>
     private static Outcome Invoke(
         HandlerKind handler,
@@ -124,12 +127,14 @@ public class SquadScopedConcealmentPropertyTests
         ISquadMembershipRepository memberships,
         IAvailabilityRepository availability,
         Guid requestingUserId,
+        Guid squadId,
         Guid matchId)
     {
         if (handler == HandlerKind.AvailabilityTally)
         {
             var result = new GetAvailabilityTallyHandler(matches, memberships, availability)
-                .HandleAsync(new GetAvailabilityTallyCommand(requestingUserId, matchId), CancellationToken.None)
+                .HandleAsync(
+                    new GetAvailabilityTallyCommand(requestingUserId, squadId, matchId), CancellationToken.None)
                 .GetAwaiter().GetResult();
 
             return result.IsSuccess

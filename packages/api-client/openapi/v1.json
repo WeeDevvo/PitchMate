@@ -4331,6 +4331,15 @@
         "operationId": "SubmitAvailabilityResponse",
         "parameters": [
           {
+            "name": "squadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "matchId",
             "in": "path",
             "required": true,
@@ -4356,7 +4365,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AvailabilityResponse"
+                  "$ref": "#/components/schemas/SubmitAvailabilityResult"
                 }
               }
             }
@@ -4432,6 +4441,15 @@
         ],
         "operationId": "ClearAvailabilityResponse",
         "parameters": [
+          {
+            "name": "squadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           {
             "name": "matchId",
             "in": "path",
@@ -4520,6 +4538,15 @@
         "operationId": "GetAvailabilityTally",
         "parameters": [
           {
+            "name": "squadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "matchId",
             "in": "path",
             "required": true,
@@ -4603,6 +4630,15 @@
         ],
         "operationId": "ConfirmMatch",
         "parameters": [
+          {
+            "name": "squadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           {
             "name": "matchId",
             "in": "path",
@@ -4708,6 +4744,15 @@
         "operationId": "AddGuestParticipant",
         "parameters": [
           {
+            "name": "squadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "matchId",
             "in": "path",
             "required": true,
@@ -4811,6 +4856,15 @@
         ],
         "operationId": "RemoveParticipant",
         "parameters": [
+          {
+            "name": "squadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           {
             "name": "matchId",
             "in": "path",
@@ -6497,66 +6551,6 @@
           }
         }
       },
-      "AvailabilityResponse": {
-        "type": "object",
-        "properties": {
-          "matchId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "squadMembershipId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "submittedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "markedDays": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/CandidateDay"
-            }
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "createdBy": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "updatedBy": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isDeleted": {
-            "type": "boolean"
-          },
-          "deletedAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
       "AvailabilityTally": {
         "type": "object",
         "properties": {
@@ -6594,15 +6588,6 @@
           "matchId": {
             "type": "string",
             "format": "uuid"
-          }
-        }
-      },
-      "CandidateDay": {
-        "type": "object",
-        "properties": {
-          "instant": {
-            "type": "string",
-            "format": "date-time"
           }
         }
       },
@@ -6828,7 +6813,8 @@
         "type": "object",
         "properties": {
           "day": {
-            "$ref": "#/components/schemas/CandidateDay"
+            "type": "string",
+            "format": "date-time"
           },
           "availableMemberIds": {
             "type": [
@@ -8443,6 +8429,36 @@
           }
         }
       },
+      "SubmitAvailabilityResult": {
+        "required": [
+          "matchId",
+          "squadMembershipId",
+          "submittedAt",
+          "markedDays"
+        ],
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "squadMembershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "markedDays": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      },
       "TeamProposal": {
         "required": [
           "teams",
@@ -8493,7 +8509,8 @@
             ]
           },
           "confirmedDay": {
-            "$ref": "#/components/schemas/CandidateDay"
+            "type": "string",
+            "format": "date-time"
           },
           "teams": {
             "type": [

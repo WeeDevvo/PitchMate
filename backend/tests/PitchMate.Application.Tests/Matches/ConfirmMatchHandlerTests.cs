@@ -43,7 +43,7 @@ public class ConfirmMatchHandlerTests
         Harness h = Harness.With(availableMembers: 10, ConfirmPublisherMode.Success);
 
         ConfirmResult result = await h.Handler.HandleAsync(
-            new ConfirmMatchCommand(h.OwnerUserId, h.MatchId, ConfirmedDay),
+            new ConfirmMatchCommand(h.OwnerUserId, h.SquadId, h.MatchId, ConfirmedDay),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -61,7 +61,7 @@ public class ConfirmMatchHandlerTests
         Harness h = Harness.With(availableMembers: 9, ConfirmPublisherMode.Success);
 
         ConfirmResult result = await h.Handler.HandleAsync(
-            new ConfirmMatchCommand(h.OwnerUserId, h.MatchId, ConfirmedDay),
+            new ConfirmMatchCommand(h.OwnerUserId, h.SquadId, h.MatchId, ConfirmedDay),
             CancellationToken.None);
 
         Assert.False(result.IsSuccess);
@@ -82,7 +82,7 @@ public class ConfirmMatchHandlerTests
         Harness h = Harness.With(availableMembers: 10, ConfirmPublisherMode.Success);
 
         ConfirmResult result = await h.Handler.HandleAsync(
-            new ConfirmMatchCommand(h.OwnerUserId, h.MatchId, ConfirmedDay),
+            new ConfirmMatchCommand(h.OwnerUserId, h.SquadId, h.MatchId, ConfirmedDay),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -103,7 +103,7 @@ public class ConfirmMatchHandlerTests
         Harness h = Harness.With(availableMembers: 10, ConfirmPublisherMode.FailureResult);
 
         ConfirmResult result = await h.Handler.HandleAsync(
-            new ConfirmMatchCommand(h.OwnerUserId, h.MatchId, ConfirmedDay),
+            new ConfirmMatchCommand(h.OwnerUserId, h.SquadId, h.MatchId, ConfirmedDay),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -120,7 +120,7 @@ public class ConfirmMatchHandlerTests
         Harness h = Harness.With(availableMembers: 10, ConfirmPublisherMode.Throws);
 
         ConfirmResult result = await h.Handler.HandleAsync(
-            new ConfirmMatchCommand(h.OwnerUserId, h.MatchId, ConfirmedDay),
+            new ConfirmMatchCommand(h.OwnerUserId, h.SquadId, h.MatchId, ConfirmedDay),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -137,7 +137,7 @@ public class ConfirmMatchHandlerTests
 
         // The commit throws and the handler does not swallow it, so the failure surfaces to the caller.
         await Assert.ThrowsAsync<InvalidOperationException>(() => h.Handler.HandleAsync(
-            new ConfirmMatchCommand(h.OwnerUserId, h.MatchId, ConfirmedDay),
+            new ConfirmMatchCommand(h.OwnerUserId, h.SquadId, h.MatchId, ConfirmedDay),
             CancellationToken.None));
 
         Assert.Equal(1, h.UnitOfWork.SaveCallCount);
