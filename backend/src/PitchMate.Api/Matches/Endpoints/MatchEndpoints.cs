@@ -42,6 +42,7 @@ public static class MatchEndpoints
 
         RouteGroupBuilder squadScoped =
             endpoints.MapGroup("/squads/{squadId:guid}/matches").WithTags("Matches");
+        MapListEndpoints(squadScoped);
         MapDraftEndpoints(squadScoped);
         MapAvailabilityEndpoints(squadScoped);
         MapConfirmationEndpoints(squadScoped);
@@ -50,6 +51,52 @@ public static class MatchEndpoints
         RouteGroupBuilder matchScoped = endpoints.MapGroup("/matches/{matchId:guid}").WithTags("Matches");
         MapTeamEndpoints(matchScoped);
         MapPlayEndpoints(matchScoped);
+    }
+
+    /// <summary>
+    /// Maps the squad match list read onto the squad-scoped group (match-read-models Requirement 1.1).
+    /// <para>
+    /// This is a <b>new method on an existing path</b>, not a new path: the group already carries
+    /// <c>CreateMatchDraft</c> on <c>POST /squads/{squadId:guid}/matches</c>, so the read is the
+    /// <c>GET</c> of the same collection resource and binds <c>squadId</c> exactly as the <c>POST</c>
+    /// does (Requirement 12.1).
+    /// </para>
+    /// <para>
+    /// The lambda does exactly four things — resolve the caller from the access token's subject, build
+    /// the command, invoke the handler, translate the result through the single
+    /// <see cref="MatchErrorResults"/> seam. There is <b>no</b> authorisation decision, aggregation,
+    /// ordering, truncation, projection or prediction here: the gate belongs to
+    /// <see cref="GetMatchListHandler"/> and the order, bound and projection belong to the query source
+    /// (Requirement 11.4).
+    /// </para>
+    /// </summary>
+    private static void MapListEndpoints(RouteGroupBuilder group)
+    {
+        // Read the squad's bounded, ordered match list — gated to active members of the squad named in
+        // the path; existence concealed otherwise (Requirements 1.1, 5.3, 5.6, 5.7).
+        group.MapGet("/", static async (
+            Guid squadId,
+            ClaimsPrincipal principal,
+            GetMatchListHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(
+                await handler.HandleAsync(new GetMatchListCommand(userId, squadId), ct),
+                concealExistence: true);
+        })
+            .RequireAuthorization()
+            .WithName("ListSquadMatches")
+            // Existence-sensitive, as the availability tally and the team sheet are: the authorisation
+            // failure is reported through the argument-free MatchErrorResults.Concealed() 404, so this
+            // read's refusal body is byte-identical to theirs and discloses neither the squad's
+            // existence nor the caller's membership state (Requirements 5.6, 5.7, 12.2).
+            .Produces<MatchList>(StatusCodes.Status200OK)
+            .WithMatchConcealedProblemResponses();
     }
 
     /// <summary>Maps draft creation under the squad-scoped group (Requirement 1, 13.1).</summary>

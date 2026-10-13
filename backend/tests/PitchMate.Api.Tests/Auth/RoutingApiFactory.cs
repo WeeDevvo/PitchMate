@@ -86,6 +86,42 @@ public sealed class RoutingApiFactory : WebApplicationFactory<LinkExternalProvid
         return new JsonWebTokenHandler().CreateToken(descriptor);
     }
 
+    /// <summary>
+    /// Mints a token the booted host's JWT bearer pipeline <b>accepts</b> but which carries no
+    /// <c>sub</c> claim, so the request arrives at the endpoint as an authenticated principal from
+    /// which <c>CallerIdentity.ResolveUserId</c> can resolve no caller.
+    /// <para>
+    /// This is the only way to reach the residual unauthenticated branch inside an endpoint lambda:
+    /// a missing or rejected token is turned away by the middleware's uniform <c>401</c> long before
+    /// the handler runs, so it exercises the middleware rather than the endpoint's own
+    /// <c>Unauthenticated()</c> result. The token carries a harmless non-identity claim so the
+    /// principal is a populated authenticated identity rather than an empty one.
+    /// </para>
+    /// </summary>
+    /// <returns>A compact JWS access token accepted by the running host but carrying no subject.</returns>
+    public string CreateAccessTokenWithoutSubject()
+    {
+        DateTimeOffset now = Clock.GetUtcNow();
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));
+
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = Issuer,
+            Audience = Audience,
+            IssuedAt = now.UtcDateTime,
+            NotBefore = now.AddMinutes(-1).UtcDateTime,
+            Expires = now.AddMinutes(15).UtcDateTime,
+            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256),
+            Claims = new Dictionary<string, object>
+            {
+                // Deliberately no "sub" and no name-identifier claim: the two CallerIdentity reads.
+                ["scope"] = "pitchmate.api",
+            },
+        };
+
+        return new JsonWebTokenHandler().CreateToken(descriptor);
+    }
+
     /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
