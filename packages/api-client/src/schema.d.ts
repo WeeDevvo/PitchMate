@@ -1038,26 +1038,6 @@ export interface components {
             /** Format: date-time */
             refreshTokenExpiresAt: string;
         };
-        AvailabilityResponse: {
-            /** Format: uuid */
-            matchId?: string;
-            /** Format: uuid */
-            squadMembershipId?: string;
-            /** Format: date-time */
-            submittedAt?: string;
-            markedDays?: null | components["schemas"]["CandidateDay"][];
-            /** Format: uuid */
-            id?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            createdBy?: null | string;
-            updatedBy?: null | string;
-            isDeleted?: boolean;
-            /** Format: date-time */
-            deletedAt?: null | string;
-        };
         AvailabilityTally: {
             days?: null | components["schemas"]["DayAvailability"][];
         };
@@ -1067,10 +1047,6 @@ export interface components {
         CancelMatchResult: {
             /** Format: uuid */
             matchId: string;
-        };
-        CandidateDay: {
-            /** Format: date-time */
-            instant?: string;
         };
         CoAppearance: {
             /** Format: uuid */
@@ -1131,7 +1107,8 @@ export interface components {
             ownerMembershipId: string;
         };
         DayAvailability: {
-            day?: components["schemas"]["CandidateDay"];
+            /** Format: date-time */
+            day?: string;
             availableMemberIds?: null | string[];
             /** Format: int32 */
             count?: number | string;
@@ -1527,6 +1504,15 @@ export interface components {
         SubmitAvailabilityRequest: {
             markedDays: null | string[];
         };
+        SubmitAvailabilityResult: {
+            /** Format: uuid */
+            matchId: string;
+            /** Format: uuid */
+            squadMembershipId: string;
+            /** Format: date-time */
+            submittedAt: string;
+            markedDays: string[];
+        };
         TeamProposal: {
             teams: components["schemas"]["ProposedTeamAssignment"][];
             /** Format: double */
@@ -1540,7 +1526,8 @@ export interface components {
         };
         TeamSheet: {
             location?: null | string;
-            confirmedDay?: components["schemas"]["CandidateDay"];
+            /** Format: date-time */
+            confirmedDay?: string;
             teams?: null | components["schemas"]["TeamSheetTeam"][];
         };
         TeamSheetTeam: {
@@ -5167,6 +5154,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5183,7 +5171,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AvailabilityResponse"];
+                    "application/json": components["schemas"]["SubmitAvailabilityResult"];
                 };
             };
             /** @description Bad Request */
@@ -5247,6 +5235,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5321,6 +5310,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5388,6 +5378,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5468,6 +5459,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5548,6 +5540,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
                 membershipId: string;
             };
