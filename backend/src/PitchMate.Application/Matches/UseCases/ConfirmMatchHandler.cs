@@ -228,9 +228,10 @@ public sealed class ConfirmMatchHandler
     /// <summary>
     /// Resolves the squad's minimum player threshold, defaulting to
     /// <see cref="DefaultMinimumPlayerThreshold"/> when the squad is unavailable or configures none
-    /// (Requirement 6.3).
+    /// (Requirement 6.3). Internal so the match detail read publishes the threshold through this same
+    /// seam rather than restating the value (match-read-models Requirement 2.5).
     /// </summary>
-    private static int ResolveMinimumThreshold(Squad? squad) =>
+    internal static int ResolveMinimumThreshold(Squad? squad) =>
         // The squad aggregate carries no configurable threshold today, so the documented default of 10
         // is the effective value; this seam reads any future squad-configured threshold in one place.
         DefaultMinimumPlayerThreshold;

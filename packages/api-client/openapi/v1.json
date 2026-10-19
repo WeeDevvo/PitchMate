@@ -5036,6 +5036,90 @@
         ]
       }
     },
+    "/matches/{matchId}": {
+      "get": {
+        "tags": [
+          "Matches"
+        ],
+        "operationId": "GetMatchDetail",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/matches/{matchId}/teams/proposal": {
       "post": {
         "tags": [
@@ -6661,6 +6745,25 @@
           }
         }
       },
+      "CallerAvailability": {
+        "required": [
+          "hasStoredResponse",
+          "markedDays"
+        ],
+        "type": "object",
+        "properties": {
+          "hasStoredResponse": {
+            "type": "boolean"
+          },
+          "markedDays": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      },
       "CancelMatchResult": {
         "required": [
           "matchId"
@@ -7379,6 +7482,95 @@
           }
         }
       },
+      "MatchDetail": {
+        "required": [
+          "matchId",
+          "squadId",
+          "state",
+          "location",
+          "candidateDays",
+          "confirmedDay",
+          "participantCount",
+          "participants",
+          "effectiveMinimumPlayerThreshold",
+          "callerAvailability",
+          "recordedResult",
+          "completedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "squadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "$ref": "#/components/schemas/MatchState"
+          },
+          "location": {
+            "type": "string"
+          },
+          "candidateDays": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "confirmedDay": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "participantCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParticipantView"
+            }
+          },
+          "effectiveMinimumPlayerThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "callerAvailability": {
+            "$ref": "#/components/schemas/CallerAvailability"
+          },
+          "recordedResult": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecordedResultView"
+              }
+            ]
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "MatchList": {
         "required": [
           "matches",
@@ -7615,6 +7807,35 @@
             "format": "double"
           },
           "qualifyingMatches": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ParticipantView": {
+        "required": [
+          "squadMembershipId",
+          "displayName",
+          "isGuest",
+          "rosterPosition"
+        ],
+        "type": "object",
+        "properties": {
+          "squadMembershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "isGuest": {
+            "type": "boolean"
+          },
+          "rosterPosition": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

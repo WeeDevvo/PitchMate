@@ -47,6 +47,7 @@ public static class MatchesInfrastructureRegistration
         // Scoped so each shares the request scope's DbContext; every read is AsNoTracking and loads no
         // entity for mutation, so nothing it does can reach a SaveChanges.
         services.TryAddScoped<IMatchListSource, EfMatchListSource>();
+        services.TryAddScoped<IMatchDetailSource, EfMatchDetailSource>();
 
         // The balancer holds no mutable state — it scores splits solely through the singleton
         // IRatingEngine's pure Predict primitive — so a single shared instance is safe as a singleton

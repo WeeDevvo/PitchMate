@@ -47,6 +47,7 @@ internal sealed class MatchListDatasetSeeder
         var squadRepository = new EfSquadRepository(context);
         var membershipRepository = new EfSquadMembershipRepository(context);
         var matchRepository = new EfMatchRepository(context);
+        var availabilityRepository = new EfAvailabilityRepository(context);
 
         var seededSquads = new List<SeededMatchListDataset.SquadData>(spec.Squads.Count);
 
@@ -82,11 +83,12 @@ internal sealed class MatchListDatasetSeeder
 
             var matches = new List<Match>(squadSpec.Matches.Count);
             var softDeleted = new HashSet<Guid>();
+            var responses = new List<AvailabilityResponse>();
 
             for (int m = 0; m < squadSpec.Matches.Count; m++)
             {
                 MatchListDatasetSpec.MatchSpec matchSpec = squadSpec.Matches[m];
-                Match match = BuildMatch(squad, pool, guests, matchSpec, anchor, m);
+                Match match = BuildMatch(squad, pool, guests, matchSpec, anchor, m, responses);
 
                 await matchRepository.AddAsync(match, cancellationToken);
                 matches.Add(match);
@@ -104,8 +106,13 @@ internal sealed class MatchListDatasetSeeder
                 member.Anonymise();
             }
 
+            foreach (AvailabilityResponse response in responses)
+            {
+                await availabilityRepository.UpsertAsync(response, cancellationToken);
+            }
+
             seededSquads.Add(new SeededMatchListDataset.SquadData(
-                squad.Id, matches, softDeleted, squadSpec.SoftDeleteSquad));
+                squad.Id, matches, softDeleted, squadSpec.SoftDeleteSquad, [.. pool, .. guests], responses));
         }
 
         await new UnitOfWork(context).SaveChangesAsync(cancellationToken);
@@ -123,7 +130,8 @@ internal sealed class MatchListDatasetSeeder
         IReadOnlyList<SquadMembership> guests,
         MatchListDatasetSpec.MatchSpec spec,
         DateTimeOffset anchor,
-        int sequence)
+        int sequence,
+        List<AvailabilityResponse> responses)
     {
         List<DateTimeOffset> candidateDays =
             [.. spec.CandidateDayOffsetDays.Select(offset => anchor.AddDays(offset))];
@@ -136,6 +144,18 @@ internal sealed class MatchListDatasetSeeder
                 candidateDays,
                 anchor),
             "create draft");
+
+        // Responses are stored while the match gathers availability, and outlive the confirm.
+        foreach (MatchListDatasetSpec.AvailabilityMark mark in spec.AvailabilityMarks ?? [])
+        {
+            AvailabilityResponse response = Unwrap(
+                match.SubmitAvailability(
+                    pool[mark.MemberIndex].Id,
+                    [.. mark.MarkedDayIndexes.Select(index => candidateDays[index])],
+                    anchor),
+                "submit availability");
+            responses.Add(response);
+        }
 
         if (spec.State == MatchState.GatheringAvailability)
         {
@@ -158,8 +178,8 @@ internal sealed class MatchListDatasetSeeder
                 []),
             "confirm");
 
-        List<SquadMembership> participants =
-            AddParticipants(match, pool, guests, spec.ParticipantCount, spec.GuestParticipantCount);
+        List<SquadMembership> participants = AddParticipants(
+            match, pool, guests, spec.ParticipantCount, spec.GuestParticipantCount, spec.RemovedParticipantCount);
 
         if (spec.State == MatchState.Confirmed)
         {
@@ -217,16 +237,18 @@ internal sealed class MatchListDatasetSeeder
     /// <summary>
     /// Adds <paramref name="count"/> participants — the first <paramref name="guestCount"/> guests of
     /// the guest pool and the first <c>count - guestCount</c> registered members of the pool — and
-    /// returns them in the order they were added.
+    /// returns them in the order they were added. With <paramref name="removedCount"/> further
+    /// registered members are added and then removed, leaving gaps in the roster positions.
     /// </summary>
     private static List<SquadMembership> AddParticipants(
         Match match,
         IReadOnlyList<SquadMembership> pool,
         IReadOnlyList<SquadMembership> guests,
         int count,
-        int guestCount)
+        int guestCount,
+        int removedCount = 0)
     {
-        int registeredCount = count - guestCount;
+        int registeredCount = count - guestCount + removedCount;
 
         if (guestCount < 0 || guestCount > count || guestCount > guests.Count)
         {
@@ -247,7 +269,21 @@ internal sealed class MatchListDatasetSeeder
             Check(match.AddParticipant(participant), "add participant");
         }
 
-        return participants;
+        // Remove every other one of the first registered participants, never the last-added, so the
+        // surviving roster positions keep gaps rather than being reused by a later addition.
+        List<SquadMembership> removed = [.. pool.Take(registeredCount).Where((_, index) => index % 2 == 1).Take(removedCount)];
+        if (removed.Count != removedCount)
+        {
+            throw new InvalidOperationException(
+                $"A match wants {removedCount} removals but only {removed.Count} registered participants can leave a gap.");
+        }
+
+        foreach (SquadMembership leaving in removed)
+        {
+            Check(match.RemoveParticipant(leaving.Id), "remove participant");
+        }
+
+        return [.. participants.Except(removed)];
     }
 
     /// <summary>
@@ -304,6 +340,11 @@ internal sealed class MatchListDatasetSeeder
             throw new InvalidOperationException($"Seeder step '{step}' failed: {result.Error?.Message}");
         }
     }
+
+    private static AvailabilityResponse Unwrap(PitchMate.Domain.Matches.Result<AvailabilityResponse> result, string step) =>
+        result.IsSuccess && result.Value is not null
+            ? result.Value
+            : throw new InvalidOperationException($"Seeder step '{step}' failed: {result.Error?.Message}");
 
     private static Match Unwrap(PitchMate.Domain.Matches.Result<Match> result, string step) =>
         result.IsSuccess && result.Value is not null

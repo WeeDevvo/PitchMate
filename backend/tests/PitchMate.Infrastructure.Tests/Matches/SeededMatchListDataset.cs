@@ -25,12 +25,24 @@ internal sealed record SeededMatchListDataset(IReadOnlyList<SeededMatchListDatas
     /// <param name="Matches">Every match built in the squad, in creation order, soft-deleted ones included.</param>
     /// <param name="SoftDeletedMatchIds">The identities of the matches that were soft-deleted after seeding.</param>
     /// <param name="IsSoftDeleted">Whether the squad itself was soft-deleted after seeding.</param>
+    /// <param name="Memberships">Every membership seeded in the squad — registered pool, then guests — in their final (possibly anonymised) state.</param>
+    /// <param name="Responses">Every availability response stored for the squad's matches.</param>
     internal sealed record SquadData(
         Guid SquadId,
         IReadOnlyList<Match> Matches,
         IReadOnlySet<Guid> SoftDeletedMatchIds,
-        bool IsSoftDeleted)
+        bool IsSoftDeleted,
+        IReadOnlyList<PitchMate.Domain.Squads.SquadMembership> Memberships,
+        IReadOnlyList<AvailabilityResponse> Responses)
     {
+        /// <summary>The membership with the given identity.</summary>
+        public PitchMate.Domain.Squads.SquadMembership MembershipById(Guid membershipId) =>
+            Memberships.Single(membership => membership.Id == membershipId);
+
+        /// <summary>The stored response of a membership for a match, or <see langword="null"/>.</summary>
+        public AvailabilityResponse? ResponseOf(Guid matchId, Guid membershipId) =>
+            Responses.SingleOrDefault(response => response.MatchId == matchId && response.SquadMembershipId == membershipId);
+
         /// <summary>
         /// The matches the read must admit: every match of the squad that is not soft-deleted,
         /// regardless of lifecycle state — the read applies no state filter of its own.

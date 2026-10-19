@@ -2,10 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 using PitchMate.Application.Matches.Abstractions;
+using PitchMate.Application.Matches.UseCases;
 using PitchMate.Domain.Matches;
 using PitchMate.Domain.Squads;
 using PitchMate.Infrastructure.Matches.Queries;
+using PitchMate.Infrastructure.Matches.Repositories;
 using PitchMate.Infrastructure.Persistence;
+using PitchMate.Infrastructure.Squads.Repositories;
 using PitchMate.Infrastructure.Tests.Persistence;
 
 namespace PitchMate.Infrastructure.Tests.Matches;
@@ -159,6 +162,90 @@ internal sealed class MatchListSourceHarness
         MatchListPage? page = await source.ListForSquadAsync(squadId, limit, CancellationToken.None);
 
         return (page, commands);
+    }
+
+    /// <summary>
+    /// Runs the real <see cref="EfMatchDetailSource"/> over a fresh context (match-read-models task 10.6).
+    /// </summary>
+    /// <param name="matchId">The match to read.</param>
+    public async Task<MatchDetailProjection?> FindDetailAsync(Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext read = CreateContext();
+        return await new EfMatchDetailSource(read).FindAsync(matchId, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Runs the real <see cref="GetMatchDetailHandler"/> over the production EF gateways on a fresh
+    /// context, as the given user — the path the detail endpoint takes below the transport.
+    /// </summary>
+    /// <param name="userId">The calling user.</param>
+    /// <param name="matchId">The match to read.</param>
+    public async Task<PitchMate.Domain.Matches.Result<MatchDetail>> GetDetailAsync(Guid userId, Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext read = CreateContext();
+        var handler = new GetMatchDetailHandler(
+            new EfMatchDetailSource(read),
+            new EfSquadMembershipRepository(read),
+            new EfAvailabilityRepository(read));
+
+        return await handler.HandleAsync(new GetMatchDetailCommand(userId, matchId), CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Runs the real <see cref="GetAvailabilityTallyHandler"/> over the production EF gateways, as the
+    /// given user, so the detail's caller availability can be checked against the tally.
+    /// </summary>
+    public async Task<PitchMate.Domain.Matches.Result<AvailabilityTally>> GetTallyAsync(Guid userId, Guid squadId, Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext read = CreateContext();
+        var handler = new GetAvailabilityTallyHandler(
+            new EfMatchRepository(read),
+            new EfSquadMembershipRepository(read),
+            new EfAvailabilityRepository(read));
+
+        return await handler.HandleAsync(new GetAvailabilityTallyCommand(userId, squadId, matchId), CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Removes one membership's stored availability response for a match outright, so a property can
+    /// show that another member's reported availability does not move when it changes.
+    /// </summary>
+    public async Task RemoveResponseAsync(Guid matchId, Guid membershipId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext write = CreateContext();
+        int removed = await write.Set<AvailabilityResponse>()
+            .Where(response => response.MatchId == matchId && response.SquadMembershipId == membershipId)
+            .ExecuteDeleteAsync();
+
+        Assert.Equal(1, removed);
+    }
+
+    /// <summary>
+    /// Overwrites one participant's captured display name in place — a state the aggregates cannot
+    /// produce, since a membership's name is validated non-blank — so the blank-name branch of the
+    /// display-name rule can be exercised against the SQL.
+    /// </summary>
+    /// <param name="matchId">The match.</param>
+    /// <param name="membershipId">The participant's squad-membership identity.</param>
+    /// <param name="capturedName">The captured name to plant.</param>
+    public async Task PlantCapturedDisplayNameAsync(Guid matchId, Guid membershipId, string capturedName)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext write = CreateContext();
+        int updated = await write.Set<MatchParticipant>()
+            .Where(participant => participant.MatchId == matchId && participant.SquadMembershipId == membershipId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(participant => participant.DisplayName, capturedName));
+
+        Assert.Equal(1, updated);
     }
 
     /// <summary>

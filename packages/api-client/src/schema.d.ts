@@ -740,6 +740,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/matches/{matchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMatchDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/matches/{matchId}/teams/proposal": {
         parameters: {
             query?: never;
@@ -1044,6 +1060,10 @@ export interface components {
         BatchResultResponse: {
             outcomes: components["schemas"]["RecordOutcomeResponse"][];
         };
+        CallerAvailability: {
+            hasStoredResponse: boolean;
+            markedDays: string[];
+        };
         CancelMatchResult: {
             /** Format: uuid */
             matchId: string;
@@ -1240,6 +1260,26 @@ export interface components {
             /** Format: int32 */
             markedCount: number | string;
         };
+        MatchDetail: {
+            /** Format: uuid */
+            matchId: string;
+            /** Format: uuid */
+            squadId: string;
+            state: components["schemas"]["MatchState"];
+            location: string;
+            candidateDays: string[];
+            /** Format: date-time */
+            confirmedDay: null | string;
+            /** Format: int32 */
+            participantCount: number | string;
+            participants: components["schemas"]["ParticipantView"][];
+            /** Format: int32 */
+            effectiveMinimumPlayerThreshold: number | string;
+            callerAvailability: components["schemas"]["CallerAvailability"];
+            recordedResult: null | components["schemas"]["RecordedResultView"];
+            /** Format: date-time */
+            completedAt: null | string;
+        };
         MatchList: {
             matches: components["schemas"]["MatchListEntry"][];
             truncated: boolean;
@@ -1298,6 +1338,14 @@ export interface components {
             value: number | string;
             /** Format: int32 */
             qualifyingMatches: number | string;
+        };
+        ParticipantView: {
+            /** Format: uuid */
+            squadMembershipId: string;
+            displayName: string;
+            isGuest: boolean;
+            /** Format: int32 */
+            rosterPosition: number | string;
         };
         PlayerProfile: {
             /** Format: uuid */
@@ -5671,6 +5719,73 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetMatchDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                matchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

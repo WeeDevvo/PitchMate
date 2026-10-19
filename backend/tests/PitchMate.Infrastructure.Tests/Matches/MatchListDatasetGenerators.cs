@@ -113,7 +113,7 @@ internal static class MatchListDatasetGenerators
 
     /// <summary>
     /// A squad whose matches span all six states, plus one soft-deleted match, one confirmed match with
-    /// working teams that were never locked, and 0–4 extras.
+    /// working teams that were never locked, one confirmed match whose roster has gaps, and 0–3 extras.
     /// </summary>
     private static Gen<MatchListDatasetSpec.SquadSpec> SpineSquad() =>
         // At least ten memberships, so the rolled states are reachable.
@@ -121,13 +121,19 @@ internal static class MatchListDatasetGenerators
         from spine in Sequence(AllStates.Select(state => MatchOf(pools.Registered, pools.Guests, Gen.Constant(state))))
         from deleted in MatchOf(pools.Registered, pools.Guests)
         from unlocked in MatchOf(pools.Registered, pools.Guests, Gen.Constant(MatchState.Confirmed), teamsPercent: 100)
-        from extraCount in Gen.Choose(0, MaximumMatchesPerSquad - AllStates.Length - 2)
+        from gappedDays in DistinctOffsets(1)
+        from gappedMarks in Marks(pools.Registered, 1)
+        from extraCount in Gen.Choose(0, MaximumMatchesPerSquad - AllStates.Length - 3)
         from extras in ListOfLength(extraCount, MatchOf(pools.Registered, pools.Guests))
         from anonymised in Gen.Choose(0, 3)
         from order in Gen.Choose(0, 1_000_000)
+        // Four registered participants survive two removals from the middle of the roster, so the
+        // dataset always carries a gapped roster (Requirement 2.4).
+        let gapped = new MatchListDatasetSpec.MatchSpec(
+            MatchState.Confirmed, gappedDays, ParticipantCount: 4, RemovedParticipantCount: 2, AvailabilityMarks: gappedMarks)
         select new MatchListDatasetSpec.SquadSpec(
             pools.Registered,
-            Shuffle([.. spine.Select(match => match with { SoftDeleted = false }), deleted with { SoftDeleted = true }, unlocked with { SoftDeleted = false }, .. extras], order),
+            Shuffle([.. spine.Select(match => match with { SoftDeleted = false }), deleted with { SoftDeleted = true }, unlocked with { SoftDeleted = false }, gapped, .. extras], order),
             GuestCount: pools.Guests,
             AnonymisedCount: anonymised);
 
@@ -179,6 +185,9 @@ internal static class MatchListDatasetGenerators
         let needsTeams = IsRolled(state) || (withTeams && state is MatchState.Confirmed or MatchState.Cancelled)
         from participants in ParticipantCount(state, needsTeams, pool)
         from guestParticipants in Gen.Choose(Math.Max(0, participants - registered), Math.Min(guests, participants))
+        let registeredParticipants = participants - guestParticipants
+        from removed in Gen.Choose(0, Math.Min(2, Math.Min(registered - registeredParticipants, registeredParticipants)))
+        from marks in Marks(registered, dayCount)
         from completedOffset in Gen.Choose(0, 10_000)
         from softDeleted in Chance(15)
         select new MatchListDatasetSpec.MatchSpec(
@@ -190,7 +199,35 @@ internal static class MatchListDatasetGenerators
             completedOffset,
             guestParticipants,
             ProposeTeamsWithoutLock: needsTeams && state == MatchState.Confirmed,
-            CancelFromRolled: needsTeams && state == MatchState.Cancelled);
+            CancelFromRolled: needsTeams && state == MatchState.Cancelled,
+            RemovedParticipantCount: state == MatchState.GatheringAvailability ? 0 : removed,
+            AvailabilityMarks: marks);
+
+    /// <summary>
+    /// Stored availability responses for a match's registered members (match-read-models task 10.9).
+    /// Every match carries at least one member marking one or more days (member 0), one storing a
+    /// response that marks <b>no</b> day (member 1), and one storing <b>no</b> response (member 2);
+    /// members 3 to 7 each draw one of the three at random, and the rest store nothing.
+    /// </summary>
+    private static Gen<IReadOnlyList<MatchListDatasetSpec.AvailabilityMark>> Marks(int registered, int dayCount) =>
+        from first in NonEmptyDaySubset(dayCount)
+        from rest in Sequence(Enumerable.Range(3, Math.Max(0, Math.Min(registered, 8) - 3)).Select(member =>
+            from kind in Gen.Choose(0, 2)
+            from days in NonEmptyDaySubset(dayCount)
+            select kind == 0
+                ? null
+                : new MatchListDatasetSpec.AvailabilityMark(member, kind == 1 ? [] : days)))
+        select (IReadOnlyList<MatchListDatasetSpec.AvailabilityMark>)
+        [
+            new MatchListDatasetSpec.AvailabilityMark(0, first),
+            new MatchListDatasetSpec.AvailabilityMark(1, []),
+            .. rest.OfType<MatchListDatasetSpec.AvailabilityMark>(),
+        ];
+
+    /// <summary>A non-empty subset of a match's candidate-day indexes.</summary>
+    private static Gen<IReadOnlyList<int>> NonEmptyDaySubset(int dayCount) =>
+        from mask in Gen.Choose(1, (1 << Math.Min(dayCount, 14)) - 1)
+        select (IReadOnlyList<int>)[.. Enumerable.Range(0, dayCount).Where(index => (mask & (1 << index)) != 0)];
 
     /// <summary>The participant count a state admits: none while gathering, 10–16 with teams.</summary>
     private static Gen<int> ParticipantCount(MatchState state, bool needsTeams, int pool) =>

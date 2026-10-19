@@ -79,6 +79,16 @@ internal sealed record MatchListDatasetSpec(IReadOnlyList<MatchListDatasetSpec.S
     /// For a <see cref="MatchState.Cancelled"/> match only: roll and lock the teams first, so the
     /// cancelled match still carries a kickoff lineup. Requires 10 to 16 participants.
     /// </param>
+    /// <param name="RemovedParticipantCount">
+    /// How many <em>further</em> registered participants to add and then remove while confirmed, taken
+    /// from the middle of the roster, so the surviving roster positions have gaps (Requirement 2.4).
+    /// The pool must hold <see cref="ParticipantCount"/> plus this many registered members.
+    /// </param>
+    /// <param name="AvailabilityMarks">
+    /// Availability responses stored while the match gathers availability, one per registered member
+    /// named by index; a mark naming no day is a stored response that marks nothing. Members not named
+    /// here store no response at all.
+    /// </param>
     internal sealed record MatchSpec(
         MatchState State,
         IReadOnlyList<int> CandidateDayOffsetDays,
@@ -88,5 +98,12 @@ internal sealed record MatchListDatasetSpec(IReadOnlyList<MatchListDatasetSpec.S
         int CompletedOffsetSeconds = 0,
         int GuestParticipantCount = 0,
         bool ProposeTeamsWithoutLock = false,
-        bool CancelFromRolled = false);
+        bool CancelFromRolled = false,
+        int RemovedParticipantCount = 0,
+        IReadOnlyList<AvailabilityMark>? AvailabilityMarks = null);
+
+    /// <summary>One stored availability response.</summary>
+    /// <param name="MemberIndex">The responding registered member's index in the squad's pool.</param>
+    /// <param name="MarkedDayIndexes">Indexes into the match's candidate days; empty marks no day.</param>
+    internal sealed record AvailabilityMark(int MemberIndex, IReadOnlyList<int> MarkedDayIndexes);
 }

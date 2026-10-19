@@ -49,8 +49,46 @@ public static class MatchEndpoints
         MapParticipantEndpoints(squadScoped);
 
         RouteGroupBuilder matchScoped = endpoints.MapGroup("/matches/{matchId:guid}").WithTags("Matches");
+        MapDetailEndpoints(matchScoped);
         MapTeamEndpoints(matchScoped);
         MapPlayEndpoints(matchScoped);
+    }
+
+    /// <summary>
+    /// Maps the match detail read, <c>GET /matches/{matchId}</c>, onto the match-scoped group
+    /// (match-read-models Requirement 2.1). A <b>genuinely new path</b>: <c>matchId</c> is its only
+    /// declared path parameter, and the squad is resolved from the match by
+    /// <see cref="GetMatchDetailHandler"/>, never from the request.
+    /// <para>
+    /// The lambda binds, resolves the caller, invokes the handler and translates through the
+    /// <see cref="MatchErrorResults"/> seam with existence concealed — nothing else (Requirement 11.4).
+    /// A malformed <c>matchId</c> fails the <c>:guid</c> route constraint and is answered <c>404</c> by
+    /// routing before this runs (Requirement 2.14).
+    /// </para>
+    /// </summary>
+    private static void MapDetailEndpoints(RouteGroupBuilder group)
+    {
+        group.MapGet("/", static async (
+            Guid matchId,
+            ClaimsPrincipal principal,
+            GetMatchDetailHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(
+                await handler.HandleAsync(new GetMatchDetailCommand(userId, matchId), ct),
+                concealExistence: true);
+        })
+            .RequireAuthorization()
+            .WithName("GetMatchDetail")
+            // Existence-sensitive, as the list read and the team sheet are: the refusal is the
+            // argument-free concealed 404, byte-identical to theirs (Requirements 5.6, 5.7).
+            .Produces<MatchDetail>(StatusCodes.Status200OK)
+            .WithMatchConcealedProblemResponses();
     }
 
     /// <summary>
