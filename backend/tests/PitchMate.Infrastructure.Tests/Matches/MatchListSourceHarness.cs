@@ -332,6 +332,80 @@ internal sealed class MatchListSourceHarness
         Assert.Equal(1, affected);
     }
 
+    /// <summary>Runs the real <see cref="EfRosterDisplayNameSource"/> over a fresh context (task 13.7).</summary>
+    public async Task<IReadOnlyDictionary<Guid, string>> ListRosterNamesAsync(Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext read = CreateContext();
+        return await new EfRosterDisplayNameSource(read).ListForMatchAsync(matchId, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Runs the real <see cref="GetTeamSheetHandler"/> over the production EF gateways and display-name
+    /// source, as the given user.
+    /// </summary>
+    public async Task<PitchMate.Domain.Matches.Result<TeamSheet>> GetTeamSheetAsync(Guid userId, Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext read = CreateContext();
+        var handler = new GetTeamSheetHandler(
+            new EfMatchRepository(read), new EfSquadMembershipRepository(read), new EfRosterDisplayNameSource(read));
+        return await handler.HandleAsync(new GetTeamSheetCommand(userId, matchId), CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Moves the first player of the first locked team to the second and re-locks, through the aggregate
+    /// loaded and saved by the production repository, returning the moved identity.
+    /// </summary>
+    public async Task<Guid> MoveAndRelockAsync(Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext write = CreateContext();
+        Match match = (await new EfMatchRepository(write).GetByIdAsync(matchId, CancellationToken.None))!;
+        KickoffTeam first = match.KickoffLineup!.Teams[0];
+        Guid moving = first.ParticipantMembershipIds[0];
+        Guid toTeam = match.Teams.Single(team => !team.Roster.Contains(moving)).Id;
+
+        Assert.True(match.MoveParticipant(moving, toTeam).IsSuccess);
+        Assert.True(match.Lock().IsSuccess);
+        await new UnitOfWork(write).SaveChangesAsync(CancellationToken.None);
+
+        return moving;
+    }
+
+    /// <summary>
+    /// Marks one participant row deleted by direct update, bypassing the aggregate, so a locked lineup
+    /// names an identity for which the match holds no live participant — the team sheet's form of the
+    /// no-participant plant, since the sheet reads the captured lineup rather than the team rosters.
+    /// </summary>
+    public async Task PlantDeletedParticipantAsync(Guid matchId, Guid membershipId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext write = CreateContext();
+        int updated = await write.Set<MatchParticipant>()
+            .IgnoreQueryFilters()
+            .Where(participant => participant.MatchId == matchId && participant.SquadMembershipId == membershipId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(participant => participant.IsDeleted, true));
+
+        Assert.Equal(1, updated);
+    }
+
+    /// <summary>Loads the match aggregate as the production repository rehydrates it.</summary>
+    public async Task<Match> LoadMatchAsync(Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext read = CreateContext();
+        return (await new EfMatchRepository(read).GetByIdAsync(matchId, CancellationToken.None))!;
+    }
+
+    /// <summary>Soft-deletes one membership through the production save pipeline.</summary>
+    public Task SoftDeleteMembershipAsync(Guid membershipId) => SoftDeleteAsync<SquadMembership>(membershipId);
+
     /// <summary>
     /// Removes one membership's stored availability response for a match outright, so a property can
     /// show that another member's reported availability does not move when it changes.

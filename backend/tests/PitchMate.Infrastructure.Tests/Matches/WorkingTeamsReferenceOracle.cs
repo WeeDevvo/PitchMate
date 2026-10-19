@@ -105,7 +105,11 @@ internal static class WorkingTeamsReferenceOracle
         return new SplitPrediction([.. prediction.WinProbabilities], prediction.DrawProbability);
     }
 
-    private static string DisplayNameOf(SeededMatchListDataset.SquadData squad, Match match, Guid membershipId)
+    /// <summary>
+    /// The display-name-at-time of an identity in a match: the Domain rule over the participant's captured
+    /// name and the membership's final state, or the placeholder when the match holds no participant.
+    /// </summary>
+    internal static string DisplayNameOf(SeededMatchListDataset.SquadData squad, Match match, Guid membershipId)
     {
         MatchParticipant? participant = match.Participants.SingleOrDefault(p => p.SquadMembershipId == membershipId);
         if (participant is null)

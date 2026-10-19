@@ -142,7 +142,7 @@ public class SquadScopedConcealmentPropertyTests
                 : new Outcome(false, result.Error!.Code, result.Error!.Message);
         }
 
-        var sheet = new GetTeamSheetHandler(matches, memberships)
+        var sheet = new GetTeamSheetHandler(matches, memberships, new EmptyRosterDisplayNameSource())
             .HandleAsync(new GetTeamSheetCommand(requestingUserId, matchId), CancellationToken.None)
             .GetAwaiter().GetResult();
 

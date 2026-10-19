@@ -321,29 +321,41 @@ public sealed class Match : BaseEntity
     /// <summary>
     /// Produces the <see cref="TeamSheet"/> read model for this match (Requirement 9.1). The sheet
     /// presents the match's <see cref="Location"/>, its <see cref="ConfirmedDay"/>, and each locked
-    /// team with its name, bib flag, and roster of participant display names in roster order, indicating
-    /// the single bib-wearing team (Requirement 9.2). Permitted only while the match is in
-    /// <see cref="MatchState.TeamsRolled"/> — the state in which a <see cref="KickoffLineup"/> has been
-    /// captured and a <see cref="ConfirmedDay"/> is set; from any other state an
-    /// <see cref="MatchErrorCode.InvalidState"/> failure naming the required and current state is
-    /// returned and no sheet is produced (Requirement 2.5). The sheet is projected from the immutable
-    /// captured lineup, so re-locking while <see cref="MatchState.TeamsRolled"/> and re-producing the
-    /// sheet reflects the newly locked teams (Requirement 9.3).
+    /// team with its name, bib flag, and roster of members in roster order, indicating the single
+    /// bib-wearing team (Requirement 9.2).
     /// <para>
-    /// Restricting visibility of the sheet to the match's squad is the Application layer's concern
-    /// (Requirement 9.4, 9.5); this method contributes only the projection.
+    /// <b>Available whenever a lineup has been locked</b> (match-read-models Requirements 10.4, 10.6):
+    /// in <see cref="MatchState.TeamsRolled"/>, and also while the match is
+    /// <see cref="MatchState.InProgress"/>, <see cref="MatchState.Completed"/> or cancelled after a lock,
+    /// because the captured <see cref="KickoffLineup"/> the sheet projects is immutable and still there.
+    /// A match holding no captured lineup returns <see cref="MatchErrorCode.InvalidState"/> and no sheet.
+    /// The sheet is projected from the lineup, so a re-lock re-projects to the newly locked teams
+    /// (Requirement 9.3).
+    /// </para>
+    /// <para>
+    /// <b>Pure.</b> The aggregate cannot know a membership's <i>current</i> anonymisation state, so the
+    /// caller supplies <paramref name="displayNamesByMembership"/>, already resolved by
+    /// <see cref="ParticipantDisplayName.Resolve"/>; an identity missing from it resolves to the
+    /// placeholder (Requirement 10.7). Value in, value out — no mutation, persistence, clock or I/O
+    /// (Requirement 11.8). Squad-scoped visibility is the Application layer's concern.
     /// </para>
     /// </summary>
+    /// <param name="displayNamesByMembership">The display-name-at-time of each membership the match rosters or plays, already resolved.</param>
     /// <returns>A success carrying the projected <see cref="TeamSheet"/>, or an <see cref="MatchErrorCode.InvalidState"/> failure that produces no sheet.</returns>
-    public Result<TeamSheet> ProduceTeamSheet()
+    public Result<TeamSheet> ProduceTeamSheet(IReadOnlyDictionary<Guid, string> displayNamesByMembership)
     {
-        var guard = EnsureState(MatchState.TeamsRolled);
-        if (!guard.IsSuccess)
+        ArgumentNullException.ThrowIfNull(displayNamesByMembership);
+
+        // ConfirmedDay cannot be null once a lineup exists — Lock is reachable only after Confirm — but
+        // it is checked so the projection's ConfirmedDay is never a bare assertion.
+        if (KickoffLineup is null || ConfirmedDay is null)
         {
-            return Result<TeamSheet>.Fail(guard.Error!);
+            return Result<TeamSheet>.Fail(new MatchError(
+                MatchErrorCode.InvalidState,
+                $"A team sheet requires locked teams, but the match in {State} has none."));
         }
 
-        return Result<TeamSheet>.Ok(TeamSheet.Project(this));
+        return Result<TeamSheet>.Ok(TeamSheet.Project(this, displayNamesByMembership));
     }
 
     /// <summary>

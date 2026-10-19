@@ -90,3 +90,13 @@ internal sealed class ConcealmentMembershipRepository(params SquadMembership[] m
     public void RemovePermanently(SquadMembership membership) =>
         throw new NotSupportedException("Not exercised by the read handlers under test.");
 }
+
+/// <summary>
+/// A display-name source resolving no name: the concealment properties assert only whether the team
+/// sheet is answered, and a missing name resolves to the placeholder inside the Domain rule.
+/// </summary>
+internal sealed class EmptyRosterDisplayNameSource : IRosterDisplayNameSource
+{
+    public Task<IReadOnlyDictionary<Guid, string>> ListForMatchAsync(Guid matchId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, string>>(new Dictionary<Guid, string>());
+}

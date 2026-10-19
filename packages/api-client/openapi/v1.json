@@ -9104,7 +9104,7 @@
               "array"
             ],
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/RosterEntry"
             }
           }
         }

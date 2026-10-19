@@ -1,16 +1,17 @@
 namespace PitchMate.Domain.Matches;
 
 /// <summary>
-/// The read model presented once a match reaches <see cref="MatchState.TeamsRolled"/>: the match's
+/// The read model presented once a match has locked its teams — from <see cref="MatchState.TeamsRolled"/>
+/// onward, for as long as the captured lineup exists: the match's
 /// <see cref="Location"/>, its <see cref="ConfirmedDay"/>, and each team with its name, bib flag, and
-/// roster of participant display names in roster order (Requirement 9.1). Exactly one team on the
+/// roster of members in roster order (Requirement 9.1). Exactly one team on the
 /// sheet is indicated as the bib-wearing team, corresponding to the team whose bib flag is
 /// <see langword="true"/> (Requirement 9.2).
 /// <para>
 /// The sheet is projected from the immutable <see cref="KickoffLineup"/> captured at team lock — the
-/// authoritative snapshot of the locked teams — with each roster's membership identities resolved to
-/// the display-name-at-time carried on the match's <see cref="MatchParticipant"/> pool, in the order
-/// the members appear on the locked team. A re-lock while <see cref="MatchState.TeamsRolled"/>
+/// authoritative snapshot of the locked teams — each roster entry carrying its membership identity
+/// and the display-name-at-time the caller resolved by <see cref="ParticipantDisplayName.Resolve"/>,
+/// in the order the members appear on the locked team. A re-lock while <see cref="MatchState.TeamsRolled"/>
 /// recaptures the lineup, so re-projecting yields a sheet reflecting the newly locked teams
 /// (Requirement 9.3).
 /// </para>
@@ -45,7 +46,7 @@ public sealed class TeamSheet
 
     /// <summary>
     /// The teams on the sheet, in their locked order, each with its name, bib flag, and roster of
-    /// participant display names in roster order. Exactly one team carries a <see langword="true"/>
+    /// members in roster order. Exactly one team carries a <see langword="true"/>
     /// <see cref="TeamSheetTeam.BibFlag"/> (Requirement 9.2).
     /// </summary>
     public IReadOnlyList<TeamSheetTeam> Teams => _teams;
@@ -62,19 +63,21 @@ public sealed class TeamSheet
     /// </summary>
     /// <param name="match">The match to project, guaranteed by the caller to be in <see cref="MatchState.TeamsRolled"/>.</param>
     /// <returns>The projected <see cref="TeamSheet"/>.</returns>
-    internal static TeamSheet Project(Match match)
+    internal static TeamSheet Project(Match match, IReadOnlyDictionary<Guid, string> displayNamesByMembership)
     {
         var lineup = match.KickoffLineup!;
-        var displayNamesByMembership = match.Participants
-            .ToDictionary(participant => participant.SquadMembershipId, participant => participant.DisplayName);
 
+        // Every rostered identity is carried, anonymised ones included; an identity with no resolved
+        // name reports the placeholder, never an empty name (match-read-models Requirement 10.7).
         var teams = lineup.Teams.Select(team => new TeamSheetTeam(
             team.TeamName,
             team.BibFlag,
-            team.ParticipantMembershipIds.Select(membershipId =>
-                displayNamesByMembership.TryGetValue(membershipId, out var displayName)
-                    ? displayName
-                    : string.Empty)));
+            team.ParticipantMembershipIds.Select(membershipId => new RosterEntry(
+                membershipId,
+                ParticipantDisplayName.Resolve(
+                    displayNamesByMembership.TryGetValue(membershipId, out var displayName) ? displayName : null,
+                    membershipResolved: displayNamesByMembership.ContainsKey(membershipId),
+                    isAnonymised: false)))));
 
         return new TeamSheet(match.Location, match.ConfirmedDay!.Value.Instant, teams);
     }

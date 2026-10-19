@@ -78,7 +78,7 @@ public class MatchTeamSheetPropertyTests
                 return false;
             }
 
-            var result = match.ProduceTeamSheet();
+            var result = match.ProduceTeamSheet(displayNamesById);
             if (!result.IsSuccess)
             {
                 return false;
@@ -94,12 +94,12 @@ public class MatchTeamSheetPropertyTests
                 return false;
             }
 
-            // The sheet's teams mirror the locked teams: order, name, bib flag, and roster display
-            // names in roster order (Requirement 9.1).
-            var expected = new List<(string Name, bool Bib, List<string> Roster)>
+            // The sheet's teams mirror the locked teams: order, name, bib flag, and roster entries —
+            // membership identity and display name — in roster order (Requirement 9.1).
+            var expected = new List<(string Name, bool Bib, List<RosterEntry> Roster)>
             {
-                (scenario.NameA, scenario.BibOnA, teamARoster.Select(id => displayNamesById[id]).ToList()),
-                (scenario.NameB, !scenario.BibOnA, teamBRoster.Select(id => displayNamesById[id]).ToList())
+                (scenario.NameA, scenario.BibOnA, teamARoster.Select(id => new RosterEntry(id, displayNamesById[id])).ToList()),
+                (scenario.NameB, !scenario.BibOnA, teamBRoster.Select(id => new RosterEntry(id, displayNamesById[id])).ToList())
             };
 
             if (sheet.Teams.Count != expected.Count)

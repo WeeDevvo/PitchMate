@@ -18,25 +18,30 @@ namespace PitchMate.Application.Matches.UseCases;
 /// and a request by an inactive membership or a non-member, both yield the single uniform
 /// authorisation failure, so a rejection discloses no team-sheet content and never reveals whether
 /// the match exists (Requirement 9.4, 9.5). On success the sheet is projected by the pure Domain
-/// <see cref="Match.ProduceTeamSheet"/>, which requires the match to be in
-/// <see cref="MatchState.TeamsRolled"/> and otherwise returns an
-/// <see cref="MatchErrorCode.InvalidState"/> failure (Requirement 9.3).
+/// <see cref="Match.ProduceTeamSheet"/> over display names resolved by
+/// <see cref="IRosterDisplayNameSource"/>; it is available whenever a lineup has been locked and
+/// otherwise returns an <see cref="MatchErrorCode.InvalidState"/> failure (Requirement 9.3;
+/// match-read-models Requirements 10.4, 10.7).
 /// </summary>
 public sealed class GetTeamSheetHandler
 {
     private readonly IMatchRepository _matches;
     private readonly ISquadMembershipRepository _memberships;
+    private readonly IRosterDisplayNameSource _names;
 
-    /// <summary>Creates the handler with the match and membership repositories it reads through.</summary>
+    /// <summary>Creates the handler with the match and membership repositories and the display-name source it reads through.</summary>
     public GetTeamSheetHandler(
         IMatchRepository matches,
-        ISquadMembershipRepository memberships)
+        ISquadMembershipRepository memberships,
+        IRosterDisplayNameSource names)
     {
         ArgumentNullException.ThrowIfNull(matches);
         ArgumentNullException.ThrowIfNull(memberships);
+        ArgumentNullException.ThrowIfNull(names);
 
         _matches = matches;
         _memberships = memberships;
+        _names = names;
     }
 
     /// <summary>
@@ -72,7 +77,10 @@ public sealed class GetTeamSheetHandler
         }
 
         // Project the team sheet from the immutable kickoff lineup captured at team lock
-        // (Requirement 9.1, 9.2). Producing the sheet requires the match to be in TeamsRolled.
-        return match.ProduceTeamSheet();
+        // (Requirement 9.1, 9.2), available whenever a lineup was locked. The names are resolved
+        // against each membership's current state, at the cost of one more round trip, so an
+        // anonymised membership reports the placeholder (match-read-models Requirements 10.4, 10.7).
+        IReadOnlyDictionary<Guid, string> names = await _names.ListForMatchAsync(match.Id, cancellationToken);
+        return match.ProduceTeamSheet(names);
     }
 }

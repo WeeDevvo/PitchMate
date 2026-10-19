@@ -1636,7 +1636,7 @@ export interface components {
         TeamSheetTeam: {
             teamName?: null | string;
             bibFlag?: boolean;
-            roster?: null | string[];
+            roster?: null | components["schemas"]["RosterEntry"][];
         };
         TransferOwnershipRequest: {
             /** Format: uuid */
