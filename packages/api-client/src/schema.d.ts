@@ -756,6 +756,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/matches/{matchId}/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkingTeams"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/matches/{matchId}/teams/proposal": {
         parameters: {
             query?: never;
@@ -1489,6 +1505,11 @@ export interface components {
             goalsConcededAsKeeper: null | number | string;
             keeperTime: null | string;
         };
+        RosterEntry: {
+            /** Format: uuid */
+            squadMembershipId: string;
+            displayName: string;
+        };
         RunningScoreResponse: {
             /** Format: uuid */
             matchId: string;
@@ -1513,6 +1534,11 @@ export interface components {
         };
         /** @enum {unknown} */
         SkillTier: "Beginner" | "Average" | "Strong" | null;
+        SplitPrediction: {
+            winProbabilities: (number | string)[];
+            /** Format: double */
+            drawProbability: number | string;
+        };
         SquadData: {
             /** Format: uuid */
             squadId: string;
@@ -1625,6 +1651,18 @@ export interface components {
             email: string;
             emailVerified: boolean;
             providers: components["schemas"]["AuthProvider"][];
+        };
+        WorkingTeamsView: {
+            teams: components["schemas"]["WorkingTeamView"][];
+            prediction: null | components["schemas"]["SplitPrediction"];
+            unassignedParticipants: string[];
+        };
+        WorkingTeamView: {
+            /** Format: uuid */
+            teamId: string;
+            teamName: string;
+            bibFlag: boolean;
+            roster: components["schemas"]["RosterEntry"][];
         };
     };
     responses: never;
@@ -5773,6 +5811,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MatchDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetWorkingTeams: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                matchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkingTeamsView"];
                 };
             };
             /** @description Bad Request */

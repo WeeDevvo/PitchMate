@@ -27,14 +27,19 @@ internal sealed record SeededMatchListDataset(IReadOnlyList<SeededMatchListDatas
     /// <param name="IsSoftDeleted">Whether the squad itself was soft-deleted after seeding.</param>
     /// <param name="Memberships">Every membership seeded in the squad — registered pool, then guests — in their final (possibly anonymised) state.</param>
     /// <param name="Responses">Every availability response stored for the squad's matches.</param>
+    /// <param name="Ratings">The persisted rating of each rated membership.</param>
     internal sealed record SquadData(
         Guid SquadId,
         IReadOnlyList<Match> Matches,
         IReadOnlySet<Guid> SoftDeletedMatchIds,
         bool IsSoftDeleted,
         IReadOnlyList<PitchMate.Domain.Squads.SquadMembership> Memberships,
-        IReadOnlyList<AvailabilityResponse> Responses)
+        IReadOnlyList<AvailabilityResponse> Responses,
+        IReadOnlyDictionary<Guid, PitchMate.Domain.Rating.Rating> Ratings)
     {
+        /// <summary>The squad's admin — the first registered membership, promoted on seeding.</summary>
+        public PitchMate.Domain.Squads.SquadMembership Organiser => Memberships[0];
+
         /// <summary>The membership with the given identity.</summary>
         public PitchMate.Domain.Squads.SquadMembership MembershipById(Guid membershipId) =>
             Memberships.Single(membership => membership.Id == membershipId);

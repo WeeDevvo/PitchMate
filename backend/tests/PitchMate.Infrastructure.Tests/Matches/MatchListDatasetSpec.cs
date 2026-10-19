@@ -38,12 +38,17 @@ internal sealed record MatchListDatasetSpec(IReadOnlyList<MatchListDatasetSpec.S
     /// before saving. The list read reports no display names, so anonymisation must change nothing
     /// about its answer — including for a participant whose membership was anonymised.
     /// </param>
+    /// <param name="RatedCount">
+    /// How many registered memberships, from the <em>start</em> of the pool, carry a persisted rating;
+    /// the rest are seeded in memory by any read that needs one.
+    /// </param>
     internal sealed record SquadSpec(
         int MemberCount,
         IReadOnlyList<MatchSpec> Matches,
         bool SoftDeleteSquad = false,
         int GuestCount = 0,
-        int AnonymisedCount = 0);
+        int AnonymisedCount = 0,
+        int RatedCount = 0);
 
     /// <summary>One match, built through the real aggregate lifecycle to <paramref name="State"/>.</summary>
     /// <param name="State">The lifecycle state to drive the match to.</param>
@@ -84,6 +89,11 @@ internal sealed record MatchListDatasetSpec(IReadOnlyList<MatchListDatasetSpec.S
     /// from the middle of the roster, so the surviving roster positions have gaps (Requirement 2.4).
     /// The pool must hold <see cref="ParticipantCount"/> plus this many registered members.
     /// </param>
+    /// <param name="Teams">For a <see cref="MatchState.Confirmed"/> match: an unlocked team arrangement to apply.</param>
+    /// <param name="MoveAfterLock">
+    /// For a match driven through a lock: move the first participant of the first team to the second
+    /// team after locking, so the working teams differ from the kickoff lineup.
+    /// </param>
     /// <param name="AvailabilityMarks">
     /// Availability responses stored while the match gathers availability, one per registered member
     /// named by index; a mark naming no day is a stored response that marks nothing. Members not named
@@ -100,7 +110,28 @@ internal sealed record MatchListDatasetSpec(IReadOnlyList<MatchListDatasetSpec.S
         bool ProposeTeamsWithoutLock = false,
         bool CancelFromRolled = false,
         int RemovedParticipantCount = 0,
-        IReadOnlyList<AvailabilityMark>? AvailabilityMarks = null);
+        IReadOnlyList<AvailabilityMark>? AvailabilityMarks = null,
+        TeamPlan? Teams = null,
+        bool MoveAfterLock = false);
+
+    /// <summary>
+    /// A working-team arrangement applied to a <see cref="MatchState.Confirmed"/> match and left
+    /// unlocked — free of the constraints a lock enforces, so names, bib flags and roster sizes can take
+    /// any shape the aggregate admits at apply time.
+    /// </summary>
+    /// <param name="Teams">The teams to propose, in order; their sizes partition the participants in order.</param>
+    /// <param name="Moves">Participant moves applied after the proposal, each as (participant index, target team index).</param>
+    /// <param name="AddedAfter">Further registered participants added after the proposal, who sit on no team.</param>
+    internal sealed record TeamPlan(
+        IReadOnlyList<PlannedTeam> Teams,
+        IReadOnlyList<(int Participant, int ToTeam)> Moves,
+        int AddedAfter = 0);
+
+    /// <summary>One proposed team.</summary>
+    /// <param name="Name">The team name exactly as proposed — possibly empty or whitespace.</param>
+    /// <param name="Bib">Whether the team is flagged to wear bibs; any number of teams may be.</param>
+    /// <param name="Size">The number of participants the team takes; may be zero.</param>
+    internal sealed record PlannedTeam(string Name, bool Bib, int Size);
 
     /// <summary>One stored availability response.</summary>
     /// <param name="MemberIndex">The responding registered member's index in the squad's pool.</param>

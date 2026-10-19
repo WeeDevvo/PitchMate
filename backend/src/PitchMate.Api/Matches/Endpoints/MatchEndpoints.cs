@@ -55,7 +55,8 @@ public static class MatchEndpoints
     }
 
     /// <summary>
-    /// Maps the match detail read, <c>GET /matches/{matchId}</c>, onto the match-scoped group
+    /// Maps the match detail read, <c>GET /matches/{matchId}</c>, and the working-teams read,
+    /// <c>GET /matches/{matchId}/teams</c>, onto the match-scoped group
     /// (match-read-models Requirement 2.1). A <b>genuinely new path</b>: <c>matchId</c> is its only
     /// declared path parameter, and the squad is resolved from the match by
     /// <see cref="GetMatchDetailHandler"/>, never from the request.
@@ -88,6 +89,30 @@ public static class MatchEndpoints
             // Existence-sensitive, as the list read and the team sheet are: the refusal is the
             // argument-free concealed 404, byte-identical to theirs (Requirements 5.6, 5.7).
             .Produces<MatchDetail>(StatusCodes.Status200OK)
+            .WithMatchConcealedProblemResponses();
+
+        // Read the working teams — organisers only, refused as the same concealed 404 a non-member
+        // gets, so a refusal discloses neither the match nor the caller's role (match-read-models
+        // Requirements 4.1, 5.2, 5.8). The prediction is the handler's: this lambda invokes no rating
+        // engine member (Requirement 11.10).
+        group.MapGet("/teams", static async (
+            Guid matchId,
+            ClaimsPrincipal principal,
+            GetWorkingTeamsHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(
+                await handler.HandleAsync(new GetWorkingTeamsCommand(userId, matchId), ct),
+                concealExistence: true);
+        })
+            .RequireAuthorization()
+            .WithName("GetWorkingTeams")
+            .Produces<WorkingTeamsView>(StatusCodes.Status200OK)
             .WithMatchConcealedProblemResponses();
     }
 

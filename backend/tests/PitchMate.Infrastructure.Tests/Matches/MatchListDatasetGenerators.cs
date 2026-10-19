@@ -100,6 +100,97 @@ internal static class MatchListDatasetGenerators
         ]);
 
     /// <summary>
+    /// A dataset for the working-teams properties (match-read-models task 11.9): 1–2 squads of 12–20
+    /// registered members, some with persisted ratings, each guaranteeing a confirmed match with
+    /// <b>no</b> teams, one with a <b>single</b> team, one with an <b>empty roster</b> among two or more,
+    /// one whose names are <b>empty and whitespace</b> with <b>zero</b> bib teams, one with <b>two</b>
+    /// bib teams, moves and participants <b>added after</b> the proposal, and a rolled match whose
+    /// working teams were moved after the lock — plus 0–4 unconstrained matches.
+    /// <para>
+    /// Names longer than 50 characters, which the task also lists, cannot be generated: the
+    /// <c>match_team.team_name</c> column is <c>varchar(50)</c>, so no such name can be stored.
+    /// </para>
+    /// </summary>
+    public static Gen<MatchListDatasetSpec> TeamsDataset() =>
+        from count in Gen.Choose(1, 2)
+        from squads in ListOfLength(count, TeamsSquad())
+        select new MatchListDatasetSpec([.. squads]);
+
+    private static Gen<MatchListDatasetSpec.SquadSpec> TeamsSquad() =>
+        from registered in Gen.Choose(12, 20)
+        from rated in Gen.Choose(0, registered)
+        from single in Plan(registered, Gen.Constant(1), Gen.Elements("Solo", "  padded  "), bibs: 1)
+        from emptyRoster in Plan(registered, Gen.Choose(2, 4), Gen.Elements("Reds", "Blues", "Greens"), bibs: 1, withEmptyRoster: true)
+        from blankNames in Plan(registered, Gen.Choose(2, 3), Gen.Elements(string.Empty, "   ", "	"), bibs: 0)
+        from twoBibs in Plan(registered, Gen.Choose(2, 3), Gen.Elements("Reds", "Blues"), bibs: 2, withMoves: true, addedAfter: true)
+        from extraCount in Gen.Choose(0, 4)
+        from extras in ListOfLength(extraCount, MatchOf(registered, 0))
+        from days in DistinctOffsets(1)
+        select new MatchListDatasetSpec.SquadSpec(
+            registered,
+            [
+                new MatchListDatasetSpec.MatchSpec(MatchState.Confirmed, days, ParticipantCount: 4),
+                single,
+                emptyRoster,
+                blankNames,
+                twoBibs,
+                new MatchListDatasetSpec.MatchSpec(MatchState.TeamsRolled, days, ParticipantCount: 11, MoveAfterLock: true),
+                .. extras.Select(static match => match with { SoftDeleted = false }),
+            ],
+            RatedCount: rated);
+
+    /// <summary>
+    /// A confirmed match carrying an unlocked team plan over 4–10 registered participants, partitioned
+    /// at random (a team may be empty unless the plan must avoid it).
+    /// </summary>
+    private static Gen<MatchListDatasetSpec.MatchSpec> Plan(
+        int registered,
+        Gen<int> teamCounts,
+        Gen<string> names,
+        int bibs,
+        bool withEmptyRoster = false,
+        bool withMoves = false,
+        bool addedAfter = false) =>
+        from teamCount in teamCounts
+        from participants in Gen.Choose(Math.Max(4, teamCount), Math.Min(10, registered - 2))
+        from cuts in ListOfLength(teamCount - 1, Gen.Choose(0, participants))
+        from teamNames in ListOfLength(teamCount, names)
+        from moveCount in Gen.Choose(withMoves ? 1 : 0, withMoves ? 3 : 0)
+        from moves in ListOfLength(moveCount,
+            from participant in Gen.Choose(0, participants - 1)
+            from toTeam in Gen.Choose(0, teamCount - 1)
+            select (participant, toTeam))
+        from late in Gen.Choose(addedAfter ? 1 : 0, addedAfter ? 2 : 0)
+        from days in DistinctOffsets(1)
+        let sizes = Sizes(participants, cuts, withEmptyRoster)
+        select new MatchListDatasetSpec.MatchSpec(
+            MatchState.Confirmed,
+            days,
+            ParticipantCount: participants,
+            Teams: new MatchListDatasetSpec.TeamPlan(
+                [.. Enumerable.Range(0, teamCount).Select(index => new MatchListDatasetSpec.PlannedTeam(teamNames[index], index < bibs, sizes[index]))],
+                moves,
+                late));
+
+    /// <summary>
+    /// Team sizes from sorted cut points. With <paramref name="withEmptyRoster"/> the last team is
+    /// forced empty and its share given to the first.
+    /// </summary>
+    private static IReadOnlyList<int> Sizes(int participants, IReadOnlyList<int> cuts, bool withEmptyRoster)
+    {
+        List<int> bounds = [0, .. cuts.Order(), participants];
+        List<int> sizes = [.. bounds.Zip(bounds.Skip(1), static (from, to) => to - from)];
+
+        if (withEmptyRoster)
+        {
+            sizes[0] += sizes[^1];
+            sizes[^1] = 0;
+        }
+
+        return sizes;
+    }
+
+    /// <summary>
     /// The admitted-match counts the bound property draws from: the small range most squads live in,
     /// and the three cases either side of <see cref="MatchListLimits.MaximumEntries"/>.
     /// </summary>

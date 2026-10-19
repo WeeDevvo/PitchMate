@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Npgsql;
 using PitchMate.Application.Matches.Abstractions;
 using PitchMate.Application.Matches.UseCases;
@@ -210,6 +211,125 @@ internal sealed class MatchListSourceHarness
             new EfAvailabilityRepository(read));
 
         return await handler.HandleAsync(new GetAvailabilityTallyCommand(userId, squadId, matchId), CancellationToken.None);
+    }
+
+    /// <summary>Runs the real <see cref="EfWorkingTeamsSource"/> over a fresh context (task 11.6).</summary>
+    public async Task<WorkingTeamsProjection?> FindWorkingTeamsAsync(Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext read = CreateContext();
+        return await new EfWorkingTeamsSource(read).FindAsync(matchId, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Runs the real <see cref="EfWorkingTeamsSource"/> over a context carrying a command interceptor,
+    /// so a test can assert the fixed statement count.
+    /// </summary>
+    public async Task<(WorkingTeamsProjection? Projection, CommandCountingInterceptor Commands)> FindWorkingTeamsCapturingCommandsAsync(Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        var commands = new CommandCountingInterceptor();
+        await using PitchMateDbContext read = CreateContext(commands);
+        return (await new EfWorkingTeamsSource(read).FindAsync(matchId, CancellationToken.None), commands);
+    }
+
+    /// <summary>
+    /// Runs the real <see cref="GetWorkingTeamsHandler"/> over the production EF gateways and the given
+    /// rating engine, as the given user.
+    /// </summary>
+    public async Task<PitchMate.Domain.Matches.Result<WorkingTeamsView>> GetWorkingTeamsAsync(
+        Guid userId, Guid matchId, PitchMate.Domain.Rating.IRatingEngine engine)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext read = CreateContext();
+        var handler = new GetWorkingTeamsHandler(new EfWorkingTeamsSource(read), new EfSquadMembershipRepository(read), engine);
+        return await handler.HandleAsync(new GetWorkingTeamsCommand(userId, matchId), CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Runs the real <see cref="AdjustTeamsHandler"/> — the use case behind the team-editing writes —
+    /// over the production EF gateways and balancer, as the given user, committing on success.
+    /// </summary>
+    public async Task<PitchMate.Domain.Matches.Result> AdjustTeamsAsync(
+        Guid userId, Guid matchId, TeamAdjustment adjustment, PitchMate.Domain.Rating.IRatingEngine engine)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext write = CreateContext();
+        var handler = new AdjustTeamsHandler(
+            new EfMatchRepository(write),
+            new EfSquadMembershipRepository(write),
+            new EfMembershipRatingRepository(write),
+            engine,
+            new PitchMate.Infrastructure.Matches.TeamBalancer(engine),
+            new PitchMate.Infrastructure.Matches.SillyNameGenerator(),
+            new UnitOfWork(write));
+
+        return await handler.HandleAsync(new AdjustTeamsCommand(userId, matchId, adjustment), CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Appends an identity to a team's stored roster by direct SQL, bypassing the aggregate — the
+    /// negative-control plant <c>MembershipStandingScopeHarness.AppendToTeamRosterAsync</c> uses, exposed
+    /// here for the working-teams and team-sheet reads (tasks 11.6, 13.7).
+    /// </summary>
+    public async Task AppendToTeamRosterAsync(Guid teamId, Guid membershipId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext write = CreateContext();
+        MappedTable team = MappedTable.For(write.Model, typeof(MatchTeam));
+        string roster = team.Column(nameof(MatchTeam.Roster));
+        string key = team.Column(nameof(MatchTeam.Id));
+
+        // Names come from the EF model; {0} / {1} are sent as typed parameters, never inlined.
+        var sql = $"UPDATE \"{team.Table}\" SET \"{roster}\" = \"{roster}\" || CAST({{0}} AS uuid) WHERE \"{key}\" = {{1}}";
+        int affected = await write.Database.ExecuteSqlRawAsync(sql, membershipId, teamId);
+
+        Assert.Equal(1, affected);
+    }
+
+    /// <summary>
+    /// Copies an existing participant row into another match by direct SQL — fresh identity, the target
+    /// match, a roster position after every other — bypassing the aggregate's same-squad rule. Used to
+    /// plant another squad's membership as a participant, so the squad-scoping of the read's membership
+    /// join is load-bearing rather than vacuous.
+    /// </summary>
+    public async Task PlantParticipantCopyAsync(Guid sourceMatchId, Guid membershipId, Guid targetMatchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext write = CreateContext();
+        IEntityType entity = write.Model.FindEntityType(typeof(MatchParticipant))!;
+        MappedTable participant = MappedTable.For(write.Model, typeof(MatchParticipant));
+        string id = participant.Column(nameof(MatchParticipant.Id));
+        string match = participant.Column(nameof(MatchParticipant.MatchId));
+        string member = participant.Column(nameof(MatchParticipant.SquadMembershipId));
+        string position = participant.Column(nameof(MatchParticipant.RosterPosition));
+
+        // xmin is PostgreSQL's system column behind the concurrency token; it cannot be inserted.
+        List<string> columns =
+        [
+            .. entity.GetProperties()
+                .Select(property => participant.Column(property.Name))
+                .Where(static column => column != "xmin"),
+        ];
+        string select = string.Join(", ", columns.Select(column =>
+            column == id ? "gen_random_uuid()"
+            : column == match ? "{1}"
+            : column == position ? "1000"
+            : $"p.\"{column}\""));
+
+        // Names come from the EF model; {0} / {1} / {2} are sent as typed parameters, never inlined.
+        var sql =
+            $"INSERT INTO \"{participant.Table}\" ({string.Join(", ", columns.Select(static column => $"\"{column}\""))}) " +
+            $"SELECT {select} FROM \"{participant.Table}\" AS p WHERE p.\"{match}\" = {{0}} AND p.\"{member}\" = {{2}}";
+        int affected = await write.Database.ExecuteSqlRawAsync(sql, sourceMatchId, targetMatchId, membershipId);
+
+        Assert.Equal(1, affected);
     }
 
     /// <summary>

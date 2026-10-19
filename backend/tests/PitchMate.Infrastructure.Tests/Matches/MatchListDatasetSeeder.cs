@@ -48,6 +48,7 @@ internal sealed class MatchListDatasetSeeder
         var membershipRepository = new EfSquadMembershipRepository(context);
         var matchRepository = new EfMatchRepository(context);
         var availabilityRepository = new EfAvailabilityRepository(context);
+        var ratingRepository = new EfMembershipRatingRepository(context);
 
         var seededSquads = new List<SeededMatchListDataset.SquadData>(spec.Squads.Count);
 
@@ -69,6 +70,24 @@ internal sealed class MatchListDatasetSeeder
                     "create member");
                 pool.Add(member);
                 await membershipRepository.AddAsync(member, cancellationToken);
+            }
+
+            // The first registered member organises the squad, so the organiser-gated read has a caller.
+            if (pool.Count > 0)
+            {
+                PitchMate.Domain.Squads.Result promoted = pool[0].PromoteToAdmin();
+                if (!promoted.IsSuccess)
+                {
+                    throw new InvalidOperationException($"Seeder step 'promote organiser' failed: {promoted.Error?.Message}");
+                }
+            }
+
+            var ratings = new Dictionary<Guid, PitchMate.Domain.Rating.Rating>();
+            foreach (SquadMembership rated in pool.Take(squadSpec.RatedCount))
+            {
+                var rating = new PitchMate.Domain.Rating.Rating(20 + ratings.Count, 2 + (ratings.Count % 3));
+                ratings[rated.Id] = rating;
+                await ratingRepository.AddAsync(MembershipRating.Create(rated.Id, rating), cancellationToken);
             }
 
             var guests = new List<SquadMembership>(squadSpec.GuestCount);
@@ -112,7 +131,7 @@ internal sealed class MatchListDatasetSeeder
             }
 
             seededSquads.Add(new SeededMatchListDataset.SquadData(
-                squad.Id, matches, softDeleted, squadSpec.SoftDeleteSquad, [.. pool, .. guests], responses));
+                squad.Id, matches, softDeleted, squadSpec.SoftDeleteSquad, [.. pool, .. guests], responses, ratings));
         }
 
         await new UnitOfWork(context).SaveChangesAsync(cancellationToken);
@@ -188,6 +207,11 @@ internal sealed class MatchListDatasetSeeder
                 ApplyTwoTeamProposal(match, participants);
             }
 
+            if (spec.Teams is { } plan)
+            {
+                ApplyTeamPlan(match, pool, participants, plan);
+            }
+
             return match;
         }
 
@@ -203,6 +227,12 @@ internal sealed class MatchListDatasetSeeder
         }
 
         RollAndLockTeams(match, participants);
+
+        if (spec.MoveAfterLock)
+        {
+            List<MatchTeam> locked = [.. match.Teams];
+            Check(match.MoveParticipant(locked[0].Roster[0], locked[1].Id), "move after lock");
+        }
 
         if (spec.State == MatchState.TeamsRolled)
         {
@@ -284,6 +314,51 @@ internal sealed class MatchListDatasetSeeder
         }
 
         return [.. participants.Except(removed)];
+    }
+
+    /// <summary>
+    /// Applies an unlocked team plan: the proposal (its sizes partitioning the participants in order),
+    /// then the moves, then the late additions who sit on no team.
+    /// </summary>
+    private static void ApplyTeamPlan(
+        Match match,
+        IReadOnlyList<SquadMembership> pool,
+        IReadOnlyList<SquadMembership> participants,
+        MatchListDatasetSpec.TeamPlan plan)
+    {
+        if (plan.Teams.Sum(static team => team.Size) != participants.Count)
+        {
+            throw new InvalidOperationException(
+                $"A team plan's sizes sum to {plan.Teams.Sum(static team => team.Size)} but the match has {participants.Count} participants.");
+        }
+
+        var proposal = new List<ProposedTeam>(plan.Teams.Count);
+        int taken = 0;
+        foreach (MatchListDatasetSpec.PlannedTeam team in plan.Teams)
+        {
+            proposal.Add(new ProposedTeam(team.Name, team.Bib, [.. participants.Skip(taken).Take(team.Size).Select(static member => member.Id)]));
+            taken += team.Size;
+        }
+
+        Check(match.ApplyTeamProposal(proposal), "apply team plan");
+
+        List<MatchTeam> teams = [.. match.Teams];
+        foreach ((int participant, int toTeam) in plan.Moves)
+        {
+            Check(match.MoveParticipant(participants[participant].Id, teams[toTeam].Id), "move participant");
+        }
+
+        HashSet<Guid> playing = [.. match.Participants.Select(static participant => participant.SquadMembershipId)];
+        List<SquadMembership> late = [.. pool.Where(member => !playing.Contains(member.Id)).Take(plan.AddedAfter)];
+        if (late.Count != plan.AddedAfter)
+        {
+            throw new InvalidOperationException($"A team plan wants {plan.AddedAfter} late additions but the pool has {late.Count} spare.");
+        }
+
+        foreach (SquadMembership member in late)
+        {
+            Check(match.AddParticipant(member), "add participant after proposal");
+        }
     }
 
     /// <summary>

@@ -48,6 +48,7 @@ public static class MatchesInfrastructureRegistration
         // entity for mutation, so nothing it does can reach a SaveChanges.
         services.TryAddScoped<IMatchListSource, EfMatchListSource>();
         services.TryAddScoped<IMatchDetailSource, EfMatchDetailSource>();
+        services.TryAddScoped<IWorkingTeamsSource, EfWorkingTeamsSource>();
 
         // The balancer holds no mutable state — it scores splits solely through the singleton
         // IRatingEngine's pure Predict primitive — so a single shared instance is safe as a singleton

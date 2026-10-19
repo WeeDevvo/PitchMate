@@ -28,10 +28,10 @@ namespace PitchMate.Api.Tests.Contracts;
 public sealed class MatchReadConcealmentProperties : IClassFixture<ConcealingEndpointCatalogue>
 {
     /// <summary>
-    /// The non-vacuity floor on discovered chore reads: the list read alone at task 7.8. Task 11.7
-    /// raises it to three, once the detail and working-teams reads are mapped.
+    /// The non-vacuity floor on discovered chore reads: the list, detail and working-teams reads, all
+    /// mapped from task 11.7 onward (it was one at task 7.8).
     /// </summary>
-    private const int MinimumReadEndpointCount = 1;
+    private const int MinimumReadEndpointCount = 3;
 
     private static readonly IReadOnlySet<int> ConventionStatuses =
         MatchResponseConventions.DeclaredConcealedProblemStatuses.ToHashSet();

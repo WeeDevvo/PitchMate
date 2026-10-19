@@ -5120,6 +5120,90 @@
         ]
       }
     },
+    "/matches/{matchId}/teams": {
+      "get": {
+        "tags": [
+          "Matches"
+        ],
+        "operationId": "GetWorkingTeams",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkingTeamsView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/matches/{matchId}/teams/proposal": {
       "post": {
         "tags": [
@@ -8465,6 +8549,22 @@
           }
         }
       },
+      "RosterEntry": {
+        "required": [
+          "squadMembershipId",
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "squadMembershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        }
+      },
       "RunningScoreResponse": {
         "required": [
           "matchId",
@@ -8569,6 +8669,34 @@
           "Strong",
           null
         ]
+      },
+      "SplitPrediction": {
+        "required": [
+          "winProbabilities",
+          "drawProbability"
+        ],
+        "type": "object",
+        "properties": {
+          "winProbabilities": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          },
+          "drawProbability": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
       },
       "SquadData": {
         "required": [
@@ -9031,6 +9159,66 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AuthProvider"
+            }
+          }
+        }
+      },
+      "WorkingTeamsView": {
+        "required": [
+          "teams",
+          "prediction",
+          "unassignedParticipants"
+        ],
+        "type": "object",
+        "properties": {
+          "teams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingTeamView"
+            }
+          },
+          "prediction": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SplitPrediction"
+              }
+            ]
+          },
+          "unassignedParticipants": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "WorkingTeamView": {
+        "required": [
+          "teamId",
+          "teamName",
+          "bibFlag",
+          "roster"
+        ],
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "bibFlag": {
+            "type": "boolean"
+          },
+          "roster": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RosterEntry"
             }
           }
         }

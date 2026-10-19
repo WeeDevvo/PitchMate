@@ -43,6 +43,7 @@ public static class MatchesServiceCollectionExtensions
         // Infrastructure assembly and is registered by AddMatchesInfrastructure.
         services.AddScoped<GetMatchListHandler>();
         services.AddScoped<GetMatchDetailHandler>();
+        services.AddScoped<GetWorkingTeamsHandler>();
 
         // Draft creation.
         services.AddScoped<CreateMatchDraftHandler>();
