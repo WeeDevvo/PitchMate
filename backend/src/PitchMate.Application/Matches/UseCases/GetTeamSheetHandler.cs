@@ -64,6 +64,14 @@ public sealed class GetTeamSheetHandler
             return TeamSheetResult.Fail(MatchAuthorization.RequireActiveMember(null).Error!);
         }
 
+        // A squad in its deletion grace period is not visible: soft-deleting the squad leaves its
+        // memberships active, so it is refused here, uniformly with the other causes
+        // (match-read-models Requirements 5.10, 10.5).
+        if (await _memberships.IsSquadPendingDeletionAsync(match.SquadId, cancellationToken))
+        {
+            return TeamSheetResult.Fail(MatchAuthorization.RequireActiveMember(null).Error!);
+        }
+
         // Any active member of the match's squad may read the team sheet; an inactive membership or a
         // non-member is rejected uniformly, disclosing no content and concealing the match
         // (Requirement 9.4, 9.5).

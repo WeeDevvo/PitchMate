@@ -83,6 +83,14 @@ public sealed class GetAvailabilityTallyHandler
             return TallyResult.Fail(MatchAuthorization.RequireActiveMember(null).Error!);
         }
 
+        // A squad in its deletion grace period is not visible: soft-deleting the squad leaves its
+        // memberships active, so it is refused here, uniformly with the other causes
+        // (match-read-models Requirement 5.10).
+        if (await _memberships.IsSquadPendingDeletionAsync(match.SquadId, cancellationToken))
+        {
+            return TallyResult.Fail(MatchAuthorization.RequireActiveMember(null).Error!);
+        }
+
         // Any active member of the match's squad may read the tally; an inactive membership or a
         // non-member is rejected uniformly, concealing the match (Requirement 5.5, 5.6).
         SquadMembership? acting =

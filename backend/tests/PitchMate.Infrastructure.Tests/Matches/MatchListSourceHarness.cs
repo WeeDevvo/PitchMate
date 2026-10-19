@@ -394,6 +394,60 @@ internal sealed class MatchListSourceHarness
         Assert.Equal(1, updated);
     }
 
+    /// <summary>
+    /// A row-level snapshot of everything a read could disturb for one match (task 14.4): the match
+    /// row and its participant, team and availability-response rows, and the membership-rating rows of
+    /// its squad — every column, audit and soft-delete included, soft-deleted rows included — read as
+    /// JSON in a fresh context so no tracked state can stand in for the database.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> SnapshotRowsAsync(Guid squadId, Guid matchId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using PitchMateDbContext read = CreateContext();
+        MappedTable match = MappedTable.For(read.Model, typeof(Match));
+        MappedTable participant = MappedTable.For(read.Model, typeof(MatchParticipant));
+        MappedTable team = MappedTable.For(read.Model, typeof(MatchTeam));
+        MappedTable response = MappedTable.For(read.Model, typeof(AvailabilityResponse));
+        MappedTable rating = MappedTable.For(read.Model, typeof(MembershipRating));
+        MappedTable membership = MappedTable.For(read.Model, typeof(SquadMembership));
+
+        string[] statements =
+        [
+            $"SELECT row_to_json(t)::text AS \"Value\" FROM \"{match.Table}\" t WHERE t.\"{match.Column(nameof(Match.Id))}\" = {{0}}",
+            $"SELECT row_to_json(t)::text AS \"Value\" FROM \"{participant.Table}\" t WHERE t.\"{participant.Column(nameof(MatchParticipant.MatchId))}\" = {{0}}",
+            $"SELECT row_to_json(t)::text AS \"Value\" FROM \"{team.Table}\" t WHERE t.\"{team.Column(nameof(MatchTeam.MatchId))}\" = {{0}}",
+            $"SELECT row_to_json(t)::text AS \"Value\" FROM \"{response.Table}\" t WHERE t.\"{response.Column(nameof(AvailabilityResponse.MatchId))}\" = {{0}}",
+            $"SELECT row_to_json(t)::text AS \"Value\" FROM \"{rating.Table}\" t WHERE t.\"{rating.Column(nameof(MembershipRating.SquadMembershipId))}\" IN " +
+                $"(SELECT m.\"{membership.Column(nameof(SquadMembership.Id))}\" FROM \"{membership.Table}\" m WHERE m.\"{membership.Column(nameof(SquadMembership.SquadId))}\" = {{1}})",
+        ];
+
+        var rows = new List<string>();
+        foreach (string statement in statements)
+        {
+            // Names come from the EF model; the identities are sent as typed parameters, never inlined.
+            var sql = statement;
+            rows.AddRange(await read.Database.SqlQueryRaw<string>(sql, matchId, squadId).ToListAsync());
+        }
+
+        return [.. rows.Order(StringComparer.Ordinal)];
+    }
+
+    /// <summary>
+    /// Runs a read over a fresh context carrying a command interceptor and returns how many commands it
+    /// executed (task 14.5).
+    /// </summary>
+    public async Task<int> CountCommandsAsync(Func<PitchMateDbContext, Task> read)
+    {
+        ArgumentNullException.ThrowIfNull(read);
+        await EnsureDatabaseAsync();
+
+        var commands = new CommandCountingInterceptor();
+        await using PitchMateDbContext context = CreateContext(commands);
+        await read(context);
+        return commands.ExecutedCommandCount;
+    }
+
     /// <summary>Loads the match aggregate as the production repository rehydrates it.</summary>
     public async Task<Match> LoadMatchAsync(Guid matchId)
     {

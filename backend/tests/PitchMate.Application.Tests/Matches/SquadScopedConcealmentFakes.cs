@@ -78,8 +78,10 @@ internal sealed class ConcealmentMembershipRepository(params SquadMembership[] m
     public Task<SquadMembership?> GetOwnerAsync(Guid squadId, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Not exercised by the read handlers under test.");
 
+    // The squad-scoped reads probe this since match-read-models task 14.3; every squad these fakes
+    // model is visible.
     public Task<bool> IsSquadPendingDeletionAsync(Guid squadId, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Not exercised by the read handlers under test.");
+        Task.FromResult(false);
 
     public Task<bool> DisplayNameTakenAsync(Guid squadId, string normalisedName, Guid? excludingMembershipId, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Not exercised by the read handlers under test.");
