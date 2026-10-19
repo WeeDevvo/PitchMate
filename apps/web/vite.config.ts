@@ -35,9 +35,25 @@ export function themeBootstrapPlugin(): Plugin {
   }
 }
 
+/** Where the dev server forwards API calls; override with `VITE_API_PROXY_TARGET`. */
+const API_PROXY_TARGET = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:5243'
+
+/**
+ * Top-level route prefixes the API owns. With no `VITE_API_BASE_URL` the client
+ * calls the API same-origin, so in dev these are forwarded to the backend. SPA
+ * routes live under `/app`, `/join` and `/goodbye`, so none of these collide.
+ * A new top-level API route group needs adding here.
+ */
+const API_ROUTE_PREFIXES = ['/auth', '/squads', '/matches', '/notifications', '/health']
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), themeBootstrapPlugin()],
+  server: {
+    proxy: Object.fromEntries(
+      API_ROUTE_PREFIXES.map((prefix) => [prefix, { target: API_PROXY_TARGET, changeOrigin: true }]),
+    ),
+  },
   test: {
     environment: 'jsdom',
     globals: true,

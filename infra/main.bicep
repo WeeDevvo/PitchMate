@@ -197,6 +197,12 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
           name: 'ConnectionStrings__Default'
           value: '@Microsoft.KeyVault(SecretUri=${dbConnectionSecret.properties.secretUri})'
         }
+        {
+          // The web client is served from the Static Web App's origin, so the API must
+          // allow it cross-origin (see PitchMate.Api/WebClientCors.cs).
+          name: 'Cors__AllowedOrigins__0'
+          value: 'https://${staticWebApp.properties.defaultHostname}'
+        }
       ]
     }
   }

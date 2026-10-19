@@ -40,6 +40,11 @@ builder.Services.AddOpenApi(options =>
     options.AddOperationTransformer<BearerSecurityRequirementOperationTransformer>();
 });
 
+// Cross-origin access for the deployed web client, which is served from a different origin than the
+// Api. The allow-list comes from Cors:AllowedOrigins; locally it is empty because the Vite dev server
+// proxies the Api same-origin.
+builder.Services.AddWebClientCors();
+
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Auth composition root: binds and validates the Auth configuration (fail-fast at startup),
@@ -84,6 +89,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// CORS before authentication, so a browser preflight is answered without a bearer token.
+app.UseCors();
 
 // Authentication then authorization, before the endpoints they guard. The JWT bearer handler
 // establishes the caller principal; authorization enforces RequireAuthorization()/AllowAnonymous()
