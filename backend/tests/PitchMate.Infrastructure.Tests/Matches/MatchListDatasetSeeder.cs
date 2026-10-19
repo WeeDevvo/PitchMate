@@ -70,13 +70,23 @@ internal sealed class MatchListDatasetSeeder
                 await membershipRepository.AddAsync(member, cancellationToken);
             }
 
+            var guests = new List<SquadMembership>(squadSpec.GuestCount);
+            for (int i = 0; i < squadSpec.GuestCount; i++)
+            {
+                SquadMembership guest = Unwrap(
+                    SquadMembership.CreateGuest(squad.Id, $"S{s}G{i}", skillTier: null, anchor),
+                    "create guest");
+                guests.Add(guest);
+                await membershipRepository.AddAsync(guest, cancellationToken);
+            }
+
             var matches = new List<Match>(squadSpec.Matches.Count);
             var softDeleted = new HashSet<Guid>();
 
             for (int m = 0; m < squadSpec.Matches.Count; m++)
             {
                 MatchListDatasetSpec.MatchSpec matchSpec = squadSpec.Matches[m];
-                Match match = BuildMatch(squad, pool, matchSpec, anchor, m);
+                Match match = BuildMatch(squad, pool, guests, matchSpec, anchor, m);
 
                 await matchRepository.AddAsync(match, cancellationToken);
                 matches.Add(match);
@@ -85,6 +95,13 @@ internal sealed class MatchListDatasetSeeder
                 {
                     softDeleted.Add(match.Id);
                 }
+            }
+
+            // Anonymised after the matches are built, so an anonymised membership can also be a
+            // participant — the read must count it all the same.
+            foreach (SquadMembership member in pool.TakeLast(squadSpec.AnonymisedCount))
+            {
+                member.Anonymise();
             }
 
             seededSquads.Add(new SeededMatchListDataset.SquadData(
@@ -103,6 +120,7 @@ internal sealed class MatchListDatasetSeeder
     private static Match BuildMatch(
         Squad squad,
         IReadOnlyList<SquadMembership> pool,
+        IReadOnlyList<SquadMembership> guests,
         MatchListDatasetSpec.MatchSpec spec,
         DateTimeOffset anchor,
         int sequence)
@@ -140,20 +158,31 @@ internal sealed class MatchListDatasetSeeder
                 []),
             "confirm");
 
-        AddParticipants(match, pool, spec.ParticipantCount);
+        List<SquadMembership> participants =
+            AddParticipants(match, pool, guests, spec.ParticipantCount, spec.GuestParticipantCount);
 
         if (spec.State == MatchState.Confirmed)
         {
+            if (spec.ProposeTeamsWithoutLock)
+            {
+                ApplyTwoTeamProposal(match, participants);
+            }
+
             return match;
         }
 
         if (spec.State == MatchState.Cancelled)
         {
+            if (spec.CancelFromRolled)
+            {
+                RollAndLockTeams(match, participants);
+            }
+
             Check(match.Cancel(), "cancel");
             return match;
         }
 
-        RollAndLockTeams(match, pool, spec.ParticipantCount);
+        RollAndLockTeams(match, participants);
 
         if (spec.State == MatchState.TeamsRolled)
         {
@@ -185,38 +214,71 @@ internal sealed class MatchListDatasetSeeder
         return match;
     }
 
-    /// <summary>Adds the first <paramref name="count"/> memberships of the pool as participants.</summary>
-    private static void AddParticipants(Match match, IReadOnlyList<SquadMembership> pool, int count)
+    /// <summary>
+    /// Adds <paramref name="count"/> participants — the first <paramref name="guestCount"/> guests of
+    /// the guest pool and the first <c>count - guestCount</c> registered members of the pool — and
+    /// returns them in the order they were added.
+    /// </summary>
+    private static List<SquadMembership> AddParticipants(
+        Match match,
+        IReadOnlyList<SquadMembership> pool,
+        IReadOnlyList<SquadMembership> guests,
+        int count,
+        int guestCount)
     {
-        if (count > pool.Count)
+        int registeredCount = count - guestCount;
+
+        if (guestCount < 0 || guestCount > count || guestCount > guests.Count)
         {
             throw new InvalidOperationException(
-                $"A match wants {count} participants but the squad pool holds {pool.Count}; raise the spec's MemberCount.");
+                $"A match wants {guestCount} guest participants of {count}, but the squad holds {guests.Count} guests.");
         }
 
-        for (int i = 0; i < count; i++)
+        if (registeredCount > pool.Count)
         {
-            Check(match.AddParticipant(pool[i]), "add participant");
+            throw new InvalidOperationException(
+                $"A match wants {registeredCount} registered participants but the squad pool holds {pool.Count}; raise the spec's MemberCount.");
         }
+
+        List<SquadMembership> participants = [.. pool.Take(registeredCount), .. guests.Take(guestCount)];
+
+        foreach (SquadMembership participant in participants)
+        {
+            Check(match.AddParticipant(participant), "add participant");
+        }
+
+        return participants;
     }
 
     /// <summary>
-    /// Partitions the match's participants into two teams as evenly as the count allows, flags the
-    /// second as bib-wearing, and locks — capturing the immutable kickoff lineup whose team names and
-    /// bib flags the list read reports.
+    /// Partitions the participants into two teams as evenly as the count allows, flags the second as
+    /// bib-wearing, and locks — capturing the immutable kickoff lineup whose team names and bib flags
+    /// the list read reports.
     /// </summary>
-    private static void RollAndLockTeams(Match match, IReadOnlyList<SquadMembership> pool, int count)
+    private static void RollAndLockTeams(Match match, IReadOnlyList<SquadMembership> participants)
     {
+        ApplyTwoTeamProposal(match, participants);
+        Check(match.Lock(), "lock");
+    }
+
+    /// <summary>
+    /// Applies a two-team proposal over the participants without locking it, so the match holds
+    /// working teams but no kickoff lineup.
+    /// </summary>
+    private static void ApplyTwoTeamProposal(Match match, IReadOnlyList<SquadMembership> participants)
+    {
+        int count = participants.Count;
+
         if (count < MinimumRolledParticipants || count > MaximumRolledParticipants)
         {
             throw new InvalidOperationException(
-                $"A rolled match needs {MinimumRolledParticipants} to {MaximumRolledParticipants} participants " +
+                $"Two teams need {MinimumRolledParticipants} to {MaximumRolledParticipants} participants " +
                 $"(two teams of {Match.TeamMinSize} to {Match.TeamMaxSize}), but the spec asked for {count}.");
         }
 
         int first = (count + 1) / 2;
-        List<Guid> firstRoster = [.. pool.Take(first).Select(member => member.Id)];
-        List<Guid> secondRoster = [.. pool.Skip(first).Take(count - first).Select(member => member.Id)];
+        List<Guid> firstRoster = [.. participants.Take(first).Select(member => member.Id)];
+        List<Guid> secondRoster = [.. participants.Skip(first).Select(member => member.Id)];
 
         Check(
             match.ApplyTeamProposal(
@@ -225,7 +287,6 @@ internal sealed class MatchListDatasetSeeder
                 new ProposedTeam("Bibs", BibFlag: true, secondRoster)
             ]),
             "apply team proposal");
-        Check(match.Lock(), "lock");
     }
 
     private static void Check(PitchMate.Domain.Matches.Result result, string step)

@@ -29,10 +29,21 @@ internal sealed record MatchListDatasetSpec(IReadOnlyList<MatchListDatasetSpec.S
     /// Whether the squad itself is soft-deleted after seeding, putting it inside its deletion grace
     /// period — the case the source must report as "not visible" rather than as an empty page.
     /// </param>
+    /// <param name="GuestCount">
+    /// The number of active guest memberships to create alongside the registered pool. A match draws
+    /// its <see cref="MatchSpec.GuestParticipantCount"/> guests from these.
+    /// </param>
+    /// <param name="AnonymisedCount">
+    /// The number of registered memberships, taken from the <em>end</em> of the pool, to anonymise
+    /// before saving. The list read reports no display names, so anonymisation must change nothing
+    /// about its answer — including for a participant whose membership was anonymised.
+    /// </param>
     internal sealed record SquadSpec(
         int MemberCount,
         IReadOnlyList<MatchSpec> Matches,
-        bool SoftDeleteSquad = false);
+        bool SoftDeleteSquad = false,
+        int GuestCount = 0,
+        int AnonymisedCount = 0);
 
     /// <summary>One match, built through the real aggregate lifecycle to <paramref name="State"/>.</summary>
     /// <param name="State">The lifecycle state to drive the match to.</param>
@@ -54,11 +65,28 @@ internal sealed record MatchListDatasetSpec(IReadOnlyList<MatchListDatasetSpec.S
     /// </param>
     /// <param name="SoftDeleted">Whether the match is soft-deleted after seeding, so the read must exclude it.</param>
     /// <param name="CompletedOffsetSeconds">A per-match offset that makes completion instants distinct.</param>
+    /// <param name="GuestParticipantCount">
+    /// How many of the <see cref="ParticipantCount"/> participants are guests, drawn from the squad's
+    /// guest pool; the rest are registered members. Must not exceed the squad's
+    /// <see cref="SquadSpec.GuestCount"/>.
+    /// </param>
+    /// <param name="ProposeTeamsWithoutLock">
+    /// For a <see cref="MatchState.Confirmed"/> match only: apply a two-team proposal but do not lock
+    /// it, leaving working teams with <em>no</em> kickoff lineup — the case whose locked-team
+    /// collection must stay empty. Requires 10 to 16 participants.
+    /// </param>
+    /// <param name="CancelFromRolled">
+    /// For a <see cref="MatchState.Cancelled"/> match only: roll and lock the teams first, so the
+    /// cancelled match still carries a kickoff lineup. Requires 10 to 16 participants.
+    /// </param>
     internal sealed record MatchSpec(
         MatchState State,
         IReadOnlyList<int> CandidateDayOffsetDays,
         int ConfirmedDayIndex = 0,
         int ParticipantCount = 0,
         bool SoftDeleted = false,
-        int CompletedOffsetSeconds = 0);
+        int CompletedOffsetSeconds = 0,
+        int GuestParticipantCount = 0,
+        bool ProposeTeamsWithoutLock = false,
+        bool CancelFromRolled = false);
 }
