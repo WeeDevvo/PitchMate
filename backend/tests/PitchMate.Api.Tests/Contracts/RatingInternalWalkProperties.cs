@@ -104,6 +104,8 @@ public sealed class RatingInternalWalkProperties
     [InlineData("rosterPosition", false)]
     [InlineData("location", false)]
     [InlineData("musicVenue", false)]
+    [InlineData("location_k_k", true)]
+    [InlineData("kickoffK", true)]
     public void TheMatcherFlagsPinnedNames(string name, bool flagged) =>
         Assert.Equal(flagged, RatingNameMatcher.IsFlagged(name));
 
@@ -114,6 +116,10 @@ public sealed class RatingInternalWalkProperties
             Arb.From(
                 from words in Gen.ListOf(Gen.Elements(SafeWords.Concat(RatingNameMatcher.FlaggedWords).ToArray())).Where(static list => list.Count is > 0 and < 5)
                 from style in Gen.Elements("camel", "pascal", "snake")
+                // Two single-letter words written together in camel or Pascal case form an acronym run
+                // ("locationKK") that no splitting rule can decode, so only snake case may place them
+                // side by side.
+                where style == "snake" || !words.Zip(words.Skip(1)).Any(static pair => pair.First.Length == 1 && pair.Second.Length == 1)
                 select (Words: words.ToArray(), Style: style)),
             sample =>
             {
