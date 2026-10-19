@@ -63,7 +63,7 @@ internal static class MatchListDatasetGenerators
         from unsortedDays in DistinctOffsets(unsortedCount)
         from extraCount in Gen.Choose(0, MaximumMatchesPerSquad - 3)
         from extras in ListOfLength(extraCount, MatchOf(pools.Registered, pools.Guests))
-        from anonymised in Gen.Choose(0, 3)
+        from anonymised in Gen.Choose(0, Math.Min(3, pools.Registered - 3))
         let twin = tied with { SoftDeleted = false }
         let unsorted = new MatchListDatasetSpec.MatchSpec(
             MatchState.GatheringAvailability,
@@ -216,7 +216,7 @@ internal static class MatchListDatasetGenerators
         from gappedMarks in Marks(pools.Registered, 1)
         from extraCount in Gen.Choose(0, MaximumMatchesPerSquad - AllStates.Length - 3)
         from extras in ListOfLength(extraCount, MatchOf(pools.Registered, pools.Guests))
-        from anonymised in Gen.Choose(0, 3)
+        from anonymised in Gen.Choose(0, Math.Min(3, pools.Registered - 3))
         from order in Gen.Choose(0, 1_000_000)
         // Four registered participants survive two removals from the middle of the roster, so the
         // dataset always carries a gapped roster (Requirement 2.4).
@@ -233,7 +233,7 @@ internal static class MatchListDatasetGenerators
         from pools in Pools()
         from matchCount in Gen.Choose(0, MaximumMatchesPerSquad)
         from matches in ListOfLength(matchCount, MatchOf(pools.Registered, pools.Guests))
-        from anonymised in Gen.Choose(0, 3)
+        from anonymised in Gen.Choose(0, Math.Min(3, pools.Registered - 3))
         select new MatchListDatasetSpec.SquadSpec(
             pools.Registered, matches, GuestCount: pools.Guests, AnonymisedCount: anonymised);
 
@@ -298,7 +298,8 @@ internal static class MatchListDatasetGenerators
     /// Stored availability responses for a match's registered members (match-read-models task 10.9).
     /// Every match carries at least one member marking one or more days (member 0), one storing a
     /// response that marks <b>no</b> day (member 1), and one storing <b>no</b> response (member 2);
-    /// members 3 to 7 each draw one of the three at random, and the rest store nothing.
+    /// members 3 to 7 each draw one of the three at random, and the rest store nothing. The squad
+    /// generators never anonymise members 0 to 2, so each of the three guaranteed cases can call.
     /// </summary>
     private static Gen<IReadOnlyList<MatchListDatasetSpec.AvailabilityMark>> Marks(int registered, int dayCount) =>
         from first in NonEmptyDaySubset(dayCount)
