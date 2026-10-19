@@ -651,7 +651,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["ListSquadMatches"];
         put?: never;
         post: operations["CreateMatchDraft"];
         delete?: never;
@@ -1228,6 +1228,10 @@ export interface components {
         };
         /** @enum {unknown} */
         LiveTrackingErrorCode: "ValidationFailed" | "Unauthorized" | "NotEnabled" | "MatchNotStarted" | "LogSealed" | "TargetNotFound" | "NotFound" | null;
+        LockedTeamSummary: {
+            teamName: string;
+            bibFlag: boolean;
+        };
         LockTeamsResult: {
             /** Format: uuid */
             matchId: string;
@@ -1236,6 +1240,27 @@ export interface components {
             /** Format: int32 */
             markedCount: number | string;
         };
+        MatchList: {
+            matches: components["schemas"]["MatchListEntry"][];
+            truncated: boolean;
+        };
+        MatchListEntry: {
+            /** Format: uuid */
+            matchId: string;
+            state: components["schemas"]["MatchState"];
+            location: string;
+            /** Format: date-time */
+            confirmedDay: null | string;
+            candidateDays: string[];
+            /** Format: int32 */
+            participantCount: number | string;
+            lockedTeams: components["schemas"]["LockedTeamSummary"][];
+            recordedResult: null | components["schemas"]["RecordedResultView"];
+            /** Format: date-time */
+            completedAt: null | string;
+        };
+        /** @enum {unknown} */
+        MatchState: "GatheringAvailability" | "Confirmed" | "TeamsRolled" | "InProgress" | "Completed" | "Cancelled";
         /** @enum {unknown} */
         MembershipState: "Active" | "Inactive" | null;
         MoveParticipantRequest: {
@@ -1344,6 +1369,10 @@ export interface components {
         };
         /** @enum {unknown} */
         ReadState: "Unread" | "Read";
+        RecordedResultView: {
+            fidelity: components["schemas"]["ResultFidelity"];
+            teamScores: components["schemas"]["TeamScore"][];
+        };
         RecordOutcomeResponse: {
             /** Format: uuid */
             eventId: string;
@@ -5051,6 +5080,73 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSquadMatches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                squadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

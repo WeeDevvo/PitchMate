@@ -4220,6 +4220,88 @@
       }
     },
     "/squads/{squadId}/matches": {
+      "get": {
+        "tags": [
+          "Matches"
+        ],
+        "operationId": "ListSquadMatches",
+        "parameters": [
+          {
+            "name": "squadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
       "post": {
         "tags": [
           "Matches"
@@ -7254,6 +7336,21 @@
           null
         ]
       },
+      "LockedTeamSummary": {
+        "required": [
+          "teamName",
+          "bibFlag"
+        ],
+        "type": "object",
+        "properties": {
+          "teamName": {
+            "type": "string"
+          },
+          "bibFlag": {
+            "type": "boolean"
+          }
+        }
+      },
       "LockTeamsResult": {
         "required": [
           "matchId"
@@ -7281,6 +7378,105 @@
             "format": "int32"
           }
         }
+      },
+      "MatchList": {
+        "required": [
+          "matches",
+          "truncated"
+        ],
+        "type": "object",
+        "properties": {
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchListEntry"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MatchListEntry": {
+        "required": [
+          "matchId",
+          "state",
+          "location",
+          "confirmedDay",
+          "candidateDays",
+          "participantCount",
+          "lockedTeams",
+          "recordedResult",
+          "completedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "$ref": "#/components/schemas/MatchState"
+          },
+          "location": {
+            "type": "string"
+          },
+          "confirmedDay": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "candidateDays": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "participantCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lockedTeams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LockedTeamSummary"
+            }
+          },
+          "recordedResult": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecordedResultView"
+              }
+            ]
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "MatchState": {
+        "enum": [
+          "GatheringAvailability",
+          "Confirmed",
+          "TeamsRolled",
+          "InProgress",
+          "Completed",
+          "Cancelled"
+        ]
       },
       "MembershipState": {
         "enum": [
@@ -7752,6 +7948,24 @@
           "Unread",
           "Read"
         ]
+      },
+      "RecordedResultView": {
+        "required": [
+          "fidelity",
+          "teamScores"
+        ],
+        "type": "object",
+        "properties": {
+          "fidelity": {
+            "$ref": "#/components/schemas/ResultFidelity"
+          },
+          "teamScores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamScore"
+            }
+          }
+        }
       },
       "RecordOutcomeResponse": {
         "required": [
