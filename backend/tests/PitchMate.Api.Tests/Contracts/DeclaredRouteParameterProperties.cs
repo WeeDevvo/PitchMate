@@ -72,7 +72,7 @@ public sealed class DeclaredRouteParameterProperties
     /// one — and it is a named constant precisely so raising it is a one-line edit here.
     /// </para>
     /// </summary>
-    private const int MinimumInspectedEndpointCount = 67;
+    private const int MinimumInspectedEndpointCount = 70;
 
     /// <summary>
     /// The non-vacuity floor on the match operations of the emitted document: the 21 the surface

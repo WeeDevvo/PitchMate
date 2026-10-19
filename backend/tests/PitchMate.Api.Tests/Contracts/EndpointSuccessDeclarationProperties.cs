@@ -18,7 +18,7 @@ namespace PitchMate.Api.Tests.Contracts;
 /// each declares a 2xx, each body-bearing 2xx names its response contract, and each <c>204</c> names
 /// none (Requirements 1.1, 1.2, 1.3, 1.6). Because the surface is a finite discovered set, exhausting
 /// it is strictly stronger than sampling it, which is why this half is a theory over the real
-/// catalogue rather than an FsCheck generator. It is floored at 67 endpoints
+/// catalogue rather than an FsCheck generator. It is floored at 70 endpoints
 /// (<see cref="TheQuantifiedSurfaceIsNonVacuousAndDeclaredThroughout"/>, Requirement 3.8) so a
 /// discovery regression fails here instead of passing over an empty set — the one way an exhaustive
 /// check over a discovered set can go quietly green.
@@ -47,8 +47,10 @@ public sealed class EndpointSuccessDeclarationProperties : IClassFixture<MappedE
     /// <summary>
     /// The non-vacuity floor (Requirement 3.8): the 66 operations of the pre-change document plus
     /// <c>GET /auth/me</c>.
+    /// Raised from 67 to 70 by match-read-models task 16.2 for the list, detail and working-teams reads,
+    /// and still asserted as a minimum.
     /// </summary>
-    private const int MinimumMappedEndpointCount = 67;
+    private const int MinimumMappedEndpointCount = 70;
 
     private readonly MappedEndpointCatalogue _catalogue;
 
@@ -166,7 +168,7 @@ public sealed class EndpointSuccessDeclarationProperties : IClassFixture<MappedE
     /// <summary>
     /// Requirements 1.1 and 3.8 — the floor under the exhaustive half.
     /// <para>
-    /// At least 67 endpoints were quantified over; every one of them was described well enough to judge
+    /// At least 70 endpoints were quantified over; every one of them was described well enough to judge
     /// (a route and a concrete method, which is what the rule's message names); and every one declares
     /// at least one success. Without this, the exhaustive half would be satisfied by the empty set —
     /// which is exactly what a change to endpoint discovery produces, and it would go green at the

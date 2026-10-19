@@ -58,8 +58,10 @@ public sealed class AuthorizationDeclarationProperties : IClassFixture<MappedEnd
     /// <summary>
     /// The non-vacuity floor (Requirement 3.8): the 66 operations of the pre-change document plus
     /// <c>GET /auth/me</c>.
+    /// Raised from 67 to 70 by match-read-models task 16.2 for the list, detail and working-teams reads,
+    /// and still asserted as a minimum.
     /// </summary>
-    private const int MinimumMappedEndpointCount = 67;
+    private const int MinimumMappedEndpointCount = 70;
 
     private readonly MappedEndpointCatalogue _catalogue;
 
@@ -332,7 +334,7 @@ public sealed class AuthorizationDeclarationProperties : IClassFixture<MappedEnd
     /// Requirements 3.8 and 5.4 — the floor under the exhaustive half, and the one check that stops it
     /// from holding vacuously.
     /// <para>
-    /// At least 67 endpoints were quantified over; every one of them was described well enough to judge
+    /// At least 70 endpoints were quantified over; every one of them was described well enough to judge
     /// (a route and a concrete method, which is what the rules' messages name); and <b>both populations
     /// are present</b> — at least one guarded endpoint and at least one anonymous one — so neither rule
     /// quantifies over nothing. A surface that had become wholly anonymous would satisfy the <c>401</c>

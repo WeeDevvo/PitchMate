@@ -16,6 +16,11 @@ namespace PitchMate.Api.Tests.Contracts;
 /// the aggregate repositories the lifecycle writes use. Its contract is the <c>T</c> of the
 /// <c>Task&lt;Result&lt;T&gt;&gt;</c> its <c>HandleAsync</c> returns.
 /// </para>
+/// <para>
+/// The team sheet joined the set at task 13.3, when its handler gained the
+/// <c>IRosterDisplayNameSource</c> port; it is concealed and its contract is a named schema, so every
+/// guard ranging over this set holds for it too.
+/// </para>
 /// </summary>
 public static class MatchReadContracts
 {
