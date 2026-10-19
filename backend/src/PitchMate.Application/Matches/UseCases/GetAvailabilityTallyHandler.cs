@@ -21,6 +21,14 @@ namespace PitchMate.Application.Matches.UseCases;
 /// candidate days and its stored availability responses, loaded via
 /// <see cref="IAvailabilityRepository.ListResponsesAsync"/>; every candidate day is represented,
 /// including days marked by no member (Requirement 5.2, 5.3, 5.4).
+/// <para>
+/// Immediately after the match load and <em>before</em> the membership is resolved, the handler
+/// refuses a command whose <c>SquadId</c> — the squad named in the request path — is not the squad
+/// the match records, returning the same uniform authorisation failure the endpoint conceals as a
+/// not-found. Because the check precedes the gate, the path squad is never an input to the gate's
+/// decision and the requesting membership is always resolved from the match's own squad
+/// (Requirement 7.3, 7.4, 7.6).
+/// </para>
 /// </summary>
 public sealed class GetAvailabilityTallyHandler
 {
@@ -60,6 +68,25 @@ public sealed class GetAvailabilityTallyHandler
         // failure as an unauthorised actor so its (non-)existence is never revealed (Requirement 5.6, 5.7).
         Match? match = await _matches.GetByIdAsync(command.MatchId, cancellationToken);
         if (match is null)
+        {
+            return TallyResult.Fail(MatchAuthorization.RequireActiveMember(null).Error!);
+        }
+
+        // The path's squad must be the match's own squad. The check runs before the membership is
+        // resolved, so the path squadId is never an input to the gate's decision and binding a
+        // caller-supplied squad id grants no access the match's own squad would not grant. A mismatch
+        // yields the same uniform authorisation failure the endpoint conceals as a not-found, so it
+        // discloses neither the match's existence nor which squad it belongs to
+        // (Requirement 7.3, 7.4, 7.6).
+        if (command.SquadId != match.SquadId)
+        {
+            return TallyResult.Fail(MatchAuthorization.RequireActiveMember(null).Error!);
+        }
+
+        // A squad in its deletion grace period is not visible: soft-deleting the squad leaves its
+        // memberships active, so it is refused here, uniformly with the other causes
+        // (match-read-models Requirement 5.10).
+        if (await _memberships.IsSquadPendingDeletionAsync(match.SquadId, cancellationToken))
         {
             return TallyResult.Fail(MatchAuthorization.RequireActiveMember(null).Error!);
         }

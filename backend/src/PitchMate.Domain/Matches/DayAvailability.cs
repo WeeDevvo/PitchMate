@@ -24,12 +24,17 @@ public sealed class DayAvailability
     /// <param name="availableMemberIds">The identities of the members available on <paramref name="day"/>; may be empty.</param>
     internal DayAvailability(CandidateDay day, IEnumerable<Guid> availableMemberIds)
     {
-        Day = day;
+        Day = day.Instant;
         _availableMemberIds = [.. availableMemberIds];
     }
 
-    /// <summary>The candidate day this entry describes.</summary>
-    public CandidateDay Day { get; }
+    /// <summary>
+    /// The candidate day this entry describes, as the single UTC instant the
+    /// <see cref="CandidateDay"/> it was computed from holds (Requirements 9.1, 9.2). Carried as a bare
+    /// instant rather than the wrapping value type so every day, confirmed day and completion instant a
+    /// match read reports shares one wire shape.
+    /// </summary>
+    public DateTimeOffset Day { get; }
 
     /// <summary>
     /// The identities of the active registered members available on <see cref="Day"/>, each appearing

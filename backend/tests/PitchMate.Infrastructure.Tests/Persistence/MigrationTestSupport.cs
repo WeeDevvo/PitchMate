@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 using PitchMate.Infrastructure.Persistence;
 
@@ -39,11 +40,19 @@ internal static class MigrationTestSupport
     /// supplied connection string, applying the same Npgsql + snake_case naming convention the
     /// production registration and design-time factory use, so the applied migration reflects the
     /// real mapping conventions.
+    /// <para>
+    /// <paramref name="interceptors"/> is optional and empty by default, so every existing call site
+    /// is unaffected. A test that needs to observe what the provider actually executes — see
+    /// <see cref="CommandCountingInterceptor"/> — passes one in rather than building its own options.
+    /// </para>
     /// </summary>
-    public static DbContextOptions<PitchMateDbContext> BuildContextOptions(string connectionString) =>
+    public static DbContextOptions<PitchMateDbContext> BuildContextOptions(
+        string connectionString,
+        params IInterceptor[] interceptors) =>
         new DbContextOptionsBuilder<PitchMateDbContext>()
             .UseNpgsql(connectionString)
             .UseSnakeCaseNamingConvention()
+            .AddInterceptors(interceptors)
             .Options;
 
     /// <summary>

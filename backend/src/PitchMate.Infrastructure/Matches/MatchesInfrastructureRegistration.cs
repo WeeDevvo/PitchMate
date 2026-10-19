@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PitchMate.Application.Matches.Abstractions;
+using PitchMate.Infrastructure.Matches.Queries;
 using PitchMate.Infrastructure.Matches.Repositories;
 
 namespace PitchMate.Infrastructure.Matches;
@@ -39,6 +40,16 @@ public static class MatchesInfrastructureRegistration
         services.TryAddScoped<IMatchRepository, EfMatchRepository>();
         services.TryAddScoped<IAvailabilityRepository, EfAvailabilityRepository>();
         services.TryAddScoped<IMembershipRatingRepository, EfMembershipRatingRepository>();
+
+        // The match-read query sources. Registered here, inside the Infrastructure assembly, because
+        // they are internal to it — which is what makes it impossible for an Application or Api type
+        // to name an implementation rather than merely discouraged (match-read-models Requirement 11.2).
+        // Scoped so each shares the request scope's DbContext; every read is AsNoTracking and loads no
+        // entity for mutation, so nothing it does can reach a SaveChanges.
+        services.TryAddScoped<IMatchListSource, EfMatchListSource>();
+        services.TryAddScoped<IMatchDetailSource, EfMatchDetailSource>();
+        services.TryAddScoped<IWorkingTeamsSource, EfWorkingTeamsSource>();
+        services.TryAddScoped<IRosterDisplayNameSource, EfRosterDisplayNameSource>();
 
         // The balancer holds no mutable state — it scores splits solely through the singleton
         // IRatingEngine's pure Predict primitive — so a single shared instance is safe as a singleton

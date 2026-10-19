@@ -651,7 +651,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["ListSquadMatches"];
         put?: never;
         post: operations["CreateMatchDraft"];
         delete?: never;
@@ -735,6 +735,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["RemoveParticipant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/matches/{matchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMatchDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/matches/{matchId}/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkingTeams"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1038,39 +1070,19 @@ export interface components {
             /** Format: date-time */
             refreshTokenExpiresAt: string;
         };
-        AvailabilityResponse: {
-            /** Format: uuid */
-            matchId?: string;
-            /** Format: uuid */
-            squadMembershipId?: string;
-            /** Format: date-time */
-            submittedAt?: string;
-            markedDays?: null | components["schemas"]["CandidateDay"][];
-            /** Format: uuid */
-            id?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            createdBy?: null | string;
-            updatedBy?: null | string;
-            isDeleted?: boolean;
-            /** Format: date-time */
-            deletedAt?: null | string;
-        };
         AvailabilityTally: {
             days?: null | components["schemas"]["DayAvailability"][];
         };
         BatchResultResponse: {
             outcomes: components["schemas"]["RecordOutcomeResponse"][];
         };
+        CallerAvailability: {
+            hasStoredResponse: boolean;
+            markedDays: string[];
+        };
         CancelMatchResult: {
             /** Format: uuid */
             matchId: string;
-        };
-        CandidateDay: {
-            /** Format: date-time */
-            instant?: string;
         };
         CoAppearance: {
             /** Format: uuid */
@@ -1131,7 +1143,8 @@ export interface components {
             ownerMembershipId: string;
         };
         DayAvailability: {
-            day?: components["schemas"]["CandidateDay"];
+            /** Format: date-time */
+            day?: string;
             availableMemberIds?: null | string[];
             /** Format: int32 */
             count?: number | string;
@@ -1251,6 +1264,10 @@ export interface components {
         };
         /** @enum {unknown} */
         LiveTrackingErrorCode: "ValidationFailed" | "Unauthorized" | "NotEnabled" | "MatchNotStarted" | "LogSealed" | "TargetNotFound" | "NotFound" | null;
+        LockedTeamSummary: {
+            teamName: string;
+            bibFlag: boolean;
+        };
         LockTeamsResult: {
             /** Format: uuid */
             matchId: string;
@@ -1259,6 +1276,47 @@ export interface components {
             /** Format: int32 */
             markedCount: number | string;
         };
+        MatchDetail: {
+            /** Format: uuid */
+            matchId: string;
+            /** Format: uuid */
+            squadId: string;
+            state: components["schemas"]["MatchState"];
+            location: string;
+            candidateDays: string[];
+            /** Format: date-time */
+            confirmedDay: null | string;
+            /** Format: int32 */
+            participantCount: number | string;
+            participants: components["schemas"]["ParticipantView"][];
+            /** Format: int32 */
+            effectiveMinimumPlayerThreshold: number | string;
+            callerAvailability: components["schemas"]["CallerAvailability"];
+            recordedResult: null | components["schemas"]["RecordedResultView"];
+            /** Format: date-time */
+            completedAt: null | string;
+        };
+        MatchList: {
+            matches: components["schemas"]["MatchListEntry"][];
+            truncated: boolean;
+        };
+        MatchListEntry: {
+            /** Format: uuid */
+            matchId: string;
+            state: components["schemas"]["MatchState"];
+            location: string;
+            /** Format: date-time */
+            confirmedDay: null | string;
+            candidateDays: string[];
+            /** Format: int32 */
+            participantCount: number | string;
+            lockedTeams: components["schemas"]["LockedTeamSummary"][];
+            recordedResult: null | components["schemas"]["RecordedResultView"];
+            /** Format: date-time */
+            completedAt: null | string;
+        };
+        /** @enum {unknown} */
+        MatchState: "GatheringAvailability" | "Confirmed" | "TeamsRolled" | "InProgress" | "Completed" | "Cancelled";
         /** @enum {unknown} */
         MembershipState: "Active" | "Inactive" | null;
         MoveParticipantRequest: {
@@ -1296,6 +1354,14 @@ export interface components {
             value: number | string;
             /** Format: int32 */
             qualifyingMatches: number | string;
+        };
+        ParticipantView: {
+            /** Format: uuid */
+            squadMembershipId: string;
+            displayName: string;
+            isGuest: boolean;
+            /** Format: int32 */
+            rosterPosition: number | string;
         };
         PlayerProfile: {
             /** Format: uuid */
@@ -1367,6 +1433,10 @@ export interface components {
         };
         /** @enum {unknown} */
         ReadState: "Unread" | "Read";
+        RecordedResultView: {
+            fidelity: components["schemas"]["ResultFidelity"];
+            teamScores: components["schemas"]["TeamScore"][];
+        };
         RecordOutcomeResponse: {
             /** Format: uuid */
             eventId: string;
@@ -1435,6 +1505,11 @@ export interface components {
             goalsConcededAsKeeper: null | number | string;
             keeperTime: null | string;
         };
+        RosterEntry: {
+            /** Format: uuid */
+            squadMembershipId: string;
+            displayName: string;
+        };
         RunningScoreResponse: {
             /** Format: uuid */
             matchId: string;
@@ -1459,6 +1534,11 @@ export interface components {
         };
         /** @enum {unknown} */
         SkillTier: "Beginner" | "Average" | "Strong" | null;
+        SplitPrediction: {
+            winProbabilities: (number | string)[];
+            /** Format: double */
+            drawProbability: number | string;
+        };
         SquadData: {
             /** Format: uuid */
             squadId: string;
@@ -1527,6 +1607,15 @@ export interface components {
         SubmitAvailabilityRequest: {
             markedDays: null | string[];
         };
+        SubmitAvailabilityResult: {
+            /** Format: uuid */
+            matchId: string;
+            /** Format: uuid */
+            squadMembershipId: string;
+            /** Format: date-time */
+            submittedAt: string;
+            markedDays: string[];
+        };
         TeamProposal: {
             teams: components["schemas"]["ProposedTeamAssignment"][];
             /** Format: double */
@@ -1540,13 +1629,14 @@ export interface components {
         };
         TeamSheet: {
             location?: null | string;
-            confirmedDay?: components["schemas"]["CandidateDay"];
+            /** Format: date-time */
+            confirmedDay?: string;
             teams?: null | components["schemas"]["TeamSheetTeam"][];
         };
         TeamSheetTeam: {
             teamName?: null | string;
             bibFlag?: boolean;
-            roster?: null | string[];
+            roster?: null | components["schemas"]["RosterEntry"][];
         };
         TransferOwnershipRequest: {
             /** Format: uuid */
@@ -1561,6 +1651,18 @@ export interface components {
             email: string;
             emailVerified: boolean;
             providers: components["schemas"]["AuthProvider"][];
+        };
+        WorkingTeamsView: {
+            teams: components["schemas"]["WorkingTeamView"][];
+            prediction: null | components["schemas"]["SplitPrediction"];
+            unassignedParticipants: string[];
+        };
+        WorkingTeamView: {
+            /** Format: uuid */
+            teamId: string;
+            teamName: string;
+            bibFlag: boolean;
+            roster: components["schemas"]["RosterEntry"][];
         };
     };
     responses: never;
@@ -5082,6 +5184,73 @@ export interface operations {
             };
         };
     };
+    ListSquadMatches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                squadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     CreateMatchDraft: {
         parameters: {
             query?: never;
@@ -5167,6 +5336,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5183,7 +5353,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AvailabilityResponse"];
+                    "application/json": components["schemas"]["SubmitAvailabilityResult"];
                 };
             };
             /** @description Bad Request */
@@ -5247,6 +5417,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5321,6 +5492,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5388,6 +5560,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5468,6 +5641,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
             };
             cookie?: never;
@@ -5548,6 +5722,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                squadId: string;
                 matchId: string;
                 membershipId: string;
             };
@@ -5582,6 +5757,140 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetMatchDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                matchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetWorkingTeams: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                matchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkingTeamsView"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

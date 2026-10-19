@@ -28,16 +28,17 @@ namespace PitchMate.Api.Tests.Contracts;
 /// later is covered unedited.
 /// </para>
 /// <para>
-/// <b>Why the floor is 15 and not 17.</b> The design lists 17 wire enums, and Property 6 holds all 17
-/// to their names at the serialiser. Only 15 enum schemas are reachable from a declared contract in
-/// the emitted document, and the two sets are not nested: <c>MatchState</c>, <c>PlayerResult</c> and
-/// <c>GuestClaimState</c> are not carried by any declared contract today (there is no match-detail
-/// read, <c>PlayerRecord</c> carries counts rather than per-match results, and the guest-claim
-/// initiation answers with a claim id alone), while <c>LiveTrackingErrorCode</c> is published on a
-/// batch result without being on the design's list. The three absent ones still serialise by name at
-/// runtime and are covered there by Property 6's 17-enum floor; a document rule cannot say anything
-/// about a schema the document does not contain. The floor here is therefore 15, and it is the one
-/// numeric literal in this guard — the reachable set itself is measured.
+/// <b>Why the floor is 16 and not 17.</b> The design lists 17 wire enums, and Property 6 holds all 17
+/// to their names at the serialiser. Only 16 enum schemas are reachable from a declared contract in
+/// the emitted document, and the two sets are not nested: <c>PlayerResult</c> and
+/// <c>GuestClaimState</c> are not carried by any declared contract today (<c>PlayerRecord</c> carries
+/// counts rather than per-match results, and the guest-claim initiation answers with a claim id
+/// alone), while <c>LiveTrackingErrorCode</c> is published on a batch result without being on the
+/// design's list. <c>MatchState</c> became reachable with the match list read (match-read-models task
+/// 7.7), through the non-nullable <c>MatchListEntry.State</c>. The two absent ones still serialise by
+/// name at runtime and are covered there by Property 6's 17-enum floor; a document rule cannot say
+/// anything about a schema the document does not contain. The floor here is therefore 16, and it is
+/// the one numeric literal in this guard — the reachable set itself is measured.
 /// </para>
 /// <para>
 /// <b>Why the literal <c>type: string</c> keyword is not asserted.</b> See
@@ -49,13 +50,13 @@ namespace PitchMate.Api.Tests.Contracts;
 public sealed class WireEnumSchemaProperties : IClassFixture<EmittedDocumentCatalogue>
 {
     /// <summary>
-    /// The non-vacuity floor on the enum schemas reachable from a declared contract. Exactly 15 are
+    /// The non-vacuity floor on the enum schemas reachable from a declared contract. Exactly 16 are
     /// reachable today, so this is a floor the surface sits on rather than above: a wire enum that
     /// stopped being published as a named schema — the integer regression this guard exists for —
     /// drops the count below it and fails here even though the rule itself would have nothing to
     /// report.
     /// </summary>
-    private const int MinimumDocumentReachableEnumCount = 15;
+    private const int MinimumDocumentReachableEnumCount = 16;
 
     private readonly IReadOnlyList<EnumSchemaFact> _enumSchemas;
     private readonly IReadOnlyDictionary<string, Type> _matched;
@@ -174,6 +175,29 @@ public sealed class WireEnumSchemaProperties : IClassFixture<EmittedDocumentCata
     }
 
     /// <summary>
+    /// <c>MatchState</c>, document-reachable for the first time through <c>MatchListEntry.State</c>
+    /// (match-read-models task 7.7, Requirements 9.10, 9.11): matched by the rule, and published as
+    /// exactly its six member names with no <c>type</c> keyword — the by-name form .NET 10's exporter
+    /// emits — no numeric value, and no <c>null</c>, since the member that carries it is non-nullable.
+    /// </summary>
+    [Fact]
+    public void MatchStateIsPublishedAsExactlyItsSixMemberNames()
+    {
+        Assert.Contains(nameof(PitchMate.Domain.Matches.MatchState), _matched.Keys);
+
+        EnumSchemaFact matchState = Assert.Single(
+            _enumSchemas,
+            static fact => fact.SchemaName == nameof(PitchMate.Domain.Matches.MatchState));
+
+        Assert.Equal(
+            ["GatheringAvailability", "Confirmed", "TeamsRolled", "InProgress", "Completed", "Cancelled"],
+            matchState.StringValues);
+        Assert.Null(matchState.TypeKeyword);
+        Assert.Empty(matchState.OtherValues);
+        Assert.False(matchState.AllowsNull);
+    }
+
+    /// <summary>
     /// The discriminating control, and the defect the whole guard exists for: an enum published as an
     /// integer schema is reported, naming the schema and the type keyword. A rule that only compared
     /// string values would call a numeric vocabulary clean because it carries no string values to
@@ -279,7 +303,7 @@ public sealed class WireEnumSchemaProperties : IClassFixture<EmittedDocumentCata
 
     /// <summary>
     /// The control for reachability: an enum schema the document defines but no contract references is
-    /// not drawn into the rule. This is what lets the guard be true of the 15 published enums without
+    /// not drawn into the rule. This is what lets the guard be true of the 16 published enums without
     /// asserting anything about the ones no contract carries — and it has to be measured rather than
     /// assumed, or the rule would be quantified over the components section instead of over the
     /// reachable surface.

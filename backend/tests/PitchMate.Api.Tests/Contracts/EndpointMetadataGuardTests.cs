@@ -101,8 +101,10 @@ public sealed class EndpointMetadataGuardTests : IClassFixture<MappedEndpointCat
     /// The non-vacuity floor (Requirement 3.8): the 66 operations the committed document already
     /// describes, plus <c>GET /auth/me</c>. A change to endpoint discovery that found fewer has to fail
     /// here rather than pass quietly over a short — or empty — set.
+    /// Raised from 67 to 70 by match-read-models task 16.2 for the list, detail and working-teams reads,
+    /// and still asserted as a minimum.
     /// </summary>
-    private const int MinimumMappedEndpointCount = 67;
+    private const int MinimumMappedEndpointCount = 70;
 
     private readonly MappedEndpointCatalogue _catalogue;
 
@@ -256,7 +258,7 @@ public sealed class EndpointMetadataGuardTests : IClassFixture<MappedEndpointCat
     /// empty set, which is precisely what a change to how endpoints are enumerated would produce: the
     /// guard would go green at the moment it stopped looking at anything.
     /// <para>
-    /// At least 67 endpoints, every one with a route and a concrete HTTP method, and every subsystem
+    /// At least 70 endpoints, every one with a route and a concrete HTTP method, and every subsystem
     /// present — so a discovery regression that lost a whole route group fails here too.
     /// </para>
     /// </summary>
