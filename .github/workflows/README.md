@@ -54,5 +54,11 @@ The deploy structure already encodes the project's rules:
    deployment token.
 5. **Fill in the `TODO` deploy steps** (App Service/Container Apps + Static Web
    Apps actions).
-6. **Create the `develop` branch** for QA deploys.
-7. **Set repo variable `AZURE_DEPLOY_ENABLED = true`** to activate the jobs.
+6. **Set the API URL variables** `API_BASE_URL_QA` / `API_BASE_URL_PROD`
+   (e.g. `https://<api-app>.azurewebsites.net`). The web build bakes this in as
+   `VITE_API_BASE_URL` and fails without it, because the Static Web App and the
+   API are on different origins. The API's matching CORS allow-list
+   (`Cors__AllowedOrigins__0`) is set from the Static Web App hostname by
+   `infra/main.bicep`. `infra/configure-qa.ps1` sets the QA variable.
+7. **Create the `develop` branch** for QA deploys.
+8. **Set repo variable `AZURE_DEPLOY_ENABLED = true`** to activate the jobs.
