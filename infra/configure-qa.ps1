@@ -21,6 +21,7 @@ try {
   # ── Read deployment outputs ────────────────────────────────────────────────
   $o = Get-Content "$env:TEMP\pm-deploy-qa.out.json" -Raw | ConvertFrom-Json
   $apiApp = $o.apiAppName.value
+  $apiHost = $o.apiDefaultHostname.value
   $swaApp = $o.staticWebAppName.value
   $kvName = $o.keyVaultName.value
   Log "Outputs: api=$apiApp swa=$swaApp kv=$kvName"
@@ -86,6 +87,8 @@ try {
   gh secret set DB_CONNECTION_STRING  --env qa --repo $repo --body $dbConn
   gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --env qa --repo $repo --body $swaToken
   gh variable set AZURE_WEBAPP_NAME_QA --repo $repo --body $apiApp
+  # Baked into the web build as VITE_API_BASE_URL (cd-qa.yml), since the web app and API are cross-origin.
+  gh variable set API_BASE_URL_QA --repo $repo --body "https://$apiHost"
 
   Log "DONE"
 }
