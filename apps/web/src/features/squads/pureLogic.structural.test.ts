@@ -104,6 +104,8 @@ import {
   readWithoutComments,
   relTo,
   squadsRoot,
+  targetsBarrelOf,
+  wireRoot,
 } from './structural/sourceScan';
 
 // --- The scanned sets --------------------------------------------------------
@@ -290,11 +292,14 @@ describe('every Squads_Feature lib module is free of React, the DOM, and the tra
   });
 
   it('resolves every relative import inside lib/, so purity is closed under import', () => {
+    // The one admitted exit is the shared wire barrel, which is itself pure
+    // (`src/wire/wire.structural.test.ts`), so purity stays closed under import.
     const offenders: Array<{ module: string; specifier: string }> = [];
 
     for (const file of libModules) {
       for (const specifier of relativeSpecifiers(file)) {
         const target = resolve(dirname(file), specifier);
+        if (targetsBarrelOf(wireRoot, norm(target))) continue;
         if (relative(libRoot, target).startsWith('..')) {
           offenders.push({ module: libRel(file), specifier });
         }
