@@ -1,6 +1,6 @@
 name: CI · Web
 
-# Lint + build gate for the React/Vite app and JS packages. Path-filtered so a
+# Lint + build + test gate for the React/Vite app and JS packages. Path-filtered so a
 # backend-only change doesn't trigger it.
 on:
   pull_request:
@@ -72,3 +72,8 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Vitest over apps/web (the only workspace with tests). The build does not typecheck test
+      # files, so this is the only CI gate that runs them.
+      - name: Test
+        run: npm test --workspace @pitchmate/web
