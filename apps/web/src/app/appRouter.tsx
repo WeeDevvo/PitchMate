@@ -145,6 +145,15 @@ import {
   createPlayerStatsShellRoutes,
 } from '../features/player-stats';
 import LandingPage from '../features/landing/LandingPage';
+import {
+  PrivacyPolicyPage,
+  TermsOfServicePage,
+  CookiePolicyPage,
+  AccountPrivacyScreen,
+  PRIVACY_ROUTE,
+  TERMS_ROUTE,
+  COOKIES_ROUTE,
+} from '../features/legal';
 import { AppNotFound } from './AppNotFound';
 import { APP_CATCH_ALL_ROUTE, LANDING_ROUTE } from './appRoutePaths';
 
@@ -402,6 +411,12 @@ export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
         // Destination content; an absent one falls back the same way the shell's
         // own slots do.
         home: options.destinationContent?.home ?? <SquadsHome api={squadsApi} />,
+        settings: options.destinationContent?.settings ?? (
+          <AccountPrivacyScreen
+            apiClient={apiClient}
+            onSignedOut={auth.navigation.signOut}
+          />
+        ),
       },
       pollIntervalSeconds: options.pollIntervalSeconds,
       now: options.now,
@@ -419,6 +434,9 @@ export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
 
   return [
     { path: LANDING_ROUTE, element: <LandingPage /> },
+    { path: PRIVACY_ROUTE, element: <PrivacyPolicyPage /> },
+    { path: TERMS_ROUTE, element: <TermsOfServicePage /> },
+    { path: COOKIES_ROUTE, element: <CookiePolicyPage /> },
 
     // The auth subtree ahead of the shell subtree, without its feature-level
     // catch-all (see the module note).

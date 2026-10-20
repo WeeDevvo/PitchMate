@@ -44,7 +44,7 @@ const API_PROXY_TARGET = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:
  * routes live under `/app`, `/join` and `/goodbye`, so none of these collide.
  * A new top-level API route group needs adding here.
  */
-const API_ROUTE_PREFIXES = ['/auth', '/squads', '/matches', '/notifications', '/health']
+const API_ROUTE_PREFIXES = ['/auth', '/squads', '/matches', '/notifications', '/health', '/api']
 
 // https://vite.dev/config/
 export default defineConfig({
