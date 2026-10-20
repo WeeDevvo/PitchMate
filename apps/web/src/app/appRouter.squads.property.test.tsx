@@ -78,6 +78,7 @@ import {
   PLAYER_STATS_ROUTE,
   SQUAD_ROUTE,
 } from '../features/squads';
+import { LEGAL_ROUTES } from '../features/legal';
 import { APP_CATCH_ALL_ROUTE, LANDING_ROUTE } from './appRoutePaths';
 import {
   assembleRoutes,
@@ -142,6 +143,7 @@ const FEATURE_PATHS: readonly string[] = [SQUAD_ROUTE, INVITE_LANDING_ROUTE];
  */
 const OTHER_TABLE_PATHS: readonly string[] = [
   LANDING_ROUTE,
+  ...LEGAL_ROUTES,
   ...AUTH_ROUTE_PATHS,
   ...SHELL_DESTINATIONS.map((destination) => destination.path),
   PLAYER_STATS_ROUTE,

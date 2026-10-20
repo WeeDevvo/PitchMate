@@ -39,6 +39,7 @@ public static class AuthEndpoints
 
         MapPublicEndpoints(group);
         MapProtectedEndpoints(group);
+        MapV1GdprEndpoints(endpoints);
 
         return group;
     }
@@ -258,10 +259,88 @@ public static class AuthEndpoints
         })
             .RequireAuthorization()
             .WithName("ExportUserData")
-            // Requirements 9.1, 9.3: the DSAR export's request, status and body are unchanged — the
+        // Requirements 9.1, 9.3: the DSAR export's request, status and body are unchanged — the
             // only edit is declaring the shape it already returns. UserDataExport stays a separate
             // read model from AccountView, so a field added for account settings cannot reach it.
             .Produces<UserDataExport>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
+
+        // Self-service account deletion (UK GDPR Right to Erasure / Article 17).
+        group.MapDelete("/me", static async (
+            ClaimsPrincipal principal,
+            EraseUserHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new EraseUserCommand(userId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("DeleteAccount")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithAuthProblemResponses();
+
+        // Comprehensive machine-readable GDPR data portability package (UK GDPR Articles 15 & 20).
+        group.MapGet("/me/export", static async (
+            ClaimsPrincipal principal,
+            ExportUserGdprDataHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new ExportUserGdprDataCommand(userId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("ExportComprehensiveUserData")
+            .Produces<UserGdprDataPackage>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
+    }
+
+    /// <summary>
+    /// Maps the versioned /api/v1/users/me GDPR self-service endpoints specified in Issue 19.
+    /// </summary>
+    private static void MapV1GdprEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        RouteGroupBuilder group = endpoints.MapGroup("/api/v1/users/me").WithTags("GDPR");
+
+        group.MapGet("/export", static async (
+            ClaimsPrincipal principal,
+            ExportUserGdprDataHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new ExportUserGdprDataCommand(userId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("ExportV1UserData")
+            .Produces<UserGdprDataPackage>(StatusCodes.Status200OK)
+            .WithAuthProblemResponses();
+
+        group.MapDelete("", static async (
+            ClaimsPrincipal principal,
+            EraseUserHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new EraseUserCommand(userId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("DeleteV1User")
+            .Produces(StatusCodes.Status204NoContent)
             .WithAuthProblemResponses();
     }
 
