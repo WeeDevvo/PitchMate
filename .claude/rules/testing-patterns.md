@@ -9,7 +9,7 @@ paths:
 
 # Testing patterns
 
-Tests here are specification-driven: a test's doc comment states the property or behaviour and cites the requirement it validates (`Validates: Requirements 8.2, 8.8`). Universal claims ("for every roster…", "no module may…") are written as property tests or structural scans. Examples alone don't prove them.
+A test's doc comment states the property or behaviour it checks. Older tests also cite requirement numbers (`Validates: Requirements 8.2, 8.8`) from retired feature specs; leave those as they are, and don't add new ones. Universal claims ("for every roster…", "no module may…") are written as property tests or structural scans. Examples alone don't prove them.
 
 ## Backend (xUnit)
 

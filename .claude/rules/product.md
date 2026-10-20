@@ -1,6 +1,6 @@
 # Product
 
-PitchMate organises fair, casual small-sided football between friends (pitch-mate.co.uk). These are the product rules the code implements; when product direction changes, update this file first, then specs and code. Keep its terminology in requirements, code and UI copy.
+PitchMate organises fair, casual small-sided football between friends (pitch-mate.co.uk). These are the product rules the code implements; when product direction changes, update this file first, then the code. Keep its terminology in code and UI copy.
 
 Lines marked **Today** say where the shipped code falls short of the intent, so it is not mistaken for built behaviour.
 

@@ -10,7 +10,7 @@ PitchMate: a football app for organising fair, casual small-sided matches betwee
 - `apps/web/`: React 19, TypeScript, Vite and React Router 7 (`@pitchmate/web`). `apps/mobile` and `apps/watch` are placeholders.
 - `packages/api-client/`: `@pitchmate/api-client`, a typed client generated from the backend's OpenAPI spec.
 
-The product rules live in `.claude/rules/product.md`, which loads every session. `docs/` (local-dev guide, migrations, backlog, ADRs) and `.kiro/specs/` (the feature specs) are git-ignored and may not exist locally; see "Specs and working practices" below.
+The product rules live in `.claude/rules/product.md`, which loads every session. `docs/` (local-dev guide, migrations, backlog, ADRs) is git-ignored and may not exist locally.
 
 ## Commands
 
@@ -84,9 +84,3 @@ Building `PitchMate.Api` boots the host at build time (`Microsoft.Extensions.Api
 - `.npmrc` sets `legacy-peer-deps=true` because `openapi-typescript` declares a stale TS 5 peer range while the repo pins TypeScript ~6.0.
 - Testcontainers pulls `postgres:17.2` from Docker Hub. If tests fail with `DockerApiException ... Unauthorized`, the local Docker login is stale; this is not a code fault.
 - Flow is feature branch → PR → `main`. CI is path-filtered: `ci-backend.yml` runs for `backend/**`, and `ci-web.yml` for `apps/web/**`, `packages/**` and the root package files. CD workflows are scaffolded but inert until `AZURE_DEPLOY_ENABLED` is set. Once active, a merge to `develop` deploys to QA and a merge to `main` deploys to production behind a manual approval, authenticating to Azure through GitHub OIDC. Hosting is Azure: App Service, Postgres Flexible Server, Static Web Apps, Key Vault (`infra/main.bicep`).
-
-## Specs and working practices
-
-- **Specs:** features were specified in `.kiro/specs/<feature>/` as `requirements.md`, `design.md` and `tasks.md`. Code and test comments citing "Requirement N.N" or "Property N" refer to the spec of that feature (for example `match-read-models`), so read it before changing what it governs. Tick `tasks.md` as tasks complete. A new feature follows the same shape: requirements, then design, then tasks, pausing for the user's approval after each before writing code.
-- **Backlog:** `docs/backlog.md` is the single living list. Move an item to **Now** (`[~]`) when starting it and to **Done** (`[x]`) when finishing, and add new ideas to **Later / Ideas** as they come up. Lightweight decisions go in its decisions log; significant ones get an ADR in `docs/adr/`.
-- Both folders are git-ignored, so they exist only on the user's machine. If one is missing, say so rather than guessing at a requirement.
