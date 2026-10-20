@@ -9,7 +9,7 @@ paths:
 
 # Testing patterns
 
-Tests here are specification-driven: a test's doc comment states the property or behaviour and cites the requirement it validates (`Validates: Requirements 8.2, 8.8`). Universal claims ("for every roster…", "no module may…") are written as property tests or structural scans. Examples alone don't prove them.
+A test's doc comment states the property or behaviour it checks. Older tests also cite requirement numbers (`Validates: Requirements 8.2, 8.8`) from retired feature specs; leave those as they are, and don't add new ones. Universal claims ("for every roster…", "no module may…") are written as property tests or structural scans. Examples alone don't prove them.
 
 ## Backend (xUnit)
 
@@ -25,6 +25,9 @@ Tests here are specification-driven: a test's doc comment states the property or
 - Time comes from an injected `TimeProvider`. Tests drive it with `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`).
 - Internal types are tested directly through `InternalsVisibleTo`. Add the test assembly to the `.csproj` rather than making a type public.
 - Architecture tests that assert a rule should also show the rule has teeth: apply it to types planted to break it, as `ApiInwardLogicProperties` does.
+- **Coverage is mandatory:** every Application use case has tests for its success path and each meaningful failure, and a use case isn't done without them. Domain behaviour is unit tested. The rating engine covers balancing, provisional flagging, σ inactivity decay, the μ − 3σ display rating and uneven teams, preferring property tests for invariants (balancing never drops a player, outcomes are symmetric, σ never goes negative).
+- **Model-based database properties** share one migrated database per test class: created lazily behind a semaphore (FsCheck's xUnit runner ignores `IAsyncLifetime`), with a fixed, self-healing name dropped `WITH (FORCE)` on first use, and **Npgsql pooling left enabled**. Each generated case seeds fresh squads into it. Never create a database per case or disable pooling: that put 16,000+ sockets into `TIME_WAIT` and failed unrelated tests with `WSAEADDRINUSE`. Copy `MembershipStandingScopeHarness` or `MatchListSourceHarness`.
+- Generators that guarantee a case (a member who marks no day, a gapped roster) must keep it reachable under every other generated choice. Two such slips surfaced only on a fresh CI seed, so a property's non-vacuity assertions belong in the test, not just in the generator's doc.
 
 ## Web (Vitest + Testing Library)
 
