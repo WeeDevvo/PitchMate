@@ -64,6 +64,11 @@ export function participantsEditable(state: MatchState): boolean {
   return state === 'Confirmed';
 }
 
+/** True once a kickoff lineup exists, which is when the team sheet can be read. */
+export function hasTeamSheet(state: MatchState): boolean {
+  return state === 'TeamsRolled' || state === 'InProgress' || state === 'Completed';
+}
+
 /** A probability as a whole percentage, for example `0.456` → `46%`. */
 export function formatProbability(probability: number): string {
   return `${Math.round(probability * 100)}%`;

@@ -99,6 +99,27 @@ describe.each(THEMES)('in the %s theme', (theme) => {
     await expectNoWcagViolations(document.body);
   });
 
+  it('the match screen with its team sheet and teams editor', async () => {
+    applyThemeAttribute(theme);
+    const api = fakeMatchesApi({
+      getMatch: async () =>
+        success(
+          matchDetail({
+            state: 'TeamsRolled',
+            confirmedDayMs: DAY_MS[0],
+            participantCount: 1,
+            participants: [
+              { membershipId: MATCH_ID, displayName: 'Alex', isGuest: false, rosterPosition: 0 },
+            ],
+          }),
+        ),
+    });
+    renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
+    await screen.findByRole('heading', { name: 'Team sheet' });
+    await screen.findByRole('heading', { name: 'Predicted result' });
+    await expectNoWcagViolations(document.body);
+  });
+
   it('the not-found treatment', async () => {
     applyThemeAttribute(theme);
     const api = fakeMatchesApi({ getMatch: async () => ({ kind: 'not-found' }) });

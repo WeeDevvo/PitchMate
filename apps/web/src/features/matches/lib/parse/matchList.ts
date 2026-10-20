@@ -3,7 +3,7 @@
  *
  * All or nothing: one malformed entry fails the whole list rather than quietly
  * dropping a match from the squad screen. Properties this feature does not
- * present (`lockedTeams`, `recordedResult`, `completedAt`) are never read.
+ * present (`recordedResult`, `completedAt`) are never read.
  */
 import {
   fail,
@@ -32,6 +32,8 @@ export interface MatchSummary {
   /** The candidate days in epoch milliseconds, in the order the backend sent. */
   readonly candidateDaysMs: readonly number[];
   readonly participantCount: number;
+  /** The locked teams' names, in team order; empty until the teams are locked. */
+  readonly lockedTeamNames: readonly string[];
 }
 
 /** The squad's match list, and whether the backend truncated it. */
@@ -97,6 +99,18 @@ function parseMatchSummary(value: unknown): ParseResult<MatchSummary> {
   );
   if (!participantCount.ok) return participantCount;
 
+  const lockedTeams = readArray(readProperty(source, 'lockedTeams'), 'lockedTeams');
+  if (!lockedTeams.ok) return lockedTeams;
+
+  const lockedTeamNames: string[] = [];
+  for (const team of lockedTeams.value) {
+    const object = readObject(team, 'locked team');
+    if (!object.ok) return object;
+    const name = readString(readProperty(object.value, 'teamName'), 'teamName');
+    if (!name.ok) return name;
+    lockedTeamNames.push(name.value);
+  }
+
   return ok({
     matchId: matchId.value,
     state: state.value,
@@ -104,6 +118,7 @@ function parseMatchSummary(value: unknown): ParseResult<MatchSummary> {
     confirmedDayMs: confirmedDay.value,
     candidateDaysMs: candidateDays.value,
     participantCount: participantCount.value,
+    lockedTeamNames,
   });
 }
 

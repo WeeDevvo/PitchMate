@@ -6,7 +6,8 @@
  *   the match on a day that has reached it.
  * - **Confirmed:** the players. An organiser can add guests, remove players, and
  *   roll, adjust and lock the teams.
- * - **Teams locked:** an organiser can still adjust and re-lock the teams.
+ * - **Teams locked and later:** everyone sees the team sheet; until the match
+ *   starts, an organiser can still adjust and re-lock the teams.
  *
  * A route identity that is not an identity issues no request and reads as not
  * found, as does a match whose squad is not the one the route names, so the
@@ -29,6 +30,7 @@ import {
   LoadingNotice,
   MatchNotFound,
 } from '../components/StatusNotices';
+import { TeamSheetView } from '../components/TeamSheetView';
 import { TeamsEditor } from '../components/TeamsEditor';
 import { countsByDay } from '../lib/availability';
 import { formatDay } from '../lib/matchDays';
@@ -40,9 +42,10 @@ import {
   MATCH_SCREEN_FALLBACK_HEADING,
   STATE_LABEL,
   TALLY_LOADING_LABEL,
+  TEAM_SHEET_LOADING_LABEL,
 } from '../lib/messages';
 import { MATCH_ROUTE_PARAMETER } from '../lib/routePaths';
-import { participantsEditable, teamsEditable } from '../lib/teams';
+import { hasTeamSheet, participantsEditable, teamsEditable } from '../lib/teams';
 import { useRemote } from '../state/useRemote';
 
 import '../styles/matches.css';
@@ -106,8 +109,21 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
     authState,
   );
 
+  const sheetReadable = belongs && hasTeamSheet(match.state);
+
+  const sheet = useRemote(
+    sheetReadable ? matchId : null,
+    useCallback((signal: AbortSignal) => api.getTeamSheet(matchId ?? '', signal), [api, matchId]),
+    authState,
+  );
+
   const reloadDetail = detail.reload;
   const reloadTally = tally.reload;
+  const reloadSheet = sheet.reload;
+  const reloadAfterLock = useCallback((): void => {
+    reloadDetail();
+    reloadSheet();
+  }, [reloadDetail, reloadSheet]);
   const reloadAfterWrite = useCallback((): void => {
     reloadDetail();
     reloadTally();
@@ -204,7 +220,15 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
       ) : (
         <>
           <p className="matches-hint">{AVAILABILITY_CLOSED_STATEMENT}</p>
-          {match.participants.length > 0 || editingParticipants ? (
+          {sheetReadable ? (
+            sheet.phase === 'failed' ? (
+              <FailureNotice onRetry={sheet.reload} />
+            ) : sheet.value === null ? (
+              <LoadingNotice label={TEAM_SHEET_LOADING_LABEL} />
+            ) : (
+              <TeamSheetView squadId={squadId} sheet={sheet.value} />
+            )
+          ) : match.participants.length > 0 || editingParticipants ? (
             <ParticipantsPanel
               participants={match.participants}
               editing={
@@ -231,7 +255,7 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
               participants={match.participants}
               locked={match.state === 'TeamsRolled'}
               authState={authState}
-              onLocked={reloadDetail}
+              onLocked={reloadAfterLock}
             />
           ) : null}
         </>

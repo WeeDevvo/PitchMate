@@ -29,6 +29,7 @@ import type { MatchDetail } from '../lib/parse/matchDetail';
 import { LocationProbe } from './LocationProbe';
 import type { MatchList, MatchSummary } from '../lib/parse/matchList';
 import type { DayTally, SquadStanding } from '../lib/parse/responses';
+import type { TeamSheet } from '../lib/parse/teamSheet';
 import type { SquadGuest, WorkingTeam, WorkingTeams } from '../lib/parse/teams';
 
 type Schemas = components['schemas'];
@@ -121,6 +122,7 @@ export function matchSummary(overrides: Partial<MatchSummary> = {}): MatchSummar
     confirmedDayMs: null,
     candidateDaysMs: [...DAY_MS],
     participantCount: 0,
+    lockedTeamNames: [],
     ...overrides,
   };
 }
@@ -207,6 +209,16 @@ export function workingTeams(overrides: Partial<WorkingTeams> = {}): WorkingTeam
   };
 }
 
+/** The sheet for {@link workingTeams}, kicking off on the second candidate day. */
+export function teamSheet(overrides: Partial<TeamSheet> = {}): TeamSheet {
+  return {
+    location: 'Riverside 5s, pitch 2',
+    kickoffMs: DAY_MS[1],
+    teams: workingTeams().teams.map(({ teamName, bibFlag, roster }) => ({ teamName, bibFlag, roster })),
+    ...overrides,
+  };
+}
+
 export const NO_TEAMS: WorkingTeams = { teams: [], prediction: null, unassigned: [] };
 
 export const GUESTS: readonly SquadGuest[] = [
@@ -244,6 +256,7 @@ export function fakeMatchesApi(overrides: Partial<MatchesApi> = {}): FakeMatches
     setTeamName: async () => success(undefined),
     setBibTeam: async () => success(undefined),
     lockTeams: async () => success(undefined),
+    getTeamSheet: async () => success(teamSheet()),
     ...overrides,
   };
 
