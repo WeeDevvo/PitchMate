@@ -2,8 +2,11 @@
  * One match's screen, rendered by state.
  *
  * - **Gathering availability:** the caller's own availability form and the
- *   per-day tally against the confirmation threshold.
- * - **Confirmed and later:** the confirmed day and the participants.
+ *   per-day tally against the confirmation threshold; an organiser can confirm
+ *   the match on a day that has reached it.
+ * - **Confirmed:** the players. An organiser can add guests, remove players, and
+ *   roll, adjust and lock the teams.
+ * - **Teams locked:** an organiser can still adjust and re-lock the teams.
  *
  * A route identity that is not an identity issues no request and reads as not
  * found, as does a match whose squad is not the one the route names, so the
@@ -18,28 +21,28 @@ import { readUuid } from '../../../wire';
 import type { MatchesApi } from '../api/matchesApi';
 import { AvailabilityForm } from '../components/AvailabilityForm';
 import { AvailabilityTally } from '../components/AvailabilityTally';
+import { ConfirmPanel } from '../components/ConfirmPanel';
+import { ParticipantsPanel } from '../components/ParticipantsPanel';
 import {
   BackToSquadLink,
   FailureNotice,
   LoadingNotice,
   MatchNotFound,
 } from '../components/StatusNotices';
-import { anyDayAtThreshold, countsByDay } from '../lib/availability';
+import { TeamsEditor } from '../components/TeamsEditor';
+import { countsByDay } from '../lib/availability';
 import { formatDay } from '../lib/matchDays';
 import { MATCH_STATE_LABELS, isGatheringAvailability, isOrganiser } from '../lib/matchState';
 import {
   AVAILABILITY_CLOSED_STATEMENT,
   CONFIRMED_DAY_LABEL,
-  GUEST_LABEL,
   MATCH_LOADING_LABEL,
   MATCH_SCREEN_FALLBACK_HEADING,
-  ORGANISER_READY_STATEMENT,
-  PARTICIPANTS_HEADING,
   STATE_LABEL,
   TALLY_LOADING_LABEL,
 } from '../lib/messages';
-import type { MatchDetail } from '../lib/parse/matchDetail';
 import { MATCH_ROUTE_PARAMETER } from '../lib/routePaths';
+import { participantsEditable, teamsEditable } from '../lib/teams';
 import { useRemote } from '../state/useRemote';
 
 import '../styles/matches.css';
@@ -51,28 +54,6 @@ export interface MatchScreenProps {
 function asIdentity(value: string | undefined): string | null {
   const read = readUuid(value, 'route identity');
   return read.ok ? read.value : null;
-}
-
-function ParticipantList({ match }: { readonly match: MatchDetail }): ReactElement {
-  const participants = [...match.participants].sort(
-    (a, b) => a.rosterPosition - b.rosterPosition,
-  );
-
-  return (
-    <section className="matches-panel" aria-labelledby="matches-participants-heading">
-      <h2 id="matches-participants-heading" className="matches-subheading">
-        {PARTICIPANTS_HEADING}
-      </h2>
-      <ul className="matches-people">
-        {participants.map((participant) => (
-          <li key={participant.membershipId}>
-            {participant.displayName}
-            {participant.isGuest ? <span className="matches-chip">{GUEST_LABEL}</span> : null}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
 }
 
 export function MatchScreen({ api }: MatchScreenProps): ReactElement {
@@ -108,6 +89,18 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
     squadId,
     useCallback(
       (signal: AbortSignal) => api.getSquadStanding(squadId ?? '', signal),
+      [api, squadId],
+    ),
+    authState,
+  );
+  const organiser = isOrganiser(standing.value);
+
+  const editingParticipants = belongs && organiser && participantsEditable(match.state);
+
+  const guests = useRemote(
+    editingParticipants ? squadId : null,
+    useCallback(
+      (signal: AbortSignal) => api.getSquadGuests(squadId ?? '', signal),
       [api, squadId],
     ),
     authState,
@@ -148,9 +141,7 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
     );
   }
 
-  const organiser = isOrganiser(standing.value);
   const dayCounts = tally.value === null ? [] : countsByDay(match.candidateDaysMs, tally.value);
-  const anyDayReady = anyDayAtThreshold(dayCounts, match.minimumPlayerThreshold);
 
   return (
     <div className="matches-screen">
@@ -193,21 +184,56 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
           ) : tally.value === null ? (
             <LoadingNotice label={TALLY_LOADING_LABEL} />
           ) : (
-            <AvailabilityTally
-              candidateDaysMs={match.candidateDaysMs}
-              tally={tally.value}
-              threshold={match.minimumPlayerThreshold}
-            />
+            <>
+              <AvailabilityTally
+                candidateDaysMs={match.candidateDaysMs}
+                tally={tally.value}
+                threshold={match.minimumPlayerThreshold}
+              />
+              {organiser ? (
+                <ConfirmPanel
+                  dayCounts={dayCounts}
+                  threshold={match.minimumPlayerThreshold}
+                  confirm={(day, signal) => api.confirmMatch(squadId, matchId, day, signal)}
+                  onSettled={reloadAfterWrite}
+                />
+              ) : null}
+            </>
           )}
-
-          {organiser && anyDayReady ? (
-            <p className="matches-notice">{ORGANISER_READY_STATEMENT}</p>
-          ) : null}
         </>
       ) : (
         <>
           <p className="matches-hint">{AVAILABILITY_CLOSED_STATEMENT}</p>
-          {match.participants.length > 0 ? <ParticipantList match={match} /> : null}
+          {match.participants.length > 0 || editingParticipants ? (
+            <ParticipantsPanel
+              participants={match.participants}
+              editing={
+                editingParticipants
+                  ? {
+                      guests: guests.phase === 'failed' ? 'failed' : guests.value,
+                      addGuest: (membershipId, signal) =>
+                        api.addGuest(squadId, matchId, membershipId, signal),
+                      remove: (membershipId, signal) =>
+                        api.removeParticipant(squadId, matchId, membershipId, signal),
+                      onSettled: reloadDetail,
+                    }
+                  : undefined
+              }
+            />
+          ) : null}
+          {organiser && teamsEditable(match.state) ? (
+            <TeamsEditor
+              // A changed player list re-reads the teams, so a new guest shows
+              // up as unassigned straight away.
+              key={match.participants.map((p) => p.membershipId).join()}
+              api={api}
+              matchId={matchId}
+              participants={match.participants}
+              locked={match.state === 'TeamsRolled'}
+              authState={authState}
+              onLocked={reloadDetail}
+            />
+          ) : null}
         </>
       )}
 

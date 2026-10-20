@@ -82,7 +82,7 @@ describe('the Matches_Feature in the assembled router', () => {
 
     expect(screen.getByRole('navigation')).toBeInTheDocument();
     expect(
-      await within(screen.getByRole('main')).findByText('3 of 10 needed'),
+      await within(screen.getByRole('main')).findByText('3 can play, 10 needed'),
     ).toBeInTheDocument();
   });
 

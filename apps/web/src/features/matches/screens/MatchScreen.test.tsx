@@ -11,14 +11,18 @@ import {
   BELOW_THRESHOLD_LABEL,
   CLEAR_AVAILABILITY_LABEL,
   GUEST_LABEL,
+  CONFIRM_HEADING,
+  CONFIRM_LABEL,
   MATCH_NOT_FOUND_STATEMENT,
-  ORGANISER_READY_STATEMENT,
+  NO_DAY_READY_STATEMENT,
+  TEAMS_HEADING,
   REJECTION_MESSAGES,
   SAVE_AVAILABILITY_LABEL,
   tallyCountLabel,
 } from '../lib/messages';
 import { MATCH_ROUTE, matchPath } from '../lib/routePaths';
 import {
+  confirmedMatch,
   DAY_ISO,
   DAY_MS,
   MATCH_ID,
@@ -126,30 +130,59 @@ describe('MatchScreen while gathering availability', () => {
     expect(within(days[0].closest('li') as HTMLElement).getByText(BELOW_THRESHOLD_LABEL)).toBeTruthy();
   });
 
-  it('tells an organiser when a day is ready', async () => {
-    renderScreen();
-    expect(await screen.findByText(ORGANISER_READY_STATEMENT)).toBeTruthy();
+  it('offers an organiser only the days that have reached the threshold, and confirms one', async () => {
+    const api = renderScreen();
+
+    const panel = (await screen.findByRole('heading', { name: CONFIRM_HEADING })).closest(
+      'section',
+    ) as HTMLElement;
+    const choices = within(panel).getAllByRole('radio');
+    expect(choices).toHaveLength(1);
+    expect((choices[0] as HTMLInputElement).checked).toBe(true);
+    expect(within(panel).getByText(formatDay(DAY_MS[1]))).toBeTruthy();
+
+    await userEvent.click(within(panel).getByRole('button', { name: CONFIRM_LABEL }));
+
+    expect(api.confirmMatch).toHaveBeenCalledWith(
+      SQUAD_ID,
+      MATCH_ID,
+      DAY_ISO[1],
+      expect.any(AbortSignal),
+    );
+    await expect.poll(() => api.getMatch.mock.calls.length).toBe(2);
   });
 
-  it('tells a member nothing about readiness', async () => {
+  it('offers a member no confirm step', async () => {
     renderScreen(fakeMatchesApi({ getSquadStanding: async () => success(MEMBER) }));
 
     await screen.findAllByText(/needed$/);
-    expect(screen.queryByText(ORGANISER_READY_STATEMENT)).toBeNull();
+    expect(screen.queryByRole('heading', { name: CONFIRM_HEADING })).toBeNull();
   });
 
-  it('tells an organiser nothing while no day is ready', async () => {
+  it('tells an organiser no day is ready yet', async () => {
     renderScreen(fakeMatchesApi({ getAvailabilityTally: async () => success(tally([1, 2, 3])) }));
 
-    await screen.findAllByText(/needed$/);
-    expect(screen.queryByText(ORGANISER_READY_STATEMENT)).toBeNull();
+    expect(await screen.findByText(NO_DAY_READY_STATEMENT)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: CONFIRM_LABEL })).toBeNull();
+  });
+
+  it('states a confirm the backend refuses', async () => {
+    renderScreen(
+      fakeMatchesApi({
+        confirmMatch: async () => ({ kind: 'rejected', reason: 'threshold-not-met' }),
+      }),
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: CONFIRM_LABEL }));
+    expect(await screen.findByText(REJECTION_MESSAGES['threshold-not-met'])).toBeTruthy();
   });
 });
 
 describe('MatchScreen once confirmed', () => {
-  it('shows the confirmed day and the players in roster order, without the availability form', async () => {
+  it('shows a member the confirmed day and the players in roster order, and nothing to edit', async () => {
     const api = renderScreen(
       fakeMatchesApi({
+        getSquadStanding: async () => success(MEMBER),
         getMatch: async () =>
           success(
             matchDetail({
@@ -172,7 +205,30 @@ describe('MatchScreen once confirmed', () => {
     ]);
     expect(screen.getByText(formatDay(DAY_MS[1]))).toBeTruthy();
     expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByRole('heading', { name: TEAMS_HEADING })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Remove / })).toBeNull();
     expect(api.getAvailabilityTally).not.toHaveBeenCalled();
+    expect(api.getWorkingTeams).not.toHaveBeenCalled();
+    expect(api.getSquadGuests).not.toHaveBeenCalled();
+  });
+
+  it('gives an organiser the players and the teams editor', async () => {
+    const api = renderScreen(fakeMatchesApi({ getMatch: async () => success(confirmedMatch()) }));
+
+    expect(await screen.findByRole('heading', { name: TEAMS_HEADING })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Remove Player 1' })).toBeTruthy();
+    await expect.poll(() => api.getWorkingTeams.mock.calls[0]?.[0]).toBe(MATCH_ID);
+    await expect.poll(() => api.getSquadGuests.mock.calls[0]?.[0]).toBe(SQUAD_ID);
+  });
+
+  it('stops offering participant changes once the teams are locked', async () => {
+    const api = renderScreen(
+      fakeMatchesApi({ getMatch: async () => success(confirmedMatch(10, { state: 'TeamsRolled' })) }),
+    );
+
+    expect(await screen.findByRole('heading', { name: TEAMS_HEADING })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Remove Player 1' })).toBeNull();
+    expect(api.getSquadGuests).not.toHaveBeenCalled();
   });
 });
 

@@ -151,6 +151,77 @@ describe('writes', () => {
   });
 });
 
+describe('organiser writes', () => {
+  const TEAM_ID = '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f01';
+  const GUEST_ID = '0198e2a7-6666-7a5e-9c2f-6b1d4a5e7f01';
+
+  it('sends each write to its contract path with its contract body', async () => {
+    const { api, requests } = harness((request) =>
+      request.url.endsWith('/confirm')
+        ? json({ matchId: MATCH_ID, confirmedDay: DAY_ISO[0], participantCount: 10 })
+        : request.url.endsWith('/participants')
+          ? json({ participantId: GUEST_ID })
+          : request.url.endsWith('/lock')
+            ? json({ matchId: MATCH_ID })
+            : new Response(null, { status: 204 }),
+    );
+
+    const results = [
+      await api.confirmMatch(SQUAD_ID, MATCH_ID, DAY_ISO[0]),
+      await api.addGuest(SQUAD_ID, MATCH_ID, GUEST_ID),
+      await api.removeParticipant(SQUAD_ID, MATCH_ID, GUEST_ID),
+      await api.rerollTeams(MATCH_ID),
+      await api.moveParticipant(MATCH_ID, GUEST_ID, TEAM_ID),
+      await api.setTeamName(MATCH_ID, TEAM_ID, null),
+      await api.setBibTeam(MATCH_ID, TEAM_ID),
+      await api.lockTeams(MATCH_ID),
+    ];
+
+    expect(results.every((result) => result.kind === 'success')).toBe(true);
+    expect(requests.map(({ method, url, body }) => [method, url.slice(BASE_URL.length), body])).toEqual([
+      ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/confirm`, { day: DAY_ISO[0] }],
+      ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants`, { guestMembershipId: GUEST_ID }],
+      ['DELETE', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants/${GUEST_ID}`, undefined],
+      ['POST', `/matches/${MATCH_ID}/teams/reroll`, undefined],
+      ['POST', `/matches/${MATCH_ID}/teams/moves`, { squadMembershipId: GUEST_ID, toTeamId: TEAM_ID }],
+      ['PUT', `/matches/${MATCH_ID}/teams/${TEAM_ID}/name`, { teamName: null }],
+      ['PUT', `/matches/${MATCH_ID}/teams/${TEAM_ID}/bib`, undefined],
+      ['POST', `/matches/${MATCH_ID}/teams/lock`, undefined],
+    ]);
+  });
+
+  it('reads the working teams and the squad’s guests', async () => {
+    const { api, requests } = harness((request) =>
+      request.url.endsWith('/teams')
+        ? json({ teams: [], prediction: null, unassignedParticipants: [] })
+        : json({ squadId: SQUAD_ID, name: 'Tuesday 5s', features: [], members: [] }),
+    );
+
+    expect(await api.getWorkingTeams(MATCH_ID)).toEqual({
+      kind: 'success',
+      value: { teams: [], prediction: null, unassigned: [] },
+    });
+    expect(await api.getSquadGuests(SQUAD_ID)).toEqual({ kind: 'success', value: [] });
+    expect(requests.map(({ url }) => url.slice(BASE_URL.length))).toEqual([
+      `/matches/${MATCH_ID}/teams`,
+      `/squads/${SQUAD_ID}`,
+    ]);
+  });
+
+  it('names a refused confirm by its problem code', async () => {
+    const { api } = harness(() => problem(409, 'ThresholdNotMet'));
+    expect(await api.confirmMatch(SQUAD_ID, MATCH_ID, DAY_ISO[0])).toEqual({
+      kind: 'rejected',
+      reason: 'threshold-not-met',
+    });
+  });
+
+  it('conceals a teams read by a non-organiser as not found', async () => {
+    const { api } = harness(() => problem(404, 'NotFound'));
+    expect(await api.getWorkingTeams(MATCH_ID)).toEqual({ kind: 'not-found' });
+  });
+});
+
 describe('failures', () => {
   it('conceals a missing or forbidden match as not found', async () => {
     for (const status of [401, 403, 404]) {

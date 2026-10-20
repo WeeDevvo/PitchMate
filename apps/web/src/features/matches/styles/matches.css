@@ -250,3 +250,98 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.matches-minor-heading {
+  margin: 0;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.matches-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap-tight);
+  align-items: center;
+  justify-content: center;
+}
+
+.matches-inline-form .matches-hint {
+  flex-basis: 100%;
+}
+
+.matches-person {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap-tight);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  border-bottom: var(--matches-border-width) solid var(--control-border);
+}
+
+.matches-teams {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--matches-gap);
+}
+
+.matches-team {
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+  padding: var(--matches-gap-tight);
+  border: var(--matches-border-width) solid var(--control-border);
+  border-radius: var(--matches-radius);
+}
+
+.matches-bib {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--matches-gap-tight);
+  min-height: var(--matches-touch-target);
+}
+
+.matches-prediction__lines {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.matches-prediction__line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--matches-gap-tight);
+  align-items: center;
+}
+
+.matches-prediction__line dt {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.matches-prediction__line dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--matches-gap-tight);
+}
+
+/* The bar repeats the percentage beside it; it carries no information alone. */
+.matches-prediction__bar {
+  display: inline-block;
+  block-size: 0.5rem;
+  max-inline-size: 100%;
+  border-radius: 0.25rem;
+  background: var(--accent-fill);
+}
+
+.matches-problems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
