@@ -42,14 +42,124 @@ public static class MatchEndpoints
 
         RouteGroupBuilder squadScoped =
             endpoints.MapGroup("/squads/{squadId:guid}/matches").WithTags("Matches");
+        MapListEndpoints(squadScoped);
         MapDraftEndpoints(squadScoped);
         MapAvailabilityEndpoints(squadScoped);
         MapConfirmationEndpoints(squadScoped);
         MapParticipantEndpoints(squadScoped);
 
         RouteGroupBuilder matchScoped = endpoints.MapGroup("/matches/{matchId:guid}").WithTags("Matches");
+        MapDetailEndpoints(matchScoped);
         MapTeamEndpoints(matchScoped);
         MapPlayEndpoints(matchScoped);
+    }
+
+    /// <summary>
+    /// Maps the match detail read, <c>GET /matches/{matchId}</c>, and the working-teams read,
+    /// <c>GET /matches/{matchId}/teams</c>, onto the match-scoped group
+    /// (match-read-models Requirement 2.1). A <b>genuinely new path</b>: <c>matchId</c> is its only
+    /// declared path parameter, and the squad is resolved from the match by
+    /// <see cref="GetMatchDetailHandler"/>, never from the request.
+    /// <para>
+    /// The lambda binds, resolves the caller, invokes the handler and translates through the
+    /// <see cref="MatchErrorResults"/> seam with existence concealed — nothing else (Requirement 11.4).
+    /// A malformed <c>matchId</c> fails the <c>:guid</c> route constraint and is answered <c>404</c> by
+    /// routing before this runs (Requirement 2.14).
+    /// </para>
+    /// </summary>
+    private static void MapDetailEndpoints(RouteGroupBuilder group)
+    {
+        group.MapGet("/", static async (
+            Guid matchId,
+            ClaimsPrincipal principal,
+            GetMatchDetailHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(
+                await handler.HandleAsync(new GetMatchDetailCommand(userId, matchId), ct),
+                concealExistence: true);
+        })
+            .RequireAuthorization()
+            .WithName("GetMatchDetail")
+            // Existence-sensitive, as the list read and the team sheet are: the refusal is the
+            // argument-free concealed 404, byte-identical to theirs (Requirements 5.6, 5.7).
+            .Produces<MatchDetail>(StatusCodes.Status200OK)
+            .WithMatchConcealedProblemResponses();
+
+        // Read the working teams — organisers only, refused as the same concealed 404 a non-member
+        // gets, so a refusal discloses neither the match nor the caller's role (match-read-models
+        // Requirements 4.1, 5.2, 5.8). The prediction is the handler's: this lambda invokes no rating
+        // engine member (Requirement 11.10).
+        group.MapGet("/teams", static async (
+            Guid matchId,
+            ClaimsPrincipal principal,
+            GetWorkingTeamsHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(
+                await handler.HandleAsync(new GetWorkingTeamsCommand(userId, matchId), ct),
+                concealExistence: true);
+        })
+            .RequireAuthorization()
+            .WithName("GetWorkingTeams")
+            .Produces<WorkingTeamsView>(StatusCodes.Status200OK)
+            .WithMatchConcealedProblemResponses();
+    }
+
+    /// <summary>
+    /// Maps the squad match list read onto the squad-scoped group (match-read-models Requirement 1.1).
+    /// <para>
+    /// This is a <b>new method on an existing path</b>, not a new path: the group already carries
+    /// <c>CreateMatchDraft</c> on <c>POST /squads/{squadId:guid}/matches</c>, so the read is the
+    /// <c>GET</c> of the same collection resource and binds <c>squadId</c> exactly as the <c>POST</c>
+    /// does (Requirement 12.1).
+    /// </para>
+    /// <para>
+    /// The lambda does exactly four things — resolve the caller from the access token's subject, build
+    /// the command, invoke the handler, translate the result through the single
+    /// <see cref="MatchErrorResults"/> seam. There is <b>no</b> authorisation decision, aggregation,
+    /// ordering, truncation, projection or prediction here: the gate belongs to
+    /// <see cref="GetMatchListHandler"/> and the order, bound and projection belong to the query source
+    /// (Requirement 11.4).
+    /// </para>
+    /// </summary>
+    private static void MapListEndpoints(RouteGroupBuilder group)
+    {
+        // Read the squad's bounded, ordered match list — gated to active members of the squad named in
+        // the path; existence concealed otherwise (Requirements 1.1, 5.3, 5.6, 5.7).
+        group.MapGet("/", static async (
+            Guid squadId,
+            ClaimsPrincipal principal,
+            GetMatchListHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(
+                await handler.HandleAsync(new GetMatchListCommand(userId, squadId), ct),
+                concealExistence: true);
+        })
+            .RequireAuthorization()
+            .WithName("ListSquadMatches")
+            // Existence-sensitive, as the availability tally and the team sheet are: the authorisation
+            // failure is reported through the argument-free MatchErrorResults.Concealed() 404, so this
+            // read's refusal body is byte-identical to theirs and discloses neither the squad's
+            // existence nor the caller's membership state (Requirements 5.6, 5.7, 12.2).
+            .Produces<MatchList>(StatusCodes.Status200OK)
+            .WithMatchConcealedProblemResponses();
     }
 
     /// <summary>Maps draft creation under the squad-scoped group (Requirement 1, 13.1).</summary>
@@ -84,6 +194,7 @@ public static class MatchEndpoints
     {
         // Submit or replace the acting member's availability response (Requirement 4.1, 4.2).
         group.MapPut("/{matchId:guid}/availability", static async (
+            Guid squadId,
             Guid matchId,
             SubmitAvailabilityRequest request,
             ClaimsPrincipal principal,
@@ -95,16 +206,20 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            var command = new SubmitAvailabilityResponseCommand(userId, matchId, request.MarkedDays ?? []);
+            var command = new SubmitAvailabilityResponseCommand(userId, squadId, matchId, request.MarkedDays ?? []);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
             .WithName("SubmitAvailabilityResponse")
-            .Produces<AvailabilityResponse>(StatusCodes.Status200OK)
+            // Declares the Application response contract, not the AvailabilityResponse persistence
+            // entity: the entity put its BaseEntity-declared audit and soft-delete members on the
+            // wire (Requirements 8.1, 8.3, 8.5).
+            .Produces<SubmitAvailabilityResult>(StatusCodes.Status200OK)
             .WithMatchProblemResponses();
 
         // Clear the acting member's own availability response (Requirement 4.3).
         group.MapDelete("/{matchId:guid}/availability", static async (
+            Guid squadId,
             Guid matchId,
             ClaimsPrincipal principal,
             ClearAvailabilityResponseHandler handler,
@@ -115,7 +230,8 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            return ToHttpResult(await handler.HandleAsync(new ClearAvailabilityResponseCommand(userId, matchId), ct));
+            return ToHttpResult(
+                await handler.HandleAsync(new ClearAvailabilityResponseCommand(userId, squadId, matchId), ct));
         })
             .RequireAuthorization()
             .WithName("ClearAvailabilityResponse")
@@ -125,6 +241,7 @@ public static class MatchEndpoints
         // Read the availability tally — gated to active members; existence concealed otherwise
         // (Requirement 5.1, 5.5, 5.6, 5.7).
         group.MapGet("/{matchId:guid}/availability/tally", static async (
+            Guid squadId,
             Guid matchId,
             ClaimsPrincipal principal,
             GetAvailabilityTallyHandler handler,
@@ -136,7 +253,7 @@ public static class MatchEndpoints
             }
 
             return ToHttpResult(
-                await handler.HandleAsync(new GetAvailabilityTallyCommand(userId, matchId), ct),
+                await handler.HandleAsync(new GetAvailabilityTallyCommand(userId, squadId, matchId), ct),
                 concealExistence: true);
         })
             .RequireAuthorization()
@@ -152,6 +269,7 @@ public static class MatchEndpoints
     {
         // Confirm the match on one of its candidate days (Requirement 6.1).
         group.MapPost("/{matchId:guid}/confirm", static async (
+            Guid squadId,
             Guid matchId,
             ConfirmMatchRequest request,
             ClaimsPrincipal principal,
@@ -163,7 +281,7 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            var command = new ConfirmMatchCommand(userId, matchId, request.Day);
+            var command = new ConfirmMatchCommand(userId, squadId, matchId, request.Day);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
@@ -177,6 +295,7 @@ public static class MatchEndpoints
     {
         // Add a guest participant to a confirmed match (Requirement 7.1).
         group.MapPost("/{matchId:guid}/participants", static async (
+            Guid squadId,
             Guid matchId,
             AddGuestParticipantRequest request,
             ClaimsPrincipal principal,
@@ -188,7 +307,7 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            var command = new AddGuestParticipantCommand(userId, matchId, request.GuestMembershipId);
+            var command = new AddGuestParticipantCommand(userId, squadId, matchId, request.GuestMembershipId);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
@@ -198,6 +317,7 @@ public static class MatchEndpoints
 
         // Remove a registered or guest participant from a confirmed match (Requirement 7.2).
         group.MapDelete("/{matchId:guid}/participants/{membershipId:guid}", static async (
+            Guid squadId,
             Guid matchId,
             Guid membershipId,
             ClaimsPrincipal principal,
@@ -209,7 +329,7 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            var command = new RemoveParticipantCommand(userId, matchId, membershipId);
+            var command = new RemoveParticipantCommand(userId, squadId, matchId, membershipId);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()

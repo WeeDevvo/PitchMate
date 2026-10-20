@@ -25,6 +25,22 @@ namespace PitchMate.Application.Matches.UseCases;
 /// retains at most one, and committed atomically through <see cref="IUnitOfWork.SaveChangesAsync"/>
 /// (Requirement 4.2). Any failure — authorisation, state, or validation — stores nothing.
 /// </para>
+/// <para>
+/// The committed response is reported as the <see cref="SubmitAvailabilityResult"/> contract rather
+/// than the <see cref="AvailabilityResponse"/> persistence entity, so the entity's
+/// <c>BaseEntity</c>-declared members no longer cross the wire (Requirement 8.1, 8.3). The projection
+/// reads the stored response's own submission instant and marked days, so it reports the same values
+/// the operation reports today (Requirement 8.4) and, where this submission replaced a prior one, the
+/// replacing submission's values only — the aggregate has already discarded the replaced response
+/// (Requirement 8.2).
+/// </para>
+/// <para>
+/// Immediately after the match load and <em>before</em> the membership is resolved, the handler
+/// refuses a command whose <c>SquadId</c> — the squad named in the request path — is not the squad
+/// the match records, returning the same uniform authorisation failure and storing nothing. Because
+/// the check precedes the gate, the path squad is never an input to the gate's decision and the
+/// acting membership is always resolved from the match's own squad (Requirement 7.3, 7.4, 7.6).
+/// </para>
 /// </summary>
 public sealed class SubmitAvailabilityResponseHandler
 {
@@ -61,14 +77,15 @@ public sealed class SubmitAvailabilityResponseHandler
     }
 
     /// <summary>
-    /// Handles a <see cref="SubmitAvailabilityResponseCommand"/>, returning the stored response on
-    /// success or a typed <see cref="MatchError"/> — a uniform authorisation failure for a
-    /// guest/inactive/non-member or an unfindable match, a state failure when availability is closed,
-    /// or a validation failure when a non-candidate day is referenced.
+    /// Handles a <see cref="SubmitAvailabilityResponseCommand"/>, returning the stored submission as a
+    /// <see cref="SubmitAvailabilityResult"/> on success or a typed <see cref="MatchError"/> — a
+    /// uniform authorisation failure for a guest/inactive/non-member or an unfindable match, a state
+    /// failure when availability is closed, or a validation failure when a non-candidate day is
+    /// referenced.
     /// </summary>
     /// <param name="command">The submission request.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    public async Task<Result<AvailabilityResponse>> HandleAsync(
+    public async Task<Result<SubmitAvailabilityResult>> HandleAsync(
         SubmitAvailabilityResponseCommand command,
         CancellationToken cancellationToken)
     {
@@ -83,6 +100,16 @@ public sealed class SubmitAvailabilityResponseHandler
             return Unauthorized();
         }
 
+        // The path's squad must be the match's own squad. The check runs before the membership is
+        // resolved, so the path squadId is never an input to the gate's decision and binding a
+        // caller-supplied squad id grants no access the match's own squad would not grant. A mismatch
+        // is refused with the same uniform authorisation failure and stores nothing, so it discloses
+        // neither the match's existence nor which squad it belongs to (Requirement 7.3, 7.4, 7.6).
+        if (command.SquadId != match.SquadId)
+        {
+            return Unauthorized();
+        }
+
         // Resolve the acting membership and gate: only an active registered member may respond; a
         // guest, inactive membership, or non-member is rejected with the uniform failure and nothing
         // is stored (Requirement 4.5, 7.6).
@@ -92,7 +119,7 @@ public sealed class SubmitAvailabilityResponseHandler
         Result gate = MatchAuthorization.RequireActiveRegisteredMember(acting);
         if (!gate.IsSuccess)
         {
-            return Result<AvailabilityResponse>.Fail(gate.Error!);
+            return Result<SubmitAvailabilityResult>.Fail(gate.Error!);
         }
 
         // The aggregate enforces the GatheringAvailability state gate and candidate-day validation and
@@ -101,18 +128,29 @@ public sealed class SubmitAvailabilityResponseHandler
             acting!.Id, command.MarkedDays ?? [], _clock.GetUtcNow());
         if (!submitted.IsSuccess)
         {
-            return submitted;
+            return Result<SubmitAvailabilityResult>.Fail(submitted.Error!);
         }
+
+        AvailabilityResponse stored = submitted.Value!;
 
         // Persist the upsert atomically, replacing any prior response so the member retains at most one
         // (Requirement 4.2).
-        await _availability.UpsertAsync(submitted.Value!, cancellationToken);
+        await _availability.UpsertAsync(stored, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return submitted;
+        // Project the committed response onto its wire contract: the same submission instant and the
+        // same marked days, in the order the aggregate holds them, with every candidate day unwrapped
+        // to the bare UTC instant it carries (Requirements 8.1, 8.4, 9.1, 9.2). Because the aggregate
+        // discarded any response this submission replaced, the values projected here are the
+        // replacing submission's and none of the replaced one's (Requirement 8.2).
+        return Result<SubmitAvailabilityResult>.Ok(new SubmitAvailabilityResult(
+            stored.MatchId,
+            stored.SquadMembershipId,
+            stored.SubmittedAt,
+            [.. stored.MarkedDays.Select(day => day.Instant)]));
     }
 
-    private static Result<AvailabilityResponse> Unauthorized() =>
-        Result<AvailabilityResponse>.Fail(new MatchError(
+    private static Result<SubmitAvailabilityResult> Unauthorized() =>
+        Result<SubmitAvailabilityResult>.Fail(new MatchError(
             MatchErrorCode.Unauthorized, "The requested action is not permitted."));
 }

@@ -39,6 +39,12 @@ public static class MatchesServiceCollectionExtensions
     /// </summary>
     private static void AddUseCases(IServiceCollection services)
     {
+        // The squad match list read. Its query source (IMatchListSource) is internal to the
+        // Infrastructure assembly and is registered by AddMatchesInfrastructure.
+        services.AddScoped<GetMatchListHandler>();
+        services.AddScoped<GetMatchDetailHandler>();
+        services.AddScoped<GetWorkingTeamsHandler>();
+
         // Draft creation.
         services.AddScoped<CreateMatchDraftHandler>();
 

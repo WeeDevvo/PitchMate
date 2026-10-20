@@ -38,6 +38,25 @@ Use the same feature folder name in every project:
 
 All rating maths lives behind `IRatingEngine` (`PlackettLuceRatingEngine`). `TeamBalancer` judges fairness only through `IRatingEngine.Predict`, never by reading or combining μ/σ itself. `TeamBalancerIntegrationTests` asserts this with a recording spy. Use the `/balance-simulation` skill to see the effect of a balancer or engine change.
 
+## Data-model invariants
+
+These are design decisions, not all test-enforced. The tests that guard them are named where they exist; don't break one without changing the decision first.
+
+- **Ratings are a derived cache of replay.** Completed matches are immutable, chronologically ordered events (kickoff lineup, outcome ranks, stable tie-break), enough to re-derive every rating. Single match completion and the bulk replay share the same rating-application code (`Replay*Properties`). Keep "edit a match and recompute from match N" possible without schema change, even though no UI exposes it.
+- **Rating engine:** pure and reproducible (same inputs, same outputs); ranks **N teams**, not two; balancing uses `Predict` over μ/σ while display uses μ − 3σ, never conflated. Margin-of-victory and participation weighting are built, switchable, default **off** (`RatingEngineConfig`).
+- **Membership-centric:** ratings, μ/σ snapshots and stats hang off `SquadMembership`, never `User`, so guests rate and a guest claim rebinds the owner without losing history.
+- **Idempotent writes:** matches and live-tracking events carry client-generated GUID v7 ids (`Guid.CreateVersion7()`), and retries dedupe on them. Match completion applies the rating update once, guarded by match status inside the transaction (`IdempotentCompletionPropertyTests`). Completion writes the rating and per-match μ/σ snapshots atomically.
+- **Live tracking** is an offline-first, append-only event log: corrections are compensating events, never mutations. Real-time broadcast is out of MVP scope.
+- **Stats are computed on read** from the normalised tables. Don't add a denormalised `PlayerStatsSummary` until reads hurt; if one is added, it must be rebuildable from events.
+- **Erasure is anonymisation** (`IAnonymisable`); see `security-and-privacy.md`.
+- **No rating or domain logic in any client.** Clients only call the API; the web structural scans (`ratingAndThemingBoundaries`, `enumAndRatingBoundaries`) reject μ/σ handling in `apps/web`.
+
+## C# conventions not covered by the compiler
+
+- One top-level type per file, named after the type.
+- `async`/`await` for all I/O, with a `CancellationToken` on every async public method, passed through. No `async void` (event handlers aside), `.Result` or `.Wait()`.
+- Don't suppress a warning without a comment saying why: `TreatWarningsAsErrors` is on.
+
 ## Web feature boundaries
 
 - Each feature in `apps/web/src/features/<feature>/` is imported only through its barrel `index.ts`. `moduleBoundaries.structural.test.ts` and the per-feature structural scans fail on deep imports across features.

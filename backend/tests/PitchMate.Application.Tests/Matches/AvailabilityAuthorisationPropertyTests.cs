@@ -73,8 +73,9 @@ public class AvailabilityAuthorisationPropertyTests
                 var world = World.Create(actorKind);
                 IReadOnlyList<DateTimeOffset> markedDays = world.MarkedDays(markChoice);
 
-                var command = new SubmitAvailabilityResponseCommand(world.ActingUserId, world.MatchId, markedDays);
-                Result<AvailabilityResponse> result =
+                var command = new SubmitAvailabilityResponseCommand(
+                    world.ActingUserId, world.SquadId, world.MatchId, markedDays);
+                Result<SubmitAvailabilityResult> result =
                     world.Handler.HandleAsync(command, CancellationToken.None).GetAwaiter().GetResult();
 
                 bool actorIsActiveRegistered = actorKind is ActorKind.ActiveRegisteredOwner
@@ -109,6 +110,7 @@ public class AvailabilityAuthorisationPropertyTests
             FakeAvailabilityRepository availability,
             Guid actingUserId,
             Guid? actingMembershipId,
+            Guid squadId,
             Guid matchId,
             IReadOnlyList<DateTimeOffset> candidateDays)
         {
@@ -116,6 +118,7 @@ public class AvailabilityAuthorisationPropertyTests
             Availability = availability;
             ActingUserId = actingUserId;
             ActingMembershipId = actingMembershipId;
+            SquadId = squadId;
             MatchId = matchId;
             _candidateDays = candidateDays;
         }
@@ -128,6 +131,9 @@ public class AvailabilityAuthorisationPropertyTests
 
         /// <summary>The acting membership's identity, or <see langword="null"/> for a non-member.</summary>
         public Guid? ActingMembershipId { get; }
+
+        /// <summary>The match's own squad, so the command's path squad matches and the gate is what decides.</summary>
+        public Guid SquadId { get; }
 
         public Guid MatchId { get; }
 
@@ -155,7 +161,7 @@ public class AvailabilityAuthorisationPropertyTests
 
             var handler = new SubmitAvailabilityResponseHandler(matches, memberships, availability, unitOfWork, clock);
 
-            return new World(handler, availability, actingUserId, acting?.Id, match.Id, candidateDays);
+            return new World(handler, availability, actingUserId, acting?.Id, squadId, match.Id, candidateDays);
         }
 
         /// <summary>Resolves the marked candidate-day subset for the chosen <see cref="MarkChoice"/>.</summary>

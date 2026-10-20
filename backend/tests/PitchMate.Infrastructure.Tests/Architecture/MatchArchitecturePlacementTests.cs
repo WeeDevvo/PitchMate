@@ -2,9 +2,11 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using NetArchTest.Rules;
 using PitchMate.Application.Matches.Abstractions;
+using PitchMate.Application.Matches.UseCases;
 using PitchMate.Domain.Common;
 using PitchMate.Domain.Matches;
 using PitchMate.Infrastructure.Matches;
+using PitchMate.Infrastructure.Matches.Queries;
 using PitchMate.Infrastructure.Matches.Repositories;
 
 namespace PitchMate.Infrastructure.Tests.Architecture;
@@ -87,6 +89,10 @@ public class MatchArchitecturePlacementTests
         typeof(KickoffTeam),
         typeof(MatchResult),
         typeof(TeamSheet),
+        typeof(TeamSheetTeam),
+        typeof(RosterEntry),
+        typeof(ParticipantDisplayName),
+        typeof(MatchSchedulingOrder),
         typeof(MatchError),
         typeof(MatchErrorCode),
     };
@@ -99,7 +105,36 @@ public class MatchArchitecturePlacementTests
         typeof(IMatchRepository),
         typeof(IAvailabilityRepository),
         typeof(IMembershipRatingRepository),
+        typeof(IMatchListSource),
+        typeof(IMatchDetailSource),
+        typeof(IWorkingTeamsSource),
+        typeof(IRosterDisplayNameSource),
     };
+
+    /// <summary>
+    /// match-read-models Requirement 11.1 — every read model and query handler the chore adds resides in
+    /// <c>PitchMate.Application</c> and in neither Infrastructure nor Api, named here so a type moved
+    /// out of place fails by name.
+    /// </summary>
+    [Fact]
+    public void MatchReadModelsAndQueryHandlers_ResideInApplicationAssembly()
+    {
+        Type[] readTypes =
+        [
+            typeof(MatchList), typeof(MatchListEntry), typeof(LockedTeamSummary), typeof(RecordedResultView),
+            typeof(MatchListPage), typeof(MatchDetail), typeof(ParticipantView), typeof(CallerAvailability),
+            typeof(MatchDetailProjection), typeof(WorkingTeamsView), typeof(WorkingTeamView), typeof(SplitPrediction),
+            typeof(WorkingTeamsProjection), typeof(GetMatchListHandler), typeof(GetMatchDetailHandler),
+            typeof(GetWorkingTeamsHandler),
+        ];
+
+        var offenders = readTypes
+            .Where(type => type.Assembly != ApplicationAssembly)
+            .Select(type => $"{type.FullName} in '{type.Assembly.GetName().Name}'")
+            .ToList();
+
+        Assert.True(offenders.Count == 0, $"Match read models and query handlers must reside in PitchMate.Application. Offenders: {string.Join(", ", offenders)}.");
+    }
 
     [Fact]
     public void AssertedAssembliesAreTheExpectedProjects()
@@ -259,6 +294,10 @@ public class MatchArchitecturePlacementTests
             typeof(EfMatchRepository),
             typeof(EfAvailabilityRepository),
             typeof(EfMembershipRatingRepository),
+            typeof(EfMatchListSource),
+            typeof(EfMatchDetailSource),
+            typeof(EfWorkingTeamsSource),
+            typeof(EfRosterDisplayNameSource),
         };
 
         var required = matchEfConfigurations

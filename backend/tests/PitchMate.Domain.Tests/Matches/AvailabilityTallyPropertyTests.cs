@@ -74,7 +74,9 @@ public class AvailabilityTallyPropertyTests
             for (var dayIndex = 0; dayIndex < scenario.CandidateDays.Length; dayIndex++)
             {
                 var entry = tally.Days[dayIndex];
-                if (!entry.Day.Equals(new CandidateDay(scenario.CandidateDays[dayIndex])))
+                // The entry reports the day as a bare UTC instant; DateTimeOffset equality compares
+                // the instant, so this is the same by-instant comparison CandidateDay defined.
+                if (entry.Day != new CandidateDay(scenario.CandidateDays[dayIndex]).Instant)
                 {
                     return false;
                 }

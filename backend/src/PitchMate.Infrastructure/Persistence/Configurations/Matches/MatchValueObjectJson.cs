@@ -77,7 +77,17 @@ internal static class MatchValueObjectJson
         return JsonSerializer.Serialize(instants, SerializerOptions);
     }
 
-    private static IReadOnlyCollection<CandidateDay> DeserializeCandidateDays(string json)
+    /// <summary>
+    /// Rehydrates a match's candidate-day collection from the <c>candidate_days</c> document.
+    /// <para>
+    /// <see langword="internal"/> rather than private so a raw-SQL query source inside this assembly
+    /// — which reads the <c>jsonb</c> column as <c>::text</c> because an unmapped row type admits
+    /// only provider-mappable scalars — rehydrates it through the <em>same</em> code the entity
+    /// configuration's <see cref="ValueConverter{TModel,TProvider}"/> uses, so the read path and the
+    /// write path cannot drift.
+    /// </para>
+    /// </summary>
+    internal static IReadOnlyCollection<CandidateDay> DeserializeCandidateDays(string json)
     {
         var instants = JsonSerializer.Deserialize<List<DateTimeOffset>>(json, SerializerOptions) ?? [];
         return instants.Select(instant => new CandidateDay(instant)).ToList();
@@ -91,7 +101,15 @@ internal static class MatchValueObjectJson
         return JsonSerializer.Serialize(dto, SerializerOptions);
     }
 
-    private static KickoffLineup DeserializeLineup(string json)
+    /// <summary>
+    /// Rehydrates a captured <see cref="KickoffLineup"/> from the <c>kickoff_lineup</c> document.
+    /// <para>
+    /// <see langword="internal"/> for the same reason as <see cref="DeserializeCandidateDays"/>: an
+    /// in-assembly query source reading the column as <c>::text</c> reconstructs the lineup through
+    /// the same aggregate-internal factory the entity configuration relies on.
+    /// </para>
+    /// </summary>
+    internal static KickoffLineup DeserializeLineup(string json)
     {
         var dto = JsonSerializer.Deserialize<KickoffLineupDto>(json, SerializerOptions)
             ?? new KickoffLineupDto([]);
@@ -108,7 +126,15 @@ internal static class MatchValueObjectJson
         return JsonSerializer.Serialize(dto, SerializerOptions);
     }
 
-    private static MatchResult DeserializeResult(string json)
+    /// <summary>
+    /// Rehydrates a recorded <see cref="MatchResult"/> from the <c>recorded_result</c> document.
+    /// <para>
+    /// <see langword="internal"/> for the same reason as <see cref="DeserializeCandidateDays"/>, so
+    /// a query source reading the column as <c>::text</c> produces exactly the result the entity
+    /// configuration would have materialised.
+    /// </para>
+    /// </summary>
+    internal static MatchResult DeserializeResult(string json)
     {
         var dto = JsonSerializer.Deserialize<MatchResultDto>(json, SerializerOptions)
             ?? new MatchResultDto(ResultFidelity.Basic, []);

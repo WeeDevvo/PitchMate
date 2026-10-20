@@ -53,6 +53,11 @@ public class MatchLayeringAndImplementationLocationTests
         typeof(IMatchRepository),
         typeof(IAvailabilityRepository),
         typeof(IMembershipRatingRepository),
+        typeof(IMatchListSource),
+        typeof(IMatchDetailSource),
+        typeof(IWorkingTeamsSource),
+        typeof(IRosterDisplayNameSource),
+
     };
 
     [Fact]

@@ -211,7 +211,7 @@ public class OrganiserAuthorisationPropertyTests
             NullLogger<ConfirmMatchHandler>.Instance);
 
         var result = handler
-            .HandleAsync(new ConfirmMatchCommand(actingUserId, match.Id, Day), CancellationToken.None)
+            .HandleAsync(new ConfirmMatchCommand(actingUserId, squadId, match.Id, Day), CancellationToken.None)
             .GetAwaiter().GetResult();
 
         return ToOutcome(result.IsSuccess, result.Error);
@@ -230,7 +230,8 @@ public class OrganiserAuthorisationPropertyTests
             new FakeUnitOfWork());
 
         var result = handler
-            .HandleAsync(new AddGuestParticipantCommand(actingUserId, match.Id, guest.Id), CancellationToken.None)
+            .HandleAsync(
+                new AddGuestParticipantCommand(actingUserId, squadId, match.Id, guest.Id), CancellationToken.None)
             .GetAwaiter().GetResult();
 
         return ToOutcome(result.IsSuccess, result.Error);
@@ -247,7 +248,7 @@ public class OrganiserAuthorisationPropertyTests
 
         var result = handler
             .HandleAsync(
-                new RemoveParticipantCommand(actingUserId, match.Id, participants[0].Id),
+                new RemoveParticipantCommand(actingUserId, squadId, match.Id, participants[0].Id),
                 CancellationToken.None)
             .GetAwaiter().GetResult();
 

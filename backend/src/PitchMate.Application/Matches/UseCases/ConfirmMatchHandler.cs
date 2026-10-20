@@ -43,6 +43,13 @@ namespace PitchMate.Application.Matches.UseCases;
 /// contact PII, and swallowed, so a publish failure never rolls back the committed confirmation and
 /// never surfaces to the caller (Requirement 6.6).
 /// </para>
+/// <para>
+/// Immediately after the match load and <em>before</em> the membership is resolved, the handler
+/// refuses a command whose <c>SquadId</c> — the squad named in the request path — is not the squad
+/// the match records, returning the same uniform authorisation failure and confirming nothing.
+/// Because the check precedes the gate, the path squad is never an input to the gate's decision and
+/// the acting membership is always resolved from the match's own squad (Requirement 7.3, 7.4, 7.6).
+/// </para>
 /// </summary>
 public sealed class ConfirmMatchHandler
 {
@@ -129,6 +136,16 @@ public sealed class ConfirmMatchHandler
             return Result<ConfirmMatchResult>.Fail(MatchAuthorization.RequireOrganiser(null).Error!);
         }
 
+        // The path's squad must be the match's own squad. The check runs before the membership is
+        // resolved, so the path squadId is never an input to the gate's decision and binding a
+        // caller-supplied squad id grants no access the match's own squad would not grant. A mismatch
+        // is refused with the same uniform authorisation failure and confirms nothing, so it discloses
+        // neither the match's existence nor which squad it belongs to (Requirement 7.3, 7.4, 7.6).
+        if (command.SquadId != match.SquadId)
+        {
+            return Result<ConfirmMatchResult>.Fail(MatchAuthorization.RequireOrganiser(null).Error!);
+        }
+
         // Only an active registered owner or admin of the match's squad may confirm (Requirement 6.7).
         SquadMembership? acting =
             await _memberships.GetByUserAndSquadAsync(command.ActingUserId, match.SquadId, cancellationToken);
@@ -201,17 +218,20 @@ public sealed class ConfirmMatchHandler
 
         AvailabilityTally tally = AvailabilityTally.Compute(match.CandidateDays, scoped);
 
+        // The tally reports each day as a bare UTC instant; DateTimeOffset equality compares the
+        // instant, so this matches the CandidateDay's by-instant equality it replaced.
         var confirmedDay = new CandidateDay(day);
-        DayAvailability? entry = tally.Days.FirstOrDefault(d => d.Day.Equals(confirmedDay));
+        DayAvailability? entry = tally.Days.FirstOrDefault(d => d.Day == confirmedDay.Instant);
         return entry?.Count ?? 0;
     }
 
     /// <summary>
     /// Resolves the squad's minimum player threshold, defaulting to
     /// <see cref="DefaultMinimumPlayerThreshold"/> when the squad is unavailable or configures none
-    /// (Requirement 6.3).
+    /// (Requirement 6.3). Internal so the match detail read publishes the threshold through this same
+    /// seam rather than restating the value (match-read-models Requirement 2.5).
     /// </summary>
-    private static int ResolveMinimumThreshold(Squad? squad) =>
+    internal static int ResolveMinimumThreshold(Squad? squad) =>
         // The squad aggregate carries no configurable threshold today, so the documented default of 10
         // is the effective value; this seam reads any future squad-configured threshold in one place.
         DefaultMinimumPlayerThreshold;

@@ -78,7 +78,7 @@ public class MatchTeamSheetPropertyTests
                 return false;
             }
 
-            var result = match.ProduceTeamSheet();
+            var result = match.ProduceTeamSheet(displayNamesById);
             if (!result.IsSuccess)
             {
                 return false;
@@ -87,17 +87,19 @@ public class MatchTeamSheetPropertyTests
             var sheet = result.Value!;
 
             // Location and confirmed day reflect the match (Requirement 9.1).
-            if (sheet.Location != match.Location || !sheet.ConfirmedDay.Equals(match.ConfirmedDay!.Value))
+            // The sheet reports the confirmed day as a bare UTC instant; DateTimeOffset equality
+            // compares the instant, so this is the same by-instant comparison CandidateDay defined.
+            if (sheet.Location != match.Location || sheet.ConfirmedDay != match.ConfirmedDay!.Value.Instant)
             {
                 return false;
             }
 
-            // The sheet's teams mirror the locked teams: order, name, bib flag, and roster display
-            // names in roster order (Requirement 9.1).
-            var expected = new List<(string Name, bool Bib, List<string> Roster)>
+            // The sheet's teams mirror the locked teams: order, name, bib flag, and roster entries —
+            // membership identity and display name — in roster order (Requirement 9.1).
+            var expected = new List<(string Name, bool Bib, List<RosterEntry> Roster)>
             {
-                (scenario.NameA, scenario.BibOnA, teamARoster.Select(id => displayNamesById[id]).ToList()),
-                (scenario.NameB, !scenario.BibOnA, teamBRoster.Select(id => displayNamesById[id]).ToList())
+                (scenario.NameA, scenario.BibOnA, teamARoster.Select(id => new RosterEntry(id, displayNamesById[id])).ToList()),
+                (scenario.NameB, !scenario.BibOnA, teamBRoster.Select(id => new RosterEntry(id, displayNamesById[id])).ToList())
             };
 
             if (sheet.Teams.Count != expected.Count)
