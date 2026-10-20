@@ -68,6 +68,7 @@ import {
   isWithin,
   inAppImports,
   norm,
+  matchesRoot,
   playerStatsRoot,
   readCodeOnly,
   readWithoutComments,
@@ -356,8 +357,8 @@ describe('the feature is imported through its barrel only (Requirement 18.7)', (
     expect(offenders).toEqual([]);
   });
 
-  it('is imported by the router wiring and the published player-stats seam only', () => {
-    // Two consumers, and no third.
+  it('is imported by the router wiring and the two consumers of its published route seam only', () => {
+    // Three consumers, and no fourth.
     //
     //  - `src/app/` — the application-level router wiring, which builds the
     //    facade and registers the three route tables.
@@ -366,6 +367,9 @@ describe('the feature is imported through its barrel only (Requirement 18.7)', (
     //    registers its screen at that pattern and builds the Squad_Path and
     //    sibling profile paths through these builders instead of restating a
     //    path literal, which is the whole purpose of exporting them.
+    //  - `features/matches/` — which nests its create-match and match routes
+    //    beneath `SQUAD_ROUTE` and builds their paths on `squadPath`, for the
+    //    same reason. Like player-stats, it reaches no deeper than the barrel.
     //
     // The App_Shell, the Auth_Feature, and the marketing landing feature import
     // nothing of this feature, and neither edge runs the other way: `squads`
@@ -374,7 +378,9 @@ describe('the feature is imported through its barrel only (Requirement 18.7)', (
     const offenders = inboundImports
       .filter(
         ({ file }) =>
-          !isWithin(appWiringRoot, file) && !isWithin(playerStatsRoot, file),
+          !isWithin(appWiringRoot, file) &&
+          !isWithin(playerStatsRoot, file) &&
+          !isWithin(matchesRoot, file),
       )
       .map(({ file, specifier }) => ({ file: relTo(srcRoot, file), specifier }));
     expect(offenders).toEqual([]);
@@ -383,11 +389,15 @@ describe('the feature is imported through its barrel only (Requirement 18.7)', (
   it('is reached from both admitted consumers, so neither allowance is vacuous', () => {
     const consumers = new Set(
       inboundImports.map(({ file }) =>
-        isWithin(appWiringRoot, file) ? 'app-wiring' : 'player-stats',
+        isWithin(appWiringRoot, file)
+          ? 'app-wiring'
+          : isWithin(matchesRoot, file)
+            ? 'matches'
+            : 'player-stats',
       ),
     );
 
-    expect([...consumers].sort()).toEqual(['app-wiring', 'player-stats']);
+    expect([...consumers].sort()).toEqual(['app-wiring', 'matches', 'player-stats']);
   });
 });
 

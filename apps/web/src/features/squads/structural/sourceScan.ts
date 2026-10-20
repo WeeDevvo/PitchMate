@@ -90,6 +90,12 @@ export const landingRoot: string = join(srcRoot, 'features', 'landing');
  */
 export const playerStatsRoot: string = join(srcRoot, 'features', 'player-stats');
 
+/**
+ * The Matches_Feature, which builds its route patterns on the published
+ * `SQUAD_ROUTE` and `squadPath` rather than restating them.
+ */
+export const matchesRoot: string = join(srcRoot, 'features', 'matches');
+
 /** The one shared Theme module (Requirement 18.8). */
 export const themeRoot: string = join(srcRoot, 'theme');
 

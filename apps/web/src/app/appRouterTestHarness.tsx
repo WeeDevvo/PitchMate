@@ -155,6 +155,57 @@ const REDEEM_INVITE_PATH = '/squads/invites/redeem';
 const PLAYER_PROFILE_PATH = '/squads/{squadId}/members/{membershipId}/profile';
 
 /**
+ * The match the squads-aware client lists in the fixture squad, and the paths
+ * the Matches_Feature reads it through. The squad screen's matches section is
+ * the Matches_Feature's injected content, so one client answers both features.
+ */
+export const MATCHES_FIXTURE = {
+  matchId: '7c0d2e1f-3a4b-4c5d-8e6f-708192a3b4c5',
+  location: 'Riverside Astro, pitch 3',
+  candidateDay: '2030-03-02T19:00:00.000Z',
+} as const;
+
+const SQUAD_MATCHES_PATH = '/squads/{squadId}/matches';
+const MATCH_DETAIL_PATH = '/matches/{matchId}';
+const MATCH_TALLY_PATH = '/squads/{squadId}/matches/{matchId}/availability/tally';
+
+const MATCH_LIST_BODY: unknown = {
+  matches: [
+    {
+      matchId: MATCHES_FIXTURE.matchId,
+      state: 'GatheringAvailability',
+      location: MATCHES_FIXTURE.location,
+      confirmedDay: null,
+      candidateDays: [MATCHES_FIXTURE.candidateDay],
+      participantCount: 0,
+      lockedTeams: [],
+      recordedResult: null,
+      completedAt: null,
+    },
+  ],
+  truncated: false,
+};
+
+const MATCH_DETAIL_BODY: unknown = {
+  matchId: MATCHES_FIXTURE.matchId,
+  squadId: SQUADS_FIXTURE.squadId,
+  state: 'GatheringAvailability',
+  location: MATCHES_FIXTURE.location,
+  candidateDays: [MATCHES_FIXTURE.candidateDay],
+  confirmedDay: null,
+  participantCount: 0,
+  participants: [],
+  effectiveMinimumPlayerThreshold: 10,
+  callerAvailability: { hasStoredResponse: false, markedDays: [] },
+  recordedResult: null,
+  completedAt: null,
+};
+
+const MATCH_TALLY_BODY: unknown = {
+  days: [{ day: MATCHES_FIXTURE.candidateDay, availableMemberIds: [], count: 3 }],
+};
+
+/**
  * The entries {@link SquadsApiClientStub.requests} records for the calls a
  * routing test counts, so the count is written against the same strings the stub
  * records rather than against a second copy of each path.
@@ -400,6 +451,12 @@ export function squadsApiClient(): SquadsApiClientStub {
         return json([]);
       case SQUAD_FEATURES_PATH:
         return json([]);
+      case SQUAD_MATCHES_PATH:
+        return json(MATCH_LIST_BODY);
+      case MATCH_DETAIL_PATH:
+        return json(MATCH_DETAIL_BODY);
+      case MATCH_TALLY_PATH:
+        return json(MATCH_TALLY_BODY);
       case PLAYER_PROFILE_PATH:
         // Answered for whichever membership the request names, so the resolved
         // screen's own heading says which subject it loaded.
