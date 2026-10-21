@@ -172,6 +172,75 @@ public sealed class UnitOfWorkPropertyTests
     }
 
     /// <summary>
+    /// Saves made inside <see cref="UnitOfWork.ExecuteInTransactionAsync"/> commit together: when a
+    /// later save fails, the changes an earlier save already wrote are rolled back with it, so the
+    /// modified seed keeps its original value and the inserted row never appears.
+    /// </summary>
+    [Property(MaxTest = 100, Arbitrary = new[] { typeof(UnitOfWorkArbitraries) })]
+    public Property FailingSaveInsideTransactionRollsBackEarlierSaves(UnitOfWorkRollbackInput input)
+    {
+        return RunAsync(async () =>
+        {
+            var clock = new FakeTimeProvider(input.ClockNow);
+            var actor = new FakeCurrentUserAccessor(input.Actor);
+
+            Guid seedId;
+            await using (var seedContext = _fixture.CreateContext(clock, actor))
+            {
+                var seed = new PersistenceTestEntity { DisplayName = input.SeedDisplayName };
+                await new EfRepository<PersistenceTestEntity>(seedContext).AddAsync(seed, CancellationToken.None);
+                await new UnitOfWork(seedContext).SaveChangesAsync(CancellationToken.None);
+                seedId = seed.Id;
+            }
+
+            var threw = false;
+            Guid goodId = Guid.Empty;
+            await using (var context = _fixture.CreateContext(clock, actor))
+            {
+                var repository = new EfRepository<PersistenceTestEntity>(context);
+                var unitOfWork = new UnitOfWork(context);
+
+                try
+                {
+                    await unitOfWork.ExecuteInTransactionAsync(
+                        async ct =>
+                        {
+                            // The first save succeeds on its own.
+                            var seed = await context.TestEntities.FirstAsync(e => e.Id == seedId, ct);
+                            seed.DisplayName = input.ModifiedDisplayName;
+                            var good = new PersistenceTestEntity { DisplayName = input.GoodDisplayName };
+                            await repository.AddAsync(good, ct);
+                            goodId = good.Id;
+                            await unitOfWork.SaveChangesAsync(ct);
+
+                            // The second save violates NOT NULL and fails.
+                            await repository.AddAsync(new PersistenceTestEntity { DisplayName = null! }, ct);
+                            await unitOfWork.SaveChangesAsync(ct);
+                        },
+                        CancellationToken.None);
+                }
+                catch (SaveFailedException)
+                {
+                    threw = true;
+                }
+            }
+
+            await using var verify = _fixture.CreateContext();
+            var storedSeed = await verify.TestEntities
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(e => e.Id == seedId);
+            var storedGood = await verify.TestEntities
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(e => e.Id == goodId);
+
+            return threw
+                && storedSeed is not null
+                && storedSeed.DisplayName == input.SeedDisplayName
+                && storedGood is null;
+        });
+    }
+
+    /// <summary>
     /// Bridges FsCheck's synchronous property model to the asynchronous database work each iteration
     /// performs. Blocking here is safe: xUnit test execution has no synchronization context, so
     /// <c>GetAwaiter().GetResult()</c> cannot deadlock, and it surfaces the original exception

@@ -259,6 +259,46 @@ public sealed class SquadDbInvariantPropertyTests
         });
     }
 
+    /// <summary>
+    /// An ownership transfer succeeds whichever way the two memberships' identities sort. EF Core orders
+    /// the UPDATEs of one save by key, and PostgreSQL checks the single-owner partial unique index per
+    /// statement, so promoting the target in the same batch as the demotion fails whenever the target's
+    /// row is written first. Transferring A → B and then B → A makes one of the two transfers target the
+    /// lower identity, so both must succeed, leave exactly one owner, and end with A as owner and B as
+    /// admin.
+    /// </summary>
+    [Property(MaxTest = Iterations, Arbitrary = new[] { typeof(SquadDbInvariantArbitraries) })]
+    public Property OwnershipTransferSucceedsRegardlessOfMembershipIdentityOrder(SquadDbScenario scenario)
+    {
+        return RunAsync(async () =>
+        {
+            var clock = new FakeTimeProvider();
+            var firstUserId = Guid.CreateVersion7();
+            var secondUserId = Guid.CreateVersion7();
+
+            var (squadId, firstMembershipId) =
+                await CreateSquadAsync(scenario.SquadName, scenario.OwnerName, firstUserId, clock);
+            var secondMembershipId =
+                await AddRegisteredMemberAsync(squadId, secondUserId, scenario.SecondName, clock);
+
+            var there = await TransferAsync(firstUserId, squadId, secondMembershipId, clock);
+            var ownersAfterThere = await CountOwnersAsync(squadId);
+
+            var back = await TransferAsync(secondUserId, squadId, firstMembershipId, clock);
+            var ownersAfterBack = await CountOwnersAsync(squadId);
+
+            var first = await GetMembershipAsync(firstMembershipId);
+            var second = await GetMembershipAsync(secondMembershipId);
+
+            return there.IsSuccess
+                && ownersAfterThere == 1
+                && back.IsSuccess
+                && ownersAfterBack == 1
+                && first!.Role == SquadRole.Owner
+                && second!.Role == SquadRole.Admin;
+        });
+    }
+
     // Feature: squads-and-membership, Property 14: Leaving and removal deactivate while retaining history
     /// <summary>
     /// DB portion of Property 14. Both leaving (via <see cref="LeaveSquadHandler"/>) and removal (via
@@ -672,6 +712,15 @@ PitchMate.Domain.Squads.Result<DeleteSquadResult> firstDelete;
         await memberships.AddAsync(membership, CancellationToken.None);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
         return membership.Id;
+    }
+
+    /// <summary>Transfers ownership through the real <see cref="TransferOwnershipHandler"/> in a fresh context.</summary>
+    private async Task<SquadResult> TransferAsync(Guid actingUserId, Guid squadId, Guid targetMembershipId, TimeProvider clock)
+    {
+        await using var context = CreateContext(clock, new FakeCurrentUserAccessor(actingUserId.ToString()));
+        var handler = new TransferOwnershipHandler(new EfSquadMembershipRepository(context), new UnitOfWork(context));
+        return await handler.HandleAsync(
+            new TransferOwnershipCommand(actingUserId, squadId, targetMembershipId), CancellationToken.None);
     }
 
     private DeleteSquadHandler BuildDeleteHandler(PitchMateDbContext context, TimeProvider clock) =>

@@ -91,13 +91,15 @@ public class OwnershipTransferProperties
                         .Count(m => m.Role == SquadRole.Owner);
 
                     // The swap applied atomically: target is Owner, former owner is Admin, exactly one
-                    // owner remains, and the pair committed in a single save (Requirement 6.1, 6.2).
+                    // owner remains, and the pair committed as two saves (demote, then promote) inside one
+                    // transaction (Requirement 6.1, 6.2).
                     return result.IsSuccess
                         && newOwner.Role == SquadRole.Owner
                         && newOwner.State == MembershipState.Active
                         && formerOwner.Role == SquadRole.Admin
                         && ownerCount == 1
-                        && store.SaveCallCount == 1;
+                        && store.SaveCallCount == 2
+                        && store.TransactionCount == 1;
                 }
 
                 // Every rejected request leaves all memberships unchanged, keeps the original owner, and
@@ -113,8 +115,62 @@ public class OwnershipTransferProperties
                 return !result.IsSuccess
                     && allUnchanged
                     && originalOwnerRetained
-                    && store.SaveCallCount == 0;
+                    && store.SaveCallCount == 0
+                    && store.TransactionCount == 0;
             });
+
+    /// <summary>
+    /// The demotion is saved before the promotion, so no save ever writes a second owner: at the first
+    /// save the former owner is already Admin and the target is not yet Owner, and both saves run in one
+    /// transaction.
+    /// </summary>
+    [Fact]
+    public async Task Transfer_SavesTheDemotionBeforeThePromotion()
+    {
+        var (store, squad, owner, target) = SeedOwnerAndMember();
+        var rolesAtEachSave = new List<(SquadRole? Owner, SquadRole? Target)>();
+
+        var handler = new TransferOwnershipHandler(
+            new FakeSquadMembershipRepository(store),
+            new FakeSquadUnitOfWork(store, onSave: () => rolesAtEachSave.Add((owner.Role, target.Role))));
+
+        DomainResult result = await handler.HandleAsync(
+            new TransferOwnershipCommand(owner.UserId!.Value, squad.Id, target.Id), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(
+            [(SquadRole.Admin, SquadRole.Member), (SquadRole.Admin, SquadRole.Owner)],
+            rolesAtEachSave);
+        Assert.Equal(1, store.TransactionCount);
+    }
+
+    /// <summary>A failing save surfaces from the handler rather than reporting a successful transfer.</summary>
+    [Fact]
+    public async Task Transfer_WhenASaveFails_Throws()
+    {
+        var (store, squad, owner, target) = SeedOwnerAndMember();
+
+        var handler = new TransferOwnershipHandler(
+            new FakeSquadMembershipRepository(store),
+            new FakeSquadUnitOfWork(store, throwOnSave: true));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.HandleAsync(
+            new TransferOwnershipCommand(owner.UserId!.Value, squad.Id, target.Id), CancellationToken.None));
+        Assert.Equal(1, store.TransactionCount);
+    }
+
+    private static (SquadStore Store, Squad Squad, SquadMembership Owner, SquadMembership Target) SeedOwnerAndMember()
+    {
+        var store = new SquadStore();
+        Squad squad = Squad.Create("The Squad").Value!;
+        store.AddCommittedSquad(squad);
+
+        SquadMembership owner = SquadMembership.CreateOwner(squad.Id, Guid.NewGuid(), "Owner").Value!;
+        SquadMembership target = SquadMembership.CreateRegistered(squad.Id, Guid.NewGuid(), "Target").Value!;
+        store.AddCommittedMembership(owner);
+        store.AddCommittedMembership(target);
+        return (store, squad, owner, target);
+    }
 
     /// <summary>Builds the acting user's relationship to the squad and returns the acting user identity.</summary>
     private static Guid BuildActor(SquadStore store, Guid squadId, Guid ownerUserId, ActorKind kind)
