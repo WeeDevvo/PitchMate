@@ -15,6 +15,9 @@ import {
   CONFIRM_LABEL,
   MATCH_NOT_FOUND_STATEMENT,
   NO_DAY_READY_STATEMENT,
+  PARTICIPANTS_HEADING,
+  RELOCK_TEAMS_LABEL,
+  TEAM_SHEET_HEADING,
   TEAMS_HEADING,
   REJECTION_MESSAGES,
   SAVE_AVAILABILITY_LABEL,
@@ -219,6 +222,46 @@ describe('MatchScreen once confirmed', () => {
     expect(await screen.findByRole('button', { name: 'Remove Player 1' })).toBeTruthy();
     await expect.poll(() => api.getWorkingTeams.mock.calls[0]?.[0]).toBe(MATCH_ID);
     await expect.poll(() => api.getSquadGuests.mock.calls[0]?.[0]).toBe(SQUAD_ID);
+  });
+
+  it('shows a member the team sheet once locked, in place of the player list', async () => {
+    const api = renderScreen(
+      fakeMatchesApi({
+        getSquadStanding: async () => success(MEMBER),
+        getMatch: async () => success(confirmedMatch(10, { state: 'TeamsRolled' })),
+      }),
+    );
+
+    expect(await screen.findByRole('heading', { name: TEAM_SHEET_HEADING })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: PARTICIPANTS_HEADING })).toBeNull();
+    expect(screen.queryByRole('heading', { name: TEAMS_HEADING })).toBeNull();
+    await expect.poll(() => api.getTeamSheet.mock.calls[0]?.[0]).toBe(MATCH_ID);
+  });
+
+  it('keeps showing the sheet after the match has started or finished', async () => {
+    for (const state of ['InProgress', 'Completed'] as const) {
+      const { unmount } = renderAtRoute(
+        <MatchScreen
+          api={fakeMatchesApi({ getMatch: async () => success(confirmedMatch(10, { state })) })}
+        />,
+        MATCH_ROUTE,
+        matchPath(SQUAD_ID, MATCH_ID),
+      );
+      expect(await screen.findByRole('heading', { name: TEAM_SHEET_HEADING })).toBeTruthy();
+      expect(screen.queryByRole('heading', { name: TEAMS_HEADING })).toBeNull();
+      unmount();
+    }
+  });
+
+  it('re-reads the sheet after an organiser re-locks', async () => {
+    const api = renderScreen(
+      fakeMatchesApi({ getMatch: async () => success(confirmedMatch(10, { state: 'TeamsRolled' })) }),
+    );
+
+    await screen.findByRole('heading', { name: TEAM_SHEET_HEADING });
+    await userEvent.click(await screen.findByRole('button', { name: RELOCK_TEAMS_LABEL }));
+
+    await expect.poll(() => api.getTeamSheet.mock.calls.length).toBe(2);
   });
 
   it('stops offering participant changes once the teams are locked', async () => {

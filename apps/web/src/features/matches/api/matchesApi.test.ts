@@ -208,6 +208,18 @@ describe('organiser writes', () => {
     ]);
   });
 
+  it('reads the team sheet', async () => {
+    const { api, requests } = harness(() =>
+      json({ location: 'Riverside', confirmedDay: DAY_ISO[0], teams: [] }),
+    );
+
+    expect(await api.getTeamSheet(MATCH_ID)).toEqual({
+      kind: 'success',
+      value: { location: 'Riverside', kickoffMs: Date.parse(DAY_ISO[0]), teams: [] },
+    });
+    expect(requests[0].url).toBe(`${BASE_URL}/matches/${MATCH_ID}/team-sheet`);
+  });
+
   it('names a refused confirm by its problem code', async () => {
     const { api } = harness(() => problem(409, 'ThresholdNotMet'));
     expect(await api.confirmMatch(SQUAD_ID, MATCH_ID, DAY_ISO[0])).toEqual({

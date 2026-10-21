@@ -18,6 +18,7 @@ import {
   MATCHES_LOADING_LABEL,
   MATCHES_TRUNCATED_STATEMENT,
   NO_MATCHES_STATEMENT,
+  lockedTeamsLabel,
   participantCountLabel,
 } from '../lib/messages';
 import type { MatchSummary } from '../lib/parse/matchList';
@@ -53,6 +54,9 @@ function MatchEntry({
           </span>
         )}
         <span>{participantCountLabel(match.participantCount)}</span>
+        {match.lockedTeamNames.length === 0 ? null : (
+          <span>{lockedTeamsLabel(match.lockedTeamNames)}</span>
+        )}
       </span>
     </li>
   );

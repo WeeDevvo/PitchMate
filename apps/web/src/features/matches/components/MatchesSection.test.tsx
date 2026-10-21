@@ -47,6 +47,21 @@ describe('MatchesSection', () => {
     expect(within(entry).getByText((_, node) => node?.tagName === 'TIME')).toBeTruthy();
   });
 
+  it('names the locked teams', async () => {
+    renderSection(
+      fakeMatchesApi({
+        listMatches: async () =>
+          success(
+            matchList([
+              matchSummary({ state: 'TeamsRolled', lockedTeamNames: ['Red Wolves', 'Blue Herons'] }),
+            ]),
+          ),
+      }),
+    );
+
+    expect(await screen.findByText('Red Wolves v Blue Herons')).toBeTruthy();
+  });
+
   it('offers an organiser the create-match link', async () => {
     renderSection();
 

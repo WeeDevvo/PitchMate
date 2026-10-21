@@ -345,3 +345,17 @@
   flex-direction: column;
   gap: 0.25rem;
 }
+
+.matches-team[data-bibs='true'] {
+  border-width: 2px;
+  border-color: var(--accent-fill);
+}
+
+.matches-bib-badge {
+  margin: 0;
+  align-self: center;
+  padding: 0 0.75rem;
+  border: 2px solid var(--accent-fill);
+  border-radius: 0.75rem;
+  font-weight: 600;
+}

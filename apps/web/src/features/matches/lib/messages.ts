@@ -162,6 +162,18 @@ export function lockProblemMessage(problem: LockProblem): string {
   }
 }
 
+/* The team sheet --------------------------------------------------------------- */
+
+export const TEAM_SHEET_HEADING = 'Team sheet';
+export const TEAM_SHEET_LOADING_LABEL = 'Loading the team sheet';
+export const KICKOFF_LABEL = 'Kick-off';
+export const VENUE_LABEL = 'Where';
+export const WEARS_BIBS_BADGE = 'Wears bibs';
+
+export function lockedTeamsLabel(teamNames: readonly string[]): string {
+  return teamNames.join(' v ');
+}
+
 /* Rejections ---------------------------------------------------------------- */
 
 export const REJECTION_MESSAGES: Readonly<Record<RejectionReason, string>> = {

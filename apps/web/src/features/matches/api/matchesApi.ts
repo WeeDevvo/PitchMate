@@ -20,6 +20,7 @@ import { ok, type ParseResult } from '../../../wire';
 import { classifyOutcome, type RejectionReason } from '../lib/callOutcome';
 import { parseMatchDetail, type MatchDetail } from '../lib/parse/matchDetail';
 import { parseMatchList, type MatchList } from '../lib/parse/matchList';
+import { parseTeamSheet, type TeamSheet } from '../lib/parse/teamSheet';
 import {
   parseSquadGuests,
   parseWorkingTeams,
@@ -58,6 +59,7 @@ const MOVES_PATH = '/matches/{matchId}/teams/moves';
 const TEAM_NAME_PATH = '/matches/{matchId}/teams/{teamId}/name';
 const TEAM_BIB_PATH = '/matches/{matchId}/teams/{teamId}/bib';
 const LOCK_PATH = '/matches/{matchId}/teams/lock';
+const TEAM_SHEET_PATH = '/matches/{matchId}/team-sheet';
 
 /** How long a call may take before it is abandoned. */
 export const MATCH_CALL_TIMEOUT_MS = 10_000;
@@ -114,6 +116,9 @@ export interface MatchesApi {
     matchId: string,
     signal?: AbortSignal,
   ): Promise<CallResult<void>>;
+
+  /** The team sheet, readable by every member once the teams are locked. */
+  getTeamSheet(matchId: string, signal?: AbortSignal): Promise<CallResult<TeamSheet>>;
 
   /* Organiser operations --------------------------------------------------- */
 
@@ -276,6 +281,15 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
             signal: callSignal,
           }),
         acceptNoValue,
+        signal,
+      );
+    },
+
+    getTeamSheet(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'GetTeamSheet'> =>
+          apiClient.GET(TEAM_SHEET_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        parseTeamSheet,
         signal,
       );
     },
