@@ -57,6 +57,7 @@ describe('parseTeamSheet', () => {
     location: 'Riverside 5s, pitch 2',
     confirmedDay: DAY_ISO[1],
     teams: teamSheet().teams.map((team) => ({
+      teamId: team.teamId,
       teamName: team.teamName,
       bibFlag: team.bibFlag,
       roster: team.roster.map((entry) => ({
@@ -79,5 +80,12 @@ describe('parseTeamSheet', () => {
     expect(
       parseTeamSheet({ ...wire, teams: [{ teamName: 'A', bibFlag: true, roster: null }] }).ok,
     ).toBe(false);
+  });
+
+  it('requires each team to carry the identity its score is given against', () => {
+    for (const teamId of [undefined, null, 'not-an-id']) {
+      const teams = wire.teams.map((team, index) => (index === 0 ? { ...team, teamId } : team));
+      expect(parseTeamSheet({ ...wire, teams }).ok).toBe(false);
+    }
   });
 });

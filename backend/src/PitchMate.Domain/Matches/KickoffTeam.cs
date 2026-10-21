@@ -24,14 +24,22 @@ public sealed class KickoffTeam
     /// <param name="teamName">The team's locked display name.</param>
     /// <param name="bibFlag"><see langword="true"/> when this team wore bibs for the match.</param>
     /// <param name="participantMembershipIds">The ordered squad-membership identities on the team at lock.</param>
-    internal KickoffTeam(string teamName, bool bibFlag, IEnumerable<Guid> participantMembershipIds)
+    internal KickoffTeam(Guid teamId, string teamName, bool bibFlag, IEnumerable<Guid> participantMembershipIds)
     {
+        TeamId = teamId;
         TeamName = teamName;
         BibFlag = bibFlag;
         _participantMembershipIds = [.. participantMembershipIds];
     }
 
     /// <summary>The team's locked display name.</summary>
+    /// <summary>
+    /// The identity of the working <see cref="MatchTeam"/> this team was captured from: the key a recorded
+    /// result scores it by. Captured rather than inferred from position, because the working teams carry
+    /// no stored order and a reloaded match may list them differently from the lineup.
+    /// </summary>
+    public Guid TeamId { get; }
+
     public string TeamName { get; }
 
     /// <summary>Whether this team wore bibs for the match.</summary>

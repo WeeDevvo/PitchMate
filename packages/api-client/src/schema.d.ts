@@ -1634,6 +1634,8 @@ export interface components {
             teams?: null | components["schemas"]["TeamSheetTeam"][];
         };
         TeamSheetTeam: {
+            /** Format: uuid */
+            teamId?: string;
             teamName?: null | string;
             bibFlag?: boolean;
             roster?: null | components["schemas"]["RosterEntry"][];

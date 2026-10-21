@@ -97,7 +97,7 @@ internal static class MatchValueObjectJson
     {
         var dto = new KickoffLineupDto(
             (lineup?.Teams ?? []).Select(team =>
-                new KickoffTeamDto(team.TeamName, team.BibFlag, team.ParticipantMembershipIds.ToList())).ToList());
+                new KickoffTeamDto(team.TeamId, team.TeamName, team.BibFlag, team.ParticipantMembershipIds.ToList())).ToList());
         return JsonSerializer.Serialize(dto, SerializerOptions);
     }
 
@@ -114,7 +114,7 @@ internal static class MatchValueObjectJson
         var dto = JsonSerializer.Deserialize<KickoffLineupDto>(json, SerializerOptions)
             ?? new KickoffLineupDto([]);
         var teams = dto.Teams.Select(team =>
-            new KickoffTeam(team.TeamName, team.BibFlag, team.ParticipantMembershipIds));
+            new KickoffTeam(team.TeamId, team.TeamName, team.BibFlag, team.ParticipantMembershipIds));
         return KickoffLineupFactory(teams);
     }
 
@@ -159,7 +159,7 @@ internal static class MatchValueObjectJson
 
     private sealed record KickoffLineupDto(IReadOnlyList<KickoffTeamDto> Teams);
 
-    private sealed record KickoffTeamDto(string TeamName, bool BibFlag, IReadOnlyList<Guid> ParticipantMembershipIds);
+    private sealed record KickoffTeamDto(Guid TeamId, string TeamName, bool BibFlag, IReadOnlyList<Guid> ParticipantMembershipIds);
 
     private sealed record MatchResultDto(ResultFidelity Fidelity, IReadOnlyList<TeamScoreDto> TeamScores);
 

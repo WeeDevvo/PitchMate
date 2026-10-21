@@ -9089,6 +9089,10 @@
       "TeamSheetTeam": {
         "type": "object",
         "properties": {
+          "teamId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "teamName": {
             "type": [
               "null",
