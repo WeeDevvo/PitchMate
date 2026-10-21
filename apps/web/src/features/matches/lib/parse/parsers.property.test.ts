@@ -122,6 +122,56 @@ describe('parseMatchDetail', () => {
   });
 });
 
+describe('parseMatchDetail result and completion', () => {
+  const teamScores = [
+    { teamId: '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f01', score: 2 },
+    { teamId: '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f02', score: 2 },
+  ];
+
+  it('reads a recorded result and the completion instant', () => {
+    const parsed = parseMatchDetail(
+      wireMatchDetail({
+        state: 'Completed',
+        recordedResult: { fidelity: 'Basic', teamScores },
+        completedAt: '2030-03-02T20:15:00Z',
+      }),
+    );
+
+    expect(parsed).toEqual({
+      ok: true,
+      value: matchDetail({
+        state: 'Completed',
+        recordedResult: { fidelity: 'Basic', teamScores },
+        completedAtMs: Date.parse('2030-03-02T20:15:00Z'),
+      }),
+    });
+  });
+
+  it('reads an absent result and completion as none', () => {
+    const parsed = parseMatchDetail({ ...wireMatchDetail(), recordedResult: undefined, completedAt: undefined });
+    expect(parsed.ok && parsed.value.recordedResult === null && parsed.value.completedAtMs === null).toBe(true);
+  });
+
+  it('fails the whole body for any malformed result or completion instant', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          hostileArb.filter((value) => value !== null && value !== undefined).map((recordedResult) => ({ recordedResult })),
+          fc.constant({ recordedResult: { fidelity: 'Live', teamScores } }),
+          fc.constant({ recordedResult: { fidelity: 'Basic', teamScores: [{ teamId: 'nope', score: 1 }] } }),
+          fc.constant({ recordedResult: { fidelity: 'Basic', teamScores: [{ ...teamScores[0], score: -1 }] } }),
+          hostileArb
+            .filter((value) => value !== null && value !== undefined)
+            .map((completedAt) => ({ completedAt })),
+        ),
+        (overrides) => {
+          expect(parseMatchDetail({ ...wireMatchDetail(), ...overrides }).ok).toBe(false);
+        },
+      ),
+    );
+  });
+});
+
 describe('parseMatchList', () => {
   it('reads the entries and the truncation flag', () => {
     const parsed = parseMatchList(wireMatchList([wireMatchListEntry()], true));

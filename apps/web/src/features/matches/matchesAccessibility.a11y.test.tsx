@@ -13,7 +13,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SQUAD_ROUTE, squadPath } from '../squads';
 import { THEME_ATTRIBUTE, applyThemeAttribute, type Theme } from '../../theme';
 import { MatchesSection } from './components/MatchesSection';
-import { LOCATION_LABEL, SUBMIT_DRAFT_LABEL } from './lib/messages';
+import {
+  CANCEL_MATCH_LABEL,
+  COMPLETE_MATCH_LABEL,
+  FINAL_RESULT_LABEL,
+  LOCATION_LABEL,
+  PROVISIONAL_RESULT_LABEL,
+  RESULT_FORM_HEADING,
+  SAVE_RESULT_LABEL,
+  SUBMIT_DRAFT_LABEL,
+  scoreLabel,
+} from './lib/messages';
 import { MATCH_ROUTE, NEW_MATCH_ROUTE, matchPath, newMatchPath } from './lib/routePaths';
 import { CreateMatchScreen } from './screens/CreateMatchScreen';
 import { MatchScreen } from './screens/MatchScreen';
@@ -26,6 +36,7 @@ import {
   matchDetail,
   renderAtRoute,
   success,
+  teamSheet,
 } from './testing/matchesFixtures';
 
 vi.mock('../app-shell', async () => {
@@ -117,6 +128,79 @@ describe.each(THEMES)('in the %s theme', (theme) => {
     renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
     await screen.findByRole('heading', { name: 'Team sheet' });
     await screen.findByRole('heading', { name: 'Predicted result' });
+    await expectNoWcagViolations(document.body);
+  });
+
+  it('the match screen in play, with the score form, its problem, and the complete step', async () => {
+    applyThemeAttribute(theme);
+    const [red, blue] = teamSheet().teams;
+    const api = fakeMatchesApi({
+      getMatch: async () =>
+        success(
+          matchDetail({
+            state: 'InProgress',
+            confirmedDayMs: DAY_MS[0],
+            recordedResult: {
+              fidelity: 'Basic',
+              teamScores: [
+                { teamId: red.teamId, score: 1 },
+                { teamId: blue.teamId, score: 0 },
+              ],
+            },
+          }),
+        ),
+    });
+    renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
+    await screen.findByRole('heading', { name: RESULT_FORM_HEADING });
+    await screen.findByText(PROVISIONAL_RESULT_LABEL);
+    await expectNoWcagViolations(document.body);
+
+    await userEvent.clear(screen.getByLabelText(scoreLabel(red.teamName, red.bibFlag)));
+    await userEvent.click(screen.getByRole('button', { name: SAVE_RESULT_LABEL }));
+    await userEvent.click(screen.getByRole('button', { name: COMPLETE_MATCH_LABEL }));
+    await expectNoWcagViolations(document.body);
+  });
+
+  it('the match screen once completed, and the cancel confirmation before kick-off', async () => {
+    applyThemeAttribute(theme);
+    const [red, blue] = teamSheet().teams;
+    const completed = renderAtRoute(
+      <MatchScreen
+        api={fakeMatchesApi({
+          getMatch: async () =>
+            success(
+              matchDetail({
+                state: 'Completed',
+                confirmedDayMs: DAY_MS[0],
+                recordedResult: {
+                  fidelity: 'Basic',
+                  teamScores: [
+                    { teamId: red.teamId, score: 2 },
+                    { teamId: blue.teamId, score: 2 },
+                  ],
+                },
+                completedAtMs: DAY_MS[0] + 3_600_000,
+              }),
+            ),
+        })}
+      />,
+      MATCH_ROUTE,
+      matchPath(SQUAD_ID, MATCH_ID),
+    );
+    await screen.findByText(FINAL_RESULT_LABEL);
+    await expectNoWcagViolations(document.body);
+    completed.unmount();
+
+    renderAtRoute(
+      <MatchScreen
+        api={fakeMatchesApi({
+          getMatch: async () => success(matchDetail({ state: 'TeamsRolled', confirmedDayMs: DAY_MS[0] })),
+        })}
+      />,
+      MATCH_ROUTE,
+      matchPath(SQUAD_ID, MATCH_ID),
+    );
+    await userEvent.click(await screen.findByRole('button', { name: CANCEL_MATCH_LABEL }));
     await expectNoWcagViolations(document.body);
   });
 

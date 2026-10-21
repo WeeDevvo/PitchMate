@@ -174,11 +174,65 @@ export function lockedTeamsLabel(teamNames: readonly string[]): string {
   return teamNames.join(' v ');
 }
 
+/* Playing, the result and completion ---------------------------------------- */
+
+export const MATCH_ACTIONS_HEADING = 'Match day';
+export const START_MATCH_LABEL = 'Start match';
+export const STARTING_LABEL = 'Starting…';
+export const START_HINT = 'Starting fixes the teams. You record the score once the match is over.';
+export const UNLOCKED_CHANGES_STATEMENT =
+  'Your team changes are not locked yet. Lock them first, so the teams that play are the ones on the team sheet.';
+export const CANCEL_MATCH_LABEL = 'Cancel match';
+export const CANCEL_CONFIRM_STATEMENT = 'Cancel this match? This cannot be undone.';
+export const CONFIRM_CANCEL_LABEL = 'Yes, cancel the match';
+export const KEEP_MATCH_LABEL = 'Keep the match';
+export const CANCELLING_LABEL = 'Cancelling…';
+export const MATCH_CANCELLED_STATEMENT = 'This match was cancelled.';
+
+export const RESULT_HEADING = 'Result';
+export const RESULT_FORM_HEADING = 'Record the score';
+export const RESULT_FORM_HINT = `Enter each team's goals, from 0 to 99. You can correct the score until the match is completed.`;
+export const SAVE_RESULT_LABEL = 'Save score';
+export const SAVING_RESULT_LABEL = 'Saving…';
+export const RESULT_SAVED_STATEMENT = 'The score is saved.';
+export const SCORE_INPUT_PROBLEM = 'Enter a whole number from 0 to 99 for every team.';
+export const PROVISIONAL_RESULT_LABEL = 'Score so far, not yet final';
+export const FINAL_RESULT_LABEL = 'Final score';
+export const RESULT_UNREADABLE_STATEMENT = 'The score could not be shown.';
+
+export const COMPLETE_HEADING = 'Complete the match';
+export const COMPLETE_HINT = "Completing makes the score final and updates everyone's ratings. It cannot be undone.";
+export const COMPLETE_NEEDS_RESULT_STATEMENT = 'Save the score before completing the match.';
+export const COMPLETE_MATCH_LABEL = 'Complete match';
+export const CONFIRM_COMPLETE_LABEL = 'Yes, complete the match';
+export const COMPLETING_LABEL = 'Completing…';
+export const NOT_YET_LABEL = 'Not yet';
+
+export function scoreLabel(teamName: string, bibFlag: boolean): string {
+  return bibFlag ? `${teamName} (wears bibs) goals` : `${teamName} goals`;
+}
+
+export const OUTCOME_LABELS = {
+  win: 'Won',
+  draw: 'Drew',
+  loss: 'Lost',
+} as const;
+
+/** A non-colour cue beside each outcome word: ✓ for a win, – for a draw, ✗ for a loss. */
+export const OUTCOME_ICONS = {
+  win: '✓',
+  draw: '–',
+  loss: '✗',
+} as const;
+
+export const COMPLETED_LABEL = 'Completed';
+
 /* Rejections ---------------------------------------------------------------- */
 
 export const REJECTION_MESSAGES: Readonly<Record<RejectionReason, string>> = {
   validation: 'That was not accepted. Check the details and try again.',
   'invalid-state': 'This match has moved on, so that is no longer possible. The page has been refreshed.',
   'threshold-not-met': 'That day does not have enough players yet.',
+  'result-required': 'Save the score before completing the match.',
   conflict: 'Someone else changed this match at the same time. The page has been refreshed.',
 };

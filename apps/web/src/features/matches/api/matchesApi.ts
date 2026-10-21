@@ -37,6 +37,12 @@ import {
 
 type Schemas = components['schemas'];
 
+/** One locked team's final score, as the result form builds it. */
+export interface TeamScoreCommand {
+  readonly teamId: string;
+  readonly score: number;
+}
+
 /** The body of a draft, as the create-match screen builds it. */
 export interface CreateDraftCommand {
   readonly location: string;
@@ -60,6 +66,10 @@ const TEAM_NAME_PATH = '/matches/{matchId}/teams/{teamId}/name';
 const TEAM_BIB_PATH = '/matches/{matchId}/teams/{teamId}/bib';
 const LOCK_PATH = '/matches/{matchId}/teams/lock';
 const TEAM_SHEET_PATH = '/matches/{matchId}/team-sheet';
+const START_PATH = '/matches/{matchId}/start';
+const RESULT_PATH = '/matches/{matchId}/result';
+const COMPLETE_PATH = '/matches/{matchId}/complete';
+const CANCEL_PATH = '/matches/{matchId}/cancel';
 
 /** How long a call may take before it is abandoned. */
 export const MATCH_CALL_TIMEOUT_MS = 10_000;
@@ -176,6 +186,25 @@ export interface MatchesApi {
 
   /** Lock the teams, capturing the kickoff lineup. */
   lockTeams(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** Start a match whose teams are locked. */
+  startMatch(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /**
+   * Record, or re-record, the final score of a match in progress: one score per
+   * locked team. Always a basic result; live tracking records its own.
+   */
+  recordResult(
+    matchId: string,
+    teamScores: readonly TeamScoreCommand[],
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** Complete a match with a recorded result, which applies the rating update once. */
+  completeMatch(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** Cancel a match that has not started. */
+  cancelMatch(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
 }
 
 export interface MatchesApiDependencies {
@@ -408,6 +437,50 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
       return call(
         (callSignal): ClientCall<'LockTeams'> =>
           apiClient.POST(LOCK_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    startMatch(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'StartMatch'> =>
+          apiClient.POST(START_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    recordResult(matchId, teamScores, signal) {
+      const body: Schemas['RecordResultRequest'] = {
+        fidelity: 'Basic',
+        teamScores: teamScores.map(({ teamId, score }) => ({ teamId, score })),
+      };
+      return call(
+        (callSignal): ClientCall<'RecordResult'> =>
+          apiClient.POST(RESULT_PATH, {
+            params: { path: { matchId } },
+            body,
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    completeMatch(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'CompleteMatch'> =>
+          apiClient.POST(COMPLETE_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    cancelMatch(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'CancelMatch'> =>
+          apiClient.POST(CANCEL_PATH, { params: { path: { matchId } }, signal: callSignal }),
         acceptNoValue,
         signal,
       );

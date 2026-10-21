@@ -75,6 +75,18 @@ export function isMembershipState(
   return isWireEnumName(MEMBERSHIP_STATE_NAMES, candidate);
 }
 
+/* -------------------------------------------------------------------------- */
+/* ResultFidelity                                                             */
+/* -------------------------------------------------------------------------- */
+
+export type ResultFidelity = Exclude<components['schemas']['ResultFidelity'], null>;
+
+export const RESULT_FIDELITY_NAMES = ['Basic', 'Rich'] as const satisfies WireEnumNames<ResultFidelity>;
+
+export function isResultFidelity(candidate: unknown): candidate is ResultFidelity {
+  return isWireEnumName(RESULT_FIDELITY_NAMES, candidate);
+}
+
 /** Compile-time proof that every list covers its whole generated union. */
 export const WIRE_ENUM_COVERAGE = {
   MatchState: {} satisfies UncoveredNames<MatchState, typeof MATCH_STATE_NAMES>,
@@ -83,4 +95,5 @@ export const WIRE_ENUM_COVERAGE = {
     MembershipState,
     typeof MEMBERSHIP_STATE_NAMES
   >,
+  ResultFidelity: {} satisfies UncoveredNames<ResultFidelity, typeof RESULT_FIDELITY_NAMES>,
 } as const;

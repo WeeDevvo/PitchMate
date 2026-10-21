@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DAY_ISO,
   MATCH_ID,
+  TEAM_IDS,
   SQUAD_ID,
   matchDetail,
   wireMatchDetail,
@@ -231,6 +232,62 @@ describe('organiser writes', () => {
   it('conceals a teams read by a non-organiser as not found', async () => {
     const { api } = harness(() => problem(404, 'NotFound'));
     expect(await api.getWorkingTeams(MATCH_ID)).toEqual({ kind: 'not-found' });
+  });
+});
+
+describe('the match lifecycle', () => {
+  it('starts, records a basic result, completes and cancels at their contract paths', async () => {
+    const { api, requests } = harness(({ url }) =>
+      json(url.endsWith('/complete') ? { matchId: MATCH_ID, alreadyCompleted: false } : { matchId: MATCH_ID }),
+    );
+
+    expect(await api.startMatch(MATCH_ID)).toEqual({ kind: 'success', value: undefined });
+    expect(
+      await api.recordResult(MATCH_ID, [
+        { teamId: TEAM_IDS[0], score: 3 },
+        { teamId: TEAM_IDS[1], score: 2 },
+      ]),
+    ).toEqual({ kind: 'success', value: undefined });
+    expect(await api.completeMatch(MATCH_ID)).toEqual({ kind: 'success', value: undefined });
+    expect(await api.cancelMatch(MATCH_ID)).toEqual({ kind: 'success', value: undefined });
+
+    expect(requests.map(({ method, url, body }) => [method, url.slice(BASE_URL.length), body])).toEqual([
+      ['POST', `/matches/${MATCH_ID}/start`, undefined],
+      [
+        'POST',
+        `/matches/${MATCH_ID}/result`,
+        {
+          fidelity: 'Basic',
+          teamScores: [
+            { teamId: TEAM_IDS[0], score: 3 },
+            { teamId: TEAM_IDS[1], score: 2 },
+          ],
+        },
+      ],
+      ['POST', `/matches/${MATCH_ID}/complete`, undefined],
+      ['POST', `/matches/${MATCH_ID}/cancel`, undefined],
+    ]);
+  });
+
+  it('names a completion refused for want of a result, and a lifecycle step out of turn', async () => {
+    expect(await harness(() => problem(409, 'ResultRequired')).api.completeMatch(MATCH_ID)).toEqual({
+      kind: 'rejected',
+      reason: 'result-required',
+    });
+    expect(await harness(() => problem(409, 'InvalidState')).api.startMatch(MATCH_ID)).toEqual({
+      kind: 'rejected',
+      reason: 'invalid-state',
+    });
+    expect(await harness(() => problem(400, 'LiveTrackingDisabled')).api.recordResult(MATCH_ID, [])).toEqual({
+      kind: 'rejected',
+      reason: 'validation',
+    });
+  });
+
+  it('conceals a lifecycle step by a non-organiser as not found', async () => {
+    expect(await harness(() => problem(403, 'NotAnOrganiser')).api.cancelMatch(MATCH_ID)).toEqual({
+      kind: 'not-found',
+    });
   });
 });
 
