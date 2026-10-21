@@ -769,13 +769,22 @@ export function useInviteRedemption(
       unmountedRef.current = true;
       abandonInFlight();
 
+      // The abandoned call can never settle, so the machine is returned to its
+      // initial state: otherwise a strict-mode remount finds the `redeeming`
+      // phase that call left behind and the single-flight guard refuses the
+      // fresh arrival's one redemption.
+      const renderedPath = renderedPathRef.current;
+      if (renderedPath !== null) {
+        dispatch({ type: 'restarted', state: initialInviteRedemptionState(renderedPath) });
+      }
+
       unmountedRef.current = false;
       previewedPathRef.current = null;
       redeemAttemptedPathRef.current = null;
       renderedPathRef.current = null;
       previousAuthStateRef.current = null;
     };
-  }, [abandonInFlight]);
+  }, [abandonInFlight, dispatch]);
 
   const retry = useCallback((): void => {
     // 5.13: retry belongs to the generic failure alone. `unusable` is a settled
