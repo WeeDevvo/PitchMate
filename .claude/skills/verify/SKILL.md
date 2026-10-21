@@ -5,7 +5,7 @@ description: Run PitchMate's CI gates locally (backend build and tests, OpenAPI 
 
 # Verify
 
-The gates are the ones `.github/workflows/ci-backend.yml` and `ci-web.yml` run, plus the web test suite.
+The gates are the ones `.github/workflows/ci-backend.yml` and `ci-web.yml` run.
 
 ## Steps
 

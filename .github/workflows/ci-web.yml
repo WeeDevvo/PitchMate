@@ -1,6 +1,6 @@
 name: CI · Web
 
-# Lint + build gate for the React/Vite app and JS packages. Path-filtered so a
+# Lint + build + test gate for the React/Vite app and JS packages. Path-filtered so a
 # backend-only change doesn't trigger it.
 on:
   pull_request:
@@ -72,3 +72,10 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Vitest over apps/web (the only workspace with tests). The build does not typecheck test
+      # files, so this is the only CI gate that runs them. The hosted runner runs the suite about
+      # 3.5x slower than a dev machine, which pushes the heaviest property tests past Vitest's 5 s
+      # default, so the per-test timeout is raised here only; local runs keep the default.
+      - name: Test
+        run: npm test --workspace @pitchmate/web -- --testTimeout=30000
