@@ -29,6 +29,7 @@ import type { MatchDetail } from '../lib/parse/matchDetail';
 import { LocationProbe } from './LocationProbe';
 import type { MatchList, MatchSummary } from '../lib/parse/matchList';
 import type { DayTally, SquadStanding } from '../lib/parse/responses';
+import type { SquadGuest, WorkingTeam, WorkingTeams } from '../lib/parse/teams';
 
 type Schemas = components['schemas'];
 
@@ -151,6 +152,67 @@ export function tally(counts: readonly number[] = [4, 10, 0]): readonly DayTally
   return counts.map((count, index) => ({ dayMs: DAY_MS[index], count }));
 }
 
+/* Teams ------------------------------------------------------------------------ */
+
+export const TEAM_IDS = [
+  '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f01',
+  '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f02',
+] as const;
+
+/** A distinct, well-formed membership identity for player `index`. */
+export function playerId(index: number): string {
+  return `0198e2a7-5555-7a5e-9c2f-${index.toString(16).padStart(12, '0')}`;
+}
+
+/** `count` participants named Player 1, Player 2, … in roster order. */
+export function participants(count: number): MatchDetail['participants'] {
+  return Array.from({ length: count }, (_, index) => ({
+    membershipId: playerId(index),
+    displayName: `Player ${index + 1}`,
+    isGuest: false,
+    rosterPosition: index,
+  }));
+}
+
+/** A confirmed match with `count` participants. */
+export function confirmedMatch(count = 10, overrides: Partial<MatchDetail> = {}): MatchDetail {
+  return matchDetail({
+    state: 'Confirmed',
+    confirmedDayMs: DAY_MS[1],
+    participantCount: count,
+    participants: participants(count),
+    ...overrides,
+  });
+}
+
+export function workingTeam(index: number, players: readonly number[], bibFlag = index === 0): WorkingTeam {
+  return {
+    teamId: TEAM_IDS[index],
+    teamName: index === 0 ? 'Red Wolves' : 'Blue Herons',
+    bibFlag,
+    roster: players.map((player) => ({
+      membershipId: playerId(player),
+      displayName: `Player ${player + 1}`,
+    })),
+  };
+}
+
+/** Two teams of five over players 0–9, with a prediction. */
+export function workingTeams(overrides: Partial<WorkingTeams> = {}): WorkingTeams {
+  return {
+    teams: [workingTeam(0, [0, 2, 4, 6, 8]), workingTeam(1, [1, 3, 5, 7, 9])],
+    prediction: { winProbabilities: [0.46, 0.44], drawProbability: 0.1 },
+    unassigned: [],
+    ...overrides,
+  };
+}
+
+export const NO_TEAMS: WorkingTeams = { teams: [], prediction: null, unassigned: [] };
+
+export const GUESTS: readonly SquadGuest[] = [
+  { membershipId: '0198e2a7-6666-7a5e-9c2f-6b1d4a5e7f01', displayName: 'Guest Gary' },
+];
+
 export const ORGANISER: SquadStanding = { squadId: SQUAD_ID, role: 'Admin', state: 'Active' };
 export const MEMBER: SquadStanding = { squadId: SQUAD_ID, role: 'Member', state: 'Active' };
 
@@ -172,6 +234,16 @@ export function fakeMatchesApi(overrides: Partial<MatchesApi> = {}): FakeMatches
     createDraft: async () => success(MATCH_ID),
     submitAvailability: async () => success(undefined),
     clearAvailability: async () => success(undefined),
+    confirmMatch: async () => success(undefined),
+    getSquadGuests: async () => success(GUESTS),
+    addGuest: async () => success(undefined),
+    removeParticipant: async () => success(undefined),
+    getWorkingTeams: async () => success(workingTeams()),
+    rerollTeams: async () => success(undefined),
+    moveParticipant: async () => success(undefined),
+    setTeamName: async () => success(undefined),
+    setBibTeam: async () => success(undefined),
+    lockTeams: async () => success(undefined),
     ...overrides,
   };
 

@@ -4,6 +4,7 @@
  */
 import { CANDIDATE_DAY_MAX_COUNT, LOCATION_MAX_LENGTH, type DraftProblem } from './matchDays';
 import type { RejectionReason } from './callOutcome';
+import { ROLL_MAX_PARTICIPANTS, ROLL_MIN_PARTICIPANTS, TEAM_MAX_SIZE, TEAM_MIN_SIZE, type LockProblem } from './teams';
 
 /* Boundary states ---------------------------------------------------------- */
 
@@ -77,18 +78,89 @@ export const AT_THRESHOLD_LABEL = 'Enough to play';
 export const BELOW_THRESHOLD_LABEL = 'Not enough yet';
 
 export function tallyCountLabel(count: number, threshold: number): string {
-  return `${count} of ${threshold} needed`;
+  return `${count} can play, ${threshold} needed`;
 }
 
 export function thresholdStatement(threshold: number): string {
   return `A day needs ${threshold} players before an admin can confirm it.`;
 }
 
-export const ORGANISER_READY_STATEMENT =
-  'At least one day has enough players. Confirming a day arrives in the next update.';
+/* Confirming ------------------------------------------------------------------ */
+
+export const CONFIRM_HEADING = 'Confirm the match';
+export const CONFIRM_DAY_LEGEND = 'Day to confirm';
+export const CONFIRM_LABEL = 'Confirm match';
+export const CONFIRMING_LABEL = 'Confirming…';
+export const NO_DAY_READY_STATEMENT = 'No day has enough players yet. You can confirm once one does.';
+export const CONFIRM_HINT =
+  'Confirming closes availability. Everyone who can make that day becomes a player.';
 
 export const PARTICIPANTS_HEADING = 'Players';
 export const GUEST_LABEL = 'Guest';
+export const ADD_GUEST_LABEL = 'Guest to add';
+export const ADD_GUEST_SUBMIT_LABEL = 'Add guest';
+export const NO_GUESTS_TO_ADD = 'Every guest in this squad is already playing, or the squad has none.';
+export const GUESTS_LOADING_LABEL = 'Loading guests';
+
+export function removeParticipantLabel(name: string): string {
+  return `Remove ${name}`;
+}
+
+export function playerCountStatement(count: number): string {
+  return count === 1 ? '1 player' : `${count} players`;
+}
+
+/* Teams ------------------------------------------------------------------------ */
+
+export const TEAMS_HEADING = 'Teams';
+export const TEAMS_LOADING_LABEL = 'Loading teams';
+export const NO_TEAMS_STATEMENT = 'Teams have not been rolled yet.';
+export const ROLL_TEAMS_LABEL = 'Roll teams';
+export const REROLL_TEAMS_LABEL = 'Re-roll teams';
+export const ROLLING_LABEL = 'Rolling…';
+export const ROLL_HINT = `Rolling needs ${ROLL_MIN_PARTICIPANTS} to ${ROLL_MAX_PARTICIPANTS} players. The balancer splits them as fairly as it can; you can then move players, rename teams and choose who wears bibs.`;
+export const PREDICTION_HEADING = 'Predicted result';
+export const DRAW_LABEL = 'Draw';
+export const NO_PREDICTION_STATEMENT = 'A prediction appears once two teams have players.';
+export const SAVE_TEAM_NAME_LABEL = 'Save name';
+export const TEAM_NAME_HINT = 'Leave it blank for a generated name.';
+export const UNASSIGNED_HEADING = 'Not on a team';
+export const LOCK_TEAMS_LABEL = 'Lock teams';
+export const RELOCK_TEAMS_LABEL = 'Lock changes';
+export const LOCKING_LABEL = 'Locking…';
+export const LOCK_HINT = 'Locking fixes the kickoff line-up and shows the team sheet to everyone.';
+export const TEAMS_LOCKED_STATEMENT = 'Teams are locked. You can still change them until the match starts.';
+
+export function teamHeading(name: string, size: number): string {
+  return `${name} (${playerCountStatement(size)})`;
+}
+
+export function teamNameLabel(teamName: string): string {
+  return `Name of ${teamName}`;
+}
+
+export function wearsBibsLabel(teamName: string): string {
+  return `${teamName} wears bibs`;
+}
+
+export function moveToLabel(playerName: string, teamName: string): string {
+  return `Move ${playerName} to ${teamName}`;
+}
+
+export function lockProblemMessage(problem: LockProblem): string {
+  switch (problem.kind) {
+    case 'too-few-teams':
+      return 'Roll teams before locking.';
+    case 'team-size':
+      return `${problem.teamName} has ${playerCountStatement(problem.size)}; each team needs ${TEAM_MIN_SIZE} to ${TEAM_MAX_SIZE}.`;
+    case 'bib-count':
+      return 'Choose exactly one team to wear bibs.';
+    case 'unassigned':
+      return problem.count === 1
+        ? '1 player is not on a team and will not play.'
+        : `${problem.count} players are not on a team and will not play.`;
+  }
+}
 
 /* Rejections ---------------------------------------------------------------- */
 
