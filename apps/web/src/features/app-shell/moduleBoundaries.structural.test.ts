@@ -120,6 +120,7 @@ const squadsRoot = join(srcRoot, 'features', 'squads');
  * at the barrel only.
  */
 const playerStatsRoot = join(srcRoot, 'features', 'player-stats');
+const matchesRoot = join(srcRoot, 'features', 'matches');
 
 /** Normalise an absolute path to forward slashes for stable comparisons. */
 function norm(path: string): string {
@@ -483,10 +484,11 @@ describe('the dependency direction runs one way to the App_Shell (Requirement 15
     expect(offenders).toEqual([]);
   });
 
-  it('is imported by the application-level router wiring and the two admitted features only', () => {
-    // Three admitted consumers, and no fourth. `src/app/**` is the
-    // application-level router wiring. `features/squads/**` and
-    // `features/player-stats/**` are admitted because both designs declare the
+  it('is imported by the application-level router wiring and the three admitted features only', () => {
+    // Four admitted consumers, and no fifth. `src/app/**` is the
+    // application-level router wiring. `features/squads/**`,
+    // `features/player-stats/**` and `features/matches/**` are admitted because
+    // each declares the
     // dependency edge `app` → feature → `app-shell`: each feature's screens mount
     // inside the shell's Home Destination and take `HOME_ROUTE`,
     // `SQUAD_SCOPE_ROUTE_PARAMETER`, and `usePublishSquadScopeFromRoute` from the
@@ -494,7 +496,7 @@ describe('the dependency direction runs one way to the App_Shell (Requirement 15
     // contract. The admission is narrow: a module of either feature reaching a
     // deeper shell path than the barrel is still an offender here, as it is in
     // the public-entry-point check above.
-    const admittedFeatureRoots = [squadsRoot, playerStatsRoot];
+    const admittedFeatureRoots = [squadsRoot, playerStatsRoot, matchesRoot];
 
     const offenders = inboundImports
       .filter(({ file, target }) => {

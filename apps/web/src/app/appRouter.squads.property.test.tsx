@@ -78,6 +78,7 @@ import {
   PLAYER_STATS_ROUTE,
   SQUAD_ROUTE,
 } from '../features/squads';
+import { MATCH_ROUTE, NEW_MATCH_ROUTE } from '../features/matches';
 import { APP_CATCH_ALL_ROUTE, LANDING_ROUTE } from './appRoutePaths';
 import {
   assembleRoutes,
@@ -133,7 +134,8 @@ const FEATURE_PATHS: readonly string[] = [SQUAD_ROUTE, INVITE_LANDING_ROUTE];
  * Auth_Feature's table, the App_Shell's — its four Destinations plus its own
  * not-found child, which sits under `/app` and so claims `/app/*` — and the
  * Player_Stats_Feature's one route, nested into the same `/app` layout route
- * this feature's Squad_Route is (player-stats Requirement 1.1).
+ * this feature's Squad_Route is (player-stats Requirement 1.1), and the
+ * Matches_Feature's create-match and match routes, nested there too.
  *
  * Read from each contributor's own exports rather than restated, and the shell's
  * not-found is *derived* from the two constants that produce it, so a path moving
@@ -145,6 +147,8 @@ const OTHER_TABLE_PATHS: readonly string[] = [
   ...AUTH_ROUTE_PATHS,
   ...SHELL_DESTINATIONS.map((destination) => destination.path),
   PLAYER_STATS_ROUTE,
+  NEW_MATCH_ROUTE,
+  MATCH_ROUTE,
   `${HOME_ROUTE}/${APP_CATCH_ALL_ROUTE}`,
   APP_CATCH_ALL_ROUTE,
 ];

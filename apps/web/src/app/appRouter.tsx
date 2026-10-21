@@ -18,6 +18,7 @@
  * | `/app` (index) | the Squads_Feature's `SquadsHome`, injected as the shell's Home_Slot content | squads 1.12, 18.6 |
  * | `/app/squads/:squadId` | the Squads_Feature's `SquadScreen`, nested into the shell's `/app` layout route | squads 18.5 |
  * | `/app/squads/:squadId/players/:membershipId` | the Player_Stats_Feature's `PlayerStatsScreen`, nested into the same `/app` layout route | player-stats 1.1 |
+ * | `/app/squads/:squadId/matches/new`, `/app/squads/:squadId/matches/:matchId` | the Matches_Feature's `CreateMatchScreen` and `MatchScreen`, nested into the same `/app` layout route | — |
  * | `/join/:code` | the Squads_Feature's `InviteLandingScreen`, outside the Route_Guard and the shell frame | squads 5.1, 18.5 |
  * | `*` | {@link AppNotFound} | 15.9 |
  *
@@ -144,6 +145,11 @@ import {
   createPlayerStatsApi,
   createPlayerStatsShellRoutes,
 } from '../features/player-stats';
+import {
+  MatchesSection,
+  createMatchesApi,
+  createMatchesShellRoutes,
+} from '../features/matches';
 import LandingPage from '../features/landing/LandingPage';
 import { AppNotFound } from './AppNotFound';
 import { APP_CATCH_ALL_ROUTE, LANDING_ROUTE } from './appRoutePaths';
@@ -388,6 +394,11 @@ export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
   // reached through its barrel alone.
   const playerStatsApi = createPlayerStatsApi({ apiClient });
 
+  // One Matches_Api over the same Authenticated_Api_Client. It serves both the
+  // squad screen's matches section, injected as that section's content, and the
+  // feature's own create-match and match screens.
+  const matchesApi = createMatchesApi({ apiClient });
+
   const shellRoutes = withNestedRoutes(
     createShellRoutes({
       apiClient,
@@ -412,8 +423,12 @@ export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
     // takes both features' children, so the shell's `/app` layout route is
     // assembled in a single place.
     [
-      ...createSquadsShellRoutes({ api: squadsApi }),
+      ...createSquadsShellRoutes({
+        api: squadsApi,
+        matchesContent: <MatchesSection api={matchesApi} />,
+      }),
       ...createPlayerStatsShellRoutes({ api: playerStatsApi }),
+      ...createMatchesShellRoutes({ api: matchesApi }),
     ],
   );
 

@@ -1,0 +1,252 @@
+/*
+ * The Matches_Feature's styles.
+ *
+ * Colour comes only from the shell's semantic theme tokens (`--text`,
+ * `--muted-text`, `--control-*`, `--accent-*`, `--focus-ring`), which carry
+ * dark and light values and are contrast-tested in the app-shell, so this sheet
+ * declares no colour of its own. Spacing and touch targets match the squads and
+ * player-stats screens.
+ */
+:root {
+  --matches-gutter: clamp(0.75rem, 4vw, 2rem);
+  --matches-gap: clamp(0.5rem, 2vw, 1.5rem);
+  --matches-gap-tight: 0.5rem;
+  --matches-touch-target: 44px;
+  --matches-radius: 0.5rem;
+  --matches-border-width: 1px;
+  --matches-focus-width: 3px;
+  --matches-focus-offset: 2px;
+}
+
+.matches-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap);
+  padding: var(--matches-gutter);
+  max-width: 48rem;
+  color: var(--text);
+}
+
+.matches-heading {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.matches-subheading {
+  margin: 0 0 var(--matches-gap-tight);
+  font-size: 1.25rem;
+}
+
+.matches-section,
+.matches-panel,
+.matches-form,
+.matches-failure,
+.matches-not-found {
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+}
+
+.matches-notice,
+.matches-hint {
+  margin: 0;
+}
+
+.matches-hint {
+  color: var(--muted-text);
+}
+
+.matches-error {
+  margin: 0;
+  font-weight: 600;
+}
+
+.matches-error::before {
+  content: '! ';
+}
+
+.matches-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap-tight);
+  align-items: center;
+  justify-content: center;
+}
+
+.matches-button,
+.matches-link,
+.matches-entry__link {
+  min-height: var(--matches-touch-target);
+  display: inline-flex;
+  align-items: center;
+}
+
+.matches-button {
+  /* Sized to its label rather than stretched across a column, in keeping with
+     the app's centred layout. */
+  align-self: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border: var(--matches-border-width) solid var(--control-border);
+  border-radius: var(--matches-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* An accent outline rather than an accent fill: no theme token gives text that
+   reaches AA on the green fill in both themes, and the outline keeps the text on
+   the control surface it is already tested against. */
+.matches-button--primary {
+  border: 2px solid var(--accent-fill);
+  font-weight: 600;
+}
+
+.matches-button[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.matches-link,
+.matches-entry__link {
+  color: var(--accent-text);
+}
+
+.matches-button:focus-visible,
+.matches-link:focus-visible,
+.matches-entry__link:focus-visible,
+.matches-input:focus-visible,
+.matches-checkbox:focus-visible {
+  outline: var(--matches-focus-width) solid var(--focus-ring);
+  outline-offset: var(--matches-focus-offset);
+}
+
+.matches-list,
+.matches-people,
+.matches-checklist,
+.matches-tally,
+.matches-day-fields {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+}
+
+.matches-entry,
+.matches-tally__day {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap-tight);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--matches-gap-tight) 0;
+  border-bottom: var(--matches-border-width) solid var(--control-border);
+}
+
+.matches-entry__location {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.matches-entry__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap-tight);
+  color: var(--muted-text);
+}
+
+.matches-chip {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0 0.5rem;
+  border: var(--matches-border-width) solid var(--control-border);
+  border-radius: 0.75rem;
+  color: var(--text);
+}
+
+.matches-tally__day[data-enough='true'] .matches-chip {
+  border-color: var(--accent-fill);
+}
+
+.matches-field,
+.matches-day-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.matches-day-field {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--matches-gap-tight);
+}
+
+.matches-input {
+  min-height: var(--matches-touch-target);
+  padding: 0 0.75rem;
+  border: var(--matches-border-width) solid var(--control-border);
+  border-radius: var(--matches-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  max-width: 100%;
+}
+
+.matches-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+}
+
+.matches-fieldset legend {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.matches-checklist li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--matches-gap-tight);
+  min-height: var(--matches-touch-target);
+}
+
+.matches-checkbox {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.matches-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap);
+  margin: 0;
+}
+
+.matches-facts dt {
+  color: var(--muted-text);
+}
+
+.matches-facts dd {
+  margin: 0;
+}
+
+.matches-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
