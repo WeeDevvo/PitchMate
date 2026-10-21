@@ -7,7 +7,14 @@
  * - **Confirmed:** the players. An organiser can add guests, remove players, and
  *   roll, adjust and lock the teams.
  * - **Teams locked and later:** everyone sees the team sheet; until the match
- *   starts, an organiser can still adjust and re-lock the teams.
+ *   starts, an organiser can still adjust and re-lock the teams, then start it.
+ * - **In progress:** an organiser records the score, correcting it as needed,
+ *   then completes the match, which applies the rating update. Everyone sees
+ *   the score, marked as not yet final until completion.
+ * - **Completed:** everyone sees the final score beside the team sheet.
+ * - **Cancelled:** a statement that it was cancelled, and nothing to change.
+ *
+ * Until it starts, an organiser can cancel the match.
  *
  * A route identity that is not an identity issues no request and reads as not
  * found, as does a match whose squad is not the one the route names, so the
@@ -22,8 +29,12 @@ import { readUuid } from '../../../wire';
 import type { MatchesApi } from '../api/matchesApi';
 import { AvailabilityForm } from '../components/AvailabilityForm';
 import { AvailabilityTally } from '../components/AvailabilityTally';
+import { CompletePanel } from '../components/CompletePanel';
 import { ConfirmPanel } from '../components/ConfirmPanel';
+import { MatchActionsPanel } from '../components/MatchActionsPanel';
 import { ParticipantsPanel } from '../components/ParticipantsPanel';
+import { ResultForm } from '../components/ResultForm';
+import { ResultSummary } from '../components/ResultSummary';
 import {
   BackToSquadLink,
   FailureNotice,
@@ -33,11 +44,13 @@ import {
 import { TeamSheetView } from '../components/TeamSheetView';
 import { TeamsEditor } from '../components/TeamsEditor';
 import { countsByDay } from '../lib/availability';
+import { canRecordResult } from '../lib/lifecycle';
 import { formatDay } from '../lib/matchDays';
 import { MATCH_STATE_LABELS, isGatheringAvailability, isOrganiser } from '../lib/matchState';
 import {
   AVAILABILITY_CLOSED_STATEMENT,
   CONFIRMED_DAY_LABEL,
+  MATCH_CANCELLED_STATEMENT,
   MATCH_LOADING_LABEL,
   MATCH_SCREEN_FALLBACK_HEADING,
   STATE_LABEL,
@@ -184,6 +197,37 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
 
       {detail.refreshing ? <LoadingNotice label={MATCH_LOADING_LABEL} /> : null}
 
+      {match.state === 'Cancelled' ? (
+        <p className="matches-notice" role="status">
+          {MATCH_CANCELLED_STATEMENT}
+        </p>
+      ) : null}
+
+      {match.recordedResult !== null && sheet.value !== null ? (
+        <ResultSummary
+          sheet={sheet.value}
+          result={match.recordedResult}
+          completedAtMs={match.completedAtMs}
+        />
+      ) : null}
+
+      {organiser && canRecordResult(match.state) && sheet.value !== null ? (
+        <>
+          <ResultForm
+            sheet={sheet.value}
+            recordedResult={match.recordedResult}
+            record={(teamScores, signal) => api.recordResult(matchId, teamScores, signal)}
+            onSettled={reloadDetail}
+          />
+          <CompletePanel
+            state={match.state}
+            recordedResult={match.recordedResult}
+            complete={(signal) => api.completeMatch(matchId, signal)}
+            onSettled={reloadDetail}
+          />
+        </>
+      ) : null}
+
       {gathering ? (
         <>
           <AvailabilityForm
@@ -219,7 +263,9 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
         </>
       ) : (
         <>
-          <p className="matches-hint">{AVAILABILITY_CLOSED_STATEMENT}</p>
+          {match.state === 'Cancelled' ? null : (
+            <p className="matches-hint">{AVAILABILITY_CLOSED_STATEMENT}</p>
+          )}
           {sheetReadable ? (
             sheet.phase === 'failed' ? (
               <FailureNotice onRetry={sheet.reload} />
@@ -228,7 +274,7 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
             ) : (
               <TeamSheetView squadId={squadId} sheet={sheet.value} />
             )
-          ) : match.participants.length > 0 || editingParticipants ? (
+          ) : match.state === 'Cancelled' ? null : match.participants.length > 0 || editingParticipants ? (
             <ParticipantsPanel
               participants={match.participants}
               editing={
@@ -260,6 +306,17 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
           ) : null}
         </>
       )}
+
+      {organiser ? (
+        <MatchActionsPanel
+          state={match.state}
+          sheet={sheet.value}
+          getWorkingTeams={(signal) => api.getWorkingTeams(matchId, signal)}
+          start={(signal) => api.startMatch(matchId, signal)}
+          cancel={(signal) => api.cancelMatch(matchId, signal)}
+          onSettled={reloadAfterLock}
+        />
+      ) : null}
 
       <BackToSquadLink squadId={squadId} />
     </div>

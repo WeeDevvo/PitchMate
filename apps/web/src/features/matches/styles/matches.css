@@ -359,3 +359,75 @@
   border-radius: 0.75rem;
   font-weight: 600;
 }
+
+/* Result entry, the recorded score, and confirmations ------------------------ */
+
+.matches-score-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap);
+  margin: 0 0 var(--matches-gap-tight);
+  padding: 0;
+  list-style: none;
+}
+
+.matches-score-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.matches-input--score {
+  width: 5rem;
+  text-align: center;
+  font-size: 1.25rem;
+}
+
+.matches-input[aria-invalid='true'] {
+  border-width: 2px;
+}
+
+.matches-result .matches-chip {
+  align-self: flex-start;
+  margin-left: 0;
+}
+
+.matches-result__lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matches-result__line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--matches-gap);
+}
+
+.matches-result__team {
+  overflow-wrap: anywhere;
+}
+
+.matches-result__score {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.matches-result__outcome {
+  min-width: 4.5rem;
+}
+
+.matches-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+}
+
+.matches-confirm p {
+  margin: 0;
+}

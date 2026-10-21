@@ -146,6 +146,8 @@ export function matchDetail(overrides: Partial<MatchDetail> = {}): MatchDetail {
     participants: [],
     minimumPlayerThreshold: 10,
     callerAvailability: { hasStoredResponse: true, markedDaysMs: [DAY_MS[1]] },
+    recordedResult: null,
+    completedAtMs: null,
     ...overrides,
   };
 }
@@ -262,6 +264,10 @@ export function fakeMatchesApi(overrides: Partial<MatchesApi> = {}): FakeMatches
     setBibTeam: async () => success(undefined),
     lockTeams: async () => success(undefined),
     getTeamSheet: async () => success(teamSheet()),
+    startMatch: async () => success(undefined),
+    recordResult: async () => success(undefined),
+    completeMatch: async () => success(undefined),
+    cancelMatch: async () => success(undefined),
     ...overrides,
   };
 

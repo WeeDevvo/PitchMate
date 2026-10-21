@@ -2,7 +2,7 @@
  * The parser for `GetMatchDetail` (`GET /matches/{matchId}`).
  *
  * All or nothing, like every parser here. `recordedResult` and `completedAt`
- * belong to the later result flow and are never read.
+ * are null until a result is recorded and the match completed.
  */
 import {
   fail,
@@ -19,7 +19,7 @@ import {
   readWireEnumName,
   type ParseResult,
 } from '../../../../wire';
-import { isMatchState, type MatchState } from '../wireEnums';
+import { isMatchState, isResultFidelity, type MatchState, type ResultFidelity } from '../wireEnums';
 import { readInstantList } from './matchList';
 
 /** One participant of a confirmed match. */
@@ -36,6 +36,18 @@ export interface CallerAvailability {
   readonly markedDaysMs: readonly number[];
 }
 
+/** One team's final score, keyed by the locked team it was given against. */
+export interface TeamScore {
+  readonly teamId: string;
+  readonly score: number;
+}
+
+/** The result recorded for a played match. It can be re-recorded until completion. */
+export interface RecordedResult {
+  readonly fidelity: ResultFidelity;
+  readonly teamScores: readonly TeamScore[];
+}
+
 /** A match as its own screen presents it. */
 export interface MatchDetail {
   readonly matchId: string;
@@ -49,6 +61,9 @@ export interface MatchDetail {
   /** The fewest available players a day needs before it can be confirmed. */
   readonly minimumPlayerThreshold: number;
   readonly callerAvailability: CallerAvailability;
+  readonly recordedResult: RecordedResult | null;
+  /** When the match was completed and ratings applied, or `null` before then. */
+  readonly completedAtMs: number | null;
 }
 
 function parseParticipant(value: unknown): ParseResult<Participant> {
@@ -102,6 +117,43 @@ function parseCallerAvailability(value: unknown): ParseResult<CallerAvailability
     hasStoredResponse: hasStoredResponse.value,
     markedDaysMs: markedDays.value,
   });
+}
+
+function parseTeamScore(value: unknown): ParseResult<TeamScore> {
+  const object = readObject(value, 'team score');
+  if (!object.ok) return object;
+
+  const teamId = readUuid(readProperty(object.value, 'teamId'), 'teamId');
+  if (!teamId.ok) return teamId;
+
+  const score = readCount(readProperty(object.value, 'score'), 'score');
+  if (!score.ok) return score;
+
+  return ok({ teamId: teamId.value, score: score.value });
+}
+
+function parseRecordedResult(value: unknown): ParseResult<RecordedResult> {
+  const object = readObject(value, 'recordedResult');
+  if (!object.ok) return object;
+
+  const fidelity = readWireEnumName(
+    readProperty(object.value, 'fidelity'),
+    'fidelity',
+    isResultFidelity,
+  );
+  if (!fidelity.ok) return fidelity;
+
+  const entries = readArray(readProperty(object.value, 'teamScores'), 'teamScores');
+  if (!entries.ok) return entries;
+
+  const teamScores: TeamScore[] = [];
+  for (const entry of entries.value) {
+    const parsed = parseTeamScore(entry);
+    if (!parsed.ok) return fail(`teamScores element: ${parsed.reason}`);
+    teamScores.push(parsed.value);
+  }
+
+  return ok({ fidelity: fidelity.value, teamScores });
 }
 
 /** Parse a `MatchDetail` body. */
@@ -167,6 +219,20 @@ export function parseMatchDetail(body: unknown): ParseResult<MatchDetail> {
   );
   if (!callerAvailability.ok) return callerAvailability;
 
+  const recordedResult = readOptional(
+    readProperty(source, 'recordedResult'),
+    'recordedResult',
+    parseRecordedResult,
+  );
+  if (!recordedResult.ok) return recordedResult;
+
+  const completedAt = readOptional(
+    readProperty(source, 'completedAt'),
+    'completedAt',
+    readInstantMs,
+  );
+  if (!completedAt.ok) return completedAt;
+
   return ok({
     matchId: matchId.value,
     squadId: squadId.value,
@@ -178,5 +244,7 @@ export function parseMatchDetail(body: unknown): ParseResult<MatchDetail> {
     participants,
     minimumPlayerThreshold: threshold.value,
     callerAvailability: callerAvailability.value,
+    recordedResult: recordedResult.value,
+    completedAtMs: completedAt.value,
   });
 }

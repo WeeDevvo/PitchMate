@@ -4,8 +4,26 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { formatDay } from '../lib/matchDays';
 import { MATCH_STATE_LABELS } from '../lib/matchState';
+import type { MatchesApi } from '../api/matchesApi';
+import type { MatchDetail } from '../lib/parse/matchDetail';
 import {
   AT_THRESHOLD_LABEL,
+  CANCEL_MATCH_LABEL,
+  COMPLETE_MATCH_LABEL,
+  COMPLETE_NEEDS_RESULT_STATEMENT,
+  CONFIRM_CANCEL_LABEL,
+  CONFIRM_COMPLETE_LABEL,
+  FINAL_RESULT_LABEL,
+  KEEP_MATCH_LABEL,
+  MATCH_CANCELLED_STATEMENT,
+  OUTCOME_LABELS,
+  PROVISIONAL_RESULT_LABEL,
+  RESULT_SAVED_STATEMENT,
+  SAVE_RESULT_LABEL,
+  SCORE_INPUT_PROBLEM,
+  START_MATCH_LABEL,
+  UNLOCKED_CHANGES_STATEMENT,
+  scoreLabel,
   AVAILABILITY_CLEARED_STATEMENT,
   AVAILABILITY_SAVED_STATEMENT,
   BELOW_THRESHOLD_LABEL,
@@ -37,6 +55,8 @@ import {
   renderAtRoute,
   success,
   tally,
+  teamSheet,
+  workingTeams,
 } from '../testing/matchesFixtures';
 import { MatchScreen } from './MatchScreen';
 
@@ -291,5 +311,136 @@ describe('MatchScreen concealment', () => {
 
     expect(await screen.findByText(MATCH_NOT_FOUND_STATEMENT)).toBeTruthy();
     expect(api.getMatch).not.toHaveBeenCalled();
+  });
+});
+
+describe('MatchScreen from kick-off to the final score', () => {
+  /**
+   * A fake whose match moves on as the organiser acts: start puts it in play,
+   * a saved score is kept on the match, and completion stamps it final.
+   */
+  function playedMatchApi(overrides: Partial<MatchesApi> = {}) {
+    let detail: MatchDetail = confirmedMatch(10, { state: 'TeamsRolled' });
+    const api = fakeMatchesApi({
+      getMatch: async () => success(detail),
+      startMatch: async () => {
+        detail = { ...detail, state: 'InProgress' };
+        return success(undefined);
+      },
+      recordResult: async (_matchId, teamScores) => {
+        detail = { ...detail, recordedResult: { fidelity: 'Basic', teamScores: [...teamScores] } };
+        return success(undefined);
+      },
+      completeMatch: async () => {
+        detail = { ...detail, state: 'Completed', completedAtMs: DAY_MS[1] + 3_600_000 };
+        return success(undefined);
+      },
+      cancelMatch: async () => {
+        detail = { ...detail, state: 'Cancelled' };
+        return success(undefined);
+      },
+      ...overrides,
+    });
+    return api;
+  }
+
+  it('starts, scores, corrects and completes a match, then shows the final score', async () => {
+    const user = userEvent.setup();
+    const api = renderScreen(playedMatchApi());
+    const [red, blue] = teamSheet().teams;
+
+    await user.click(await screen.findByRole('button', { name: START_MATCH_LABEL }));
+    expect(await screen.findByText(MATCH_STATE_LABELS.InProgress)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: COMPLETE_MATCH_LABEL })).toBeNull();
+    expect(screen.getByText(COMPLETE_NEEDS_RESULT_STATEMENT)).toBeTruthy();
+
+    // An unreadable score is refused before anything is sent.
+    await user.type(screen.getByLabelText(scoreLabel(red.teamName, red.bibFlag)), 'x');
+    await user.type(screen.getByLabelText(scoreLabel(blue.teamName, blue.bibFlag)), '2');
+    await user.click(screen.getByRole('button', { name: SAVE_RESULT_LABEL }));
+    expect(screen.getByText(SCORE_INPUT_PROBLEM)).toBeTruthy();
+    expect(screen.getByLabelText(scoreLabel(red.teamName, red.bibFlag)).getAttribute('aria-invalid')).toBe('true');
+    expect(api.recordResult).not.toHaveBeenCalled();
+
+    await user.clear(screen.getByLabelText(scoreLabel(red.teamName, red.bibFlag)));
+    await user.type(screen.getByLabelText(scoreLabel(red.teamName, red.bibFlag)), '3');
+    await user.click(screen.getByRole('button', { name: SAVE_RESULT_LABEL }));
+    expect(await screen.findByText(RESULT_SAVED_STATEMENT)).toBeTruthy();
+    expect(api.recordResult).toHaveBeenLastCalledWith(
+      MATCH_ID,
+      [
+        { teamId: red.teamId, score: 3 },
+        { teamId: blue.teamId, score: 2 },
+      ],
+      expect.anything(),
+    );
+    expect(await screen.findByText(PROVISIONAL_RESULT_LABEL)).toBeTruthy();
+
+    // Completion asks twice, then the score is final and nothing is left to change.
+    await user.click(await screen.findByRole('button', { name: COMPLETE_MATCH_LABEL }));
+    await user.click(screen.getByRole('button', { name: CONFIRM_COMPLETE_LABEL }));
+    expect(await screen.findByText(FINAL_RESULT_LABEL)).toBeTruthy();
+    expect(screen.getByText(MATCH_STATE_LABELS.Completed, { selector: '.matches-chip' })).toBeTruthy();
+    expect(screen.getByText(OUTCOME_LABELS.win)).toBeTruthy();
+    expect(screen.getByText(OUTCOME_LABELS.loss)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: SAVE_RESULT_LABEL })).toBeNull();
+    expect(api.completeMatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start a match whose teams were changed after locking, and says why', async () => {
+    const changed = workingTeams();
+    const api = renderScreen(
+      playedMatchApi({
+        getWorkingTeams: async () =>
+          success({ ...changed, teams: [{ ...changed.teams[0], teamName: 'Renamed' }, changed.teams[1]] }),
+      }),
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: START_MATCH_LABEL }));
+
+    expect(await screen.findByText(UNLOCKED_CHANGES_STATEMENT)).toBeTruthy();
+    expect(api.startMatch).not.toHaveBeenCalled();
+  });
+
+  it('cancels a match only on a second, explicit activation', async () => {
+    const user = userEvent.setup();
+    const api = renderScreen(playedMatchApi());
+
+    await user.click(await screen.findByRole('button', { name: CANCEL_MATCH_LABEL }));
+    await user.click(screen.getByRole('button', { name: KEEP_MATCH_LABEL }));
+    expect(api.cancelMatch).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: CANCEL_MATCH_LABEL }));
+    await user.click(screen.getByRole('button', { name: CONFIRM_CANCEL_LABEL }));
+
+    expect(await screen.findByText(MATCH_CANCELLED_STATEMENT)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: CANCEL_MATCH_LABEL })).toBeNull();
+    expect(screen.queryByRole('heading', { name: TEAM_SHEET_HEADING })).toBeNull();
+  });
+
+  it('shows a member the score, not yet final while in play, and no controls', async () => {
+    const [red, blue] = teamSheet().teams;
+    renderScreen(
+      fakeMatchesApi({
+        getSquadStanding: async () => success(MEMBER),
+        getMatch: async () =>
+          success(
+            confirmedMatch(10, {
+              state: 'InProgress',
+              recordedResult: {
+                fidelity: 'Basic',
+                teamScores: [
+                  { teamId: blue.teamId, score: 1 },
+                  { teamId: red.teamId, score: 1 },
+                ],
+              },
+            }),
+          ),
+      }),
+    );
+
+    expect(await screen.findByText(PROVISIONAL_RESULT_LABEL)).toBeTruthy();
+    expect(screen.getAllByText(OUTCOME_LABELS.draw)).toHaveLength(2);
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });
