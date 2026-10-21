@@ -9,7 +9,7 @@
  * two claims, and they need different kinds of evidence, so this file makes both
  * kinds:
  *
- * 1. **Behavioural** — every one of the fourteen methods issues its request
+ * 1. **Behavioural** — every one of the eighteen methods issues its request
  *    through the client instance it was handed, and through no other. Two
  *    facades are built over two separately-configured clients and driven in the
  *    same test, so a module-level singleton or a lazily-constructed default
@@ -136,7 +136,7 @@ const CALL_OUTCOME_KINDS: readonly string[] = [
   'parse-failure',
 ];
 
-// --- The fourteen operations -------------------------------------------------
+// --- The eighteen operations -------------------------------------------------
 
 /**
  * One operation of the facade, reduced to its activation.
@@ -181,6 +181,19 @@ const OPERATIONS: readonly OperationCase[] = [
     name: 'promoteToAdmin',
     invoke: (api) => api.promoteToAdmin(SQUAD_ID, MEMBERSHIP_ID),
   },
+  {
+    name: 'demoteToMember',
+    invoke: (api) => api.demoteToMember(SQUAD_ID, MEMBERSHIP_ID),
+  },
+  {
+    name: 'removeMember',
+    invoke: (api) => api.removeMember(SQUAD_ID, MEMBERSHIP_ID),
+  },
+  {
+    name: 'transferOwnership',
+    invoke: (api) => api.transferOwnership(SQUAD_ID, MEMBERSHIP_ID),
+  },
+  { name: 'leaveSquad', invoke: (api) => api.leaveSquad(SQUAD_ID) },
   { name: 'getFeatureFlags', invoke: (api) => api.getFeatureFlags(SQUAD_ID) },
   {
     name: 'setFeatureFlag',
@@ -328,13 +341,13 @@ function expectNothingEscaped(): void {
 // ---------------------------------------------------------------------------
 
 describe('the Squads_Api surface under test', () => {
-  it('is the fourteen operations, every one of them exercised here', () => {
+  it('is the eighteen operations, every one of them exercised here', () => {
     expect(DEPENDENCY_IS_THE_GENERATED_CLIENT).toBe(true);
 
     const { api } = injectedFacade('injected');
     const methods = Object.keys(api).sort();
 
-    expect(methods).toHaveLength(14);
+    expect(methods).toHaveLength(18);
     expect(methods).toEqual([...OPERATIONS.map((operation) => operation.name)].sort());
   });
 
@@ -423,14 +436,14 @@ describe('every call issues through the injected client (Requirement 16.2)', () 
     },
   );
 
-  it('reaches no transport of its own across all fourteen operations', async () => {
+  it('reaches no transport of its own across all eighteen operations', async () => {
     const { api, transport, log } = injectedFacade('injected');
 
     for (const { invoke } of OPERATIONS) {
       await invoke(api);
     }
 
-    // 16.1: fourteen activations, fourteen requests, all through the one
+    // 16.1: eighteen activations, eighteen requests, all through the one
     // injected client — and nothing at all through a client of the facade's own.
     expect(log).toHaveLength(OPERATIONS.length);
     expect(transport.requests).toHaveLength(OPERATIONS.length);
@@ -483,7 +496,7 @@ describe("the injected client's credential survives every call (Requirement 16.2
     expectNothingEscaped();
   });
 
-  it('carries it on all fourteen operations, consulting the source once each', async () => {
+  it('carries it on all eighteen operations, consulting the source once each', async () => {
     const source = tokenSource({ token: ACCESS_TOKEN });
     const { api, transport } = authenticatedFacade(source);
 
@@ -798,7 +811,7 @@ describe('the facade constructs no Api_Client (Requirements 16.1, 16.2)', () => 
       /function\s+createSquadsApi\s*\(\s*\{\s*apiClient\s*\}\s*:\s*SquadsApiDependencies\s*\)/,
     );
     // Every HTTP verb the facade uses is invoked on that one injected parameter.
-    for (const verb of ['GET', 'POST', 'PUT', 'PATCH'] as const) {
+    for (const verb of ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const) {
       expect(facadeLiveCode).toMatch(new RegExp(`\\bapiClient\\.${verb}\\s*\\(`));
     }
     // And no HTTP-method call is made on anything else.

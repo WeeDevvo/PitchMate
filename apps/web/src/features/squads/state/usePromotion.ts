@@ -44,9 +44,9 @@
  *
  * No action and no state field carries a message (Requirement 17.2); the component
  * reads `lib/messages.ts`. Nothing re-issues a call by itself
- * (Requirement 17.4) — the one issue site is a person confirming a promotion. The
- * feature offers no demotion, no ownership transfer, and no removal, so there is
- * no other operation for this machine to hold (Requirement 13.8).
+ * (Requirement 17.4) — the one issue site is a person confirming a promotion.
+ * Demotion, removal, ownership transfer and leaving have their own machine,
+ * `useMembershipAction.ts`, built on the same shape.
  *
  * The 10-second Squad_Call_Timeout, the abort chaining, and the
  * one-request-per-method discipline all belong to `api/squadsApi.ts`; none of it

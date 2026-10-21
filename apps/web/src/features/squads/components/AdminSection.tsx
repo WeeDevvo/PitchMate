@@ -77,6 +77,7 @@ import type { SquadRefreshOptions } from '../state/useSquadScreen';
 import { FeatureToggles } from './FeatureToggles';
 import { GuestManager } from './GuestManager';
 import { InviteManager } from './InviteManager';
+import { OwnershipTransfer } from './OwnershipTransfer';
 import '../styles/squadsTokens.css';
 import './AdminSection.css';
 
@@ -118,6 +119,13 @@ export interface AdminSectionProps {
    * (Requirements 12.6, 12.10, 14.2).
    */
   readonly onSquadChanged: (options?: SquadRefreshOptions) => void;
+
+  /**
+   * The re-read after a change to the caller's own standing — an ownership
+   * transfer, which makes the owner an admin. Re-reads the squad and the
+   * caller's `ListMySquads` summary. Falls back to {@link onSquadChanged}.
+   */
+  readonly onCallerStandingChanged?: () => void;
 
   /**
    * The composed Player_List the screen is rendering, from which the
@@ -164,6 +172,7 @@ export function AdminSection({
   api,
   flags,
   onSquadChanged,
+  onCallerStandingChanged,
   rows,
   viewerRole,
   viewerState,
@@ -267,6 +276,19 @@ export function AdminSection({
           {...authStateProp}
         />
       </section>
+
+      {/* Owner only: the component asks `resolveOwnerAuthority` itself and
+          renders nothing for an admin. */}
+      <OwnershipTransfer
+        squadId={squadId}
+        api={api}
+        rows={rows}
+        viewerRole={viewerRole}
+        viewerState={viewerState}
+        onSquadChanged={onCallerStandingChanged ?? refreshDetail}
+        confirmHeadingLevel={CHILD_SURFACE_HEADING_LEVEL}
+        {...authStateProp}
+      />
     </section>
   );
 }

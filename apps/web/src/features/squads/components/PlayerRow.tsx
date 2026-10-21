@@ -88,10 +88,13 @@
  */
 import { useId, type ReactElement } from 'react';
 
+import { MembershipActionControl } from './MembershipActionControl';
 import { MembershipLabels } from './MembershipLabels';
 import { PromotionControl } from './PromotionControl';
 import { RatingBadge } from './RatingBadge';
 import { EDIT_GUEST_LABEL, PROMOTE_TO_ADMIN_LABEL } from '../lib/messages';
+import { DEMOTION_COPY, REMOVAL_COPY } from '../lib/membershipActionCopy';
+import { isDemotable, isRemovable } from '../lib/membershipActions';
 import { isGuestEditable, type PlayerListRow } from '../lib/playerList';
 import { isPromotable } from '../lib/promotionEligibility';
 import {
@@ -99,6 +102,7 @@ import {
   type RatingPresentation,
 } from '../lib/ratingPresentation';
 import { playerStatsPath } from '../lib/routePaths';
+import type { MembershipActionMachine } from '../state/useMembershipAction';
 import type { PromotionMachine } from '../state/usePromotion';
 
 // The feature token table, so a row rendered outside the App_Shell frame still
@@ -219,6 +223,18 @@ export interface PlayerRowProps {
 
   /** Called with this row's membership identity to begin editing that guest. */
   readonly onEditGuest: (membershipId: string) => void;
+
+  /**
+   * The removal machine. Supplied, the row offers the remove control wherever
+   * `isRemovable` holds; absent, it offers none.
+   */
+  readonly removal?: MembershipActionMachine;
+
+  /**
+   * The demotion machine. Supplied, the row offers the demote control wherever
+   * `isDemotable` holds; absent, it offers none.
+   */
+  readonly demotion?: MembershipActionMachine;
 }
 
 /**
@@ -236,6 +252,8 @@ export function PlayerRow({
   onPromote,
   promotion,
   onEditGuest,
+  removal,
+  demotion,
 }: PlayerRowProps): ReactElement {
   const nameId = useId();
 
@@ -307,6 +325,19 @@ export function PlayerRow({
         )
       )}
 
+      {/* Demote sits beside promote: the two change the same role. Both it and
+          remove are gated by `lib/membershipActions.ts`, never by a condition
+          written here. */}
+      {demotion !== undefined && (
+        <MembershipActionControl
+          kind="demote"
+          member={row}
+          eligible={isDemotable(row, viewer.membershipId, viewer.isAdmin)}
+          machine={demotion}
+          copy={DEMOTION_COPY}
+        />
+      )}
+
       {/* 12.7, 7.8: present only on an editable guest row — never on a registered
           membership, and never on a Former_Player. */}
       {guestEditable && (
@@ -319,6 +350,16 @@ export function PlayerRow({
         >
           {EDIT_GUEST_LABEL}
         </button>
+      )}
+
+      {removal !== undefined && (
+        <MembershipActionControl
+          kind="remove"
+          member={row}
+          eligible={isRemovable(row, viewer.membershipId, viewer.isAdmin)}
+          machine={removal}
+          copy={REMOVAL_COPY}
+        />
       )}
     </div>
   );

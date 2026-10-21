@@ -1,6 +1,6 @@
 /**
- * Structural source scan: the Squads_Feature's theming, the auth constants it
- * borrows, and the membership actions it deliberately does not offer (task 17.5).
+ * Structural source scan: the Squads_Feature's theming and the auth constants it
+ * borrows (task 17.5).
  *
  * Requirement 20.11 makes this file part of the product rather than a courtesy
  * check. Every rule it enforces is stated as a prohibition or as a universal over
@@ -8,8 +8,7 @@
  * appearance storage key, no pre-paint bootstrap, and no theme resolution
  * function of its own" (18.8), "use the route paths and the Redirect_Capture
  * query parameter name exported by the Auth_Feature rather than feature-local
- * copies of either" (5.5), "render no control that demotes an admin, transfers
- * ownership, or removes a membership" (13.8) — and neither a prohibition nor a
+ * copies of either" (5.5) — and neither a prohibition nor a
  * universal can be demonstrated by an example. So the source tree is read and
  * matched, following the mechanism `pureLogic.structural.test.ts`,
  * `transportSeam.structural.test.ts`, and `enumAndRatingBoundaries.structural.test.ts`
@@ -18,7 +17,7 @@
  * contents) through the same small state machine, and fail naming the offending
  * file and the offending literal.
  *
- * ### The four rule groups
+ * ### The three rule groups
  *
  * 1. **One place writes a colour** (Requirements 18.9, 20.11). No production
  *    module of the feature contains a hex literal or a colour function, no
@@ -40,12 +39,11 @@
  *    any of the three. `screens/InviteLandingScreen.tsx` imports them from the
  *    Auth_Feature barrel instead, so the handover cannot drift from where the
  *    auth routes are registered.
- * 4. **The deferred membership actions are absent** (Requirement 13.8). The
- *    backend offers demotion, ownership transfer, leaving, and member removal;
- *    the feature names none of the four — not their endpoint paths, and not an
- *    identifier for any of them. Promotion is the one membership-changing action
- *    in the feature, and it *is* named, which is what makes the other four an
- *    omission rather than a gap in the scan.
+ *
+ * A fourth group once banned demotion, ownership transfer, leaving and member
+ * removal (Requirement 13.8). Those actions now ship — see
+ * `lib/membershipActions.ts` and `state/useMembershipAction.ts` — so the group
+ * and its near-miss assertions were removed rather than loosened.
  *
  * ### Why the colour rule is stated over declarations rather than over text
  *
@@ -86,27 +84,16 @@
  * ### Scoping notes
  *
  * - The identifier rules read comment-*and*-string-stripped source, because these
- *   modules' docblocks discuss at length the very things they must not do
- *   (`usePromotion.ts` promises in prose that the feature "offers no demotion, no
- *   ownership transfer, and no removal"), and a scan that matched prose would flag
- *   the documentation promising compliance.
+ *   modules' docblocks discuss at length the very things they must not do, and a
+ *   scan that matched prose would flag the documentation promising compliance.
  * - The literal rules read comment-stripped source that **keeps** strings, because
  *   a route path, an endpoint path, and a storage key are string literals.
- * - `lib/skillTier.ts` declares `LEAVE_TIER_UNCHANGED` and the sentinel
- *   `'leave-unchanged'` — a Guest_Form tier selection, not a membership leaving a
- *   squad. The leaving rule is scoped to a squad-or-membership object for exactly
- *   that reason, and the near-miss is asserted below so the scoping cannot be
- *   loosened by accident.
- * - `usePromotion.ts` and `useFeatureToggles.ts` call `Map.delete(membershipId)`
- *   on their in-flight controller maps. The removal rule matches a *member-delete
- *   identifier*, not a `delete` call whose argument happens to be a membership
- *   identity, and that near-miss is asserted too.
  *
- * Requirements: 5.5, 13.8, 18.8, 18.9, 20.11
+ * Requirements: 5.5, 18.8, 18.9, 20.11
  */
 
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -128,7 +115,6 @@ import {
   stripCssComments,
   targetsBarrelOf,
   themeRoot,
-  webRoot,
 } from './structural/sourceScan';
 
 // --- The scanned sets --------------------------------------------------------
@@ -179,25 +165,11 @@ const componentStylesheets = stylesheets.filter(
   (file) => norm(file) !== norm(tokenTablePath),
 );
 
-/** The transport facade: the one module that names an endpoint path. */
-const facadePath = join(squadsRoot, 'api', 'squadsApi.ts');
-
 /** The screen Requirement 5.5 governs. */
 const inviteLandingPath = join(squadsRoot, 'screens', 'InviteLandingScreen.tsx');
 
 /** The shared Theme module's public barrel (Requirement 18.8). */
 const themeBarrelPath = join(themeRoot, 'index.ts');
-
-/** The generated client's schema, for what the backend actually offers. */
-const generatedSchemaPath = resolve(
-  webRoot,
-  '..',
-  '..',
-  'packages',
-  'api-client',
-  'src',
-  'schema.d.ts',
-);
 
 /** Path relative to the feature root, for a failure message. */
 function featureRel(path: string): string {
@@ -945,111 +917,6 @@ describe('the auth route paths and the redirect parameter are the Auth_Feature s
   });
 });
 
-// --- Rule group 4: the deferred membership actions (Requirement 13.8) --------
-
-/** The endpoint path of the one membership action this feature does offer. */
-const PROMOTE_PATH = '/squads/{squadId}/members/{membershipId}/promote';
-
-/** The endpoint paths of the four actions Requirement 13.8 defers. */
-const DEFERRED_ENDPOINTS = {
-  demote: '/squads/{squadId}/members/{membershipId}/demote',
-  ownership: '/squads/{squadId}/ownership',
-  leave: '/squads/{squadId}/leave',
-  removeMember: '/squads/{squadId}/members/{membershipId}',
-} as const;
-
-/** One deferred action, as an identifier would spell it. */
-interface DeferredActionRule {
-  readonly label: string;
-  readonly pattern: RegExp;
-}
-
-const DEFERRED_ACTION_RULES: readonly DeferredActionRule[] = [
-  { label: 'demotion of an admin', pattern: /demot(?:e|es|ed|ing|ion)/gi },
-  {
-    label: 'transfer of squad ownership',
-    pattern: /ownership|transfer[_-]?owner/gi,
-  },
-  {
-    label: 'a membership leaving a squad',
-    // Scoped to a squad-or-membership object, so `LEAVE_TIER_UNCHANGED` and the
-    // `'leave-unchanged'` Skill_Tier sentinel are not mistaken for it.
-    pattern:
-      /leav(?:e|es|ing)[_-]?(?:squad|member|membership)|(?:squad|member|membership)[_-]?leav(?:e|es|ing)|\b(?:on|handle)Leave\b/gi,
-  },
-  {
-    label: 'removal of a membership',
-    // An identifier, not a call: `controllersRef.current.delete(membershipId)`
-    // removes an abort controller from a map, not a person from a squad.
-    pattern:
-      /(?:remove|removal|delete|deletion|kick|eject)[_A-Za-z]*(?:member|membership)s?\b|\b(?:member|membership)s?[_A-Za-z]*(?:remove|removal|delete|deletion)\b/gi,
-  },
-];
-
-describe('the feature names none of the deferred membership actions', () => {
-  it('names no deferred endpoint path (Requirement 13.8)', () => {
-    const findings: Finding[] = [];
-
-    for (const file of modules) {
-      for (const literal of stringLiterals(file)) {
-        for (const [action, path] of Object.entries(DEFERRED_ENDPOINTS)) {
-          // The member path is the removal target, and it is a prefix of the
-          // promotion path — so the promotion path is not a finding and a bare
-          // member path is.
-          const names =
-            action === 'removeMember'
-              ? literal === path
-              : literal.includes(path);
-          if (names) {
-            findings.push({
-              file: featureRel(file),
-              rule: `names the ${action} endpoint`,
-              offender: literal,
-            });
-          }
-        }
-      }
-    }
-
-    expect(findings).toEqual([]);
-  });
-
-  it('names no demote, ownership, leave, or member-removal identifier (13.8)', () => {
-    const findings: Finding[] = [];
-
-    for (const file of modules) {
-      const code = readCodeOnly(file);
-      for (const { label, pattern } of DEFERRED_ACTION_RULES) {
-        for (const offender of matchesOf(code, pattern)) {
-          findings.push({ file: featureRel(file), rule: label, offender });
-        }
-      }
-    }
-
-    expect(findings).toEqual([]);
-  });
-
-  it('does name the promotion endpoint, so the four absences are a choice (13.8)', () => {
-    // Non-vacuity from inside the feature: the facade spells a membership action's
-    // path as a literal, which is the form the rule above searches for. An empty
-    // finding list therefore means the four are absent rather than that literals
-    // went unread.
-    expect(stringLiterals(facadePath)).toContain(PROMOTE_PATH);
-  });
-
-  it('defers four operations the backend actually offers (Requirement 13.8)', () => {
-    // Non-vacuity from outside: all four are available on the generated contract,
-    // so "the feature references none of them" is a scope decision rather than a
-    // statement about endpoints that do not exist.
-    const schema = readFileSync(generatedSchemaPath, 'utf8');
-
-    for (const path of Object.values(DEFERRED_ENDPOINTS)) {
-      expect(schema, `the backend must offer ${path}`).toContain(`"${path}"`);
-    }
-    expect(schema).toContain(`"${PROMOTE_PATH}"`);
-  });
-});
-
 // --- The patterns fire, and hold off the near-misses -------------------------
 
 describe('the scan patterns fire on an offender and hold off a near-miss', () => {
@@ -1118,42 +985,5 @@ describe('the scan patterns fire on an offender and hold off a near-miss', () =>
     expect(
       copiesAuthConstant('Sign in or create an account before redirecting.'),
     ).toBeNull();
-  });
-
-  it('catches each deferred membership action it claims to catch', () => {
-    const offenders = [
-      'const onDemote = () => api.demoteAdmin(squadId, membershipId);',
-      'await api.transferOwnership(squadId, membershipId);',
-      'const leaveSquad = () => api.leaveSquad(squadId);',
-      'const removeMember = () => api.removeMembership(squadId, membershipId);',
-    ];
-
-    for (const offender of offenders) {
-      const fired = DEFERRED_ACTION_RULES.filter(
-        ({ pattern }) => matchesOf(offender, pattern).length > 0,
-      );
-      expect(fired.length, offender).toBeGreaterThan(0);
-    }
-  });
-
-  it('holds off the near-misses this feature really contains', () => {
-    const nearMisses = [
-      // `lib/skillTier.ts`: a Guest_Form tier sentinel, not a membership leaving.
-      'export const LEAVE_TIER_UNCHANGED = "leave-unchanged";',
-      // `lib/parse/createdSquad.ts`: the created squad's owner membership.
-      'const ownerMembershipId = body.ownerMembershipId;',
-      // `state/usePromotion.ts`: an abort controller leaving a map.
-      'controllersRef.current.delete(membershipId);',
-      // `api/squadsApi.ts`: the leaderboard, which shares no verb with leaving.
-      'const LEADERBOARD_PATH = "/squads/{squadId}/leaderboard";',
-      // `lib/promotionEligibility.ts`: the action that *is* offered.
-      'export function isPromotable(member, caller) { return true; }',
-    ];
-
-    for (const nearMiss of nearMisses) {
-      for (const { label, pattern } of DEFERRED_ACTION_RULES) {
-        expect(matchesOf(nearMiss, pattern), `${label} on: ${nearMiss}`).toEqual([]);
-      }
-    }
   });
 });

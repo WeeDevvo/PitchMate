@@ -126,6 +126,9 @@ export type EditGuestRequest = Schemas['EditGuestRequest'];
 /** `PUT /squads/{squadId}/features` body: one feature and its desired state. */
 export type SetFeatureFlagRequest = Schemas['SetFeatureFlagRequest'];
 
+/** `POST /squads/{squadId}/ownership` body: the membership becoming owner. */
+export type TransferOwnershipRequest = Schemas['TransferOwnershipRequest'];
+
 /** The query of `GET /squads/{squadId}/leaderboard`, as the contract types it. */
 type LeaderboardQuery = NonNullable<
   operations['GetSquadLeaderboard']['parameters']['query']
@@ -174,6 +177,18 @@ const GUEST_PATH = '/squads/{squadId}/guests/{membershipId}';
 
 /** `POST /squads/{squadId}/members/{membershipId}/promote`. */
 const PROMOTE_PATH = '/squads/{squadId}/members/{membershipId}/promote';
+
+/** `POST /squads/{squadId}/members/{membershipId}/demote`. */
+const DEMOTE_PATH = '/squads/{squadId}/members/{membershipId}/demote';
+
+/** `DELETE /squads/{squadId}/members/{membershipId}` — remove a membership. */
+const MEMBER_PATH = '/squads/{squadId}/members/{membershipId}';
+
+/** `POST /squads/{squadId}/ownership` — transfer ownership. */
+const OWNERSHIP_PATH = '/squads/{squadId}/ownership';
+
+/** `POST /squads/{squadId}/leave` — the caller leaves the squad. */
+const LEAVE_PATH = '/squads/{squadId}/leave';
 
 // --- The facade's result type ------------------------------------------------
 
@@ -288,6 +303,30 @@ export interface SquadsApi {
     signal?: AbortSignal,
   ): Promise<CallResult<void>>;
 
+  /** `POST …/members/{membershipId}/demote` — demote an admin to member. */
+  demoteToMember(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** `DELETE …/members/{membershipId}` — remove a membership, keeping its history. */
+  removeMember(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** `POST /squads/{squadId}/ownership` — transfer ownership to another member. */
+  transferOwnership(
+    squadId: string,
+    targetMembershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** `POST /squads/{squadId}/leave` — the caller leaves, keeping their history. */
+  leaveSquad(squadId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
   /** `GET /squads/{squadId}/features` — the Feature_Flag set (Req 14.7). */
   getFeatureFlags(
     squadId: string,
@@ -320,7 +359,7 @@ export const SQUAD_CALL_TIMEOUT_MS = 10_000;
  * Create the Squads_Api over an injected Authenticated_Api_Client.
  *
  * @param dependencies the injected client (Requirements 16.1, 16.2)
- * @returns the fourteen-method facade, each method issuing exactly one request
+ * @returns the eighteen-method facade, each method issuing exactly one request
  *
  * Requirements: 16.1, 16.2, 16.3, 16.11, 17.4, 18.3
  */
@@ -476,6 +515,56 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
       );
     },
 
+    demoteToMember(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'DemoteToMember'> =>
+          apiClient.POST(DEMOTE_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    removeMember(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'RemoveMember'> =>
+          apiClient.DELETE(MEMBER_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    transferOwnership(squadId, targetMembershipId, signal) {
+      const body: TransferOwnershipRequest = { targetMembershipId };
+      return call(
+        (callSignal): ClientCall<'TransferOwnership'> =>
+          apiClient.POST(OWNERSHIP_PATH, {
+            params: { path: { squadId } },
+            body,
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    leaveSquad(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'LeaveSquad'> =>
+          apiClient.POST(LEAVE_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
     getFeatureFlags(squadId, signal) {
       return call(
         (callSignal): ClientCall<'GetFeatureFlags'> =>
@@ -513,7 +602,7 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
  * the operation's evidence of success is its status, and the refreshed state
  * comes from a subsequent read. Routing these calls through the same
  * {@link call} helper as the valued ones is what keeps the timeout, the abort
- * chaining, and the classification identical for all fourteen.
+ * chaining, and the classification identical for all eighteen.
  */
 function acceptNoValue(): ParseResult<void> {
   return ok(undefined);
