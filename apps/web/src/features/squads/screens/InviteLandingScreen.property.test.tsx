@@ -136,7 +136,11 @@ const PREVIEW_INVITE_PATH = '/squads/invites/preview';
  * is exactly what a handover target built by concatenation would cut short.
  */
 const secretArb: fc.Arbitrary<string> = fc.oneof(
-  fc.string({ minLength: 1, maxLength: 32, unit: 'grapheme' }),
+  // A secret of whitespace alone reads as an incomplete link, a different surface
+  // from the one these properties are stated over, so it is not generated here.
+  fc
+    .string({ minLength: 1, maxLength: 32, unit: 'grapheme' })
+    .filter((secret) => secret.trim().length > 0),
   fc.uuid(),
   fc.constantFrom(
     'a',
