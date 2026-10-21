@@ -2,9 +2,11 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
+  LEADERBOARD_STATISTIC_NAMES,
   MEMBERSHIP_STATE_NAMES,
   RATING_STATE_NAMES,
   WIRE_ENUM_COVERAGE,
+  isLeaderboardStatistic,
   isMembershipState,
   isRatingState,
 } from './wireEnums';
@@ -66,6 +68,14 @@ import {
 const CONTRACT_NAMES = {
   MembershipState: ['Active', 'Inactive'],
   RatingState: ['Provisional', 'Established'],
+  LeaderboardStatistic: [
+    'Appearances',
+    'WinPercentage',
+    'DisplayRating',
+    'WinStreak',
+    'UnbeatenStreak',
+    'BibAppearances',
+  ],
 } as const;
 
 // --- The unions under test ---------------------------------------------------
@@ -86,6 +96,11 @@ const UNIONS: readonly WireEnumUnderTest[] = [
     is: isMembershipState,
   },
   { schemaName: 'RatingState', names: RATING_STATE_NAMES, is: isRatingState },
+  {
+    schemaName: 'LeaderboardStatistic',
+    names: LEADERBOARD_STATISTIC_NAMES,
+    is: isLeaderboardStatistic,
+  },
 ];
 
 /**
@@ -272,10 +287,11 @@ describe('the wire enum suite covers every union the module declares', () => {
     );
   });
 
-  it('names the two unions the feature reads, and no third', () => {
+  it('names the three unions the feature reads, and no fourth', () => {
     // Stated literally, because a suite derived entirely from the module would
     // accept a module that had quietly grown or lost a union.
     expect(Object.keys(WIRE_ENUM_COVERAGE).sort()).toEqual([
+      'LeaderboardStatistic',
       'MembershipState',
       'RatingState',
     ]);
@@ -284,20 +300,20 @@ describe('the wire enum suite covers every union the module declares', () => {
     );
   });
 
-  it('carries two unions and four names in total, so nothing is vacuous', () => {
+  it('carries three unions and ten names in total, so nothing is vacuous', () => {
     // An empty tuple would satisfy "every name is accepted" trivially, so both
     // floors are stated.
-    expect(UNIONS).toHaveLength(2);
-    expect(ALL_NAMES).toHaveLength(4);
+    expect(UNIONS).toHaveLength(3);
+    expect(ALL_NAMES).toHaveLength(10);
 
     for (const { schemaName, names } of UNIONS) {
       expect(names.length, schemaName).toBeGreaterThan(0);
     }
   });
 
-  it('shares no name between the two unions, so a mis-binding cannot hide', () => {
+  it('shares no name between the unions, so a mis-binding cannot hide', () => {
     // Not a rule of the contract, an observation this suite depends on: because
-    // the four names are distinct, a predicate bound to the other union's tuple
+    // the names are distinct, a predicate bound to the other union's tuple
     // is visible in the side-by-side property below rather than merely
     // plausible.
     expect(new Set(ALL_NAMES).size).toBe(ALL_NAMES.length);

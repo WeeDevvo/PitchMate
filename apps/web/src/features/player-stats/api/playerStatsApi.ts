@@ -69,16 +69,22 @@
 import type { operations, PitchMateApiClient } from '@pitchmate/api-client';
 
 import { classifyOutcome } from '../lib/callOutcome';
+import { parseLeaderboard, type Leaderboard } from '../lib/parse/leaderboard';
 import {
   parsePlayerProfile,
   type PlayerProfile,
 } from '../lib/parse/playerProfile';
+import type { ParseResult } from '../lib/parse/primitives';
+import type { LeaderboardStatistic } from '../lib/wireEnums';
 
 /**
  * `GET /squads/{squadId}/members/{membershipId}/profile` — the one endpoint this
  * feature reads, spelled once, in the generated contract's own path form.
  */
 const PLAYER_PROFILE_PATH = '/squads/{squadId}/members/{membershipId}/profile';
+
+/** `GET /squads/{squadId}/leaderboard` — one squad leaderboard, by one statistic. */
+const LEADERBOARD_PATH = '/squads/{squadId}/leaderboard';
 
 /** The Profile_Call_Timeout: 10 seconds (Requirement 12.3). */
 export const PROFILE_CALL_TIMEOUT_MS = 10_000;
@@ -105,8 +111,8 @@ export type CallResult<T> =
   | { readonly kind: 'parse-failure' };
 
 /**
- * The stats backend surface the screen consumes: one method, one request per
- * activation, no retry (Requirement 2.6).
+ * The stats backend surface the feature consumes: one request per activation,
+ * no retry (Requirement 2.6).
  */
 export interface PlayerStatsApi {
   /**
@@ -129,6 +135,25 @@ export interface PlayerStatsApi {
     membershipId: string,
     signal?: AbortSignal,
   ): Promise<CallResult<PlayerProfile>>;
+
+  /**
+   * `GET /squads/{squadId}/leaderboard?statistic=…` — the squad's ranking by
+   * one statistic, in the order the backend ranked it.
+   *
+   * A body ranking by a statistic other than `statistic` settles as
+   * `parse-failure`. The leaderboard conceals a squad the caller can't see in
+   * the same way the profile does, so that settles as `not-found`.
+   *
+   * @param squadId the squad the leaderboard is scoped to
+   * @param statistic the statistic to rank by, as its wire name
+   * @param signal an optional caller signal, chained to the internal controller
+   * @returns exactly one settled {@link CallResult}
+   */
+  getLeaderboard(
+    squadId: string,
+    statistic: LeaderboardStatistic,
+    signal?: AbortSignal,
+  ): Promise<CallResult<Leaderboard>>;
 }
 
 /** What {@link createPlayerStatsApi} needs, and all it is given. */
@@ -166,6 +191,19 @@ export function createPlayerStatsApi({
             params: { path: { squadId, membershipId } },
             signal: callSignal,
           }),
+        parsePlayerProfile,
+        signal,
+      );
+    },
+
+    getLeaderboard(squadId, statistic, signal) {
+      return call(
+        (callSignal): ClientCall<'GetSquadLeaderboard'> =>
+          apiClient.GET(LEADERBOARD_PATH, {
+            params: { path: { squadId }, query: { statistic } },
+            signal: callSignal,
+          }),
+        (body) => parseLeaderboard(body, statistic),
         signal,
       );
     },
@@ -277,10 +315,11 @@ interface Settlement<TData> {
  *
  * Requirements: 2.6, 12.3, 12.5, 12.6, 12.7, 12.8
  */
-async function call<TData>(
+async function call<TData, TValue>(
   invoke: (signal: AbortSignal) => Promise<ClientCallResult<TData>>,
+  parse: (body: unknown) => ParseResult<TValue>,
   callerSignal: AbortSignal | undefined,
-): Promise<CallResult<PlayerProfile>> {
+): Promise<CallResult<TValue>> {
   const settlement = await performCall(invoke, callerSignal);
 
   // 12.7: a success whose body the client itself could not decode never became
@@ -291,7 +330,7 @@ async function call<TData>(
     return { kind: 'parse-failure' };
   }
 
-  const parsed = parsePlayerProfile(settlement.body);
+  const parsed = parse(settlement.body);
 
   const outcome = classifyOutcome({
     status: settlement.status,

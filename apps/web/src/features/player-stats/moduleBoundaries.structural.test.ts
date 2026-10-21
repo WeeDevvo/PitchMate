@@ -587,16 +587,18 @@ describe('the feature exposes exactly one public barrel (Requirement 14.1)', () 
 // --- Invariant 3: the barrel's surface (Requirement 14.2) -------------------
 
 /**
- * The three modules the design admits into the barrel.
+ * The four modules the design admits into the barrel.
  *
- * The route table, the screen, and the transport seam — the registration a
- * consumer nests, the element of that table, and the facade `appRouter.tsx`
- * builds from the Authenticated_Api_Client and threads in.
+ * The route table, the screen, the transport seam, and the squad leaderboards —
+ * the registration a consumer nests, the element of that table, the facade
+ * `appRouter.tsx` builds from the Authenticated_Api_Client and threads in, and
+ * the stats section body it injects into the squad screen.
  */
 const ADMITTED_BARREL_MODULES: readonly string[] = [
   './api/playerStatsApi',
   './playerStatsRoutes',
   './screens/PlayerStatsScreen',
+  './screens/SquadLeaderboards',
 ];
 
 /**
@@ -645,7 +647,7 @@ function crossingNames(
 }
 
 describe('the barrel exports the registration, the screen, and the facade only (Requirement 14.2)', () => {
-  it('names exactly the three modules the design admits', () => {
+  it('names exactly the four modules the design admits', () => {
     expect([...new Set(barrelSpecifiers)].sort()).toEqual([
       ...ADMITTED_BARREL_MODULES,
     ]);
@@ -741,7 +743,7 @@ describe('the barrel exports the registration, the screen, and the facade only (
     );
   });
 
-  it('exports the route factory, the screen, the facade, and their types', () => {
+  it('exports the route factory, the screen, the facade, the leaderboards, and their types', () => {
     // The other half of 14.2: the barrel must carry what a consumer does need, or
     // "one entry point" would be satisfied by an empty file.
     expect([...barrelExportedNames].sort()).toEqual(
@@ -751,6 +753,8 @@ describe('the barrel exports the registration, the screen, and the facade only (
         'PlayerStatsRoutesOptions',
         'PlayerStatsScreen',
         'PlayerStatsScreenProps',
+        'SquadLeaderboards',
+        'SquadLeaderboardsProps',
         'createPlayerStatsApi',
         'createPlayerStatsShellRoutes',
       ].sort(),
@@ -1158,7 +1162,8 @@ describe('the feature declares neither route pattern (Requirements 1.2, 1.7)', (
     // *obtained*. The route table imports the pattern it registers, and the
     // surfaces that navigate import the two builders — so an empty finding list
     // above means the feature asks the barrel rather than that it navigates
-    // nowhere.
+    // nowhere. The leaderboards harness mounts its section at the squad route,
+    // which it also takes from the barrel.
     const fromBarrel = new Set(
       scannedModules.flatMap(({ file, source }) =>
         namedImportsFrom(source, file, squadsRoot),
@@ -1167,6 +1172,7 @@ describe('the feature declares neither route pattern (Requirements 1.2, 1.7)', (
 
     expect([...fromBarrel].sort()).toEqual([
       'PLAYER_STATS_ROUTE',
+      'SQUAD_ROUTE',
       'playerStatsPath',
       'squadPath',
     ]);

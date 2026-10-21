@@ -14,6 +14,7 @@
  * | --- | --- |
  * | `createPlayerStatsShellRoutes`, `PlayerStatsRoutesOptions` | the one table the application router nests into the shell's `/app` layout route (Requirements 1.1, 14.7) |
  * | `PlayerStatsScreen`, `PlayerStatsScreenProps` | the element of that table, exported so a test can render the screen without the router |
+ * | `SquadLeaderboards`, `SquadLeaderboardsProps` | the squad screen's stats section body, which `appRouter.tsx` injects through the squads feature's `statsContent` slot |
  * | `createPlayerStatsApi`, `PlayerStatsApi`, `PlayerStatsApiDependencies` | the facade `appRouter.tsx` builds once from the Authenticated_Api_Client and threads into the route (Requirement 12.1) |
  *
  * Nothing else is exported (Requirement 14.2). The Response_Parser and its
@@ -39,6 +40,11 @@ export {
   PlayerStatsScreen,
   type PlayerStatsScreenProps,
 } from './screens/PlayerStatsScreen';
+
+export {
+  SquadLeaderboards,
+  type SquadLeaderboardsProps,
+} from './screens/SquadLeaderboards';
 
 export {
   createPlayerStatsApi,
