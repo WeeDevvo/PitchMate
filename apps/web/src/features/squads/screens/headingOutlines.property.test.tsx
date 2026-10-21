@@ -87,6 +87,7 @@ import {
   ADMIN_SUBSECTION_SELECTOR,
 } from '../components/AdminSection';
 import { resolveAdminAuthority } from '../lib/adminAuthority';
+import { resolveOwnerAuthority } from '../lib/membershipActions';
 import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import { validateHeadingOutline } from '../lib/headingOutline';
 import {
@@ -95,6 +96,7 @@ import {
   GUESTS_SECTION_HEADING,
   INVITES_SECTION_HEADING,
   MATCHES_SECTION_HEADING,
+  OWNERSHIP_SECTION_HEADING,
   PLAYERS_SECTION_HEADING,
   SQUAD_DETAIL_SECTION_HEADING,
   STATS_SECTION_HEADING,
@@ -201,15 +203,24 @@ const SQUAD_SECTION_HEADINGS: readonly string[] = [
   ADMIN_SECTION_HEADING,
 ];
 
-/** The administration section's three regions, in the order Req 10.7 names. */
-const ADMIN_SUBSECTIONS: readonly string[] = ['invites', 'guests', 'features'];
+/**
+ * The administration section's regions, in the order Req 10.7 names, followed
+ * for the owner alone by the ownership transfer.
+ */
+function adminSubsections(owner: boolean): readonly string[] {
+  const shared = ['invites', 'guests', 'features'];
+  return owner ? [...shared, 'ownership'] : shared;
+}
 
-/** Their three level-three headings, in the same order. */
-const ADMIN_SUBSECTION_HEADINGS: readonly string[] = [
-  INVITES_SECTION_HEADING,
-  GUESTS_SECTION_HEADING,
-  FEATURES_SECTION_HEADING,
-];
+/** Their level-three headings, in the same order. */
+function adminSubsectionHeadings(owner: boolean): readonly string[] {
+  const shared = [
+    INVITES_SECTION_HEADING,
+    GUESTS_SECTION_HEADING,
+    FEATURES_SECTION_HEADING,
+  ];
+  return owner ? [...shared, OWNERSHIP_SECTION_HEADING] : shared;
+}
 
 /** The level-two headings of the rendered Squad_Screen, in document order. */
 function squadSectionHeadings(container: HTMLElement): readonly string[] {
@@ -276,7 +287,11 @@ function expectSquadSectionOrder(container: HTMLElement, description: string): v
  * heading a Placeholder_Section's injected body or an open confirmation elsewhere
  * on the screen contributed.
  */
-function expectAdminOutline(container: HTMLElement, authority: boolean): void {
+function expectAdminOutline(
+  container: HTMLElement,
+  authority: boolean,
+  owner: boolean,
+): void {
   const admin = container.querySelector(ADMIN_SECTION_SELECTOR);
 
   if (!authority) {
@@ -298,7 +313,7 @@ function expectAdminOutline(container: HTMLElement, authority: boolean): void {
 
   expect(
     subsections.map((section) => section.getAttribute(ADMIN_SUBSECTION_ATTRIBUTE)),
-  ).toEqual(ADMIN_SUBSECTIONS);
+  ).toEqual(adminSubsections(owner));
 
   // Exactly one each, asserted per region as well as in aggregate — three regions
   // and three headings would otherwise be satisfied by one region holding all
@@ -307,7 +322,7 @@ function expectAdminOutline(container: HTMLElement, authority: boolean): void {
     expect(headingTextsAt(section, 3)).toHaveLength(1);
   }
 
-  expect(headingTextsAt(admin, 3)).toEqual(ADMIN_SUBSECTION_HEADINGS);
+  expect(headingTextsAt(admin, 3)).toEqual(adminSubsectionHeadings(owner));
 }
 
 // --- The first property: every state of every screen -------------------------
@@ -540,7 +555,11 @@ describe('Property 43 — the Squad_Screen section order over every authority va
             // 10.7: administration's own outline, or its absence. A state holding
             // no Squad_Detail renders no section at all, so authority alone does
             // not put administration on screen (Requirement 6.9).
-            expectAdminOutline(container, authority && detailHeld(state));
+            expectAdminOutline(
+              container,
+              authority && detailHeld(state),
+              resolveOwnerAuthority(caller.role, caller.state),
+            );
           } finally {
             cleanup();
             resetTheme();

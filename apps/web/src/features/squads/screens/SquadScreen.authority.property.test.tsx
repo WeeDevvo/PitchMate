@@ -104,6 +104,18 @@ import {
   PLAYER_ROW_SELECTOR,
   PLAYER_ROW_STATS_PATH_ATTRIBUTE,
 } from '../components/PlayerRow';
+import {
+  LEAVE_SQUAD_TRIGGER_SELECTOR,
+  OWNER_MUST_TRANSFER_SELECTOR,
+} from '../components/LeaveSquadControl';
+import {
+  DEMOTE_TRIGGER_SELECTOR,
+  REMOVE_TRIGGER_SELECTOR,
+} from '../components/MembershipActionControl';
+import {
+  OWNERSHIP_TARGET_SELECTOR,
+  OWNERSHIP_TRANSFER_TRIGGER_SELECTOR,
+} from '../components/OwnershipTransfer';
 import { PROMOTION_CONTROL_SELECTOR } from '../components/PromotionControl';
 import { RATING_BADGE_SELECTOR } from '../components/RatingBadge';
 import { resolveAdminAuthority } from '../lib/adminAuthority';
@@ -121,6 +133,13 @@ import type { FeatureFlag } from '../lib/parse/featureFlags';
 import type { SquadDetail, SquadMember } from '../lib/parse/squadDetail';
 import type { SquadSummary } from '../lib/parse/squadSummary';
 import { ANONYMISED_PLACEHOLDER, isGuestEditable } from '../lib/playerList';
+import {
+  isDemotable,
+  isOwnershipTarget,
+  isRemovable,
+  leaveEligibility,
+  resolveOwnerAuthority,
+} from '../lib/membershipActions';
 import { isPromotable } from '../lib/promotionEligibility';
 import { PLAYER_STATS_ROUTE, SQUAD_ROUTE, squadPath } from '../lib/routePaths';
 import { SQUAD_DETAIL_SECTION_SELECTOR, SquadScreen } from './SquadScreen';
@@ -280,6 +299,9 @@ const FORBIDDEN_ADMIN_CALLS: readonly string[] = [
   'CreateGuest',
   'EditGuest',
   'PromoteToAdmin',
+  'DemoteToMember',
+  'RemoveMember',
+  'TransferOwnership',
   'SetFeatureFlag',
 ];
 
@@ -362,6 +384,22 @@ function createRecordingApi(options: {
     },
     setFeatureFlag: () => {
       note('SetFeatureFlag');
+      return Promise.resolve(TRANSPORT_FAILURE);
+    },
+    demoteToMember: () => {
+      note('DemoteToMember');
+      return Promise.resolve(TRANSPORT_FAILURE);
+    },
+    removeMember: () => {
+      note('RemoveMember');
+      return Promise.resolve(TRANSPORT_FAILURE);
+    },
+    transferOwnership: () => {
+      note('TransferOwnership');
+      return Promise.resolve(TRANSPORT_FAILURE);
+    },
+    leaveSquad: () => {
+      note('LeaveSquad');
       return Promise.resolve(TRANSPORT_FAILURE);
     },
   };
@@ -543,7 +581,10 @@ function describeNonAdminSurface(): NonAdminSurface {
  * Guest_Manager, and the Feature_Toggle set inside it — in the order
  * Requirement 10.7 fixes, each under its own level-three heading.
  */
-function expectAdminSurfaceRendered(features: readonly FeatureFlag[]): void {
+function expectAdminSurfaceRendered(
+  features: readonly FeatureFlag[],
+  owner: boolean,
+): void {
   expect(document.querySelector(ADMIN_SECTION_SELECTOR)).not.toBeNull();
   expect(document.querySelector(INVITE_MANAGER_SELECTOR)).not.toBeNull();
   expect(document.querySelector(GENERATE_INVITE_CONTROL_SELECTOR)).not.toBeNull();
@@ -554,7 +595,17 @@ function expectAdminSurfaceRendered(features: readonly FeatureFlag[]): void {
     Array.from(
       document.querySelectorAll<HTMLElement>(ADMIN_SUBSECTION_SELECTOR),
     ).map((section) => section.getAttribute(ADMIN_SUBSECTION_ATTRIBUTE)),
-  ).toEqual(['invites', 'guests', 'features']);
+  ).toEqual(
+    owner
+      ? ['invites', 'guests', 'features', 'ownership']
+      : ['invites', 'guests', 'features'],
+  );
+
+  // The ownership transfer is the owner's alone, inside the admin surface.
+  const ownershipOffered =
+    document.querySelector(OWNERSHIP_TARGET_SELECTOR) !== null ||
+    document.querySelector('[data-squads-ownership-empty="true"]') !== null;
+  expect(ownershipOffered).toBe(owner);
 
   // 14.1: one toggle per parsed Feature_Flag, so an empty collection renders no
   // toggle while the set itself is still there.
@@ -570,7 +621,7 @@ function expectAdminSurfaceRendered(features: readonly FeatureFlag[]): void {
     STATS_SECTION_HEADING,
     ADMIN_SECTION_HEADING,
   ]);
-  expect(headingTexts(3)).toHaveLength(3);
+  expect(headingTexts(3)).toHaveLength(owner ? 4 : 3);
 }
 
 /**
@@ -588,6 +639,10 @@ function expectNoAdminSurface(): void {
   expect(document.querySelectorAll(PROMOTION_CONTROL_SELECTOR)).toHaveLength(0);
   expect(document.querySelectorAll(PLAYER_ROW_PROMOTE_SELECTOR)).toHaveLength(0);
   expect(document.querySelectorAll(PLAYER_ROW_EDIT_GUEST_SELECTOR)).toHaveLength(0);
+  expect(document.querySelectorAll(REMOVE_TRIGGER_SELECTOR)).toHaveLength(0);
+  expect(document.querySelectorAll(DEMOTE_TRIGGER_SELECTOR)).toHaveLength(0);
+  expect(document.querySelector(OWNERSHIP_TARGET_SELECTOR)).toBeNull();
+  expect(document.querySelector(OWNERSHIP_TRANSFER_TRIGGER_SELECTOR)).toBeNull();
 
   // 10.7: the three admin subsections are the only level-three headings of this
   // screen, so their absence is a structural statement as well as a selector one.
@@ -620,6 +675,56 @@ function expectRowControlsMatchEligibility(
 
   expect(membershipIdsOf(PLAYER_ROW_PROMOTE_SELECTOR)).toEqual(eligibleForPromotion);
   expect(membershipIdsOf(PLAYER_ROW_EDIT_GUEST_SELECTOR)).toEqual(editableGuests);
+
+  // Remove and demote: exactly the rows `lib/membershipActions.ts` accepts.
+  const removable = members
+    .filter((member) => isRemovable(member, null, authority))
+    .map((member) => member.membershipId)
+    .sort();
+  const demotable = members
+    .filter((member) => isDemotable(member, null, authority))
+    .map((member) => member.membershipId)
+    .sort();
+
+  expect(membershipIdsOf(REMOVE_TRIGGER_SELECTOR)).toEqual(removable);
+  expect(membershipIdsOf(DEMOTE_TRIGGER_SELECTOR)).toEqual(demotable);
+}
+
+/**
+ * The leave control, or the owner's "transfer first" statement, or neither —
+ * exactly as `leaveEligibility` answers for the caller's standing.
+ */
+function expectLeaveMatchesEligibility(caller: CallerStanding): void {
+  const eligibility = leaveEligibility(caller.role, caller.state);
+
+  expect(document.querySelector(LEAVE_SQUAD_TRIGGER_SELECTOR) !== null).toBe(
+    eligibility === 'can-leave',
+  );
+  expect(document.querySelector(OWNER_MUST_TRANSFER_SELECTOR) !== null).toBe(
+    eligibility === 'owner-must-transfer',
+  );
+}
+
+/** The ownership options offered are exactly the transfer predicate's set. */
+function expectOwnershipCandidatesMatchEligibility(
+  members: readonly SquadMember[],
+  caller: CallerStanding,
+): void {
+  const owner = resolveOwnerAuthority(caller.role, caller.state);
+  const expected = members
+    .filter((member) => isOwnershipTarget(member, null, owner))
+    .map((member) => member.membershipId)
+    .sort();
+  const select = document.querySelector<HTMLSelectElement>(OWNERSHIP_TARGET_SELECTOR);
+  const offered =
+    select === null
+      ? []
+      : Array.from(select.options)
+          .map((option) => option.value)
+          .filter((value) => value !== '')
+          .sort();
+
+  expect(offered).toEqual(expected);
 }
 
 /**
@@ -709,7 +814,10 @@ describe('Property 26 — admin affordances and admin calls exist exactly while 
             expectSquadRendered(members);
 
             if (authority) {
-              expectAdminSurfaceRendered(features);
+              expectAdminSurfaceRendered(
+                features,
+                resolveOwnerAuthority(caller.role, caller.state),
+              );
             } else {
               expectNoAdminSurface();
               withoutAdmin = describeNonAdminSurface();
@@ -719,6 +827,8 @@ describe('Property 26 — admin affordances and admin calls exist exactly while 
             // in both branches — the predicates already answer `false` for every
             // row of a caller without authority.
             expectRowControlsMatchEligibility(members, authority);
+            expectLeaveMatchesEligibility(caller);
+            expectOwnershipCandidatesMatchEligibility(members, caller);
           } finally {
             cleanup();
           }
@@ -777,9 +887,10 @@ describe('Property 26 — admin affordances and admin calls exist exactly while 
             ).toEqual([]);
 
             // And the surface still offers none, so nothing in the sequence
-            // revealed an admin affordance.
+            // revealed an admin affordance. (A level-three heading may now be
+            // the leave confirmation, which is the caller's own action.)
             expect(document.querySelector(ADMIN_SECTION_SELECTOR)).toBeNull();
-            expect(headingTexts(3)).toHaveLength(0);
+            expect(document.querySelector(ADMIN_SUBSECTION_SELECTOR)).toBeNull();
           } finally {
             cleanup();
           }

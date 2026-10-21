@@ -360,9 +360,8 @@ export const FORMER_PLAYER_LABEL = 'Former player, details removed';
  * `RatingBadge` builds its own — no message here takes an interpolation
  * parameter, so a name is composed at the call site rather than folded into copy.
  *
- * Promotion is the only membership-changing action in the feature: no control
- * demotes an admin, transfers a squad, or removes a membership
- * (Requirement 13.8), so there is no sibling label here.
+ * Its siblings — demote, remove, transfer ownership and leave — follow
+ * {@link PROMOTION_SUCCEEDED}.
  */
 export const PROMOTE_TO_ADMIN_LABEL = 'Make admin';
 
@@ -384,8 +383,7 @@ export const PROMOTION_CONFIRM_HEADING = 'Make this player an admin?';
  * promotion itself — so the person confirming knows what they are handing over.
  * It names nobody: the player being promoted is rendered beside it.
  *
- * Promotion is the only membership-changing action in the feature, so the
- * statement promises no way back through the interface (Requirement 13.8).
+ * The way back is the demote control, which an owner or admin can use later.
  */
 export const PROMOTION_CONFIRM_STATEMENT =
   'An admin can manage invites, add and edit guests, change the optional features, and make other members admins.';
@@ -403,6 +401,108 @@ export const PROMOTION_CONFIRM_STATEMENT =
  * other message here: there is no parameter to name one through.
  */
 export const PROMOTION_SUCCEEDED = 'That player is now an admin.';
+
+// --- Membership actions: demote, remove, transfer ownership, leave -----------
+//
+// Each action reads as the promotion does: a visible label, a confirmation
+// heading and statement (the player is rendered beside it, because no message
+// takes a parameter), a success message, and a conflict message for a refusal
+// the squad's own rules explain. Every other failure reads
+// {@link GENERIC_SQUADS_FAILURE}.
+
+/** The visible label of the demote control on an admin's Player_Row. */
+export const DEMOTE_TO_MEMBER_LABEL = 'Remove admin';
+
+/** The heading of the demote confirmation. */
+export const DEMOTION_CONFIRM_HEADING = 'Make this admin a regular member?';
+
+/** The demote confirmation's statement of what changes. */
+export const DEMOTION_CONFIRM_STATEMENT =
+  'They stay in the squad with the same rating and history, but can no longer manage invites, guests or features.';
+
+/** Announced when a demotion succeeds. */
+export const DEMOTION_SUCCEEDED = 'That player is no longer an admin.';
+
+/** Announced when the backend refuses a demotion under the squad's rules. */
+export const DEMOTION_CONFLICT =
+  'That player can no longer be demoted. Refresh to see the latest roles.';
+
+/** The visible label of the remove control on a Player_Row. */
+export const REMOVE_MEMBER_LABEL = 'Remove from squad';
+
+/** The heading of the removal confirmation. */
+export const REMOVAL_CONFIRM_HEADING = 'Remove this player from the squad?';
+
+/**
+ * The removal confirmation's statement. Product rule: removal makes the
+ * membership inactive, keeping its rating, stats and history, and re-joining by
+ * invite reactivates it.
+ */
+export const REMOVAL_CONFIRM_STATEMENT =
+  'They drop out of match selection. Their rating, stats and match history are kept, and come back if they re-join with an invite.';
+
+/** Announced when a removal succeeds. */
+export const REMOVAL_SUCCEEDED = 'That player has been removed from the squad.';
+
+/** Announced when the backend refuses a removal under the squad's rules. */
+export const REMOVAL_CONFLICT =
+  'That player cannot be removed. The owner has to transfer ownership first.';
+
+/** The heading of the Admin_Section subsection holding the ownership transfer. */
+export const OWNERSHIP_SECTION_HEADING = 'Ownership';
+
+/** The label of the select naming who becomes the owner. */
+export const TRANSFER_OWNERSHIP_TARGET_LABEL = 'New owner';
+
+/** The select's first, empty option. */
+export const TRANSFER_OWNERSHIP_PLACEHOLDER = 'Choose a member';
+
+/** Shown in place of the select when no member can take ownership. */
+export const TRANSFER_OWNERSHIP_NO_CANDIDATES =
+  'Nobody else can take ownership yet. Only active members with an account can become the owner.';
+
+/** The visible label of the transfer control, and of its confirm action. */
+export const TRANSFER_OWNERSHIP_LABEL = 'Transfer ownership';
+
+/** The heading of the transfer confirmation. */
+export const TRANSFER_OWNERSHIP_CONFIRM_HEADING = 'Make this player the owner?';
+
+/** The transfer confirmation's statement: what the current owner becomes. */
+export const TRANSFER_OWNERSHIP_CONFIRM_STATEMENT =
+  'There is only ever one owner. You will become an admin, and only the new owner can transfer ownership back.';
+
+/** Announced when a transfer succeeds. */
+export const TRANSFER_OWNERSHIP_SUCCEEDED =
+  'Ownership has been transferred. You are now an admin.';
+
+/** Announced when the backend refuses a transfer under the squad's rules. */
+export const TRANSFER_OWNERSHIP_CONFLICT =
+  'Ownership could not be transferred to that player. Refresh and choose again.';
+
+/** The visible label of the leave control in the Squad_Detail region. */
+export const LEAVE_SQUAD_LABEL = 'Leave squad';
+
+/** The heading of the leave confirmation. */
+export const LEAVE_CONFIRM_HEADING = 'Leave this squad?';
+
+/**
+ * The leave confirmation's statement. Product rule: leaving makes the
+ * membership inactive and keeps its rating, stats and history; re-joining by
+ * invite restores them.
+ */
+export const LEAVE_CONFIRM_STATEMENT =
+  'You will drop out of match selection and lose access to the squad. Your rating, stats and match history are kept, and come back if you re-join with an invite.';
+
+/**
+ * Shown to the owner in place of the leave control. Product rule: the owner
+ * must transfer ownership before leaving.
+ */
+export const OWNER_MUST_TRANSFER_BEFORE_LEAVING =
+  'You own this squad. Transfer ownership to another member before you leave.';
+
+/** Announced when the backend refuses a leave under the squad's rules. */
+export const LEAVE_CONFLICT =
+  'You cannot leave yet. Transfer ownership to another member first.';
 
 /**
  * The visible label of the guest edit control on an editable guest Player_Row

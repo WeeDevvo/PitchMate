@@ -149,7 +149,7 @@ const WIRE_ENUMS_MODULE = 'lib/wireEnums.ts';
 const API_CLIENT_VALUE_IMPORT =
   /^\s*import\s+(?!type\b)[^;]*?from\s*['"]@pitchmate\/api-client(?:\/[^'"]*)?['"]/m;
 
-/** The six generated request bodies this feature sends (Requirement 16.11). */
+/** The seven generated request bodies this feature sends (Requirement 16.11). */
 const GENERATED_REQUEST_TYPES = [
   'CreateSquadRequest',
   'RedeemInviteRequest',
@@ -157,6 +157,7 @@ const GENERATED_REQUEST_TYPES = [
   'CreateGuestRequest',
   'EditGuestRequest',
   'SetFeatureFlagRequest',
+  'TransferOwnershipRequest',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -450,7 +451,7 @@ describe('no hand-written type duplicates a generated request shape (Req 16.11)'
     );
   });
 
-  it('derives each of the six request bodies from the generated schema', () => {
+  it('derives each of the seven request bodies from the generated schema', () => {
     // `type CreateSquadRequest = Schemas['CreateSquadRequest']` — the alias reads
     // the contract, so a backend change to any of these bodies fails to compile
     // here rather than diverging silently.
@@ -520,7 +521,7 @@ describe('no hand-written type duplicates a generated request shape (Req 16.11)'
 
   it('declares no wire-shape type of its own anywhere in the feature', () => {
     // A `…Request`, `…Dto`, `…Payload`, `…RequestBody`, or `…ResponseBody`
-    // declaration outside the facade's six aliases is a hand-written duplicate of
+    // declaration outside the facade's seven aliases is a hand-written duplicate of
     // something the generated contract already says. The Guest_Form's
     // `GuestCreateSubmission` and `GuestEditSubmission` are deliberately *not*
     // such types and deliberately not named like them: they carry the tier

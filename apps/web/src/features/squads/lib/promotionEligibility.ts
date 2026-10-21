@@ -52,10 +52,8 @@
  * `PromoteToAdmin`: `true` here is not a promise that the call will succeed, and
  * `false` is enforced by the control being *absent* rather than disabled.
  *
- * Requirement 13.8 — no control that demotes an admin, transfers ownership, or
- * removes a membership — is honoured by omission: promotion is the only
- * membership-changing predicate in the feature, and the absence of the other
- * three is pinned by the structural scan rather than by anything in this file.
+ * The other membership actions — demote, remove, transfer ownership and leave —
+ * have their predicates in `./membershipActions`.
  *
  * This module is React-free and DOM-free like every module under `lib/`, and
  * imports only the Squad_Member type it reads and the placeholder predicate it

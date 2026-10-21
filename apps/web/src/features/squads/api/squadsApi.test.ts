@@ -12,7 +12,7 @@
  *
  * Six things are covered:
  *
- * - **One request per call, and no retry.** Every one of the fourteen methods
+ * - **One request per call, and no retry.** Every one of the eighteen methods
  *   issues exactly one request for one activation, on a success and on a
  *   failing status alike (Requirement 17.4).
  * - **The 10-second Squad_Call_Timeout**, driven with `vi.useFakeTimers()`: the
@@ -62,6 +62,7 @@ import {
   type RedeemInviteRequest,
   type SetFeatureFlagRequest,
   type SquadsApi,
+  type TransferOwnershipRequest,
 } from './squadsApi';
 
 // --- Contract-derived literals (Requirement 16.11) --------------------------
@@ -82,6 +83,11 @@ const GUESTS_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/guests';
 const GUEST_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/guests/{membershipId}';
 const PROMOTE_PATH_TEMPLATE: keyof paths =
   '/squads/{squadId}/members/{membershipId}/promote';
+const DEMOTE_PATH_TEMPLATE: keyof paths =
+  '/squads/{squadId}/members/{membershipId}/demote';
+const MEMBER_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/members/{membershipId}';
+const OWNERSHIP_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/ownership';
+const LEAVE_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/leave';
 
 /** The type of the leaderboard's `statistic` query value, as the contract has it. */
 type LeaderboardStatistic = NonNullable<
@@ -109,7 +115,8 @@ const REQUEST_TYPES_COME_FROM_THE_CONTRACT: readonly [
   AssertIdentical<CreateGuestRequest, Schemas['CreateGuestRequest']>,
   AssertIdentical<EditGuestRequest, Schemas['EditGuestRequest']>,
   AssertIdentical<SetFeatureFlagRequest, Schemas['SetFeatureFlagRequest']>,
-] = [true, true, true, true, true, true];
+  AssertIdentical<TransferOwnershipRequest, Schemas['TransferOwnershipRequest']>,
+] = [true, true, true, true, true, true, true];
 
 // --- Fixtures ---------------------------------------------------------------
 
@@ -256,7 +263,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// --- The fourteen operations, each with its request shape and its success ----
+// --- The eighteen operations, each with its request shape and its success ----
 
 /**
  * One operation of the facade: how it is activated, the request it must produce,
@@ -498,6 +505,49 @@ const OPERATIONS: readonly OperationCase[] = [
     invoke: (api, signal) => api.promoteToAdmin(SQUAD_ID, MEMBERSHIP_ID, signal),
   },
   {
+    name: 'demoteToMember',
+    method: 'POST',
+    path: fill(DEMOTE_PATH_TEMPLATE, {
+      squadId: SQUAD_ID,
+      membershipId: MEMBERSHIP_ID,
+    }),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.demoteToMember(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'removeMember',
+    method: 'DELETE',
+    path: fill(MEMBER_PATH_TEMPLATE, {
+      squadId: SQUAD_ID,
+      membershipId: MEMBERSHIP_ID,
+    }),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.removeMember(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'transferOwnership',
+    method: 'POST',
+    path: fill(OWNERSHIP_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: JSON.stringify({ targetMembershipId: MEMBERSHIP_ID }),
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) =>
+      api.transferOwnership(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'leaveSquad',
+    method: 'POST',
+    path: fill(LEAVE_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.leaveSquad(SQUAD_ID, signal),
+  },
+  {
     name: 'getFeatureFlags',
     method: 'GET',
     path: fill(FEATURES_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
@@ -542,6 +592,7 @@ describe('createSquadsApi — request shapes', () => {
       true,
       true,
       true,
+      true,
     ]);
   });
 
@@ -574,6 +625,36 @@ describe('createSquadsApi — request shapes', () => {
       const outcome = await operation.invoke(api);
 
       expect(outcome).toEqual({ kind: 'transport-failure' });
+      expect(requests).toHaveLength(1);
+    },
+  );
+
+  it.each([
+    ['leaveSquad', (api: SquadsApi) => api.leaveSquad(SQUAD_ID)],
+    ['removeMember', (api: SquadsApi) => api.removeMember(SQUAD_ID, MEMBERSHIP_ID)],
+    [
+      'transferOwnership',
+      (api: SquadsApi) => api.transferOwnership(SQUAD_ID, MEMBERSHIP_ID),
+    ],
+    ['demoteToMember', (api: SquadsApi) => api.demoteToMember(SQUAD_ID, MEMBERSHIP_ID)],
+  ] as const)(
+    '%s settles an OwnerConstraint refusal as a conflict, carrying no backend text',
+    async (_name, invoke) => {
+      const { api, requests } = makeApi(() =>
+        jsonResponse(
+          {
+            title: 'OwnerConstraint',
+            status: 409,
+            detail: 'Ownership must be transferred before leaving the squad.',
+            code: 'OwnerConstraint',
+          },
+          409,
+        ),
+      );
+
+      const outcome = await invoke(api);
+
+      expect(outcome).toEqual({ kind: 'rejected-input', reason: 'conflict' });
       expect(requests).toHaveLength(1);
     },
   );

@@ -76,6 +76,7 @@
  */
 import {
   useCallback,
+  useEffect,
   useId,
   useMemo,
   useRef,
@@ -85,11 +86,16 @@ import {
 } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { SQUAD_SCOPE_ROUTE_PARAMETER, usePublishSquadScopeFromRoute } from '../../app-shell';
+import {
+  HOME_ROUTE,
+  SQUAD_SCOPE_ROUTE_PARAMETER,
+  usePublishSquadScopeFromRoute,
+} from '../../app-shell';
 import { useAuth } from '../../auth';
 import type { SquadsApi } from '../api/squadsApi';
 import { AdminSection } from '../components/AdminSection';
 import { FailureNotice } from '../components/FailureNotice';
+import { LeaveSquadControl } from '../components/LeaveSquadControl';
 import { LoadingIndication } from '../components/LoadingIndication';
 import { NotFoundTreatment } from '../components/NotFoundTreatment';
 import { PlaceholderSection } from '../components/PlaceholderSection';
@@ -114,6 +120,12 @@ import {
 } from '../lib/messages';
 import { playerStatsPath } from '../lib/routePaths';
 import { usePromotion } from '../state/usePromotion';
+import {
+  DEMOTE_CALL,
+  LEAVE_CALL,
+  REMOVE_CALL,
+  useMembershipAction,
+} from '../state/useMembershipAction';
 import { useSquadScreen } from '../state/useSquadScreen';
 import { useSquadsHome } from '../state/useSquadsHome';
 
@@ -223,10 +235,72 @@ export function SquadScreen({
   // one, so no call can be built from a value a Response_Parser never accepted.
   const detailSquadId = detail?.squadId ?? '';
 
+  // Promotion and demotion announce on the same row, so each success clears
+  // the other's settled outcome — a row never reads "now an admin" beside "no
+  // longer an admin". The demotion machine is created below, so its clearing
+  // is reached through a ref.
+  const clearDemotionOutcomeRef = useRef<() => void>(() => undefined);
+  const refreshSquadOnly = machine.refresh;
+  const refreshAfterPromotion = useCallback((): void => {
+    refreshSquadOnly();
+    clearDemotionOutcomeRef.current();
+  }, [refreshSquadOnly]);
+
   const promotion = usePromotion({
     api,
     squadId: detailSquadId,
-    refresh: machine.refresh,
+    refresh: refreshAfterPromotion,
+    authState,
+  });
+  const clearPromotionOutcome = promotion.clearOutcome;
+
+  // Remove, demote and transfer change rows, so success re-reads the squad, as
+  // promotion does. They can also change the caller's own standing — a
+  // transfer makes the owner an admin, and an admin's own row can be removed or
+  // demoted, because no result names the caller's membership — and that
+  // standing comes from `ListMySquads`, so it is re-read too. Leaving ends the
+  // caller's access, so success goes home.
+  const refreshSquad = machine.refresh;
+  const relistStanding = listing.retry;
+  const refreshAfterChange = useCallback((): void => {
+    refreshSquad();
+    relistStanding();
+  }, [refreshSquad, relistStanding]);
+
+  const removal = useMembershipAction({
+    api,
+    squadId: detailSquadId,
+    perform: REMOVE_CALL,
+    onSucceeded: refreshAfterChange,
+    authState,
+  });
+
+  const refreshAfterDemotion = useCallback((): void => {
+    refreshAfterChange();
+    clearPromotionOutcome();
+  }, [clearPromotionOutcome, refreshAfterChange]);
+
+  const demotion = useMembershipAction({
+    api,
+    squadId: detailSquadId,
+    perform: DEMOTE_CALL,
+    onSucceeded: refreshAfterDemotion,
+    authState,
+  });
+  const clearDemotionOutcome = demotion.clearOutcome;
+  useEffect(() => {
+    clearDemotionOutcomeRef.current = clearDemotionOutcome;
+  }, [clearDemotionOutcome]);
+
+  const goHome = useCallback((): void => {
+    navigate(HOME_ROUTE);
+  }, [navigate]);
+
+  const leaving = useMembershipAction({
+    api,
+    squadId: detailSquadId,
+    perform: LEAVE_CALL,
+    onSucceeded: goHome,
     authState,
   });
 
@@ -332,6 +406,13 @@ export function SquadScreen({
             {roleLabelOf(machine.caller.role)}
           </span>
         </p>
+        {/* The caller's own way out — or, for the owner, why there is none yet. */}
+        <LeaveSquadControl
+          squadId={detail.squadId}
+          callerRole={machine.caller.role}
+          callerState={machine.caller.state}
+          machine={leaving}
+        />
         {/* 6.9, 1.15: a re-read keeps the whole squad rendered and states that it
             is refreshing beside it, rather than replacing it with a busy state. */}
         {machine.busy ? <LoadingIndication label={SQUAD_LOADING_LABEL} /> : null}
@@ -379,6 +460,8 @@ export function SquadScreen({
             viewer={viewer}
             onOpenPlayer={openPlayer}
             promotion={promotion}
+            removal={removal}
+            demotion={demotion}
             onEditGuest={editGuest}
           />
         </section>
@@ -409,6 +492,7 @@ export function SquadScreen({
           api={api}
           flags={detail.features}
           onSquadChanged={machine.refresh}
+          onCallerStandingChanged={refreshAfterChange}
           rows={machine.players}
           viewerRole={machine.caller.role}
           viewerState={machine.caller.state}
