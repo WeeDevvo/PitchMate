@@ -21,6 +21,8 @@ import {
 import type { RosterEntry } from './teams';
 
 export interface TeamSheetTeam {
+  /** The team a recorded result's score is given against. */
+  readonly teamId: string;
   readonly teamName: string;
   readonly bibFlag: boolean;
   readonly roster: readonly RosterEntry[];
@@ -52,6 +54,9 @@ function parseTeam(value: unknown): ParseResult<TeamSheetTeam> {
   const object = readObject(value, 'team');
   if (!object.ok) return object;
 
+  const teamId = readUuid(readProperty(object.value, 'teamId'), 'teamId');
+  if (!teamId.ok) return teamId;
+
   const teamName = readString(readProperty(object.value, 'teamName'), 'teamName');
   if (!teamName.ok) return teamName;
 
@@ -68,7 +73,7 @@ function parseTeam(value: unknown): ParseResult<TeamSheetTeam> {
     roster.push(parsed.value);
   }
 
-  return ok({ teamName: teamName.value, bibFlag: bibFlag.value, roster });
+  return ok({ teamId: teamId.value, teamName: teamName.value, bibFlag: bibFlag.value, roster });
 }
 
 /** Parse a `TeamSheet` body. */

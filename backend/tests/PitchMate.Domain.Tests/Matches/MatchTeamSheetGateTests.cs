@@ -81,6 +81,38 @@ public class MatchTeamSheetGateTests
         Assert.Contains(match.ProduceTeamSheet(world.Names).Value!.Teams[1].Roster, entry => entry.SquadMembershipId == moving);
     }
 
+    /// <summary>
+    /// A result scores the locked teams the sheet presents. Teams re-rolled after the lock and never
+    /// re-locked get fresh working identities, but the lineup is what is played: a result keyed by the
+    /// sheet's team ids is accepted, and one keyed by the re-rolled working teams is refused.
+    /// </summary>
+    [Fact]
+    public void AResultScoresTheLockedTeams_EvenAfterAnUnlockedReRoll()
+    {
+        World world = World.LockedThen(MatchState.TeamsRolled);
+        Match match = world.Match;
+        List<Guid> sheetIds = [.. match.ProduceTeamSheet(world.Names).Value!.Teams.Select(static team => team.TeamId)];
+        List<Guid> ids = [.. world.Names.Keys];
+
+        Assert.True(match.ApplyTeamProposal(
+        [
+            new ProposedTeam("Greens", BibFlag: true, ids.Skip(5).ToList()),
+            new ProposedTeam("Golds", BibFlag: false, ids.Take(5).ToList()),
+        ]).IsSuccess);
+        List<Guid> rerolledIds = [.. match.Teams.Select(static team => team.Id)];
+        Assert.Empty(rerolledIds.Intersect(sheetIds));
+        Assert.True(match.Start().IsSuccess);
+
+        Result byWorkingTeams = match.RecordResult(
+            new MatchResult(ResultFidelity.Basic, [new TeamScore(rerolledIds[0], 1), new TeamScore(rerolledIds[1], 0)]),
+            liveTrackingEnabled: false);
+        Assert.Equal(MatchErrorCode.ValidationFailed, byWorkingTeams.Error!.Code);
+
+        Assert.True(match.RecordResult(
+            new MatchResult(ResultFidelity.Basic, [new TeamScore(sheetIds[0], 1), new TeamScore(sheetIds[1], 0)]),
+            liveTrackingEnabled: false).IsSuccess);
+    }
+
     [Fact]
     public void ProjectionCarriesEveryLockedIdentityInOrder_WithOneBibTeam_AndThePlaceholderForAnUnresolvedName()
     {

@@ -214,7 +214,12 @@ export function teamSheet(overrides: Partial<TeamSheet> = {}): TeamSheet {
   return {
     location: 'Riverside 5s, pitch 2',
     kickoffMs: DAY_MS[1],
-    teams: workingTeams().teams.map(({ teamName, bibFlag, roster }) => ({ teamName, bibFlag, roster })),
+    teams: workingTeams().teams.map(({ teamId, teamName, bibFlag, roster }) => ({
+      teamId,
+      teamName,
+      bibFlag,
+      roster,
+    })),
     ...overrides,
   };
 }
