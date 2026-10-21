@@ -359,9 +359,17 @@ export function reduceNotificationCentre(
         handoverInProgress: true,
       };
 
-    // 4.9: nothing further is owed once the loop is cancelled.
+    // 4.9: nothing further is owed once the loop is cancelled. The bumped
+    // generation makes every aborted call's outcome unacceptable, and a list
+    // whose call was aborted is no longer loading, so a remount can load it.
     case 'stopped':
-      return { ...state, countInFlight: false, countRefreshQueued: false };
+      return {
+        ...state,
+        countInFlight: false,
+        countRefreshQueued: false,
+        listPhase: state.listPhase === 'loading' ? 'idle' : state.listPhase,
+        scopeGeneration: state.scopeGeneration + 1,
+      };
 
     default:
       return state;
@@ -556,6 +564,12 @@ export function useNotificationCentre(
   const stoppedRef = useRef(false);
   /** Whether the mount call has already been issued (Requirement 4.1). */
   const startedRef = useRef(false);
+  /**
+   * Whether the last stop aborted a list call awaiting a response. A strict-mode
+   * remount re-issues it, because the surface that asked for the list keeps its
+   * own one-call latch and will not ask again.
+   */
+  const listAbandonedRef = useRef(false);
 
   const clearPollTimer = useCallback((): void => {
     if (timerRef.current !== null) {
@@ -579,6 +593,7 @@ export function useNotificationCentre(
 
   const stop = useCallback((): void => {
     stoppedRef.current = true;
+    listAbandonedRef.current = stateRef.current.listPhase === 'loading';
     clearPollTimer();
     abortOutstanding();
     dispatch({ type: 'stopped' });
@@ -813,8 +828,13 @@ export function useNotificationCentre(
     if (!startedRef.current) {
       startedRef.current = true;
       // 4.1: exactly one unread-count call on mount. The list is not fetched
-      // until the panel opens (Requirement 4.7).
+      // until the panel opens (Requirement 4.7), or unless the stop before this
+      // remount abandoned one that was already asked for.
       runCountCall();
+      if (listAbandonedRef.current) {
+        listAbandonedRef.current = false;
+        runListCall();
+      }
       return;
     }
 
