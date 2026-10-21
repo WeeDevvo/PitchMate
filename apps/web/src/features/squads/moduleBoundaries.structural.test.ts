@@ -20,11 +20,12 @@
  * 1. **Containment** (Requirement 18.1). The feature is rooted at
  *    `apps/web/src/features/squads/`, every module the design's layout names is
  *    present inside it, and no module of the feature resolves an in-app import to
- *    a path outside that root other than the three edges the design admits: the
- *    App_Shell barrel, the Auth_Feature barrel, and the shared `src/theme` module
- *    (Requirement 18.8). So no part of the feature is assembled from a module
- *    living elsewhere, and the dependency direction stays `app` → `squads` →
- *    (`app-shell`, `auth`, `theme`) — nothing here reaches back into `src/app/`.
+ *    a path outside that root other than the four edges the design admits: the
+ *    App_Shell barrel, the Auth_Feature barrel, the shared `src/theme` module
+ *    (Requirement 18.8), and the shared `src/wire` barrel. So no part of the
+ *    feature is assembled from a module living elsewhere, and the dependency
+ *    direction stays `app` → `squads` → (`app-shell`, `auth`, `theme`, `wire`) —
+ *    nothing here reaches back into `src/app/`.
  * 2. **One public barrel** (Requirement 18.7). `index.ts` exists at the feature
  *    root and nowhere else beneath it, re-exports feature modules only, and
  *    declares nothing of its own — it is re-exports and nothing else, so the
@@ -80,6 +81,7 @@ import {
   srcSources,
   targetsBarrelOf,
   themeRoot,
+  wireRoot,
 } from './structural/sourceScan';
 
 // --- The scanned sets --------------------------------------------------------
@@ -229,13 +231,13 @@ describe('every module of the feature lives under features/squads/ (Requirement 
     expect(squadsStyles().map(featureRel)).toContain('styles/squadsTokens.css');
   });
 
-  it('resolves no import outside the root beyond the shell barrel, the auth barrel, and the shared theme module', () => {
+  it('resolves no import outside the root beyond the shell barrel, the auth barrel, and the shared theme and wire modules', () => {
     const offenders: Array<{ module: string; specifier: string }> = [];
 
     for (const file of featureModules) {
       for (const { specifier, target } of inAppImports(file)) {
         if (isWithin(squadsRoot, target)) continue;
-        // The three admitted outward edges. Both features are admitted at their
+        // The four admitted outward edges. Both features are admitted at their
         // barrel only: `useInviteRedemption`, `NotFoundTreatment`, and
         // `SquadScreen` take `HOME_ROUTE`, `SQUAD_SCOPE_ROUTE_PARAMETER`, and
         // `usePublishSquadScopeFromRoute` from the App_Shell barrel, and the
@@ -243,10 +245,13 @@ describe('every module of the feature lives under features/squads/ (Requirement 
         // `REDIRECT_PARAM_NAME` from the Auth_Feature barrel, rather than
         // restating either contract (see ADR 0001). The shared Theme module is
         // admitted throughout, because Requirement 18.8 puts the one appearance
-        // store, bootstrap, and resolution function there.
+        // store, bootstrap, and resolution function there. The shared wire
+        // module is admitted at its barrel, which `lib/parse/primitives.ts`
+        // re-exports so the parsers keep one local source of readers.
         if (targetsBarrelOf(appShellRoot, target)) continue;
         if (targetsBarrelOf(authRoot, target)) continue;
         if (isWithin(themeRoot, target)) continue;
+        if (targetsBarrelOf(wireRoot, target)) continue;
 
         offenders.push({ module: featureRel(file), specifier });
       }
@@ -255,8 +260,8 @@ describe('every module of the feature lives under features/squads/ (Requirement 
     expect(offenders).toEqual([]);
   });
 
-  it('reaches the App_Shell, the Auth_Feature, and the shared theme module at all', () => {
-    // Guard: the three admitted edges are all used, so an empty offender list
+  it('reaches the App_Shell, the Auth_Feature, and the shared theme and wire modules at all', () => {
+    // Guard: the four admitted edges are all used, so an empty offender list
     // above means the boundary is clean rather than that resolution broke.
     const targets = featureModules.flatMap((file) =>
       inAppImports(file).map(({ target }) => target),
@@ -267,6 +272,7 @@ describe('every module of the feature lives under features/squads/ (Requirement 
     );
     expect(targets.some((target) => targetsBarrelOf(authRoot, target))).toBe(true);
     expect(targets.some((target) => isWithin(themeRoot, target))).toBe(true);
+    expect(targets.some((target) => targetsBarrelOf(wireRoot, target))).toBe(true);
   });
 
   it('imports nothing from the application wiring or another feature', () => {
@@ -280,6 +286,7 @@ describe('every module of the feature lives under features/squads/ (Requirement 
       for (const { specifier, target } of inAppImports(file)) {
         if (isWithin(squadsRoot, target)) continue;
         if (isWithin(themeRoot, target)) continue;
+        if (targetsBarrelOf(wireRoot, target)) continue;
         if (targetsBarrelOf(appShellRoot, target)) continue;
         if (targetsBarrelOf(authRoot, target)) continue;
         if (isWithin(appWiringRoot, target) || target.startsWith(`${featuresRoot}/`)) {

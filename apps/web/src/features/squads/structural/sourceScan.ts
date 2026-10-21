@@ -93,6 +93,12 @@ export const playerStatsRoot: string = join(srcRoot, 'features', 'player-stats')
 /** The one shared Theme module (Requirement 18.8). */
 export const themeRoot: string = join(srcRoot, 'theme');
 
+/**
+ * The one shared wire-reading module: the reading primitives every feature's
+ * Response_Parser is built from. Pure, and admitted at its barrel only.
+ */
+export const wireRoot: string = join(srcRoot, 'wire');
+
 /** This directory: scan support, not part of the shipped feature. */
 export const scanSupportRoot: string = join(squadsRoot, 'structural');
 
