@@ -248,8 +248,12 @@ describe('the Squad_Route entered directly', () => {
     });
 
     // The two concurrent calls of the screen's own machine, each issued once.
+    // The leaderboard is read twice: once by the screen for its rating badges,
+    // and once by the player-stats leaderboards injected as the stats section.
+    await waitFor(() => {
+      expect(issued(requests, SQUADS_REQUESTS.leaderboard)).toBe(2);
+    });
     expect(issued(requests, SQUADS_REQUESTS.getSquad)).toBe(1);
-    expect(issued(requests, SQUADS_REQUESTS.leaderboard)).toBe(1);
 
     // Inside the frame: the screen's content sits in the shell's main region.
     const main = within(screen.getByRole('main'));

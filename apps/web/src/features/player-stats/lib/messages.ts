@@ -547,3 +547,26 @@ export const KEEPER_TIME_LABEL = 'Time as keeper';
  * a zero.
  */
 export const STATISTIC_NO_DATA = 'No data';
+
+/* -------------------------------------------------------------------------- */
+/* Squad leaderboards                                                         */
+/* -------------------------------------------------------------------------- */
+
+/** The legend of the control that picks which statistic the board ranks by. */
+export const LEADERBOARD_RANK_BY_LABEL = 'Rank by';
+
+/** The board ranked by Display_Rating, as the switcher names it. */
+export const LEADERBOARD_RATING_LABEL = 'Rating';
+
+/** The busy statement while a leaderboard is being read. */
+export const LEADERBOARD_LOADING_LABEL = 'Loading the leaderboard';
+
+/** Shown in place of the list when the board has no entries. */
+export const LEADERBOARD_EMPTY_STATEMENT = 'Nobody is on this leaderboard yet.';
+
+/**
+ * Shown under the Display_Rating board, which leaves out every player whose
+ * rating is still provisional, so an absent player isn't read as unrated.
+ */
+export const LEADERBOARD_PROVISIONAL_STATEMENT =
+  'Players whose rating is still settling are not ranked yet.';

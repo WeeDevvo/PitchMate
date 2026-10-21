@@ -142,6 +142,7 @@ import {
   createSquadsShellRoutes,
 } from '../features/squads';
 import {
+  SquadLeaderboards,
   createPlayerStatsApi,
   createPlayerStatsShellRoutes,
 } from '../features/player-stats';
@@ -426,6 +427,7 @@ export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
       ...createSquadsShellRoutes({
         api: squadsApi,
         matchesContent: <MatchesSection api={matchesApi} />,
+        statsContent: <SquadLeaderboards api={playerStatsApi} />,
       }),
       ...createPlayerStatsShellRoutes({ api: playerStatsApi }),
       ...createMatchesShellRoutes({ api: matchesApi }),

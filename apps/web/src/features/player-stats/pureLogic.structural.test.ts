@@ -510,7 +510,11 @@ describe('the pure logic scan sees the Player_Stats_Feature lib directory', () =
       .map(libRel)
       .filter((path) => path.startsWith('parse/'));
 
-    expect(nested).toEqual(['parse/playerProfile.ts', 'parse/primitives.ts']);
+    expect(nested).toEqual([
+      'parse/leaderboard.ts',
+      'parse/playerProfile.ts',
+      'parse/primitives.ts',
+    ]);
   });
 
   it('collects the feature-wide test files the 100-run floor binds', () => {
