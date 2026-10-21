@@ -41,6 +41,24 @@ internal sealed class UnitOfWork(PitchMateDbContext db) : IUnitOfWork
         // propagates to the caller as the standard exception type (Requirement 6.6).
     }
 
+    /// <inheritdoc />
+    public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+
+        // Join an enclosing transaction rather than nesting one (Npgsql has no nested transactions).
+        if (db.Database.CurrentTransaction is not null)
+        {
+            await work(cancellationToken);
+            return;
+        }
+
+        // Disposing without a commit rolls back, so a throw from any save discards the earlier ones.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await work(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     /// <summary>
     /// Determines whether a <see cref="DbUpdateException"/> was caused by a PostgreSQL
     /// unique-constraint violation (SQLSTATE <c>23505</c>), i.e. an attempt to insert a

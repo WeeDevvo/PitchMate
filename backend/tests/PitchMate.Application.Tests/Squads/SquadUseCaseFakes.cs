@@ -83,6 +83,11 @@ internal sealed class SquadStore
     /// <summary>Records that a save was attempted.</summary>
     public void RecordSaveCall() => SaveCallCount++;
 
+    /// <summary>The number of <see cref="IUnitOfWork.ExecuteInTransactionAsync"/> calls made.</summary>
+    public int TransactionCount { get; private set; }
+
+    public void RecordTransaction() => TransactionCount++;
+
     /// <summary>Atomically commits every staged squad and membership together, returning the row count.</summary>
     public int Commit()
     {
@@ -474,17 +479,20 @@ internal sealed class FakeSquadUnitOfWork : IUnitOfWork
 {
     private readonly SquadStore _store;
     private readonly bool _throwOnSave;
+    private readonly Action? _onSave;
 
-    public FakeSquadUnitOfWork(SquadStore store, bool throwOnSave = false)
+    public FakeSquadUnitOfWork(SquadStore store, bool throwOnSave = false, Action? onSave = null)
     {
         _store = store;
         _throwOnSave = throwOnSave;
+        _onSave = onSave;
     }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         _store.RecordSaveCall();
+        _onSave?.Invoke();
 
         if (_throwOnSave)
         {
@@ -493,6 +501,13 @@ internal sealed class FakeSquadUnitOfWork : IUnitOfWork
         }
 
         return Task.FromResult(_store.Commit());
+    }
+
+    public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        _store.RecordTransaction();
+        await work(cancellationToken);
     }
 }
 
