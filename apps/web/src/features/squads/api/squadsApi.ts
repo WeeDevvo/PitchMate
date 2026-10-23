@@ -76,6 +76,16 @@ import { parseCreatedGuest, type CreatedGuest } from '../lib/parse/createdGuest'
 import { parseCreatedSquad, type CreatedSquad } from '../lib/parse/createdSquad';
 import { parseFeatureFlags, type FeatureFlag } from '../lib/parse/featureFlags';
 import {
+  parseAcceptedGuestClaim,
+  parseGuestClaimPreview,
+  parseGuestClaimRows,
+  parseIssuedClaimLink,
+  type AcceptedGuestClaim,
+  type GuestClaimPreview,
+  type GuestClaimRow,
+  type IssuedClaimLink,
+} from '../lib/parse/guestClaim';
+import {
   parseGeneratedInvite,
   type GeneratedInvite,
 } from '../lib/parse/generatedInvite';
@@ -202,6 +212,18 @@ const RESTORE_PATH = '/squads/{squadId}/restore';
 const EXPORT_PATH = '/squads/{squadId}/export';
 
 const PENDING_DELETION_PATH = '/squads/pending-deletion';
+
+const GUEST_CLAIMS_PATH = '/squads/{squadId}/guest-claims';
+
+const ISSUE_CLAIM_LINK_PATH = '/squads/{squadId}/guests/{membershipId}/claims';
+
+const COMPLETE_CLAIM_PATH = '/squads/{squadId}/guests/{membershipId}/claims/complete';
+
+const REVERSE_CLAIM_PATH = '/squads/{squadId}/guests/{membershipId}/claims/reverse';
+
+const PREVIEW_CLAIM_PATH = '/squads/guest-claims/preview';
+
+const ACCEPT_CLAIM_PATH = '/squads/guest-claims/accept';
 
 // --- The facade's result type ------------------------------------------------
 
@@ -362,6 +384,52 @@ export interface SquadsApi {
   listPendingDeletion(
     signal?: AbortSignal,
   ): Promise<CallResult<readonly PendingDeletionSquad[]>>;
+
+  /**
+   * `POST …/guests/{membershipId}/claims` — an owner or admin issues a one-time
+   * claim link for a guest, cancelling any open one. The link is in this result
+   * and nowhere else.
+   */
+  issueClaimLink(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<IssuedClaimLink>>;
+
+  /** `GET /squads/{squadId}/guest-claims` — where each guest's claim stands (admins only). */
+  listGuestClaims(
+    squadId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<readonly GuestClaimRow[]>>;
+
+  /**
+   * `POST /squads/guest-claims/preview` — what a claim link is for, before a
+   * signed-in player accepts it. The secret goes in the body, never the URL.
+   */
+  previewGuestClaim(
+    secret: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<GuestClaimPreview>>;
+
+  /** `POST /squads/guest-claims/accept` — a signed-in player accepts a claim link. */
+  acceptGuestClaim(
+    secret: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<AcceptedGuestClaim>>;
+
+  /** `POST …/claims/complete` — an admin confirms an accepted claim. */
+  completeGuestClaim(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** `POST …/claims/reverse` — an admin undoes a completed claim. */
+  reverseGuestClaim(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
 
   /** `GET /squads/{squadId}/features` — the Feature_Flag set (Req 14.7). */
   getFeatureFlags(
@@ -667,6 +735,78 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
         (callSignal): ClientCall<'ListMyPendingDeletionSquads'> =>
           apiClient.GET(PENDING_DELETION_PATH, { signal: callSignal }),
         parsePendingDeletionSquadList,
+        signal,
+      );
+    },
+
+    issueClaimLink(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'InitiateGuestClaim'> =>
+          apiClient.POST(ISSUE_CLAIM_LINK_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        parseIssuedClaimLink,
+        signal,
+      );
+    },
+
+    listGuestClaims(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'ListGuestClaims'> =>
+          apiClient.GET(GUEST_CLAIMS_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        parseGuestClaimRows,
+        signal,
+      );
+    },
+
+    previewGuestClaim(secret, signal) {
+      return call(
+        (callSignal): ClientCall<'PreviewGuestClaim'> =>
+          apiClient.POST(PREVIEW_CLAIM_PATH, {
+            body: { presentedSecret: secret },
+            signal: callSignal,
+          }),
+        parseGuestClaimPreview,
+        signal,
+      );
+    },
+
+    acceptGuestClaim(secret, signal) {
+      return call(
+        (callSignal): ClientCall<'AcceptGuestClaim'> =>
+          apiClient.POST(ACCEPT_CLAIM_PATH, {
+            body: { presentedSecret: secret },
+            signal: callSignal,
+          }),
+        parseAcceptedGuestClaim,
+        signal,
+      );
+    },
+
+    completeGuestClaim(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'CompleteGuestClaim'> =>
+          apiClient.POST(COMPLETE_CLAIM_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    reverseGuestClaim(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'ReverseGuestClaim'> =>
+          apiClient.POST(REVERSE_CLAIM_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
         signal,
       );
     },

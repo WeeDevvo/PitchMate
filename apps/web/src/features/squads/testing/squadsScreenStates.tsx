@@ -508,6 +508,14 @@ export function createStubApi(options: StubApiOptions = {}): SquadsApi {
     deleteSquad: () => pendingCall<never>(),
     restoreSquad: () => pendingCall<void>(),
     exportSquad: () => pendingCall<never>(),
+    // The admin claim list is read by every admin view; with nothing supplied it
+    // reports no claim activity, the ordinary case.
+    listGuestClaims: () => Promise.resolve({ kind: 'success', value: [] }),
+    issueClaimLink: () => pendingCall<never>(),
+    completeGuestClaim: () => pendingCall<void>(),
+    reverseGuestClaim: () => pendingCall<void>(),
+    previewGuestClaim: () => pendingCall<never>(),
+    acceptGuestClaim: () => pendingCall<never>(),
   } as SquadsApi;
 }
 

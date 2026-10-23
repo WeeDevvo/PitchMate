@@ -3611,16 +3611,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InitiateGuestClaimRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK",
@@ -3708,12 +3698,12 @@
         ]
       }
     },
-    "/squads/{squadId}/guests/{membershipId}/claims/consent": {
-      "post": {
+    "/squads/{squadId}/guest-claims": {
+      "get": {
         "tags": [
           "Squads"
         ],
-        "operationId": "RecordClaimConsent",
+        "operationId": "ListGuestClaims",
         "parameters": [
           {
             "name": "squadId",
@@ -3723,20 +3713,217 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          {
-            "name": "membershipId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
           }
         ],
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GuestClaimSummary"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/squads/guest-claims/preview": {
+      "post": {
+        "tags": [
+          "Squads"
+        ],
+        "operationId": "PreviewGuestClaim",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestClaimSecretRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestClaimPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/squads/guest-claims/accept": {
+      "post": {
+        "tags": [
+          "Squads"
+        ],
+        "operationId": "AcceptGuestClaim",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestClaimSecretRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptGuestClaimResult"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -6767,6 +6954,17 @@
   },
   "components": {
     "schemas": {
+      "AcceptGuestClaimResult": {
+        "required": [
+          "squadName"
+        ],
+        "type": "object",
+        "properties": {
+          "squadName": {
+            "type": "string"
+          }
+        }
+      },
       "AccountView": {
         "required": [
           "userId",
@@ -7401,6 +7599,71 @@
           }
         }
       },
+      "GuestClaimPreview": {
+        "required": [
+          "squadName",
+          "guestDisplayName"
+        ],
+        "type": "object",
+        "properties": {
+          "squadName": {
+            "type": "string"
+          },
+          "guestDisplayName": {
+            "type": "string"
+          }
+        }
+      },
+      "GuestClaimSecretRequest": {
+        "required": [
+          "presentedSecret"
+        ],
+        "type": "object",
+        "properties": {
+          "presentedSecret": {
+            "type": "string"
+          }
+        }
+      },
+      "GuestClaimStatus": {
+        "enum": [
+          "LinkIssued",
+          "LinkExpired",
+          "Accepted",
+          "Claimed"
+        ]
+      },
+      "GuestClaimSummary": {
+        "required": [
+          "membershipId",
+          "status",
+          "expiresAt",
+          "acceptedByName"
+        ],
+        "type": "object",
+        "properties": {
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GuestClaimStatus"
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "acceptedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "HealthResponse": {
         "required": [
           "status"
@@ -7412,27 +7675,24 @@
           }
         }
       },
-      "InitiateGuestClaimRequest": {
-        "required": [
-          "targetUserId"
-        ],
-        "type": "object",
-        "properties": {
-          "targetUserId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
-      },
       "InitiateGuestClaimResult": {
         "required": [
-          "claimId"
+          "claimId",
+          "redeemableLink",
+          "expiresAt"
         ],
         "type": "object",
         "properties": {
           "claimId": {
             "type": "string",
             "format": "uuid"
+          },
+          "redeemableLink": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },

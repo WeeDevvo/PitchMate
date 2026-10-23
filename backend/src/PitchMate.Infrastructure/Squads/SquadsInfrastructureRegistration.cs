@@ -49,6 +49,9 @@ public static class SquadsInfrastructureRegistration
         // instance is safe as a singleton (Requirement 10.7).
         services.TryAddSingleton<IInviteSecretService, InviteSecretService>();
 
+        // Claim-link secrets follow the same scheme and are just as stateless.
+        services.TryAddSingleton<IClaimSecretService, ClaimSecretService>();
+
         // Conservative default until the match-lifecycle spec introduces the match tables this probe
         // would query; it reports no match history so erasure hard-removes rather than anonymising
         // (Requirement 18.2). Stateless, so a singleton is safe.

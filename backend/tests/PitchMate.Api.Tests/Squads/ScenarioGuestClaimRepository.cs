@@ -39,4 +39,21 @@ internal sealed class ScenarioGuestClaimRepository : IGuestClaimRepository
 
         return Task.FromResult(membershipId == scenario.MembershipId ? scenario.OpenClaim : null);
     }
+
+    public Task<GuestClaim?> FindByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
+    {
+        GuestClaimScenario scenario = Scenario ?? throw new InvalidOperationException(
+            "No guest-claim scenario is configured; the already-member guard sets one before each request.");
+
+        return Task.FromResult(scenario.OpenClaim?.TokenHash == tokenHash ? scenario.OpenClaim : null);
+    }
+
+    // Reversal and the admin status read are outside the surface this guard drives.
+    public Task<GuestClaim?> GetLatestCompletedForMembershipAsync(
+        Guid membershipId,
+        CancellationToken cancellationToken) =>
+        throw new NotSupportedException("The already-member guard drives no reversal.");
+
+    public Task<IReadOnlyList<GuestClaim>> ListOpenForSquadAsync(Guid squadId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("The already-member guard drives no claim listing.");
 }

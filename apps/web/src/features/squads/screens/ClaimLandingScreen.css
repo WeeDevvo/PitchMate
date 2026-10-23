@@ -1,0 +1,22 @@
+/*
+ * The Claim_Landing_Route's one addition to the invite landing's styles: the
+ * guest and squad a link is for, as a label/value list. No colour is written here.
+ */
+
+.squads-claim-landing__preview {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--squads-gap-hairline) var(--squads-gap-tight);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.squads-claim-landing__preview dt {
+  color: var(--muted-text);
+  font-weight: var(--squads-font-weight-label);
+}
+
+.squads-claim-landing__preview dd {
+  margin: 0;
+  color: var(--text);
+}

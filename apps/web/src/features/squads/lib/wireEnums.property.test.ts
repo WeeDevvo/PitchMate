@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { webRoot } from '../structural/sourceScan';
 import {
+  GUEST_CLAIM_STATUS_NAMES,
   INVITE_STATE_NAMES,
   MEMBERSHIP_STATE_NAMES,
   RATING_STATE_NAMES,
@@ -14,6 +15,7 @@ import {
   SQUAD_FEATURE_NAMES,
   SQUAD_ROLE_NAMES,
   WIRE_ENUM_COVERAGE,
+  isGuestClaimStatus,
   isInviteState,
   isMembershipState,
   isRatingState,
@@ -127,6 +129,11 @@ interface WireEnumUnderTest {
 }
 
 const UNIONS: readonly WireEnumUnderTest[] = [
+  {
+    schemaName: 'GuestClaimStatus',
+    names: GUEST_CLAIM_STATUS_NAMES,
+    is: isGuestClaimStatus,
+  },
   { schemaName: 'InviteState', names: INVITE_STATE_NAMES, is: isInviteState },
   {
     schemaName: 'MembershipState',
@@ -312,11 +319,11 @@ describe('the wire enum suite covers every union the module declares', () => {
     );
   });
 
-  it('carries seven unions and seventeen names in total', () => {
+  it('carries eight unions and twenty-one names in total', () => {
     // A vacuous suite would pass every property below. Both floors are stated,
     // because an empty tuple would satisfy "every name is accepted" trivially.
-    expect(UNIONS).toHaveLength(7);
-    expect(ALL_NAMES).toHaveLength(17);
+    expect(UNIONS).toHaveLength(8);
+    expect(ALL_NAMES).toHaveLength(21);
 
     for (const { schemaName, names } of UNIONS) {
       expect(names.length, schemaName).toBeGreaterThan(0);

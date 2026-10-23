@@ -91,6 +91,17 @@ const LEAVE_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/leave';
 const RESTORE_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/restore';
 const EXPORT_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/export';
 const PENDING_DELETION_PATH: keyof paths = '/squads/pending-deletion';
+const ISSUE_CLAIM_LINK_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/guests/{membershipId}/claims';
+const GUEST_CLAIMS_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/guest-claims';
+const COMPLETE_CLAIM_PATH_TEMPLATE: keyof paths =
+  '/squads/{squadId}/guests/{membershipId}/claims/complete';
+const REVERSE_CLAIM_PATH_TEMPLATE: keyof paths =
+  '/squads/{squadId}/guests/{membershipId}/claims/reverse';
+const PREVIEW_CLAIM_PATH: keyof paths = '/squads/guest-claims/preview';
+const ACCEPT_CLAIM_PATH: keyof paths = '/squads/guest-claims/accept';
+
+/** A claim-link secret, as the landing page reads it from the path. */
+const CLAIM_SECRET = 'claim-secret-token';
 
 /** A purge instant as the backend writes one, and the epoch milliseconds it reads as. */
 const PURGE_AT = '2026-11-22T09:30:00Z';
@@ -610,6 +621,95 @@ const OPERATIONS: readonly OperationCase[] = [
       value: [{ squadId: SQUAD_ID, name: 'Tuesday Five', purgeAtMs: PURGE_AT_MS }],
     },
     invoke: (api, signal) => api.listPendingDeletion(signal),
+  },
+  {
+    name: 'issueClaimLink',
+    method: 'POST',
+    path: fill(ISSUE_CLAIM_LINK_PATH_TEMPLATE, {
+      squadId: SQUAD_ID,
+      membershipId: MEMBERSHIP_ID,
+    }),
+    search: '',
+    // No body: whoever accepts the link becomes the target.
+    requestBodyText: '',
+    successBody: {
+      claimId: MEMBERSHIP_ID,
+      redeemableLink: 'https://pitch-mate.co.uk/claim/abc',
+      expiresAt: PURGE_AT,
+    },
+    expected: {
+      kind: 'success',
+      value: {
+        claimId: MEMBERSHIP_ID,
+        redeemableLink: 'https://pitch-mate.co.uk/claim/abc',
+        expiresAtMs: PURGE_AT_MS,
+      },
+    },
+    invoke: (api, signal) => api.issueClaimLink(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'listGuestClaims',
+    method: 'GET',
+    path: fill(GUEST_CLAIMS_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: '',
+    successBody: [
+      { membershipId: MEMBERSHIP_ID, status: 'Accepted', expiresAt: PURGE_AT, acceptedByName: 'Sam' },
+    ],
+    expected: {
+      kind: 'success',
+      value: [
+        {
+          membershipId: MEMBERSHIP_ID,
+          status: 'Accepted',
+          expiresAtMs: PURGE_AT_MS,
+          acceptedByName: 'Sam',
+        },
+      ],
+    },
+    invoke: (api, signal) => api.listGuestClaims(SQUAD_ID, signal),
+  },
+  {
+    name: 'previewGuestClaim',
+    method: 'POST',
+    path: PREVIEW_CLAIM_PATH,
+    // The secret travels in the body, never the URL.
+    search: '',
+    requestBodyText: JSON.stringify({ presentedSecret: CLAIM_SECRET }),
+    successBody: { squadName: 'Tuesday Five', guestDisplayName: 'Big Dave' },
+    expected: {
+      kind: 'success',
+      value: { squadName: 'Tuesday Five', guestDisplayName: 'Big Dave' },
+    },
+    invoke: (api, signal) => api.previewGuestClaim(CLAIM_SECRET, signal),
+  },
+  {
+    name: 'acceptGuestClaim',
+    method: 'POST',
+    path: ACCEPT_CLAIM_PATH,
+    search: '',
+    requestBodyText: JSON.stringify({ presentedSecret: CLAIM_SECRET }),
+    successBody: { squadName: 'Tuesday Five' },
+    expected: { kind: 'success', value: { squadName: 'Tuesday Five' } },
+    invoke: (api, signal) => api.acceptGuestClaim(CLAIM_SECRET, signal),
+  },
+  {
+    name: 'completeGuestClaim',
+    method: 'POST',
+    path: fill(COMPLETE_CLAIM_PATH_TEMPLATE, { squadId: SQUAD_ID, membershipId: MEMBERSHIP_ID }),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.completeGuestClaim(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'reverseGuestClaim',
+    method: 'POST',
+    path: fill(REVERSE_CLAIM_PATH_TEMPLATE, { squadId: SQUAD_ID, membershipId: MEMBERSHIP_ID }),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.reverseGuestClaim(SQUAD_ID, MEMBERSHIP_ID, signal),
   },
   {
     name: 'getFeatureFlags',

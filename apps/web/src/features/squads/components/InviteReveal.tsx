@@ -73,6 +73,7 @@ import {
   INVITE_REVEAL_HEADING,
   INVITE_SHOWN_ONCE,
 } from '../lib/messages';
+import { writeToClipboard } from './clipboard';
 import { useSurfaceFocus, type SurfaceHeadingLevel } from './surfaceFocus';
 import '../styles/squadsTokens.css';
 import './surfaces.css';
@@ -130,36 +131,6 @@ export interface InviteRevealProps {
 
 /** The class every surface of the feature shares; see `surfaces.css`. */
 const SURFACE_CLASS = 'squads-surface squads-invite-reveal';
-
-/**
- * Put a string on the clipboard, reporting only whether it got there.
- *
- * Returns a promise that never rejects, so the caller has one settled answer
- * rather than two paths. The value is passed straight through and appears in no
- * message either way (Requirement 11.7).
- *
- * A clipboard is absent in more situations than a failure: an insecure context, a
- * permission the person declined, an older engine, and a test environment without
- * the API. All of them arrive here as the same `false`, and the failure copy tells
- * the person to select the link by hand — which is possible because the link is
- * rendered as ordinary selectable text.
- */
-async function writeToClipboard(value: string): Promise<boolean> {
-  try {
-    const clipboard: Clipboard | undefined = navigator.clipboard;
-
-    if (clipboard === undefined || typeof clipboard.writeText !== 'function') {
-      return false;
-    }
-
-    await clipboard.writeText(value);
-    return true;
-  } catch {
-    // Deliberately swallowed rather than logged: a rejection reason here could
-    // carry the value that was being written (Requirement 11.7).
-    return false;
-  }
-}
 
 /**
  * Render the Invite_Reveal: the generated link and code, a control that copies the

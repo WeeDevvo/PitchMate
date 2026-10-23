@@ -1250,3 +1250,124 @@ export const RESTORE_SQUAD_LABEL = 'Restore';
 
 /** Announced when a restore succeeds. */
 export const RESTORE_SQUAD_SUCCEEDED = 'Squad restored.';
+
+// --- Guest claims by claim link ----------------------------------------------
+
+/** The heading of the admins' claim list, inside the Guests subsection. */
+export const CLAIMS_HEADING = 'Link a guest to a player';
+
+/** What linking a guest does, stated above the list. */
+export const CLAIMS_STATEMENT =
+  "Send a guest's link to the player. Once they open it signed in and accept, you complete the claim here and the guest's rating, stats and history become theirs.";
+
+/** Shown in place of the list when the squad has no guests to link. */
+export const CLAIMS_NO_GUESTS = 'There are no guests to link yet.';
+
+/** The control that issues a guest's first claim link. */
+export const CREATE_CLAIM_LINK_LABEL = 'Create claim link';
+
+/** The control that replaces a guest's link with a new one, cancelling the old one. */
+export const NEW_CLAIM_LINK_LABEL = 'Create new link';
+
+/** The words before a live link's expiry. */
+export const CLAIM_LINK_SENT_LABEL = 'Link sent, expires';
+
+/** A link that expired before anyone accepted it. */
+export const CLAIM_LINK_EXPIRED = 'Link expired before anyone accepted it.';
+
+/** The words before the account name of the player who accepted. */
+export const CLAIM_ACCEPTED_BY_LABEL = 'Accepted by';
+
+/** A guest whose claim is complete. */
+export const CLAIM_CLAIMED = 'Linked to a player.';
+
+/** The control that completes an accepted claim, and confirms it. */
+export const COMPLETE_CLAIM_LABEL = 'Complete claim';
+
+/** The heading of the completion confirmation. */
+export const COMPLETE_CLAIM_CONFIRM_HEADING = 'Complete this claim?';
+
+/** What completing does, stated in the confirmation. */
+export const COMPLETE_CLAIM_CONFIRM_STATEMENT =
+  "This guest's rating, stats and match history become the player's. You can undo it later.";
+
+/** Announced once a claim completes. */
+export const COMPLETE_CLAIM_SUCCEEDED = 'Claim completed.';
+
+/** The control that undoes a completed claim, and confirms it. */
+export const UNDO_CLAIM_LABEL = 'Undo claim';
+
+/** The heading of the undo confirmation. */
+export const UNDO_CLAIM_CONFIRM_HEADING = 'Undo this claim?';
+
+/** What undoing does, stated in the confirmation. */
+export const UNDO_CLAIM_CONFIRM_STATEMENT =
+  'The player goes back to being a guest. The rating, stats and match history stay with the guest.';
+
+/** Announced once a claim is undone. */
+export const UNDO_CLAIM_SUCCEEDED = 'Claim undone.';
+
+/** The heading of the one-time claim link reveal. */
+export const CLAIM_REVEAL_HEADING = 'Claim link';
+
+/** The statement that the claim link is shown once and works once. */
+export const CLAIM_SHOWN_ONCE =
+  'This link is shown once and works once. Copy it now and send it to the player.';
+
+/** The label of the revealed link. */
+export const CLAIM_LINK_LABEL = 'Link';
+
+/** The words before the revealed link's expiry. */
+export const CLAIM_LINK_EXPIRES_LABEL = 'Expires';
+
+/** The control that copies the revealed claim link. */
+export const COPY_CLAIM_LINK_LABEL = 'Copy link';
+
+/** Announced once the claim link is on the clipboard. */
+export const CLAIM_LINK_COPIED = 'Link copied.';
+
+/** The heading of the Claim_Landing_Route. */
+export const CLAIM_LANDING_HEADING = 'Link your account to a guest';
+
+/** What a signed-out visitor is asked to do. */
+export const CLAIM_SIGN_IN_INSTRUCTION = 'Log in or sign up to accept this link.';
+
+/** The log-in control on the Claim_Landing_Route. */
+export const CLAIM_LOG_IN_LABEL = 'Log in';
+
+/** The sign-up control on the Claim_Landing_Route. */
+export const CLAIM_SIGN_UP_LABEL = 'Sign up';
+
+/** The busy statement while the link is being read. */
+export const CLAIM_PREVIEWING_LABEL = 'Checking this link';
+
+/** The label of the guest a link is for. */
+export const CLAIM_PREVIEW_GUEST_LABEL = 'Guest';
+
+/** The label of the squad a link is for. */
+export const CLAIM_PREVIEW_SQUAD_LABEL = 'Squad';
+
+/** What accepting does, stated beside the preview. */
+export const CLAIM_PREVIEW_EXPLANATION =
+  "Accepting links this guest's rating, stats and match history to your account once an admin confirms it.";
+
+/** The control that accepts the link. */
+export const ACCEPT_CLAIM_LABEL = 'Accept';
+
+/** The busy statement while accepting. */
+export const CLAIM_ACCEPTING_LABEL = 'Accepting';
+
+/** Shown once the link is accepted. */
+export const CLAIM_ACCEPTED_STATEMENT =
+  'Accepted. Once an admin confirms it, the guest and their history are yours.';
+
+/**
+ * Shown for a link that can't be accepted, whatever the reason: unknown, expired,
+ * replaced, already used, or the player already belongs to the squad.
+ */
+export const CLAIM_UNUSABLE =
+  "This link can't be used. It may have expired or been replaced, or you may already be in this squad. Ask an admin for a new link.";
+
+/** Shown for a link whose secret can't be read from the address. */
+export const CLAIM_LINK_INCOMPLETE =
+  'This claim link is incomplete. Ask an admin for the full link.';

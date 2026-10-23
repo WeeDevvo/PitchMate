@@ -175,6 +175,14 @@ export const DELETE_CALL: MembershipActionCall = (api, squadId, _target, signal)
 export const RESTORE_CALL: MembershipActionCall = (api, _squadId, target, signal) =>
   api.restoreSquad(target, signal);
 
+/** Complete an accepted guest claim. The target is the guest membership. */
+export const COMPLETE_CLAIM_CALL: MembershipActionCall = (api, squadId, target, signal) =>
+  api.completeGuestClaim(squadId, target, signal);
+
+/** Undo a completed guest claim. The target is the claimed membership. */
+export const REVERSE_CLAIM_CALL: MembershipActionCall = (api, squadId, target, signal) =>
+  api.reverseGuestClaim(squadId, target, signal);
+
 export interface MembershipActionOptions {
   /** The Squads_Api facade — the feature's only transport seam. */
   readonly api: SquadsApi;

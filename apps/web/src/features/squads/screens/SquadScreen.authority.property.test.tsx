@@ -298,6 +298,7 @@ const interactionArb: fc.Arbitrary<Interaction> = fc
  */
 const FORBIDDEN_ADMIN_CALLS: readonly string[] = [
   'ListInvites',
+  'ListGuestClaims',
   'GenerateInvite',
   'RevokeInvite',
   'CreateGuest',
@@ -360,6 +361,10 @@ function createRecordingApi(options: {
     },
     listInvites: () => {
       note('ListInvites');
+      return Promise.resolve({ kind: 'success', value: [] });
+    },
+    listGuestClaims: () => {
+      note('ListGuestClaims');
       return Promise.resolve({ kind: 'success', value: [] });
     },
     generateInvite: () => {

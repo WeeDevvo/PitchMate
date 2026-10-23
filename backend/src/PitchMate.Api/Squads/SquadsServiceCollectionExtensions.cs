@@ -87,7 +87,9 @@ public static class SquadsServiceCollectionExtensions
 
         // Guest claims.
         services.AddScoped<InitiateGuestClaimHandler>();
-        services.AddScoped<RecordClaimConsentHandler>();
+        services.AddScoped<AcceptGuestClaimHandler>();
+        services.AddScoped<PreviewGuestClaimHandler>();
+        services.AddScoped<ListGuestClaimsHandler>();
         services.AddScoped<CompleteGuestClaimHandler>();
         services.AddScoped<ReverseGuestClaimHandler>();
 
