@@ -94,6 +94,13 @@ export interface ConfirmDialogProps {
    * mid-operation; single-flight is enforced in the state hook regardless.
    */
   readonly pending?: boolean;
+  /**
+   * Whether the confirm control is held back until the person has done what the
+   * statement asks (typing a squad's name before deleting it). Presented like
+   * `pending`, `aria-disabled` rather than `disabled`, so the control stays in the
+   * keyboard order and reachable to a screen reader.
+   */
+  readonly confirmBlocked?: boolean;
   /** Optional id for the surface element, for a caller's `aria-controls`. */
   readonly id?: string;
   /** Optional extra class for the surface element. */
@@ -118,6 +125,7 @@ function OpenConfirmDialog({
   onConfirm,
   onClose,
   pending = false,
+  confirmBlocked = false,
   id,
   className,
 }: Omit<ConfirmDialogProps, 'open'>): ReactElement {
@@ -143,12 +151,12 @@ function OpenConfirmDialog({
   );
 
   const handleConfirm = useCallback((): void => {
-    if (pending) {
+    if (pending || confirmBlocked) {
       // Keeps the `aria-disabled` the control reports truthful.
       return;
     }
     onConfirm();
-  }, [onConfirm, pending]);
+  }, [confirmBlocked, onConfirm, pending]);
 
   return (
     <div
@@ -185,7 +193,7 @@ function OpenConfirmDialog({
           <button
             type="button"
             className="squads-surface__action squads-surface__action--primary"
-            aria-disabled={pending ? true : undefined}
+            aria-disabled={pending || confirmBlocked ? true : undefined}
             aria-busy={pending ? true : undefined}
             data-pending={pending ? 'true' : 'false'}
             onClick={handleConfirm}

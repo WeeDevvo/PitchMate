@@ -140,6 +140,8 @@ function createTransport(): Transport {
   };
 
   const api: SquadsApi = {
+    // The Squads_Home also reads the caller's pending-deletion squads; none here.
+    listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
     listMySquads: (signal) => respond('listMySquads', signal),
     getSquad: (_squadId, signal) => respond('getSquad', signal),
     getDisplayRatingLeaderboard: (_squadId, signal) =>

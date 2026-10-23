@@ -80,6 +80,10 @@ import {
   ADMIN_SUBSECTION_ATTRIBUTE,
   ADMIN_SUBSECTION_SELECTOR,
 } from '../components/AdminSection';
+import {
+  DELETE_SQUAD_TRIGGER_SELECTOR,
+  EXPORT_SQUAD_TRIGGER_SELECTOR,
+} from '../components/DeleteSquadSection';
 import { FAILURE_NOTICE_SELECTOR } from '../components/FailureNotice';
 import {
   FEATURE_TOGGLE_SELECTOR,
@@ -597,7 +601,7 @@ function expectAdminSurfaceRendered(
     ).map((section) => section.getAttribute(ADMIN_SUBSECTION_ATTRIBUTE)),
   ).toEqual(
     owner
-      ? ['invites', 'guests', 'features', 'ownership']
+      ? ['invites', 'guests', 'features', 'ownership', 'delete']
       : ['invites', 'guests', 'features'],
   );
 
@@ -606,6 +610,10 @@ function expectAdminSurfaceRendered(
     document.querySelector(OWNERSHIP_TARGET_SELECTOR) !== null ||
     document.querySelector('[data-squads-ownership-empty="true"]') !== null;
   expect(ownershipOffered).toBe(owner);
+
+  // Deleting the squad, and the export offered before it, are the owner's alone.
+  expect(document.querySelector(DELETE_SQUAD_TRIGGER_SELECTOR) !== null).toBe(owner);
+  expect(document.querySelector(EXPORT_SQUAD_TRIGGER_SELECTOR) !== null).toBe(owner);
 
   // 14.1: one toggle per parsed Feature_Flag, so an empty collection renders no
   // toggle while the set itself is still there.
@@ -621,7 +629,7 @@ function expectAdminSurfaceRendered(
     STATS_SECTION_HEADING,
     ADMIN_SECTION_HEADING,
   ]);
-  expect(headingTexts(3)).toHaveLength(owner ? 4 : 3);
+  expect(headingTexts(3)).toHaveLength(owner ? 5 : 3);
 }
 
 /**

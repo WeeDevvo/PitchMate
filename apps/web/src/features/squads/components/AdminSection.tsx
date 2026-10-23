@@ -77,6 +77,7 @@ import type { SquadRefreshOptions } from '../state/useSquadScreen';
 import { FeatureToggles } from './FeatureToggles';
 import { GuestManager } from './GuestManager';
 import { InviteManager } from './InviteManager';
+import { DeleteSquadSection } from './DeleteSquadSection';
 import { OwnershipTransfer } from './OwnershipTransfer';
 import '../styles/squadsTokens.css';
 import './AdminSection.css';
@@ -102,6 +103,12 @@ const CHILD_SURFACE_HEADING_LEVEL = 4;
 export interface AdminSectionProps {
   /** The squad being administered, from the parsed Squad_Detail. */
   readonly squadId: string;
+
+  /**
+   * The squad's name, which the owner types to confirm deleting it. Without one,
+   * the "Delete squad" area is not offered.
+   */
+  readonly squadName?: string;
 
   /** The Squads_Api facade — the feature's only transport seam. */
   readonly api: SquadsApi;
@@ -169,6 +176,7 @@ export interface AdminSectionProps {
  */
 export function AdminSection({
   squadId,
+  squadName,
   api,
   flags,
   onSquadChanged,
@@ -289,6 +297,20 @@ export function AdminSection({
         confirmHeadingLevel={CHILD_SURFACE_HEADING_LEVEL}
         {...authStateProp}
       />
+
+      {/* Owner only, and last: deleting is the one action here that ends the
+          squad, so it sits below everything that changes it. */}
+      {squadName === undefined ? null : (
+        <DeleteSquadSection
+          squadId={squadId}
+          squadName={squadName}
+          api={api}
+          viewerRole={viewerRole}
+          viewerState={viewerState}
+          confirmHeadingLevel={CHILD_SURFACE_HEADING_LEVEL}
+          {...authStateProp}
+        />
+      )}
     </section>
   );
 }

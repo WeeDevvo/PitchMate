@@ -1203,3 +1203,50 @@ export const INVITE_REDEEM_RETRY_LABEL = 'Try again';
  * to (which is also why a successful redemption *replaces* the history entry).
  */
 export const SQUADS_HOME_CONTROL_LABEL = 'Go to your squads';
+
+// --- Squad deletion ----------------------------------------------------------
+
+/** The heading of the owner's deletion area in Administration. */
+export const DELETE_SECTION_HEADING = 'Delete squad';
+
+/**
+ * What deleting does, stated before the owner starts. The grace period is the
+ * backend's default, which this client never overrides.
+ */
+export const DELETE_SECTION_STATEMENT =
+  'Deleting hides the squad from everyone straight away. You can restore it from your squads page for 30 days. After that it is removed for good, with its matches and stats.';
+
+/** The control that downloads the owner's copy of the squad's data. */
+export const EXPORT_SQUAD_LABEL = 'Download an export';
+
+/** Why the export is offered first. */
+export const EXPORT_SQUAD_STATEMENT =
+  'Save a copy of the players, invites and settings before you delete.';
+
+/** Announced once the export has been handed to the browser to save. */
+export const EXPORT_SQUAD_SUCCEEDED = 'Export downloaded.';
+
+/** The control that opens the deletion confirmation, and confirms it. */
+export const DELETE_SQUAD_LABEL = 'Delete squad';
+
+/** The heading of the deletion confirmation. */
+export const DELETE_CONFIRM_HEADING = 'Delete this squad?';
+
+/** The label of the field the owner types the squad's name into. */
+export const DELETE_CONFIRM_NAME_LABEL = 'Type the squad name to confirm';
+
+/** Shown under the field while what is typed does not match the name. */
+export const DELETE_CONFIRM_NAME_HINT =
+  'The delete button works once the name matches exactly.';
+
+/** The heading of the owner's list of deleted squads on the Squads_Home. */
+export const PENDING_DELETION_HEADING = 'Scheduled for deletion';
+
+/** The words before a deleted squad's purge date. */
+export const PENDING_DELETION_PURGE_LABEL = 'Removed for good on';
+
+/** The control that undoes a deletion. */
+export const RESTORE_SQUAD_LABEL = 'Restore';
+
+/** Announced when a restore succeeds. */
+export const RESTORE_SQUAD_SUCCEEDED = 'Squad restored.';

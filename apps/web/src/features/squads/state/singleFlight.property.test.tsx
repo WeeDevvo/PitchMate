@@ -254,6 +254,8 @@ function unreached(method: string): () => never {
 /** Every method refused, so each subject opts in to exactly what it needs. */
 function refusingApi(): SquadsApi {
   return {
+    // The Squads_Home also reads the caller's pending-deletion squads; none here.
+    listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
     listMySquads: unreached('ListMySquads'),
     getSquad: unreached('GetSquad'),
     getDisplayRatingLeaderboard: unreached('GetSquadLeaderboard'),
@@ -763,6 +765,8 @@ async function startSubject(scenario: Scenario): Promise<SingleFlightDriver> {
 
       const api: SquadsApi = {
         ...refusingApi(),
+        // The Squads_Home also reads the caller's pending-deletion squads; none here.
+        listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
         listMySquads: () => Promise.resolve(LISTED_SQUADS),
         createSquad: () => record(),
       };
@@ -789,6 +793,8 @@ async function startSubject(scenario: Scenario): Promise<SingleFlightDriver> {
 
       const api: SquadsApi = {
         ...refusingApi(),
+        // The Squads_Home also reads the caller's pending-deletion squads; none here.
+        listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
         listMySquads: () => Promise.resolve(LISTED_SQUADS),
         redeemInvite: () => record(),
       };

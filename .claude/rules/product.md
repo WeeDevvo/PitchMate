@@ -13,7 +13,7 @@ Lines marked **Today** say where the shipped code falls short of the intent, so 
 - **Display names are unique within a squad**, for guests and members alike.
 - An admin can **claim** a guest for a registered user. The user must accept, the claim is audited and reversible, and it preserves the guest's rating and stats, because ratings belong to the membership, not the account.
 - **Leaving or removal** makes a membership inactive (out of selection) but keeps its rating, stats and history. Re-joining reactivates the same membership.
-- **Deleting a squad** is owner-only: soft delete, grace period, then purge, with an export offered first. A squad in its grace period should be invisible to every read. **Today** the squad leaderboard and player profile reads still answer for it (logged in the backlog).
+- **Deleting a squad** is owner-only: soft delete, grace period (30 days by default), then purge, with an export offered first and a typed-name confirmation. A squad in its grace period should be invisible to every read except the owner's own list of deleted squads, where the owner can restore it until the purge. **Today** the squad leaderboard and player profile reads still answer for it (logged in the backlog).
 
 ## Optional features
 

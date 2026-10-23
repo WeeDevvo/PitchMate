@@ -114,6 +114,7 @@ import { CREATE_SQUAD_FORM_ID, CreateSquadForm } from '../components/CreateSquad
 import { FailureNotice } from '../components/FailureNotice';
 import { JOIN_SQUAD_FORM_ID, JoinSquadForm } from '../components/JoinSquadForm';
 import { LoadingIndication } from '../components/LoadingIndication';
+import { PendingDeletionList } from '../components/PendingDeletionList';
 import { SquadCard } from '../components/SquadCard';
 import { SquadsEmptyState } from '../components/SquadsEmptyState';
 import {
@@ -615,6 +616,10 @@ export function SquadsHome({ api }: SquadsHomeProps): ReactElement {
       />
 
       {loadState}
+
+      {/* The owner's deleted squads, still restorable. Renders nothing for
+          anyone without one. */}
+      <PendingDeletionList api={api} authState={authState} onRestored={machine.retry} />
     </div>
   );
 }
