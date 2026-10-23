@@ -5,23 +5,15 @@ using PitchMate.Domain.Squads;
 namespace PitchMate.Application.Squads.UseCases;
 
 /// <summary>
-/// Initiates a guest claim linking a guest membership to a registered user, opening the
-/// consent-gated, audited, reversible lifecycle that later completes with
-/// <see cref="CompleteGuestClaimHandler"/> (Requirement 15.1, 15.7). The handler resolves the acting
-/// membership from the authenticated user and target squad and gates it through
-/// <see cref="SquadAuthorization.RequireOwnerOrAdmin"/>, so only an active owner or admin may
-/// initiate a claim; every other actor is rejected with the uniform authorisation failure that never
-/// discloses squad existence (Requirement 4.2). A missing or pending-deletion squad yields the same
-/// uniform failure (Requirement 17.3).
+/// Issues a one-time claim link for a guest membership. An active owner or admin of a live squad asks
+/// for it; the target must be a guest of that squad. Any claim already open for the guest is cancelled
+/// first, so a guest has at most one live link, and the new link expires after
+/// <see cref="GuestClaim.LinkValidity"/>.
 /// <para>
-/// The target membership must resolve, belong to the acting member's squad, and be a
-/// <b>guest</b> membership; a non-guest target is rejected as <see cref="SquadErrorCode.ClaimNotEligible"/>
-/// and left unchanged (Requirement 15.7). The target user must not already hold any membership —
-/// active or inactive — in the same squad; such a target is rejected as
-/// <see cref="SquadErrorCode.AlreadyMember"/> and both memberships are left unchanged
-/// (Requirement 15.4). On success the handler stages a single pending <see cref="GuestClaim"/> whose
-/// initiating admin and initiation instant are captured as audit by the persistence pipeline, and
-/// commits it atomically through <see cref="IUnitOfWork.SaveChangesAsync"/> (Requirement 15.1, 15.5).
+/// Only the hash of the link's secret is persisted. The link itself is in the result and nowhere else,
+/// so this is the one time it can be shown. Who the link is for isn't known yet: the player who opens it
+/// and accepts becomes the target (<see cref="AcceptGuestClaimHandler"/>), and an admin then completes
+/// the claim. The cancellation and the new claim commit in one save.
 /// </para>
 /// </summary>
 public sealed class InitiateGuestClaimHandler
@@ -29,35 +21,42 @@ public sealed class InitiateGuestClaimHandler
     private readonly ISquadRepository _squads;
     private readonly ISquadMembershipRepository _memberships;
     private readonly IGuestClaimRepository _claims;
+    private readonly IClaimSecretService _secrets;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _clock;
 
     /// <summary>
-    /// Creates the handler with the squad repository it verifies existence/soft-delete through, the
-    /// membership repository it authorises and resolves targets with, the guest-claim repository it
-    /// stages the audit record into, and the unit of work it commits with.
+    /// Creates the handler with the repositories it authorises and loads through, the secret service that
+    /// issues the link, the unit of work it commits with, and the clock that sets the expiry.
     /// </summary>
     public InitiateGuestClaimHandler(
         ISquadRepository squads,
         ISquadMembershipRepository memberships,
         IGuestClaimRepository claims,
-        IUnitOfWork unitOfWork)
+        IClaimSecretService secrets,
+        IUnitOfWork unitOfWork,
+        TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(squads);
         ArgumentNullException.ThrowIfNull(memberships);
         ArgumentNullException.ThrowIfNull(claims);
+        ArgumentNullException.ThrowIfNull(secrets);
         ArgumentNullException.ThrowIfNull(unitOfWork);
+        ArgumentNullException.ThrowIfNull(clock);
 
         _squads = squads;
         _memberships = memberships;
         _claims = claims;
+        _secrets = secrets;
         _unitOfWork = unitOfWork;
+        _clock = clock;
     }
 
     /// <summary>
-    /// Handles an <see cref="InitiateGuestClaimCommand"/>, returning the created claim's identity on
-    /// success, or a typed <see cref="SquadError"/> when authorisation or target eligibility fails.
+    /// Handles an <see cref="InitiateGuestClaimCommand"/>, returning the new link and its expiry, or a
+    /// typed <see cref="SquadError"/> when authorisation or target eligibility fails.
     /// </summary>
-    /// <param name="command">The claim-initiation request.</param>
+    /// <param name="command">The request.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     public async Task<Result<InitiateGuestClaimResult>> HandleAsync(
         InitiateGuestClaimCommand command,
@@ -68,28 +67,20 @@ public sealed class InitiateGuestClaimHandler
         SquadMembership? acting =
             await _memberships.GetByUserAndSquadAsync(command.ActingUserId, command.SquadId, cancellationToken);
 
-        // Only an active owner or admin may initiate a claim; every other actor is rejected uniformly (Requirement 4.2).
+        // Only an active owner or admin may issue a claim link; every other actor is rejected uniformly.
         Result gate = SquadAuthorization.RequireOwnerOrAdmin(acting);
         if (!gate.IsSuccess)
         {
             return Result<InitiateGuestClaimResult>.Fail(gate.Error!);
         }
 
-        // Load the squad, excluding soft-deleted ones. A missing or pending-deletion squad yields the
-        // same uniform failure so its (non-)existence is never revealed (Requirement 4.2, 17.3).
+        // A missing or pending-deletion squad yields the same uniform failure.
         Squad? squad = await _squads.GetByIdAsync(command.SquadId, cancellationToken);
         if (squad is null)
         {
             return Result<InitiateGuestClaimResult>.Fail(SquadAuthorization.RequireOwnerOrAdmin(null).Error!);
         }
 
-        if (command.TargetUserId == Guid.Empty)
-        {
-            return Fail(SquadErrorCode.ValidationFailed, "A guest claim requires a non-empty target user identifier.");
-        }
-
-        // The target must be a guest membership of the acting member's squad; a non-guest target is
-        // rejected and left unchanged (Requirement 15.7).
         SquadMembership? target = await _memberships.GetByIdAsync(command.MembershipId, cancellationToken);
         if (target is null || target.SquadId != command.SquadId)
         {
@@ -101,23 +92,30 @@ public sealed class InitiateGuestClaimHandler
             return Fail(SquadErrorCode.ClaimNotEligible, "Only a guest membership can be claimed onto a user.");
         }
 
-        // The target user must not already hold any membership — active or inactive — in the squad
-        // (Requirement 15.4).
-        SquadMembership? existing =
-            await _memberships.GetByUserAndSquadAsync(command.TargetUserId, command.SquadId, cancellationToken);
-        if (existing is not null)
+        DateTimeOffset now = _clock.GetUtcNow();
+
+        // A newer link replaces any open one, so a forwarded old link stops working.
+        GuestClaim? open = await _claims.GetOpenForMembershipAsync(command.MembershipId, cancellationToken);
+        if (open is not null)
         {
-            return Fail(SquadErrorCode.AlreadyMember, "The target user already holds a membership in this squad.");
+            Result cancelled = open.Cancel(now);
+            if (!cancelled.IsSuccess)
+            {
+                return Result<InitiateGuestClaimResult>.Fail(cancelled.Error!);
+            }
         }
 
-        GuestClaim claim = GuestClaim.Initiate(command.MembershipId, command.TargetUserId);
+        ClaimSecret secret = _secrets.Generate();
+        DateTimeOffset expiresAt = now + GuestClaim.LinkValidity;
+        GuestClaim claim = GuestClaim.Initiate(command.MembershipId, secret.TokenHash, expiresAt);
         await _claims.AddAsync(claim, cancellationToken);
 
-        // Persist the single pending claim atomically; the initiating admin and instant are captured
-        // as audit by the persistence pipeline (Requirement 15.1, 15.5).
+        // The cancellation and the new claim commit together; the issuing admin and instant are stamped
+        // as audit by the persistence pipeline.
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<InitiateGuestClaimResult>.Ok(new InitiateGuestClaimResult(claim.Id));
+        return Result<InitiateGuestClaimResult>.Ok(
+            new InitiateGuestClaimResult(claim.Id, secret.RedeemableLink, expiresAt));
     }
 
     private static Result<InitiateGuestClaimResult> Fail(SquadErrorCode code, string message) =>

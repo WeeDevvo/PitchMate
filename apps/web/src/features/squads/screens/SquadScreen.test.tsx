@@ -208,6 +208,8 @@ function createFakeApi(options: FakeApiOptions): {
       log.leaderboardCalls += 1;
       return Promise.resolve(leaderboardOutcome);
     },
+    // Administration also reads the admins' claim list; no claim activity here.
+    listGuestClaims: async () => ({ kind: 'success', value: [] }),
     listInvites: () => {
       log.listInvitesCalls += 1;
       if (!invitesAvailable) {

@@ -15,7 +15,7 @@
  * | `SquadsHome` | the App_Shell's injected Home_Slot content (Requirement 1.12, 18.6) |
  * | `SquadScreen`, `InviteLandingScreen` | the elements of the two route tables, exported so a test can render either screen without the router |
  * | `createSquadsShellRoutes`, `createSquadsPublicRoutes` | the two tables the one application router registers (Requirements 18.4, 18.5) |
- * | `SQUAD_ROUTE`, `INVITE_LANDING_ROUTE` | the patterns a router or a redirect check names |
+ * | `SQUAD_ROUTE`, `INVITE_LANDING_ROUTE`, `CLAIM_LANDING_ROUTE` | the patterns a router or a redirect check names |
  * | `PLAYER_STATS_ROUTE`, `playerStatsPath` | the seam the later player-stats feature registers its screen against (Requirements 9.2, 9.3) |
  * | `squadPath`, `inviteLandingPath` | path construction, so no consumer rebuilds a path from a pattern |
  * | `createSquadsApi`, `SquadsApi` | the facade `appRouter.tsx` builds once from the Authenticated_Api_Client and threads into the routes (Requirement 16.2) |
@@ -43,6 +43,7 @@ export {
   SQUAD_ROUTE,
   PLAYER_STATS_ROUTE,
   INVITE_LANDING_ROUTE,
+  CLAIM_LANDING_ROUTE,
   squadPath,
   playerStatsPath,
   inviteLandingPath,

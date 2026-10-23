@@ -107,6 +107,8 @@ function statefulApi(): { readonly api: SquadsApi; readonly listCalls: () => num
     },
     getSquad: async () => detail(),
     getDisplayRatingLeaderboard: async () => ({ kind: 'success', value: { entries: [] } }),
+    // Administration also reads the admins' claim list; no claim activity here.
+    listGuestClaims: async () => ({ kind: 'success', value: [] }),
     listInvites: async () => ({ kind: 'success', value: [] }),
     transferOwnership: async (_squadId: string, target: string) => {
       roles.set(CALLER_ID, 'Admin');

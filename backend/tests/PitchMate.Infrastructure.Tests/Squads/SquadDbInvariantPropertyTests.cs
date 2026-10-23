@@ -395,13 +395,16 @@ public sealed class SquadDbInvariantPropertyTests
 
             var expectedName = scenario.ThirdName.Trim();
 
-            // Persist a consented, still-open claim for the guest membership.
+            // Persist an accepted, still-open claim for the guest membership.
             await using (var context = CreateContext(clock, new FakeCurrentUserAccessor(ownerUserId.ToString())))
             {
                 var claims = new EfGuestClaimRepository(context);
                 var unitOfWork = new UnitOfWork(context);
-                var claim = GuestClaim.Initiate(guestMembershipId, targetUserId);
-                claim.RecordConsent(clock.GetUtcNow());
+                var claim = GuestClaim.Initiate(
+                    guestMembershipId,
+                    $"hash::{Guid.NewGuid():N}",
+                    clock.GetUtcNow() + GuestClaim.LinkValidity);
+                claim.Accept(targetUserId, clock.GetUtcNow());
                 await claims.AddAsync(claim, CancellationToken.None);
                 await unitOfWork.SaveChangesAsync(CancellationToken.None);
             }

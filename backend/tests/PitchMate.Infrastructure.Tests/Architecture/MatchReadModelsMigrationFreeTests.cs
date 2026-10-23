@@ -21,6 +21,16 @@ public sealed class MatchReadModelsMigrationFreeTests
     /// <summary>The latest migration before the chore; the chore adds none after it.</summary>
     private const string LatestMigration = "20260810155804_AddMatchEvent";
 
+    /// <summary>
+    /// Migrations later features added after the chore, each named here by the feature that added it,
+    /// so a migration slipping in unannounced still fails this guard.
+    /// </summary>
+    private static readonly string[] LaterFeatureMigrations =
+    [
+        // Guest claims by claim link (ADR 0003).
+        "20261023163741_AddGuestClaimLinks",
+    ];
+
     /// <summary>The aggregate's public operations before the chore, pinned so a new one fails by name.</summary>
     private static readonly string[] MatchOperations =
     [
@@ -37,8 +47,9 @@ public sealed class MatchReadModelsMigrationFreeTests
 
         List<string> migrations = [.. context.Database.GetMigrations()];
 
-        Assert.Equal(LatestMigration, migrations[^1]);
-        Assert.Equal(5, migrations.Count);
+        int choreEnd = migrations.IndexOf(LatestMigration);
+        Assert.Equal(4, choreEnd);
+        Assert.Equal(LaterFeatureMigrations, migrations.Skip(choreEnd + 1));
         Assert.False(context.Database.HasPendingModelChanges(), "The EF model differs from the latest migration snapshot.");
     }
 

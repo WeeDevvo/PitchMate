@@ -9,7 +9,7 @@
  * two claims, and they need different kinds of evidence, so this file makes both
  * kinds:
  *
- * 1. **Behavioural** — every one of the twenty-two methods issues its request
+ * 1. **Behavioural** — every one of the twenty-eight methods issues its request
  *    through the client instance it was handed, and through no other. Two
  *    facades are built over two separately-configured clients and driven in the
  *    same test, so a module-level singleton or a lazily-constructed default
@@ -136,7 +136,7 @@ const CALL_OUTCOME_KINDS: readonly string[] = [
   'parse-failure',
 ];
 
-// --- The twenty-two operations -------------------------------------------------
+// --- The twenty-eight operations -------------------------------------------------
 
 /**
  * One operation of the facade, reduced to its activation.
@@ -198,6 +198,18 @@ const OPERATIONS: readonly OperationCase[] = [
   { name: 'restoreSquad', invoke: (api) => api.restoreSquad(SQUAD_ID) },
   { name: 'exportSquad', invoke: (api) => api.exportSquad(SQUAD_ID) },
   { name: 'listPendingDeletion', invoke: (api) => api.listPendingDeletion() },
+  { name: 'issueClaimLink', invoke: (api) => api.issueClaimLink(SQUAD_ID, MEMBERSHIP_ID) },
+  { name: 'listGuestClaims', invoke: (api) => api.listGuestClaims(SQUAD_ID) },
+  { name: 'previewGuestClaim', invoke: (api) => api.previewGuestClaim('claim-secret') },
+  { name: 'acceptGuestClaim', invoke: (api) => api.acceptGuestClaim('claim-secret') },
+  {
+    name: 'completeGuestClaim',
+    invoke: (api) => api.completeGuestClaim(SQUAD_ID, MEMBERSHIP_ID),
+  },
+  {
+    name: 'reverseGuestClaim',
+    invoke: (api) => api.reverseGuestClaim(SQUAD_ID, MEMBERSHIP_ID),
+  },
   { name: 'getFeatureFlags', invoke: (api) => api.getFeatureFlags(SQUAD_ID) },
   {
     name: 'setFeatureFlag',
@@ -345,13 +357,13 @@ function expectNothingEscaped(): void {
 // ---------------------------------------------------------------------------
 
 describe('the Squads_Api surface under test', () => {
-  it('is the twenty-two operations, every one of them exercised here', () => {
+  it('is the twenty-eight operations, every one of them exercised here', () => {
     expect(DEPENDENCY_IS_THE_GENERATED_CLIENT).toBe(true);
 
     const { api } = injectedFacade('injected');
     const methods = Object.keys(api).sort();
 
-    expect(methods).toHaveLength(22);
+    expect(methods).toHaveLength(28);
     expect(methods).toEqual([...OPERATIONS.map((operation) => operation.name)].sort());
   });
 
@@ -440,14 +452,14 @@ describe('every call issues through the injected client (Requirement 16.2)', () 
     },
   );
 
-  it('reaches no transport of its own across all twenty-two operations', async () => {
+  it('reaches no transport of its own across all twenty-eight operations', async () => {
     const { api, transport, log } = injectedFacade('injected');
 
     for (const { invoke } of OPERATIONS) {
       await invoke(api);
     }
 
-    // 16.1: twenty-two activations, twenty-two requests, all through the one
+    // 16.1: twenty-eight activations, twenty-eight requests, all through the one
     // injected client — and nothing at all through a client of the facade's own.
     expect(log).toHaveLength(OPERATIONS.length);
     expect(transport.requests).toHaveLength(OPERATIONS.length);
@@ -500,7 +512,7 @@ describe("the injected client's credential survives every call (Requirement 16.2
     expectNothingEscaped();
   });
 
-  it('carries it on all twenty-two operations, consulting the source once each', async () => {
+  it('carries it on all twenty-eight operations, consulting the source once each', async () => {
     const source = tokenSource({ token: ACCESS_TOKEN });
     const { api, transport } = authenticatedFacade(source);
 

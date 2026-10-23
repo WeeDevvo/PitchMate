@@ -1,0 +1,54 @@
+/*
+ * Presentation for the admins' "Link a guest to a player" list. Every value is
+ * read from a custom property in `styles/squadsTokens.css`; each status is stated
+ * in words, never by colour alone.
+ */
+
+.squads-guest-claims {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+}
+
+.squads-guest-claims__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--squads-font-size-body);
+  font-weight: var(--squads-font-weight-label);
+  line-height: var(--squads-line-height-heading);
+}
+
+.squads-guest-claims__statement {
+  margin: 0;
+  max-width: var(--squads-measure);
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-meta);
+}
+
+.squads-guest-claims__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.squads-guest-claims__entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--squads-gap-tight);
+  overflow-wrap: anywhere;
+}
+
+.squads-guest-claims__name {
+  flex: 1 1 8rem;
+  color: var(--text);
+  font-weight: var(--squads-font-weight-label);
+}
+
+.squads-guest-claims__status {
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-meta);
+}

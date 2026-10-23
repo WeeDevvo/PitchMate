@@ -194,13 +194,25 @@ internal sealed class SquadStore
         _invites.Where(i => i.SquadId == squadId).ToList();
 
     /// <summary>
-    /// Finds the current open claim for a membership: the most recently committed claim for it whose
-    /// state is not <see cref="GuestClaimState.Reversed"/>, so an in-flight (pending/consented) claim
-    /// <em>and</em> a completed claim both resolve — mirroring the production repository the reversal
-    /// handler relies on to record its audit. Returns <see langword="null"/> when none remains open.
+    /// Finds the open claim for a membership, exactly as the production repository does: the most
+    /// recently committed claim for it that is issued or accepted. A completed claim is not open.
     /// </summary>
     public GuestClaim? FindOpenClaimForMembership(Guid membershipId) =>
-        _claims.LastOrDefault(c => c.MembershipId == membershipId && c.State != GuestClaimState.Reversed);
+        _claims.LastOrDefault(c => c.MembershipId == membershipId && c.IsOpen);
+
+    /// <summary>Finds the committed claim whose link secret hashes to <paramref name="tokenHash"/>, in any state.</summary>
+    public GuestClaim? FindClaimByTokenHash(string tokenHash) =>
+        _claims.FirstOrDefault(c => c.TokenHash == tokenHash);
+
+    /// <summary>Finds the membership's most recently completed, not-yet-reversed claim.</summary>
+    public GuestClaim? FindLatestCompletedClaim(Guid membershipId) =>
+        _claims.LastOrDefault(c => c.MembershipId == membershipId && c.State == GuestClaimState.Completed);
+
+    /// <summary>Lists the open claims for memberships of a squad.</summary>
+    public IReadOnlyList<GuestClaim> ListOpenClaimsForSquad(Guid squadId) =>
+        _claims
+            .Where(c => c.IsOpen && _memberships.Any(m => m.Id == c.MembershipId && m.SquadId == squadId))
+            .ToList();
 
     /// <summary>Counts the committed invites of a squad whose effective state at <paramref name="now"/> is active.</summary>
     public int CountActiveInvites(Guid squadId, DateTimeOffset now) =>
@@ -382,10 +394,9 @@ internal sealed class FakeInviteRepository : IInviteRepository
 
 /// <summary>
 /// In-memory <see cref="IGuestClaimRepository"/> over a <see cref="SquadStore"/>. <c>AddAsync</c> only
-/// stages the claim (committed on a successful unit-of-work save), while
-/// <c>GetOpenForMembershipAsync</c> resolves the current non-reversed claim from the committed set —
-/// including a completed claim — so consent, completion, and the reversal audit all act on the
-/// in-flight record exactly as the production repository would.
+/// stages the claim (committed on a successful unit-of-work save); every lookup reads the committed set
+/// with the same meaning as the production repository, so a completed claim is found by the reversal's
+/// lookup and not by the open-claim one.
 /// </summary>
 internal sealed class FakeGuestClaimRepository : IGuestClaimRepository
 {
@@ -405,6 +416,50 @@ internal sealed class FakeGuestClaimRepository : IGuestClaimRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(_store.FindOpenClaimForMembership(membershipId));
+    }
+
+    public Task<GuestClaim?> FindByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.FindClaimByTokenHash(tokenHash));
+    }
+
+    public Task<GuestClaim?> GetLatestCompletedForMembershipAsync(
+        Guid membershipId,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.FindLatestCompletedClaim(membershipId));
+    }
+
+    public Task<IReadOnlyList<GuestClaim>> ListOpenForSquadAsync(Guid squadId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.ListOpenClaimsForSquad(squadId));
+    }
+}
+
+/// <summary>
+/// A deterministic <see cref="IClaimSecretService"/>: each generated secret is a fresh GUID token in a
+/// <c>/claim/</c> link, hashed with a visible, reversible-looking prefix so a test can tell a hash from a
+/// token at a glance. It records the last secret so a test can present it.
+/// </summary>
+internal sealed class FakeClaimSecretService : IClaimSecretService
+{
+    /// <summary>The token of the most recently generated secret, or <see langword="null"/> if none.</summary>
+    public string? LastToken { get; private set; }
+
+    public ClaimSecret Generate()
+    {
+        string token = Guid.NewGuid().ToString("N");
+        LastToken = token;
+        return new ClaimSecret($"https://pitch-mate.co.uk/claim/{token}", Hash(token));
+    }
+
+    public string Hash(string presentedSecret)
+    {
+        ArgumentNullException.ThrowIfNull(presentedSecret);
+        return $"claim-hash::{presentedSecret}";
     }
 }
 

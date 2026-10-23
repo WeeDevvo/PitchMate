@@ -406,7 +406,7 @@ describe('the feature is imported through its barrel only (Requirement 18.7)', (
 /**
  * The names of `lib/` and `api/` the design justifies crossing the boundary.
  *
- * The three route patterns and three builders, because a consumer registers and
+ * The four route patterns and three builders, because a consumer registers and
  * navigates by them and must not rebuild a path from a pattern (Requirements 9.2,
  * 9.3); the transport facade and its type, because `src/app/appRouter.tsx`
  * constructs it once from the Authenticated_Api_Client and threads it into both
@@ -414,6 +414,7 @@ describe('the feature is imported through its barrel only (Requirement 18.7)', (
  * consumer's business.
  */
 const PERMITTED_LIB_AND_API_EXPORTS: readonly string[] = [
+  'CLAIM_LANDING_ROUTE',
   'INVITE_LANDING_ROUTE',
   'PLAYER_STATS_ROUTE',
   'SQUAD_ROUTE',
@@ -527,6 +528,7 @@ describe('nothing surplus is exported from lib/ or api/ (Requirement 18.7)', () 
     // "one entry point" would be satisfied by an empty file.
     expect(barrelExportedNames.sort()).toEqual(
       [
+        'CLAIM_LANDING_ROUTE',
         'INVITE_LANDING_ROUTE',
         'InviteLandingScreen',
         'PLAYER_STATS_ROUTE',

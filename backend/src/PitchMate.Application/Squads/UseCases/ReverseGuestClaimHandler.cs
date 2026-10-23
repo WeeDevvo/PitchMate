@@ -102,9 +102,10 @@ public sealed class ReverseGuestClaimHandler
             return rebind;
         }
 
-        // Record the reversal on the completed claim as audit; the in-flight (not-yet-reversed) claim
-        // for a completed membership is its completed record (Requirement 15.6).
-        GuestClaim? claim = await _claims.GetOpenForMembershipAsync(command.MembershipId, cancellationToken);
+        // Record the reversal on the completed claim as audit (Requirement 15.6). A completed claim is not
+        // "open", so it is looked up as the latest completed, not-yet-reversed claim for the membership.
+        GuestClaim? claim =
+            await _claims.GetLatestCompletedForMembershipAsync(command.MembershipId, cancellationToken);
         if (claim is not null)
         {
             Result reversal = claim.MarkReversed(_clock.GetUtcNow());

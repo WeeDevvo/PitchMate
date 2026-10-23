@@ -121,6 +121,27 @@ function isWireEnumName<TName extends string>(
  * `Expired` is derived by the backend clock and never persisted, so it arrives
  * like any other state and this feature does no expiry arithmetic of its own.
  */
+/** Where a guest's claim stands, as the squad's admins see it. */
+export type GuestClaimStatus = Exclude<
+  components['schemas']['GuestClaimStatus'],
+  null
+>;
+
+/** Every `GuestClaimStatus` name, in the contract's declaration order. */
+export const GUEST_CLAIM_STATUS_NAMES = [
+  'LinkIssued',
+  'LinkExpired',
+  'Accepted',
+  'Claimed',
+] as const satisfies WireEnumNames<GuestClaimStatus>;
+
+/** Whether a value is a `GuestClaimStatus` name. Total, and free of exceptions. */
+export function isGuestClaimStatus(
+  candidate: unknown,
+): candidate is GuestClaimStatus {
+  return isWireEnumName(GUEST_CLAIM_STATUS_NAMES, candidate);
+}
+
 export type InviteState = Exclude<components['schemas']['InviteState'], null>;
 
 /** The `InviteState` names, pinned to the generated union (Requirement 12.3). */
@@ -314,6 +335,10 @@ export function isSquadRole(candidate: unknown): candidate is SquadRole {
  * the property test beside this module asserts its own table covers exactly them.
  */
 export const WIRE_ENUM_COVERAGE = {
+  GuestClaimStatus: {} satisfies UncoveredNames<
+    GuestClaimStatus,
+    typeof GUEST_CLAIM_STATUS_NAMES
+  >,
   InviteState: {} satisfies UncoveredNames<
     InviteState,
     typeof INVITE_STATE_NAMES

@@ -5,27 +5,41 @@ using PitchMate.Infrastructure.Persistence;
 
 namespace PitchMate.Infrastructure.Squads.Repositories;
 
-/// <summary>
-/// EF Core implementation of <see cref="IGuestClaimRepository"/> over the shared
-/// <see cref="PitchMateDbContext"/>. Resolves the single in-flight claim for a membership so
-/// consent and completion act on it; an <em>open</em> claim is one still in
-/// <see cref="GuestClaimState.Pending"/> or <see cref="GuestClaimState.Consented"/> (not yet
-/// completed or reversed).
-/// <para>Validates: Requirements 15.1, 15.3, 15.5, 19.3.</para>
-/// </summary>
+/// <summary>EF Core implementation of <see cref="IGuestClaimRepository"/>.</summary>
 internal sealed class EfGuestClaimRepository(PitchMateDbContext db) : IGuestClaimRepository
 {
-    /// <inheritdoc />
     public async Task AddAsync(GuestClaim claim, CancellationToken cancellationToken)
         => await db.Set<GuestClaim>().AddAsync(claim, cancellationToken);
 
-    /// <inheritdoc />
     public Task<GuestClaim?> GetOpenForMembershipAsync(Guid membershipId, CancellationToken cancellationToken)
-        // Open == not yet completed or reversed, i.e. Pending or Consented. A membership has at most
-        // one such claim in flight at a time (Requirement 15.1, 15.3, 15.5).
+        // Open == issued or accepted. Issuing a new link cancels the old one, so there is at most one.
         => db.Set<GuestClaim>()
             .FirstOrDefaultAsync(
                 claim => claim.MembershipId == membershipId
                     && (claim.State == GuestClaimState.Pending || claim.State == GuestClaimState.Consented),
                 cancellationToken);
+
+    public Task<GuestClaim?> FindByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
+        // token_hash is unique, so this is a point lookup on its index.
+        => db.Set<GuestClaim>()
+            .FirstOrDefaultAsync(claim => claim.TokenHash == tokenHash, cancellationToken);
+
+    public Task<GuestClaim?> GetLatestCompletedForMembershipAsync(
+        Guid membershipId,
+        CancellationToken cancellationToken)
+        => db.Set<GuestClaim>()
+            .Where(claim => claim.MembershipId == membershipId && claim.State == GuestClaimState.Completed)
+            .OrderByDescending(claim => claim.CompletedAt)
+            .ThenByDescending(claim => claim.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<GuestClaim>> ListOpenForSquadAsync(
+        Guid squadId,
+        CancellationToken cancellationToken)
+        => await db.Set<GuestClaim>()
+            .Where(claim => (claim.State == GuestClaimState.Pending || claim.State == GuestClaimState.Consented)
+                && db.Set<SquadMembership>().Any(membership =>
+                    membership.Id == claim.MembershipId && membership.SquadId == squadId))
+            .OrderBy(claim => claim.Id)
+            .ToListAsync(cancellationToken);
 }

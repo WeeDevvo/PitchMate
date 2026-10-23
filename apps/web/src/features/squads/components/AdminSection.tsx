@@ -75,6 +75,7 @@ import type { FeatureFlag } from '../lib/parse/featureFlags';
 import type { PlayerListRow } from '../lib/playerList';
 import type { SquadRefreshOptions } from '../state/useSquadScreen';
 import { FeatureToggles } from './FeatureToggles';
+import { GuestClaims } from './GuestClaims';
 import { GuestManager } from './GuestManager';
 import { InviteManager } from './InviteManager';
 import { DeleteSquadSection } from './DeleteSquadSection';
@@ -264,6 +265,17 @@ export function AdminSection({
           headingLevel={CHILD_SURFACE_HEADING_LEVEL}
           {...(onEditingFinished === undefined ? {} : { onEditingFinished })}
           {...(editOpenerRef === undefined ? {} : { editOpenerRef })}
+          {...authStateProp}
+        />
+        {/* Linking a guest to a player's account (ADR 0003): its own h4 list,
+            beneath the guests it applies to. */}
+        <GuestClaims
+          squadId={squadId}
+          api={api}
+          rows={rows}
+          viewerRole={viewerRole}
+          viewerState={viewerState}
+          onSquadChanged={onCallerStandingChanged ?? refreshDetail}
           {...authStateProp}
         />
       </section>

@@ -548,7 +548,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/squads/{squadId}/guests/{membershipId}/claims/consent": {
+    "/squads/{squadId}/guest-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListGuestClaims"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/squads/guest-claims/preview": {
         parameters: {
             query?: never;
             header?: never;
@@ -557,7 +573,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["RecordClaimConsent"];
+        post: operations["PreviewGuestClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/squads/guest-claims/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AcceptGuestClaim"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1048,6 +1080,9 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AcceptGuestClaimResult: {
+            squadName: string;
+        };
         AccountView: {
             /** Format: uuid */
             userId: string;
@@ -1220,16 +1255,32 @@ export interface components {
             /** Format: date-time */
             expiresAt: null | string;
         };
+        GuestClaimPreview: {
+            squadName: string;
+            guestDisplayName: string;
+        };
+        GuestClaimSecretRequest: {
+            presentedSecret: string;
+        };
+        /** @enum {unknown} */
+        GuestClaimStatus: "LinkIssued" | "LinkExpired" | "Accepted" | "Claimed";
+        GuestClaimSummary: {
+            /** Format: uuid */
+            membershipId: string;
+            status: components["schemas"]["GuestClaimStatus"];
+            /** Format: date-time */
+            expiresAt: null | string;
+            acceptedByName: null | string;
+        };
         HealthResponse: {
             status: string;
-        };
-        InitiateGuestClaimRequest: {
-            /** Format: uuid */
-            targetUserId: string;
         };
         InitiateGuestClaimResult: {
             /** Format: uuid */
             claimId: string;
+            redeemableLink: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         InvitePreviewResponse: {
             requiresAuthentication: boolean;
@@ -4730,11 +4781,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["InitiateGuestClaimRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -4810,24 +4857,190 @@ export interface operations {
             };
         };
     };
-    RecordClaimConsent: {
+    ListGuestClaims: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 squadId: string;
-                membershipId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No Content */
-            204: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GuestClaimSummary"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PreviewGuestClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestClaimSecretRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestClaimPreview"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AcceptGuestClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestClaimSecretRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptGuestClaimResult"];
+                };
             };
             /** @description Bad Request */
             400: {

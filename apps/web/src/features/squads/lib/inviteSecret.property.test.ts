@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
-import { redeemableValueFrom } from './inviteSecret';
-import { inviteLandingPath } from './routePaths';
+import {
+  extractClaimSecretFromPath,
+  extractInviteSecretFromPath,
+  redeemableValueFrom,
+} from './inviteSecret';
+import { claimLandingPath, inviteLandingPath } from './routePaths';
 import * as messages from './messages';
 
 /**
@@ -562,5 +566,30 @@ describe('inviteSecret — the derivations a reader can check by eye', () => {
     expect(redeemableValueFrom(inviteLinkFor(secretThatIsALink))).toBe(
       secretThatIsALink,
     );
+  });
+});
+// The claim-link reader is the invite reader pointed at `/claim/`: a claim path
+// built by `claimLandingPath` reads back its secret exactly, and neither reader
+// takes a secret from the other's path, so a claim link can never be redeemed as
+// an invite or the other way round.
+describe('extractClaimSecretFromPath — the claim link reads like an invite link', () => {
+  /** Secrets as the backend issues them: URL-safe base64, never blank. */
+  const secretArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,64}$/);
+
+  it('reads back the secret of every claim path, and nothing from an invite path', () => {
+    fc.assert(
+      fc.property(secretArb, (secret) => {
+        expect(extractClaimSecretFromPath(claimLandingPath(secret))).toEqual({ ok: true, secret });
+        expect(extractClaimSecretFromPath(inviteLandingPath(secret)).ok).toBe(false);
+        expect(extractInviteSecretFromPath(claimLandingPath(secret)).ok).toBe(false);
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it('names an empty or missing segment rather than inventing a secret', () => {
+    expect(extractClaimSecretFromPath('/claim/')).toEqual({ ok: false, reason: 'empty' });
+    expect(extractClaimSecretFromPath('/claim')).toEqual({ ok: false, reason: 'absent' });
+    expect(extractClaimSecretFromPath('/claim/%E0%A4%A')).toEqual({ ok: false, reason: 'undecodable' });
   });
 });

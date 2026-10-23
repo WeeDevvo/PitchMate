@@ -107,10 +107,16 @@ public sealed class CompleteGuestClaimHandler
             return Fail(SquadErrorCode.ClaimNotEligible, "There is no open guest claim to complete for this membership.");
         }
 
-        // The target user must not have come to hold another membership in the squad since initiation
+        // Nobody has accepted the link yet: there is no account to complete onto (consent gate).
+        if (claim.TargetUserId is not { } targetUserId)
+        {
+            return Fail(SquadErrorCode.ClaimNotEligible, "A claim can only complete once a player has accepted it.");
+        }
+
+        // The accepting user must not have come to hold another membership in the squad since accepting
         // (Requirement 15.4).
         SquadMembership? existing =
-            await _memberships.GetByUserAndSquadAsync(claim.TargetUserId, command.SquadId, cancellationToken);
+            await _memberships.GetByUserAndSquadAsync(targetUserId, command.SquadId, cancellationToken);
         if (existing is not null)
         {
             return Fail(SquadErrorCode.AlreadyMember, "The target user already holds a membership in this squad.");
@@ -127,7 +133,7 @@ public sealed class CompleteGuestClaimHandler
         // Rebind the membership guest → registered Member, preserving state, name, and history
         // (Requirement 15.1, 15.2). Both changes commit atomically; a failure persists neither
         // (Requirement 15.1).
-        target.CompleteClaim(claim.TargetUserId);
+        target.CompleteClaim(targetUserId);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Ok();

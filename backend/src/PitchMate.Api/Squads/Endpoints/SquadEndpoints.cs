@@ -494,14 +494,16 @@ public static class SquadEndpoints
             .WithSquadProblemResponses();
     }
 
-    /// <summary>Maps the guest-claim lifecycle: initiate, consent, complete, reverse (Requirement 15).</summary>
+    /// <summary>
+    /// Maps the guest-claim lifecycle by claim link: issue a link, list where claims stand, preview and
+    /// accept a link, complete, and reverse (ADR 0003).
+    /// </summary>
     private static void MapGuestClaimEndpoints(RouteGroupBuilder group)
     {
-        // Initiate a claim linking a guest membership to a registered user (Requirement 15.1, 15.7).
+        // Issue a one-time claim link for a guest; the link is in the response and nowhere else.
         group.MapPost("/{squadId:guid}/guests/{membershipId:guid}/claims", static async (
             Guid squadId,
             Guid membershipId,
-            InitiateGuestClaimRequest request,
             ClaimsPrincipal principal,
             InitiateGuestClaimHandler handler,
             CancellationToken ct) =>
@@ -511,7 +513,7 @@ public static class SquadEndpoints
                 return SquadErrorResults.Unauthenticated();
             }
 
-            var command = new InitiateGuestClaimCommand(userId, squadId, membershipId, request.TargetUserId);
+            var command = new InitiateGuestClaimCommand(userId, squadId, membershipId);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
@@ -519,12 +521,12 @@ public static class SquadEndpoints
             .Produces<InitiateGuestClaimResult>(StatusCodes.Status200OK)
             .WithSquadProblemResponses();
 
-        // The target user records their own consent to a pending claim (Requirement 15.3).
-        group.MapPost("/{squadId:guid}/guests/{membershipId:guid}/claims/consent", static async (
+        // Where each guest's claim stands, for owners and admins. Existence-sensitive: anyone else, a
+        // missing squad and a squad pending deletion all get the same 404.
+        group.MapGet("/{squadId:guid}/guest-claims", static async (
             Guid squadId,
-            Guid membershipId,
             ClaimsPrincipal principal,
-            RecordClaimConsentHandler handler,
+            ListGuestClaimsHandler handler,
             CancellationToken ct) =>
         {
             if (CallerIdentity.ResolveUserId(principal) is not { } userId)
@@ -532,15 +534,55 @@ public static class SquadEndpoints
                 return SquadErrorResults.Unauthenticated();
             }
 
-            var command = new RecordClaimConsentCommand(userId, squadId, membershipId);
+            var command = new ListGuestClaimsCommand(userId, squadId);
+            return ToHttpResult(await handler.HandleAsync(command, ct), concealExistence: true);
+        })
+            .RequireAuthorization()
+            .WithName("ListGuestClaims")
+            .Produces<IReadOnlyList<GuestClaimSummary>>(StatusCodes.Status200OK)
+            .WithSquadConcealedProblemResponses();
+
+        // What a claim link is for, before accepting it. Every unusable link gets one uniform answer.
+        group.MapPost("/guest-claims/preview", static async (
+            GuestClaimSecretRequest request,
+            ClaimsPrincipal principal,
+            PreviewGuestClaimHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return SquadErrorResults.Unauthenticated();
+            }
+
+            var command = new PreviewGuestClaimCommand(userId, request.PresentedSecret);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("RecordClaimConsent")
-            .Produces(StatusCodes.Status204NoContent)
+            .WithName("PreviewGuestClaim")
+            .Produces<GuestClaimPreview>(StatusCodes.Status200OK)
             .WithSquadProblemResponses();
 
-        // Complete a consented claim, rebinding the guest onto its target user (Requirement 15.1, 15.2).
+        // A signed-in player accepts a claim link, binding their account; an admin then completes it.
+        group.MapPost("/guest-claims/accept", static async (
+            GuestClaimSecretRequest request,
+            ClaimsPrincipal principal,
+            AcceptGuestClaimHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return SquadErrorResults.Unauthenticated();
+            }
+
+            var command = new AcceptGuestClaimCommand(userId, request.PresentedSecret);
+            return ToHttpResult(await handler.HandleAsync(command, ct));
+        })
+            .RequireAuthorization()
+            .WithName("AcceptGuestClaim")
+            .Produces<AcceptGuestClaimResult>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
+
+        // Complete an accepted claim, rebinding the guest onto the player who accepted (Requirement 15.1, 15.2).
         group.MapPost("/{squadId:guid}/guests/{membershipId:guid}/claims/complete", static async (
             Guid squadId,
             Guid membershipId,

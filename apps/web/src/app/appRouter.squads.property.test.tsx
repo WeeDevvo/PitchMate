@@ -74,6 +74,7 @@ import {
   type ShellDestinationContent,
 } from '../features/app-shell';
 import {
+  CLAIM_LANDING_ROUTE,
   INVITE_LANDING_ROUTE,
   PLAYER_STATS_ROUTE,
   SQUAD_ROUTE,
@@ -127,7 +128,11 @@ function matchShape(pattern: string): string {
  * below and is imported here to pin in the guard that this feature's two
  * registered patterns are distinguishable from the one that extends them.
  */
-const FEATURE_PATHS: readonly string[] = [SQUAD_ROUTE, INVITE_LANDING_ROUTE];
+const FEATURE_PATHS: readonly string[] = [
+  SQUAD_ROUTE,
+  INVITE_LANDING_ROUTE,
+  CLAIM_LANDING_ROUTE,
+];
 
 /**
  * Every path the other contributors register: the marketing landing route, the
@@ -251,6 +256,7 @@ describe('appRouter — Property 48 (every route path registered exactly once)',
     );
     expect(matchShape(SQUAD_ROUTE)).not.toBe(matchShape(PLAYER_STATS_ROUTE));
     expect(matchShape(SQUAD_ROUTE)).not.toBe(matchShape(INVITE_LANDING_ROUTE));
+    expect(matchShape(INVITE_LANDING_ROUTE)).not.toBe(matchShape(CLAIM_LANDING_ROUTE));
     expect(matchShape('/app/:section')).not.toBe(matchShape(SQUAD_ROUTE));
 
     // The two declared lists are disjoint and each free of internal repeats, so

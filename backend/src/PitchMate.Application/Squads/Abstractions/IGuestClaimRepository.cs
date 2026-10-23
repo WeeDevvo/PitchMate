@@ -2,25 +2,27 @@ using PitchMate.Domain.Squads;
 
 namespace PitchMate.Application.Squads.Abstractions;
 
-/// <summary>
-/// Guest-claim persistence operations. Declared in Application; implemented in Infrastructure over
-/// the <c>PitchMateDbContext</c> (Requirement 19.2, 19.3). A <see cref="GuestClaim"/> is the audit
-/// record for a consent-gated, reversible rebind of a guest membership onto a registered user.
-/// </summary>
+/// <summary>Persistence for <see cref="GuestClaim"/> audit records.</summary>
 public interface IGuestClaimRepository
 {
-    /// <summary>Stages an insert of <paramref name="claim"/>; the row is written on the unit-of-work commit.</summary>
-    /// <param name="claim">The guest claim to add.</param>
-    /// <param name="cancellationToken">A token that surfaces cancellation to the caller.</param>
+    /// <summary>Stages a new claim for the unit of work's next save.</summary>
     Task AddAsync(GuestClaim claim, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Retrieves the open (not yet completed or reversed) claim for the membership identified by
-    /// <paramref name="membershipId"/>, so consent and completion act on the in-flight claim, or
-    /// <see langword="null"/> when there is none (Requirement 15.1, 15.3, 15.5).
+    /// The membership's open claim (issued or accepted), or <see langword="null"/>. A membership has at
+    /// most one open claim, because issuing a new link cancels the old one.
     /// </summary>
-    /// <param name="membershipId">The guest membership whose open claim is resolved.</param>
-    /// <param name="cancellationToken">A token that surfaces cancellation to the caller.</param>
-    /// <returns>The open claim for the membership, or <see langword="null"/>.</returns>
     Task<GuestClaim?> GetOpenForMembershipAsync(Guid membershipId, CancellationToken cancellationToken);
+
+    /// <summary>The claim whose link secret hashes to <paramref name="tokenHash"/>, in any state, or <see langword="null"/>.</summary>
+    Task<GuestClaim?> FindByTokenHashAsync(string tokenHash, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The membership's most recently completed claim that has not been reversed, or
+    /// <see langword="null"/>. This is the claim a reversal marks.
+    /// </summary>
+    Task<GuestClaim?> GetLatestCompletedForMembershipAsync(Guid membershipId, CancellationToken cancellationToken);
+
+    /// <summary>Every open claim (issued or accepted) for memberships of <paramref name="squadId"/>.</summary>
+    Task<IReadOnlyList<GuestClaim>> ListOpenForSquadAsync(Guid squadId, CancellationToken cancellationToken);
 }
