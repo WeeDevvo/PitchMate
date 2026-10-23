@@ -97,6 +97,7 @@ import {
   INVITES_SECTION_HEADING,
   MATCHES_SECTION_HEADING,
   OWNERSHIP_SECTION_HEADING,
+  DELETE_SECTION_HEADING,
   PLAYERS_SECTION_HEADING,
   SQUAD_DETAIL_SECTION_HEADING,
   STATS_SECTION_HEADING,
@@ -205,11 +206,11 @@ const SQUAD_SECTION_HEADINGS: readonly string[] = [
 
 /**
  * The administration section's regions, in the order Req 10.7 names, followed
- * for the owner alone by the ownership transfer.
+ * for the owner alone by the ownership transfer and then squad deletion.
  */
 function adminSubsections(owner: boolean): readonly string[] {
   const shared = ['invites', 'guests', 'features'];
-  return owner ? [...shared, 'ownership'] : shared;
+  return owner ? [...shared, 'ownership', 'delete'] : shared;
 }
 
 /** Their level-three headings, in the same order. */
@@ -219,7 +220,7 @@ function adminSubsectionHeadings(owner: boolean): readonly string[] {
     GUESTS_SECTION_HEADING,
     FEATURES_SECTION_HEADING,
   ];
-  return owner ? [...shared, OWNERSHIP_SECTION_HEADING] : shared;
+  return owner ? [...shared, OWNERSHIP_SECTION_HEADING, DELETE_SECTION_HEADING] : shared;
 }
 
 /** The level-two headings of the rendered Squad_Screen, in document order. */

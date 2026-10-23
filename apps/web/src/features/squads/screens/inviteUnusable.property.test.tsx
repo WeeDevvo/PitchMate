@@ -248,6 +248,8 @@ function unavailable(method: string): () => never {
 /** A Squads_Api with every method refused, to be overridden selectively. */
 function refusingApi(): SquadsApi {
   return {
+    // The Squads_Home also reads the caller's pending-deletion squads; none here.
+    listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
     listMySquads: unavailable('listMySquads'),
     getSquad: unavailable('getSquad'),
     getDisplayRatingLeaderboard: unavailable('getDisplayRatingLeaderboard'),
@@ -366,6 +368,8 @@ async function observeFormOutcome(options: {
 
   const api: SquadsApi = {
     ...refusingApi(),
+    // The Squads_Home also reads the caller's pending-deletion squads; none here.
+    listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
     listMySquads: () =>
       Promise.resolve<CallResult<readonly SquadSummary[]>>({
         kind: 'success',

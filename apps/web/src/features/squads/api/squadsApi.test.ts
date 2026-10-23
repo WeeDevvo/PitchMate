@@ -88,6 +88,24 @@ const DEMOTE_PATH_TEMPLATE: keyof paths =
 const MEMBER_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/members/{membershipId}';
 const OWNERSHIP_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/ownership';
 const LEAVE_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/leave';
+const RESTORE_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/restore';
+const EXPORT_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/export';
+const PENDING_DELETION_PATH: keyof paths = '/squads/pending-deletion';
+
+/** A purge instant as the backend writes one, and the epoch milliseconds it reads as. */
+const PURGE_AT = '2026-11-22T09:30:00Z';
+const PURGE_AT_MS = Date.UTC(2026, 10, 22, 9, 30, 0);
+
+/** An export body with every collection present and empty. */
+const EXPORT_BODY = {
+  squadId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+  name: 'Tuesday Five',
+  isPendingDeletion: false,
+  purgeAt: null,
+  memberships: [],
+  invites: [],
+  features: [],
+};
 
 /** The type of the leaderboard's `statistic` query value, as the contract has it. */
 type LeaderboardStatistic = NonNullable<
@@ -546,6 +564,52 @@ const OPERATIONS: readonly OperationCase[] = [
     requestBodyText: '',
     expected: { kind: 'success', value: undefined },
     invoke: (api, signal) => api.leaveSquad(SQUAD_ID, signal),
+  },
+  {
+    name: 'deleteSquad',
+    method: 'DELETE',
+    path: fill(SQUAD_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    // No grace period is sent: the backend's default applies.
+    search: '',
+    requestBodyText: '',
+    successBody: { purgeAt: PURGE_AT },
+    expected: { kind: 'success', value: { purgeAtMs: PURGE_AT_MS } },
+    invoke: (api, signal) => api.deleteSquad(SQUAD_ID, signal),
+  },
+  {
+    name: 'restoreSquad',
+    method: 'POST',
+    path: fill(RESTORE_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.restoreSquad(SQUAD_ID, signal),
+  },
+  {
+    name: 'exportSquad',
+    method: 'GET',
+    path: fill(EXPORT_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: '',
+    successBody: EXPORT_BODY,
+    expected: {
+      kind: 'success',
+      value: { squadId: EXPORT_BODY.squadId, name: EXPORT_BODY.name, body: EXPORT_BODY },
+    },
+    invoke: (api, signal) => api.exportSquad(SQUAD_ID, signal),
+  },
+  {
+    name: 'listPendingDeletion',
+    method: 'GET',
+    path: PENDING_DELETION_PATH,
+    search: '',
+    requestBodyText: '',
+    successBody: [{ squadId: SQUAD_ID, name: 'Tuesday Five', purgeAt: PURGE_AT }],
+    expected: {
+      kind: 'success',
+      value: [{ squadId: SQUAD_ID, name: 'Tuesday Five', purgeAtMs: PURGE_AT_MS }],
+    },
+    invoke: (api, signal) => api.listPendingDeletion(signal),
   },
   {
     name: 'getFeatureFlags',

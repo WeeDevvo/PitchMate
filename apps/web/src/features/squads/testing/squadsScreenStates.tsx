@@ -89,6 +89,7 @@ import {
   type Theme,
 } from '../../../theme';
 import type { CallResult, SquadsApi } from '../api/squadsApi';
+import type { PendingDeletionSquad } from '../lib/parse/squadDeletion';
 import { ADMIN_SECTION_SELECTOR } from '../components/AdminSection';
 import { CREATE_SQUAD_FORM_ID } from '../components/CreateSquadForm';
 import { FAILURE_NOTICE_SELECTOR } from '../components/FailureNotice';
@@ -450,6 +451,14 @@ export interface StubApiOptions {
     | Promise<CallResult<readonly InviteSummary[]>>;
   readonly preview?: CallResult<InvitePreview> | Promise<CallResult<InvitePreview>>;
   readonly redemption?: CallResult<Redemption> | Promise<CallResult<Redemption>>;
+  /**
+   * What the Squads_Home's pending-deletion read answers. Unlike the reads
+   * above it defaults to an empty list, because the home screen always issues it
+   * and an owner with nothing pending is the ordinary case.
+   */
+  readonly pendingDeletion?:
+    | CallResult<readonly PendingDeletionSquad[]>
+    | Promise<CallResult<readonly PendingDeletionSquad[]>>;
 }
 
 /**
@@ -494,6 +503,11 @@ export function createStubApi(options: StubApiOptions = {}): SquadsApi {
     transferOwnership: () => pendingCall<void>(),
     leaveSquad: () => pendingCall<void>(),
     setFeatureFlag: () => pendingCall<void>(),
+    listPendingDeletion: () =>
+      Promise.resolve(options.pendingDeletion ?? { kind: 'success', value: [] }),
+    deleteSquad: () => pendingCall<never>(),
+    restoreSquad: () => pendingCall<void>(),
+    exportSquad: () => pendingCall<never>(),
   } as SquadsApi;
 }
 

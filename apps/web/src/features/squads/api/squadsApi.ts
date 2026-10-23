@@ -93,7 +93,14 @@ import {
 } from '../lib/parse/leaderboard';
 import { ok, type ParseResult } from '../lib/parse/primitives';
 import { parseRedemption, type Redemption } from '../lib/parse/redemption';
+import {
+  parsePendingDeletionSquadList,
+  parseSquadDeletion,
+  type PendingDeletionSquad,
+  type SquadDeletion,
+} from '../lib/parse/squadDeletion';
 import { parseSquadDetail, type SquadDetail } from '../lib/parse/squadDetail';
+import { parseSquadExport, type SquadExportFile } from '../lib/parse/squadExport';
 import {
   parseSquadSummaryList,
   type SquadSummary,
@@ -189,6 +196,12 @@ const OWNERSHIP_PATH = '/squads/{squadId}/ownership';
 
 /** `POST /squads/{squadId}/leave` — the caller leaves the squad. */
 const LEAVE_PATH = '/squads/{squadId}/leave';
+
+const RESTORE_PATH = '/squads/{squadId}/restore';
+
+const EXPORT_PATH = '/squads/{squadId}/export';
+
+const PENDING_DELETION_PATH = '/squads/pending-deletion';
 
 // --- The facade's result type ------------------------------------------------
 
@@ -326,6 +339,29 @@ export interface SquadsApi {
 
   /** `POST /squads/{squadId}/leave` — the caller leaves, keeping their history. */
   leaveSquad(squadId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /**
+   * `DELETE /squads/{squadId}` — the owner deletes the squad. It is hidden at
+   * once and purged when the default grace period ends; the result carries when.
+   */
+  deleteSquad(squadId: string, signal?: AbortSignal): Promise<CallResult<SquadDeletion>>;
+
+  /** `POST /squads/{squadId}/restore` — the owner undoes a deletion before the purge. */
+  restoreSquad(squadId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** `GET /squads/{squadId}/export` — the owner's copy of the squad's data. */
+  exportSquad(
+    squadId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<SquadExportFile>>;
+
+  /**
+   * `GET /squads/pending-deletion` — the squads the caller owns that are deleted
+   * and still restorable, soonest purge first. Empty for anyone else.
+   */
+  listPendingDeletion(
+    signal?: AbortSignal,
+  ): Promise<CallResult<readonly PendingDeletionSquad[]>>;
 
   /** `GET /squads/{squadId}/features` — the Feature_Flag set (Req 14.7). */
   getFeatureFlags(
@@ -586,6 +622,51 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
             signal: callSignal,
           }),
         acceptNoValue,
+        signal,
+      );
+    },
+
+    deleteSquad(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'DeleteSquad'> =>
+          apiClient.DELETE(SQUAD_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        parseSquadDeletion,
+        signal,
+      );
+    },
+
+    restoreSquad(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'ReverseSquadDeletion'> =>
+          apiClient.POST(RESTORE_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    exportSquad(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'ExportSquad'> =>
+          apiClient.GET(EXPORT_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        parseSquadExport,
+        signal,
+      );
+    },
+
+    listPendingDeletion(signal) {
+      return call(
+        (callSignal): ClientCall<'ListMyPendingDeletionSquads'> =>
+          apiClient.GET(PENDING_DELETION_PATH, { signal: callSignal }),
+        parsePendingDeletionSquadList,
         signal,
       );
     },

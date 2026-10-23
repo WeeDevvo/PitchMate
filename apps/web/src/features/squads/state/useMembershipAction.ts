@@ -141,7 +141,7 @@ export type MembershipActionCall = (
   signal: AbortSignal,
 ) => Promise<CallResult<void>>;
 
-/** The four calls, each a single facade method. */
+/** The membership calls, each a single facade method. */
 export const LEAVE_CALL: MembershipActionCall = (api, squadId, _target, signal) =>
   api.leaveSquad(squadId, signal);
 
@@ -159,6 +159,22 @@ export const TRANSFER_CALL: MembershipActionCall = (
 ) => api.transferOwnership(squadId, target, signal);
 
 /** Options for {@link useMembershipAction}. Every seam is injected. */
+/**
+ * Delete the squad. The target is the squad itself; the purge instant the call
+ * answers with is shown on the Squads_Home's pending list, not here.
+ */
+export const DELETE_CALL: MembershipActionCall = (api, squadId, _target, signal) =>
+  api.deleteSquad(squadId, signal).then((result): CallResult<void> =>
+    result.kind === 'success' ? { kind: 'success', value: undefined } : result,
+  );
+
+/**
+ * Restore a deleted squad. Run from the Squads_Home, where there is no current
+ * squad, so the target is the squad being restored.
+ */
+export const RESTORE_CALL: MembershipActionCall = (api, _squadId, target, signal) =>
+  api.restoreSquad(target, signal);
+
 export interface MembershipActionOptions {
   /** The Squads_Api facade — the feature's only transport seam. */
   readonly api: SquadsApi;

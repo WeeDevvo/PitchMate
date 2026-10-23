@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using PitchMate.Api.Auth.Endpoints;
+using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Application.Squads.UseCases;
 using PitchMate.Domain.Squads;
 
@@ -83,6 +84,25 @@ public static class SquadEndpoints
             .RequireAuthorization()
             .WithName("ListMySquads")
             .Produces<IReadOnlyList<MySquadSummary>>(StatusCodes.Status200OK)
+            .WithSquadProblemResponses();
+
+        // The caller's own squads that are deleted but still restorable, so the owner can reach the
+        // restore route (Requirement 17.4). Owner-scoped by its source: anyone else gets an empty list.
+        group.MapGet("/pending-deletion", static async (
+            ClaimsPrincipal principal,
+            ListMyPendingDeletionSquadsHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return SquadErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new ListMyPendingDeletionSquadsCommand(userId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("ListMyPendingDeletionSquads")
+            .Produces<IReadOnlyList<PendingDeletionSquad>>(StatusCodes.Status200OK)
             .WithSquadProblemResponses();
 
         // Read a squad's data — gated to active members; existence concealed otherwise (Requirement 16.1, 16.2).

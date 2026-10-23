@@ -60,6 +60,7 @@ public static class SquadsServiceCollectionExtensions
         services.AddScoped<CreateSquadHandler>();
         services.AddScoped<GetSquadHandler>();
         services.AddScoped<ListMySquadsHandler>();
+        services.AddScoped<ListMyPendingDeletionSquadsHandler>();
 
         // Role and ownership management.
         services.AddScoped<PromoteToAdminHandler>();

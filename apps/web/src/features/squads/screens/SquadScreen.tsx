@@ -489,6 +489,7 @@ export function SquadScreen({
       {detail !== null && (
         <AdminSection
           squadId={detail.squadId}
+          squadName={detail.name}
           api={api}
           flags={detail.features}
           onSquadChanged={machine.refresh}

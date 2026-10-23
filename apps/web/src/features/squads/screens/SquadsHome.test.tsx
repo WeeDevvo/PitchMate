@@ -90,6 +90,8 @@ function createFakeApi(options: FakeApiOptions): {
   const { listOutcomes, createOutcome, redeemOutcome } = options;
 
   const api: SquadsApi = {
+    // The Squads_Home also reads the caller's pending-deletion squads; none here.
+    listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
     listMySquads: () => {
       const index = Math.min(log.listCalls, listOutcomes.length - 1);
       log.listCalls += 1;
