@@ -193,6 +193,7 @@ function ShellNotifications({ disclosure }: ShellHeaderSlotProps): ReactElement 
       open={open && !handoverInProgress}
       onRequestOpen={requestOpen}
       onRequestClose={requestClose}
+      surfaceClassName="shell-notifications__surface"
       trigger={(triggerProps) => <NotificationIndicator {...triggerProps} />}
     >
       <NotificationPanel onNavigate={handleNavigate} />

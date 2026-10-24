@@ -205,9 +205,12 @@ describe('ShellFrame brand control', () => {
     renderFrame({ children: <h1>Settings</h1> });
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    const logo = screen.getByRole('banner').querySelector('img');
-    expect(logo).not.toBeNull();
-    expect(logo).toHaveAttribute('alt', '');
+    const marks = screen.getByRole('banner').querySelectorAll('img');
+    // The design-system Logo carries a mark per theme; each is decorative.
+    expect(marks.length).toBeGreaterThan(0);
+    for (const mark of marks) {
+      expect(mark).toHaveAttribute('alt', '');
+    }
   });
 
   // Requirements 1.3, 1.4 — client-side navigation: the content region's children

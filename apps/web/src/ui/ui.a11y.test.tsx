@@ -29,7 +29,13 @@ import {
   Logo,
   MatchProgress,
   MatchStateChip,
+  NavItem,
   NotFoundState,
+  NotificationItem,
+  NotificationList,
+  Sidebar,
+  SidebarLabel,
+  TopBar,
   ProvisionalBadge,
   Rating,
   ResultBadge,
@@ -56,6 +62,16 @@ const noop = () => {};
 
 function Gallery() {
   return (
+    <>
+    <TopBar>
+      <Logo href="/" />
+      <IconButton icon="bell" label="Notifications, 3 unread" badge={<Badge tone="count">3</Badge>} />
+    </TopBar>
+    <Sidebar label="Squad">
+      <NavItem label="Players" icon="users" active render={(props) => <a href="/players" {...props} />} />
+      <SidebarLabel>Your squads</SidebarLabel>
+      <NavItem label="Thursday Ballers" render={(props) => <a href="/squad" {...props} />} />
+    </Sidebar>
     <main>
       <h1>Components</h1>
       <Logo />
@@ -126,7 +142,20 @@ function Gallery() {
       </EmptyState>
       <ErrorState onRetry={noop} />
       <NotFoundState />
+      <NotificationList>
+        <li>
+          <NotificationItem icon="calendar" accent unread time="2 min ago" render={(props) => <button type="button" {...props} />}>
+            <span className="pm-sr">Unread</span> Thursday Ballers: new match drafted.
+          </NotificationItem>
+        </li>
+        <li>
+          <NotificationItem icon="trophy" time="Yesterday" render={(props) => <a href="/match" {...props} />}>
+            You won 5–3.
+          </NotificationItem>
+        </li>
+      </NotificationList>
     </main>
+    </>
   );
 }
 

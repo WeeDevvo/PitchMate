@@ -116,13 +116,14 @@ function stylesheetsUnder(dir: string): string[] {
   return found;
 }
 
-/** The per-Theme token tables of the three features that declare the shared ten. */
+/**
+ * The per-Theme token tables of the features that still declare the shared ten
+ * as colours. The App_Shell no longer does: it moved onto the design system, and
+ * its `legacyTokens.css` aliases the ten to `--pm-*` tokens, which take
+ * precedence inside the frame and are contrast-checked in `legacyTokens.test.ts`.
+ */
 const SHARED_THEME_TABLES: readonly { readonly name: string; readonly path: string }[] =
   [
-    {
-      name: 'app-shell',
-      path: join(FEATURE_ROOT, '..', 'app-shell', 'styles', 'theme.css'),
-    },
     { name: 'auth', path: join(FEATURE_ROOT, '..', 'auth', 'styles', 'theme.css') },
     {
       name: 'landing',
@@ -723,7 +724,8 @@ describe('Property 35 — both Theme tables declare every token the feature pain
     }
 
     // Guards the comparison: a parse that found no shared name would pass vacuously.
-    expect(compared).toBeGreaterThan(30);
+    // Two tables (auth, landing) across two Themes; the App_Shell table is gone.
+    expect(compared).toBeGreaterThan(20);
   });
 });
 

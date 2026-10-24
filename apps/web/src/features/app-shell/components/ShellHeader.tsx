@@ -61,6 +61,7 @@
  * Requirements: 1.1, 1.2, 1.5, 1.6, 1.7, 1.9, 1.13, 8.8, 13.2, 13.3
  */
 import { useMemo, type ReactElement, type ReactNode } from 'react';
+import { TopBar } from '../../../ui';
 import { BrandControl } from './BrandControl';
 import type { DisclosureCloseReason } from './Disclosure';
 import {
@@ -194,9 +195,9 @@ export function ShellHeader(props: ShellHeaderProps): ReactElement {
     // `role="banner"` is redundant for a top-level `<header>`, and stated anyway
     // so the landmark survives a later change of wrapper element
     // (Requirement 1.5).
-    <header role="banner" className="shell-header" data-layout={layout}>
+    <TopBar role="banner" className="shell-header" data-layout={layout}>
       <ShellHeaderControls key={layout} layout={layout} {...props} />
-    </header>
+    </TopBar>
   );
 }
 

@@ -77,8 +77,11 @@ const landingRoot = join(srcRoot, 'features', 'landing');
 /** The one module permitted to touch transport, relative to the shell root. */
 const TRANSPORT_MODULE = 'api/notificationsApi.ts';
 
-/** The shell's per-Theme token table — the one place hex literals may appear. */
-const TOKEN_TABLE = 'styles/theme.css';
+/**
+ * The shell's legacy token table. It once held the shell's hex values; it now
+ * aliases design-system tokens, so no shell stylesheet writes a hex colour.
+ */
+const TOKEN_TABLE = 'styles/legacyTokens.css';
 
 // --- File discovery ---------------------------------------------------------
 
@@ -773,22 +776,25 @@ describe('all three features import the shared theme module (Requirement 15.7)',
 const HEX_COLOUR = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/;
 
 describe('the shell declares colour only in its token table (Requirement 12.8)', () => {
-  it('the token table is where the hex values live', () => {
-    // Guards the exclusion below: if the table held no hex, excluding it would
-    // be hiding nothing and the scan would prove nothing.
+  it('the token table holds aliases of design tokens, not colours', () => {
     const table = stripCssComments(
       readFileSync(join(shellRoot, TOKEN_TABLE), 'utf8'),
     );
-    expect(HEX_COLOUR.test(table)).toBe(true);
+    expect(table).toMatch(/var\(--pm-/);
+    expect(HEX_COLOUR.test(table)).toBe(false);
   });
 
-  it('no shell stylesheet outside the token table writes a hex colour', () => {
+  it('detects a hex colour in a stylesheet', () => {
+    // Guards the scan below: with every stylesheet clean, it must still be able to
+    // see a hex value when one is there.
+    expect(HEX_COLOUR.test(stripCssComments('.a { color: #5bbf36; }'))).toBe(true);
+    expect(HEX_COLOUR.test(stripCssComments('/* #5bbf36 */ .a { color: var(--pm-accent-text); }'))).toBe(false);
+  });
+
+  it('no shell stylesheet writes a hex colour', () => {
     const offenders: string[] = [];
     for (const file of shellStyles) {
       const name = rel(shellRoot, file);
-      if (name === TOKEN_TABLE) {
-        continue;
-      }
       if (HEX_COLOUR.test(stripCssComments(readFileSync(file, 'utf8')))) {
         offenders.push(name);
       }

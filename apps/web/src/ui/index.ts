@@ -30,8 +30,23 @@ export {
 export { Icon, type IconName, type IconProps } from './Icon';
 export { Logo, type LogoProps } from './Logo';
 export { MatchProgress, MatchStateChip, type MatchStateName } from './MatchState';
+export {
+  NotificationItem,
+  NotificationList,
+  type NotificationItemProps,
+  type NotificationItemRenderProps,
+  type NotificationListProps,
+} from './NotificationList';
 export { Rating, type RatingProps } from './Rating';
 export { FormGuide, ResultBadge, type ResultLetter } from './Result';
+export {
+  NavItem,
+  Sidebar,
+  SidebarLabel,
+  type NavItemProps,
+  type NavItemRenderProps,
+  type SidebarProps,
+} from './Sidebar';
 export {
   SegmentedControl,
   Tabs,
@@ -42,3 +57,4 @@ export {
 } from './Tabs';
 export { Select, TextField, type SelectOption, type SelectProps, type TextFieldProps } from './TextField';
 export { Toggle, type ToggleProps } from './Toggle';
+export { TopBar, type TopBarProps } from './TopBar';

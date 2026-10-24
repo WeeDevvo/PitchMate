@@ -451,19 +451,28 @@ describe('PrimaryNavigation — the declared active cue (3.5)', () => {
     expect(shellCssSource).toContain(".shell-nav__link[aria-current='page']");
   });
 
-  // Requirement 3.5 — a non-colour cue *in addition to* the colour difference:
-  // the colour token is there, and so are two things that are not colour.
+  // Requirement 3.5 — a non-colour cue *in addition to* the colour difference.
+  // The colour half is the design system's NavItem tint, applied with
+  // `aria-current` by the same component; the shell declares the rest.
   it('declares a heavier weight and an inset bar alongside the colour change', () => {
     const active = declarations(".shell-nav__link[aria-current='page']");
     const base = declarations('.shell-nav__link');
 
-    // The colour half — unresolvable in jsdom, which returns the `var()` text.
-    expect(active).toMatch(/color:\s*var\(--nav-current\)/);
-    // The non-colour half: a heavier weight than the unmarked control's...
+    // A heavier weight than the unmarked control's...
     expect(/font-weight:\s*700/.test(active)).toBe(true);
     expect(/font-weight:\s*500/.test(base)).toBe(true);
-    // ...and a bar inset into the control's own left padding, so it is a shape
-    // rather than a colour. Its rendered geometry needs a browser to verify.
-    expect(active).toMatch(/box-shadow:\s*inset\s+3px\s+0\s+0\s+0\s+var\(--nav-current\)/);
+    // ...and a bar inset along the control's bottom edge, so it is a shape rather
+    // than a colour. Its rendered geometry needs a browser to verify.
+    expect(active).toMatch(/box-shadow:\s*inset\s+0\s+-2px\s+0\s+0\s+var\(--pm-accent-on-subtle\)/);
+  });
+
+  it('gives the current control the design-system active tint, and no other', () => {
+    renderNavigation('wide', SHELL_DESTINATIONS[0].path);
+    const controls = destinationControls();
+    for (const link of controls) {
+      expect(link.classList.contains('is-active')).toBe(link.getAttribute('aria-current') === 'page');
+    }
+    expect(controls.filter((link) => link.classList.contains('is-active'))).toHaveLength(1);
+    cleanup();
   });
 });

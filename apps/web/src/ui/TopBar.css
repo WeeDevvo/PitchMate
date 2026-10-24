@@ -1,0 +1,10 @@
+.pm-topbar {
+  min-height: var(--pm-topbar-h);
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-4);
+  padding: var(--pm-space-2) var(--pm-space-5);
+  background: var(--pm-bg);
+  color: var(--pm-text-primary);
+  border-bottom: 1px solid var(--pm-border-subtle);
+}

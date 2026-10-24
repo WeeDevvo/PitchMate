@@ -20,17 +20,23 @@ import {
   Logo,
   MatchProgress,
   MatchStateChip,
+  NavItem,
   NotFoundState,
+  NotificationItem,
+  NotificationList,
   ProvisionalBadge,
   Rating,
   ResultBadge,
   RoleBadge,
   SegmentedControl,
   Select,
+  Sidebar,
+  SidebarLabel,
   Tabs,
   TextField,
   Toast,
   Toggle,
+  TopBar,
 } from '.';
 
 describe('Button', () => {
@@ -241,6 +247,76 @@ describe('Logo', () => {
     );
     expect(screen.getByRole('img', { name: 'PitchMate' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'PitchMate' })).toHaveAttribute('href', '/');
+  });
+
+  it('is named by its wordmark text inside a control, with decorative marks', () => {
+    render(
+      <a href="/app">
+        <Logo textName />
+      </a>,
+    );
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'PitchMate' })).toBeInTheDocument();
+  });
+});
+
+describe('TopBar', () => {
+  it('is a banner holding what it is given', () => {
+    render(
+      <TopBar>
+        <Logo href="/" />
+      </TopBar>,
+    );
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('link', { name: 'PitchMate' }));
+  });
+});
+
+describe('Sidebar and NavItem', () => {
+  it('is a named navigation landmark only when labelled', () => {
+    const { rerender } = render(<Sidebar label="Squad">x</Sidebar>);
+    expect(screen.getByRole('navigation', { name: 'Squad' })).toBeInTheDocument();
+    rerender(<Sidebar>x</Sidebar>);
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  });
+
+  it('hands its element the active class, aria-current and its contents', () => {
+    render(
+      <Sidebar label="Squad">
+        <SidebarLabel>Your squads</SidebarLabel>
+        <NavItem label="Players" icon="users" active render={(props) => <a href="/players" {...props} />} />
+        <NavItem label="Matches" icon="calendar" render={(props) => <a href="/matches" {...props} />} />
+      </Sidebar>,
+    );
+    const players = screen.getByRole('link', { name: 'Players' });
+    expect(players).toHaveAttribute('aria-current', 'page');
+    expect(players).toHaveClass('pm-navitem', 'is-active');
+    expect(screen.getByRole('link', { name: 'Matches' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByText('Your squads')).toBeInTheDocument();
+  });
+});
+
+describe('NotificationList and NotificationItem', () => {
+  it('renders each row through the caller element, with the time under the text', async () => {
+    const onClick = vi.fn();
+    render(
+      <NotificationList>
+        <li>
+          <NotificationItem
+            icon="calendar"
+            unread
+            time="2 min ago"
+            render={(props) => <button type="button" onClick={onClick} {...props} />}
+          >
+            <span className="pm-sr">Unread</span> New match drafted
+          </NotificationItem>
+        </li>
+      </NotificationList>,
+    );
+    const row = screen.getByRole('button', { name: /Unread\s+New match drafted\s*2 min ago/ });
+    expect(row).toHaveClass('pm-notif', 'is-unread');
+    await userEvent.click(row);
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(screen.getByRole('list')).toHaveClass('pm-notifs');
   });
 });
 

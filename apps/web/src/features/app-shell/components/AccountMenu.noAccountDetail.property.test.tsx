@@ -352,8 +352,10 @@ function expectFixedTriggerName(established: EstablishedSession): void {
 }
 
 /** Selectors for anything that renders, or could carry, an image. */
+// Anything that could show or load an avatar. An inline icon glyph cannot, so a
+// decorative `svg` is allowed; one that embeds or references an image is not.
 const IMAGE_SELECTOR =
-  'img, svg, picture, source, object, canvas, video, [role="img"], input[type="image"], [src], [srcset], [poster], [style*="background-image"], [style*="url("]';
+  'img, svg:not([aria-hidden="true"]), svg image, svg use, picture, source, object, canvas, video, [role="img"], input[type="image"], [src], [srcset], [poster], [style*="background-image"], [style*="url("]';
 
 /**
  * Requirement 8.4: no account name, no email address, and no avatar image — on

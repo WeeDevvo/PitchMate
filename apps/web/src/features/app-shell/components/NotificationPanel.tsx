@@ -83,6 +83,7 @@ import {
   type ReactElement,
 } from 'react';
 import { Link } from 'react-router-dom';
+import { NotificationList } from '../../../ui';
 
 import { NOTIFICATIONS_ROUTE, destinationLabel } from '../lib/destinations';
 import {
@@ -323,7 +324,7 @@ export function NotificationPanel({
        * ever sees them.
        */}
       {panelRecords.length === 0 ? null : (
-        <ul className="shell-notification-panel__list">
+        <NotificationList className="shell-notification-panel__list">
           {panelRecords.map((record) => (
             <li key={record.notificationId} className="shell-notification-panel__item">
               {/* 6.11, 6.12: one keyboard-operable control per record, and the
@@ -331,7 +332,7 @@ export function NotificationPanel({
               <NotificationRow record={record} nowMs={nowMs} onActivate={markRead} />
             </li>
           ))}
-        </ul>
+        </NotificationList>
       )}
 
       {/* 5.12: the control to the Notifications_Destination, always present —

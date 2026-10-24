@@ -15,12 +15,18 @@ export interface LogoProps {
    */
   variant?: 'auto' | 'green' | 'ink' | 'white' | 'icon';
   href?: string;
+  /**
+   * Inside a control that the logo names, such as a home link: the marks take
+   * empty alternatives and the wordmark's text is read, so the control is
+   * announced as "PitchMate" without an extra image. Needs the wordmark.
+   */
+  textName?: boolean;
   className?: string;
 }
 
 const MARKS = { green: markGreen, ink: markInk, white: markWhite };
 
-export function Logo({ size = 32, wordmark = true, variant = 'auto', href, className }: LogoProps) {
+export function Logo({ size = 32, wordmark = true, variant = 'auto', href, textName, className }: LogoProps) {
   const markWidth = Math.round(size * 0.92);
   const mark =
     variant === 'icon' ? (
@@ -37,12 +43,16 @@ export function Logo({ size = 32, wordmark = true, variant = 'auto', href, class
     <>
       {mark}
       {wordmark && (
-        <span className="pm-logo__word" style={{ fontSize: size * 0.78 }} aria-hidden="true">
+        <span className="pm-logo__word" style={{ fontSize: size * 0.78 }} aria-hidden={textName ? undefined : true}>
           Pitch<b>Mate</b>
         </span>
       )}
     </>
   );
+
+  if (textName && wordmark) {
+    return <span className={cx('pm-logo', className)}>{content}</span>;
+  }
 
   return href ? (
     <a className={cx('pm-logo', className)} href={href} aria-label="PitchMate">
