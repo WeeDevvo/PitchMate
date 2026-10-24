@@ -1,0 +1,121 @@
+.pm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pm-field__label {
+  font: var(--pm-type-label);
+  color: var(--pm-text-primary);
+}
+
+.pm-field__hint {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--pm-text-muted);
+}
+
+.pm-field__error {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--pm-danger-text);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-weight: 500;
+}
+
+.pm-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pm-input-wrap > .pm-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--pm-text-muted);
+  pointer-events: none;
+}
+
+.pm-input-wrap > .pm-input--icon {
+  padding-left: 44px;
+}
+
+.pm-input,
+.pm-select {
+  width: 100%;
+  height: var(--pm-control-h);
+  padding: 0 14px;
+  border-radius: var(--pm-radius-sm);
+  border: 1.5px solid var(--pm-border-control);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
+  font-size: 16px;
+  transition: border-color var(--pm-duration-fast);
+}
+
+.pm-input::placeholder {
+  color: var(--pm-text-muted);
+}
+
+.pm-input:hover,
+.pm-select:hover {
+  border-color: var(--pm-text-secondary);
+}
+
+.pm-field.is-error .pm-input,
+.pm-field.is-error .pm-select {
+  border-color: var(--pm-danger-text);
+  border-width: 2px;
+}
+
+.pm-input:disabled,
+.pm-select:disabled {
+  background: var(--pm-surface-sunken);
+  color: var(--pm-text-disabled);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.pm-input--code {
+  font-family: var(--pm-font-display);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  text-align: center;
+  height: 60px;
+}
+
+.pm-select {
+  appearance: none;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+.pm-select-wrap {
+  position: relative;
+}
+
+.pm-select-wrap > .pm-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--pm-text-secondary);
+}
+
+.pm-field.is-loading .pm-input-wrap::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--pm-text-muted);
+  border-right-color: transparent;
+  animation: pm-spin 0.7s linear infinite;
+}

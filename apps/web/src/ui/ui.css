@@ -1,0 +1,54 @@
+/* Rules shared by every src/ui component. Colours come from the --pm-* tokens only. */
+
+.pm-icon {
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.pm-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* One focus rule everywhere: a solid 2px ring at 2px offset. */
+.pm-btn:focus-visible,
+.pm-iconbtn:focus-visible,
+.pm-input:focus-visible,
+.pm-select:focus-visible,
+.pm-chip:focus-visible,
+.pm-tab:focus-visible,
+.pm-seg__opt:focus-visible,
+.pm-toast__action:focus-visible,
+.pm-dialog:focus-visible,
+.pm-logo:focus-visible,
+.pm-card--link:focus-visible,
+.pm-toggle input:focus-visible + .pm-toggle__track {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+}
+
+.pm-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2.5px solid currentColor;
+  border-right-color: transparent;
+  animation: pm-spin 0.7s linear infinite;
+}
+
+@keyframes pm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pm-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
