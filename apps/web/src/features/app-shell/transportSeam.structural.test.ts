@@ -21,7 +21,7 @@
  * | No token, refresh, expiry, or session-storage identifier in the shell | 9.2, 15.2 |
  * | No shell-local `'/login'` or Redirect_Capture parameter-name literal | 2.6 |
  * | Exactly one Appearance_Preference storage key and one pre-paint bootstrap, with all three features importing the shared theme module | 12.13, 15.7 |
- * | No hex colour literal in shell source outside the token table | 12.8 |
+ * | No hex colour literal in shell source; colour comes from design tokens | 12.8 |
  *
  * ### Scanning technique
  *
@@ -76,12 +76,6 @@ const landingRoot = join(srcRoot, 'features', 'landing');
 
 /** The one module permitted to touch transport, relative to the shell root. */
 const TRANSPORT_MODULE = 'api/notificationsApi.ts';
-
-/**
- * The shell's legacy token table. It once held the shell's hex values; it now
- * aliases design-system tokens, so no shell stylesheet writes a hex colour.
- */
-const TOKEN_TABLE = 'styles/legacyTokens.css';
 
 // --- File discovery ---------------------------------------------------------
 
@@ -320,9 +314,8 @@ describe('the scan covers the shell and the shared theme module', () => {
     expect(names.filter((name) => isTestFile(name))).toEqual([]);
   });
 
-  it('discovers the shell stylesheets, the token table included', () => {
+  it('discovers the shell stylesheets', () => {
     const names = shellStyles.map((file) => rel(shellRoot, file));
-    expect(names).toContain(TOKEN_TABLE);
     expect(names).toContain('styles/shell.css');
   });
 
@@ -769,21 +762,13 @@ describe('all three features import the shared theme module (Requirement 15.7)',
 });
 
 // ---------------------------------------------------------------------------
-// Requirement 12.8 — colour comes from the token table, not from components.
+// Requirement 12.8 — colour comes from the design tokens, not from components.
 // ---------------------------------------------------------------------------
 
 /** `#rgb`, `#rgba`, `#rrggbb`, and `#rrggbbaa`. */
 const HEX_COLOUR = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/;
 
-describe('the shell declares colour only in its token table (Requirement 12.8)', () => {
-  it('the token table holds aliases of design tokens, not colours', () => {
-    const table = stripCssComments(
-      readFileSync(join(shellRoot, TOKEN_TABLE), 'utf8'),
-    );
-    expect(table).toMatch(/var\(--pm-/);
-    expect(HEX_COLOUR.test(table)).toBe(false);
-  });
-
+describe('the shell takes colour only from design tokens (Requirement 12.8)', () => {
   it('detects a hex colour in a stylesheet', () => {
     // Guards the scan below: with every stylesheet clean, it must still be able to
     // see a hex value when one is there.

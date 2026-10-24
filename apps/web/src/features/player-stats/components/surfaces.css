@@ -59,7 +59,7 @@
 }
 
 .player-stats-main:focus-visible {
-  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline: var(--player-stats-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--player-stats-focus-offset);
 }
 
@@ -75,18 +75,19 @@
   box-sizing: border-box;
   width: 100%;
   padding: var(--player-stats-gutter);
-  border: var(--player-stats-border-width) solid var(--player-stats-card-border);
+  border: var(--player-stats-border-width) solid var(--pm-border-subtle);
   border-radius: var(--player-stats-radius);
-  background: var(--player-stats-card-surface);
-  color: var(--text);
+  background: var(--pm-surface);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
 }
 
 .player-stats-section__heading {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-section-heading);
+  font-family: var(--pm-font-display);
   font-weight: var(--player-stats-font-weight-heading);
   line-height: var(--player-stats-line-height-heading);
 }
@@ -103,7 +104,7 @@
 .player-stats-loading {
   margin: 0;
   max-width: var(--player-stats-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-body);
   font-weight: var(--player-stats-font-weight-body);
   line-height: var(--player-stats-line-height-body);
@@ -123,7 +124,7 @@
 
 .player-stats-failure__message {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
 }
@@ -139,17 +140,17 @@
 .player-stats-failure__retry {
   min-height: var(--player-stats-touch-target);
   padding: 0 var(--player-stats-gap-tight);
-  border: var(--player-stats-border-width) solid var(--control-border);
-  border-radius: var(--player-stats-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  border: var(--player-stats-border-width) solid var(--pm-border-control);
+  border-radius: var(--player-stats-radius-chip);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
   font: inherit;
   font-weight: var(--player-stats-font-weight-label);
   cursor: pointer;
 }
 
 .player-stats-failure__retry:focus-visible {
-  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline: var(--player-stats-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--player-stats-focus-offset);
 }
 
@@ -173,15 +174,16 @@
 
 .player-stats-not-found__heading {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-screen-heading);
+  font-family: var(--pm-font-display);
   font-weight: var(--player-stats-font-weight-heading);
   line-height: var(--player-stats-line-height-heading);
 }
 
 .player-stats-not-found__statement {
   margin: 0;
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
 }
@@ -193,16 +195,16 @@
   align-items: center;
   min-height: var(--player-stats-touch-target);
   padding: 0 var(--player-stats-gap-tight);
-  border: var(--player-stats-border-width) solid var(--control-border);
+  border: var(--player-stats-border-width) solid var(--pm-border-control);
   border-radius: var(--player-stats-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-body);
   font-weight: var(--player-stats-font-weight-label);
   text-decoration: none;
 }
 
 .player-stats-squad-link:focus-visible {
-  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline: var(--player-stats-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--player-stats-focus-offset);
 }

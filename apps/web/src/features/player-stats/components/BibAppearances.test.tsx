@@ -120,14 +120,15 @@ describe('BibAppearances structure', () => {
     ).toHaveLength(0);
   });
 
-  it('renders the pair as the list’s only children', () => {
+  it('renders the pair as the list’s one group, a term then its description', () => {
+    // A `div` grouping a name and its value is one of the content models HTML
+    // gives a `dl`; the stat tile is that group.
     const { container } = render(<BibAppearances bibAppearances={11} />);
 
     const figure = container.querySelector(BIB_APPEARANCES_SELECTOR);
-    const childTags = Array.from(figure?.children ?? []).map(
-      (child) => child.tagName,
-    );
+    const groups = Array.from(figure?.children ?? []);
 
-    expect(childTags).toEqual(['DT', 'DD']);
+    expect(groups.map((group) => group.tagName)).toEqual(['DIV']);
+    expect(Array.from(groups[0].children).map((child) => child.tagName)).toEqual(['DT', 'DD']);
   });
 });

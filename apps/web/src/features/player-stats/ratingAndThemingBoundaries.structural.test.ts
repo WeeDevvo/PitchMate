@@ -226,6 +226,7 @@ import {
   relTo,
   resolveWithinSrc,
   stripCssComments,
+  designTokensPath,
   themeRoot,
 } from './structural/sourceScan';
 
@@ -715,8 +716,12 @@ function referencedPropertiesIn(source: string): string[] {
   return found;
 }
 
-/** The token table's three blocks: the Theme-invariant scale and the two Themes. */
+/**
+ * The feature's token table, which holds the Theme-invariant scale only, and the
+ * design-system tokens, which hold every colour in a dark and a light block.
+ */
 const tokenTableCss = stripCssComments(readFileSync(tokenTablePath, 'utf8'));
+const designTokensCss = stripCssComments(readFileSync(designTokensPath, 'utf8'));
 
 /** `:root { … }` alone — the Theme-invariant scale, which carries no colour. */
 const SCALE_BLOCK = /:root\s*\{([^}]*)\}/;
@@ -727,14 +732,19 @@ const DARK_BLOCK = /:root,\s*\[data-theme='dark'\]\s*\{([^}]*)\}/;
 /** `[data-theme='light'] { … }` — the opt-in light table. */
 const LIGHT_BLOCK = /\[data-theme='light'\]\s*\{([^}]*)\}/;
 
-/** The body of one block of the token table, or `''` when it is not declared. */
-function tokenTableBlock(pattern: RegExp): string {
-  return pattern.exec(tokenTableCss)?.[1] ?? '';
+/** The body of one block of a stylesheet, or `''` when it is not declared. */
+function blockOf(css: string, pattern: RegExp): string {
+  return pattern.exec(css)?.[1] ?? '';
 }
 
-const scaleBlock = tokenTableBlock(SCALE_BLOCK);
-const darkBlock = tokenTableBlock(DARK_BLOCK);
-const lightBlock = tokenTableBlock(LIGHT_BLOCK);
+const scaleBlock = blockOf(tokenTableCss, SCALE_BLOCK);
+const darkBlock = blockOf(designTokensCss, DARK_BLOCK);
+const lightBlock = blockOf(designTokensCss, LIGHT_BLOCK);
+
+/** Every design-system token: the colours and shadows of both Themes, and the type, space and size scale. */
+const designTokens = new Set(
+  declaredCustomProperties(designTokensPath).filter((token) => token.startsWith('--pm-')),
+);
 
 // --- Rule group 5: appearance (Requirement 15.1) -----------------------------
 
@@ -1313,8 +1323,10 @@ describe('no colour value is written outside the feature token table', () => {
     expect(inspected).toBeGreaterThan(20);
   });
 
-  it('declares every custom property it reads in the one token table (15.2)', () => {
-    const declared = new Set(declaredCustomProperties(tokenTablePath));
+  it('reads only custom properties the token table or the design tokens declare (15.2)', () => {
+    // Colours come from the design system's `--pm-*` tokens; the feature's own
+    // table holds its scale.
+    const declared = new Set([...declaredCustomProperties(tokenTablePath), ...designTokens]);
     const findings: Finding[] = [];
     const used = new Set<string>();
 
@@ -1344,8 +1356,8 @@ describe('no colour value is written outside the feature token table', () => {
     }
 
     expect(findings).toEqual([]);
-    // Non-vacuity from both ends: the table declares a full scale and two Theme
-    // tables, and the stylesheets really do read from it.
+    // Non-vacuity from both ends: the tables declare a full scale and the design
+    // colours, and the stylesheets really do read from them.
     expect(declared.size).toBeGreaterThan(30);
     expect(used.size).toBeGreaterThan(20);
   });
@@ -1376,12 +1388,12 @@ describe('no colour value is written outside the feature token table', () => {
     expect([...inStylesheets, ...inModules]).toEqual([]);
   });
 
-  it('writes a colour per token in both Theme tables, so the rule can fire (15.3)', () => {
-    // The exempted file is the one file that *does* write colours. If the patterns
-    // above cannot see them there, they could not see a stray colour anywhere else
+  it('writes the colours in both design Theme tables, so the rule can fire (15.3)', () => {
+    // The design tokens are where colours *are* written. If the patterns above
+    // cannot see them there, they could not see a stray colour anywhere else
     // either, and every prohibition above would be empty.
-    expect(DARK_BLOCK.test(tokenTableCss), 'the dark Theme table').toBe(true);
-    expect(LIGHT_BLOCK.test(tokenTableCss), 'the light Theme table').toBe(true);
+    expect(DARK_BLOCK.test(designTokensCss), 'the dark Theme table').toBe(true);
+    expect(LIGHT_BLOCK.test(designTokensCss), 'the light Theme table').toBe(true);
 
     for (const [name, table] of [
       ['dark', darkBlock],
@@ -1393,11 +1405,12 @@ describe('no colour value is written outside the feature token table', () => {
       expect(colours.length, `the ${name} table writes no colour`).toBeGreaterThan(
         15,
       );
-      expect(colours).toHaveLength(tokens.length);
+      // Aliases (`var(--pm-...)`) and shadows are the entries without a hex.
+      expect(colours.length).toBeGreaterThan(tokens.length / 2);
     }
   });
 
-  it('declares every colour token in both Theme tables (Requirement 15.3)', () => {
+  it('declares every colour token in both design Theme tables (Requirement 15.3)', () => {
     // The two tables are the same token set, so a Theme can never be missing a
     // value the other one has — the failure that renders an unstyled colour.
     const dark = [...new Set(declaredPropertiesIn(darkBlock))].sort();
@@ -1407,19 +1420,17 @@ describe('no colour value is written outside the feature token table', () => {
     expect(dark.length).toBeGreaterThan(15);
   });
 
-  it('declares every other token once, on the Theme-invariant scale (15.3)', () => {
-    // Every token the feature paints is either a colour, with a value in both
-    // Theme tables, or Theme-invariant and declared once on `:root`. Nothing is
-    // declared in one Theme alone, and nothing is declared twice over.
-    const themed = new Set(declaredPropertiesIn(darkBlock));
+  it('declares only its scale, once, on the Theme-invariant block (15.3)', () => {
+    // Every token the feature paints is either a design colour, with a value in
+    // both Theme tables, or Theme-invariant and declared once on `:root` in the
+    // feature's table. The table writes no colour and restates no design token.
     const scale = new Set(declaredPropertiesIn(scaleBlock));
     const declared = new Set(declaredCustomProperties(tokenTablePath));
 
     expect(scale.size).toBeGreaterThan(20);
-    expect([...scale].filter((token) => themed.has(token))).toEqual([]);
-    expect(
-      [...declared].filter((token) => !themed.has(token) && !scale.has(token)),
-    ).toEqual([]);
+    expect([...declared].filter((token) => !scale.has(token))).toEqual([]);
+    expect([...scale].filter((token) => designTokens.has(token))).toEqual([]);
+    expect(matchesOf(tokenTableCss, HEX_COLOUR)).toEqual([]);
   });
 });
 
@@ -1782,7 +1793,7 @@ describe('the scan patterns fire on an offender and hold off a near-miss', () =>
     // The two token-table rules are comparisons rather than patterns, so their
     // controls are comparisons too: a sheet reading a property the table does not
     // declare, and a Theme table missing a value the other one has.
-    const declared = new Set(declaredCustomProperties(tokenTablePath));
+    const declared = new Set([...declaredCustomProperties(tokenTablePath), ...designTokens]);
 
     expect(
       referencedPropertiesIn(
@@ -1793,7 +1804,7 @@ describe('the scan patterns fire on an offender and hold off a near-miss', () =>
     // The same comparison over the real sheets reports nothing, so the detector
     // is distinguishing a declared token from an undeclared one.
     expect(
-      referencedPropertiesIn('color: var(--text); background: var(--bg);').filter(
+      referencedPropertiesIn('color: var(--pm-text-primary); background: var(--pm-bg);').filter(
         (token) => !declared.has(token),
       ),
     ).toEqual([]);

@@ -72,14 +72,14 @@
 
 /* A settled rating: a filled disc, the only badge with a fill. */
 .player-stats-rating__badge--established {
-  border-color: var(--text);
+  border-color: var(--pm-text-primary);
   border-radius: 50%;
-  background: var(--text);
+  background: var(--pm-text-primary);
 }
 
 /* Still settling: a ring, and a dashed one — an outline that has not closed. */
 .player-stats-rating__badge--provisional {
-  border-color: var(--player-stats-provisional-border);
+  border-color: var(--pm-provisional-text);
   border-style: dashed;
   border-radius: 50%;
 }
@@ -87,13 +87,13 @@
 /* Nothing played: a hollow square. Square against the two round badges, so the
    difference reads at a glance and without colour. */
 .player-stats-rating__badge--never-played {
-  border-color: var(--muted-text);
+  border-color: var(--pm-text-secondary);
 }
 
 /* No rating recorded: the square turned on its point and dotted, so it is told
    apart from the never-played badge by orientation as well as by edge. */
 .player-stats-rating__badge--absent {
-  border-color: var(--muted-text);
+  border-color: var(--pm-text-secondary);
   border-style: dotted;
   transform: rotate(45deg);
 }
@@ -103,7 +103,7 @@
  * ------------------------------------------------------------------ */
 
 .player-stats-rating__text {
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-body);
   font-weight: var(--player-stats-font-weight-label);
   line-height: var(--player-stats-line-height-body);
@@ -114,19 +114,20 @@
 /* The one condition with a number to show, sized as the section's figure. */
 .player-stats-rating__text--established {
   font-size: var(--player-stats-font-size-figure);
+  font-family: var(--pm-font-display);
   font-weight: var(--player-stats-font-weight-heading);
   line-height: var(--player-stats-line-height-heading);
 }
 
 /* Amber is reinforcement over words that already state the condition. */
 .player-stats-rating__text--provisional {
-  color: var(--player-stats-provisional-text);
+  color: var(--pm-provisional-text);
 }
 
 /* Neither absence is a result, so neither is emphasised. */
 .player-stats-rating__text--never-played,
 .player-stats-rating__text--absent {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
 }
 
 /* ------------------------------------------------------------------ *
@@ -136,7 +137,7 @@
 .player-stats-rating__scope {
   margin: 0;
   max-width: var(--player-stats-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-meta);
   line-height: var(--player-stats-line-height-body);
 }

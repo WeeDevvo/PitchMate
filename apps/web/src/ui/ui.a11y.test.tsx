@@ -40,6 +40,9 @@ import {
   NotificationList,
   PlayerRow,
   SquadCard,
+  StatTile,
+  LeaderboardRow,
+  RatingChart,
   Sidebar,
   SidebarLabel,
   TopBar,
@@ -170,6 +173,16 @@ function Gallery() {
         <a href="/p1">Player 1</a>
       </TeamColumn>
       <Scoreboard teamA="Red Wolves" teamB="Blue Herons" scoreA={3} scoreB={2} bibs="a" status="provisional" />
+      <dl>
+        <StatTile label="Win rate" value="62%" sub="Of 24 games" tone="accent" />
+        <StatTile label="Bibs" value="3" icon="bib" tone="bib" />
+        <StatTile label="Longest streak" value="–" sub="No run recorded yet" empty />
+      </dl>
+      <ol aria-label="Top rated">
+        <LeaderboardRow rank={1} first name={<a href="/p/1">Priya Shah</a>} value="1,240" />
+        <LeaderboardRow rank={2} me name={<a href="/p/2">Sam Okoro</a>} value="1,180" unit="pts" />
+      </ol>
+      <RatingChart width={120} height={40} gridLines={[{ x1: 0, x2: 120, y: 2 }]} polyline="0,30 60,20 120,10" marks={[{ key: 'a', x: 0, y: 30 }, { key: 'b', x: 120, y: 10 }]} />
       <SquadCard
         name="Thursday Ballers"
         meta={<RoleBadge role="admin" />}

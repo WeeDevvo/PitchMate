@@ -45,9 +45,7 @@ import { ShellHeader, type ShellHeaderProps } from './components/ShellHeader';
 import { SkipLink } from './components/SkipLink';
 import { resolveDestination } from './lib/routeResolution';
 // The shell's layout reads the design-system `--pm-*` tokens, which are loaded
-// globally; the legacy aliases keep the unprefixed names the not-yet-migrated
-// features inside the frame still read (Requirements 12.8, 13.4).
-import './styles/legacyTokens.css';
+// globally (Requirements 12.8, 13.4).
 import './styles/shell.css';
 
 export interface ShellFrameProps extends ShellHeaderProps {

@@ -55,6 +55,7 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.6, 15.5, 16.6
  */
 import { type ReactElement } from 'react';
+import { StatTile } from '../../../ui';
 
 import { ResultBreakdown } from './ResultBreakdown';
 import {
@@ -118,32 +119,29 @@ export function RecordPanel({
       ) : null}
 
       <dl className="player-stats-record__figures">
-        <div
+        {/* 6.1: a whole number, exactly as parsed. */}
+        <StatTile
           className="player-stats-record__figure"
           data-player-stats-figure="appearances"
-        >
-          <dt className="player-stats-record__label">{APPEARANCES_LABEL}</dt>
-          {/* 6.1: a whole number, exactly as parsed. */}
-          <dd className="player-stats-record__value">
-            {formatCount(record.appearances)}
-          </dd>
-        </div>
+          label={APPEARANCES_LABEL}
+          value={formatCount(record.appearances)}
+          labelProps={{ className: 'player-stats-record__label' }}
+          valueProps={{ className: 'player-stats-record__value' }}
+        />
 
-        <div
+        <StatTile
           className="player-stats-record__figure"
           data-player-stats-figure="win-percentage"
-        >
-          <dt className="player-stats-record__label">{WIN_PERCENTAGE_LABEL}</dt>
-          <dd
-            className={
-              hasWinPercentage
-                ? 'player-stats-record__value'
-                : 'player-stats-record__value player-stats-record__value--absent'
-            }
-          >
-            {formattedWinPercentage ?? NO_WIN_PERCENTAGE}
-          </dd>
-        </div>
+          label={WIN_PERCENTAGE_LABEL}
+          value={formattedWinPercentage ?? NO_WIN_PERCENTAGE}
+          empty={!hasWinPercentage}
+          labelProps={{ className: 'player-stats-record__label' }}
+          valueProps={{
+            className: hasWinPercentage
+              ? 'player-stats-record__value'
+              : 'player-stats-record__value player-stats-record__value--absent',
+          }}
+        />
       </dl>
 
       {/* 6.2: the three results, each a letter and an icon as well as a hue. */}

@@ -77,6 +77,15 @@ export {
   type TabItem,
   type TabsProps,
 } from './Tabs';
+export {
+  LeaderboardRow,
+  RatingChart,
+  StatTile,
+  type ChartPoint,
+  type LeaderboardRowProps,
+  type RatingChartProps,
+  type StatTileProps,
+} from './Stats';
 export { Select, TextField, type SelectOption, type SelectProps, type TextFieldProps } from './TextField';
 export { Toggle, type ToggleProps } from './Toggle';
 export { TopBar, type TopBarProps } from './TopBar';

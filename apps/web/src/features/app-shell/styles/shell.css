@@ -19,9 +19,6 @@
  *   13.13 In the Compact_Layout every interactive control of the frame is at
  *         least 44x44 CSS pixels with at least 8px between adjacent targets.
  *
- * `styles/legacyTokens.css` keeps the unprefixed names that squads, matches and
- * player stats still read; nothing here reads them.
- *
  * Requirements: 1.2, 1.5, 1.8, 13.1, 13.3, 13.4, 13.8, 13.11, 13.13
  */
 
