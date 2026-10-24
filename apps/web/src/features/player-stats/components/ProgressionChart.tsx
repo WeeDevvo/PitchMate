@@ -63,7 +63,8 @@
  *
  * Requirements: 8.2, 8.5, 8.6, 8.7, 15.6
  */
-import { type ReactElement } from 'react';
+import { type ReactElement, type SVGProps } from 'react';
+import { RatingChart } from '../../../ui';
 
 import { plotProgression, type ChartExtent } from '../lib/chartGeometry';
 import type { ProgressionPoint } from '../lib/parse/playerProfile';
@@ -120,8 +121,12 @@ const CHART_EXTENT: ChartExtent = {
   padding: PROGRESSION_CHART_PADDING,
 };
 
-/** The `viewBox` the drawing is laid out in. */
-const VIEW_BOX = `0 0 ${String(PROGRESSION_CHART_WIDTH)} ${String(PROGRESSION_CHART_HEIGHT)}`;
+/** Test hooks on the line and on each mark, read by the chart's own tests. */
+const LINE_HOOK = { 'data-player-stats-progression-line': 'true' } as SVGProps<SVGPolylineElement>;
+
+function pointHook(index: number): SVGProps<SVGCircleElement> {
+  return { 'data-player-stats-progression-point': index } as SVGProps<SVGCircleElement>;
+}
 
 export interface ProgressionChartProps {
   /**
@@ -158,60 +163,32 @@ export function ProgressionChart({
   const gridBottom = PROGRESSION_CHART_HEIGHT - PROGRESSION_CHART_PADDING;
 
   return (
-    <svg
+    <RatingChart
       className="player-stats-progression-chart"
-      viewBox={VIEW_BOX}
-      preserveAspectRatio="none"
-      // 8.5: the Progression_Table is the accessible representation, so this
-      // drawing is hidden rather than described — the figures are announced
-      // once, by the table.
-      aria-hidden="true"
-      // Hidden *and* unfocusable: a focusable element in an `aria-hidden`
-      // subtree is a defect, and some engines focus an `svg` by default.
-      focusable="false"
+      width={PROGRESSION_CHART_WIDTH}
+      height={PROGRESSION_CHART_HEIGHT}
       data-player-stats-progression-chart="true"
-    >
-      {/* The bounds of the rating domain the line was scaled against. A frame
-          for the data, drawn only because there is data — never on its own
-          (Requirement 8.6). */}
-      <line
-        className="player-stats-progression-chart__grid"
-        x1={PROGRESSION_CHART_PADDING}
-        y1={gridTop}
-        x2={PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING}
-        y2={gridTop}
-      />
-      <line
-        className="player-stats-progression-chart__grid"
-        x1={PROGRESSION_CHART_PADDING}
-        y1={gridBottom}
-        x2={PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING}
-        y2={gridBottom}
-      />
-
-      {/* 8.7: `polyline` is null for the one-point series, so a single reading
-          cannot be drawn as a trend. */}
-      {plot.polyline === null ? null : (
-        <polyline
-          className="player-stats-progression-chart__line"
-          points={plot.polyline}
-          data-player-stats-progression-line="true"
-        />
-      )}
-
-      {/* 15.6: a mark is a shape at a position. Both carry the reading without
-          reference to the hue. */}
-      {plot.points.map((plotted, index) => (
-        <circle
-          key={`${String(plotted.point.completedAtMs)}:${String(plotted.point.displayRating)}:${String(index)}`}
-          className="player-stats-progression-chart__point"
-          cx={plotted.x}
-          cy={plotted.y}
-          r={POINT_MARK_RADIUS}
-          data-player-stats-progression-point={index}
-        />
-      ))}
-    </svg>
+      // The bounds of the rating domain the line was scaled against. A frame for
+      // the data, drawn only because there is data — never on its own
+      // (Requirement 8.6).
+      gridLines={[
+        { x1: PROGRESSION_CHART_PADDING, x2: PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING, y: gridTop },
+        { x1: PROGRESSION_CHART_PADDING, x2: PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING, y: gridBottom },
+      ]}
+      // 8.7: `polyline` is null for the one-point series, so a single reading
+      // cannot be drawn as a trend.
+      polyline={plot.polyline}
+      lineProps={LINE_HOOK}
+      // 15.6: a mark is a shape at a position. Both carry the reading without
+      // reference to the hue.
+      marks={plot.points.map((plotted, index) => ({
+        key: `${String(plotted.point.completedAtMs)}:${String(plotted.point.displayRating)}:${String(index)}`,
+        x: plotted.x,
+        y: plotted.y,
+      }))}
+      pointRadius={POINT_MARK_RADIUS}
+      pointProps={pointHook}
+    />
   );
 }
 

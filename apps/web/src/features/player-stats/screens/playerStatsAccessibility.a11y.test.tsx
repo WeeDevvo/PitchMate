@@ -65,9 +65,8 @@
  * expert review. This suite establishes the automated floor, not the ceiling.
  *
  * The heading outlines (Property 33), keyboard reachability and focus
- * (Property 34), the token tables and contrast (Property 35), and the green
- * painting rule (Property 36) are not re-asserted here; each is owned by its own
- * file.
+ * (Property 34), and the token tables and contrast, greens included
+ * (Property 35), are not re-asserted here; each is owned by its own file.
  *
  * Feature: web-player-stats-screen
  * Validates: Requirements 16.7, 16.8

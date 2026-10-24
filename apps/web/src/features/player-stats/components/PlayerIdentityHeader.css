@@ -48,8 +48,9 @@
 .player-stats-identity__name {
   margin: 0;
   max-width: var(--player-stats-measure);
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-screen-heading);
+  font-family: var(--pm-font-display);
   font-weight: var(--player-stats-font-weight-heading);
   line-height: var(--player-stats-line-height-heading);
   /* A name is rendered whole. See the module note. */
@@ -71,9 +72,9 @@
   display: inline-flex;
   align-items: center;
   padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
-  border: var(--player-stats-border-width) solid var(--player-stats-card-border);
+  border: var(--player-stats-border-width) solid var(--pm-border-subtle);
   border-radius: var(--player-stats-radius-chip);
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-chip);
   font-weight: var(--player-stats-font-weight-label);
   line-height: var(--player-stats-line-height-body);
@@ -82,13 +83,13 @@
 /* Informational, not a result: the guest hue is the info blue of the token
    table, and the word "Guest" carries the meaning without it. */
 .player-stats-identity__label--guest {
-  color: var(--player-stats-guest-text);
+  color: var(--pm-text-secondary);
 }
 
 /* An erased membership is stated plainly and not emphasised; the label is a
    note about the record rather than a warning. */
 .player-stats-identity__label--former-player {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
 }
 
 /* ------------------------------------------------------------------ *
@@ -98,7 +99,7 @@
 .player-stats-identity__scope {
   margin: 0;
   max-width: var(--player-stats-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-meta);
   line-height: var(--player-stats-line-height-body);
 }

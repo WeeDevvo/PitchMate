@@ -23,10 +23,8 @@
  *  - **The hues reinforce; they never carry.** The line's slope and each mark's
  *    position and shape state the reading (Requirement 15.6), and every figure
  *    is also stated in words by the Progression_Table beside it. The line and
- *    mark tokens are the surface-keyed green of the token table — Pitch Green on
- *    the dark surfaces, Green Dark on the light ones — so a mark clears the 3:1
- *    non-text floor in both Themes and green never paints text
- *    (Requirement 15.5).
+ *    marks are the design system's chart-line token, which clears the 3:1
+ *    non-text floor on every surface in both Themes (Requirement 15.5).
  *
  * Requirements: 15.2, 15.5, 15.6, 15.7
  */
@@ -41,23 +39,7 @@
   aspect-ratio: 16 / 5;
 }
 
-/* The bounds of the rating domain the line was scaled against — a frame for the
-   data, which is drawn only when there is data. */
-.player-stats-progression-chart__grid {
-  stroke: var(--player-stats-chart-grid);
-  stroke-width: var(--player-stats-chart-grid-width);
-}
-
-/* The direction of travel, carried by the slope. */
-.player-stats-progression-chart__line {
-  fill: none;
-  stroke: var(--player-stats-chart-line);
-  stroke-width: var(--player-stats-chart-line-width);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* One reading, carried by a shape at a position. */
-.player-stats-progression-chart__point {
-  fill: var(--player-stats-chart-point);
-}
+/* The frame lines, the line and the marks, with their colours and strokes, are
+   the design system's RatingChart: the chart-line token on the chart-grid frame,
+   measured in both Themes, and every reading is also stated in words by the
+   Progression_Table beside it. */
