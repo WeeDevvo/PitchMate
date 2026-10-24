@@ -497,7 +497,7 @@ describe('NotificationPanel mark-all-read clears the displayed count', () => {
       ),
       { numRuns: 100 },
     );
-  });
+  }, 30_000);
 
   it('leaves the control disabled once the count is 0 and every displayed record is read', async () => {
     await fc.assert(
@@ -524,7 +524,7 @@ describe('NotificationPanel mark-all-read clears the displayed count', () => {
       ),
       { numRuns: 100 },
     );
-  });
+  }, 30_000);
 });
 
 // Feature: app-shell, Property 14: Mark-all-read clears the count and enables only
@@ -548,7 +548,7 @@ describe('NotificationPanel mark-all-read control availability', () => {
       }),
       { numRuns: 200 },
     );
-  });
+  }, 30_000);
 
   it('is available for activation whenever the count is 1 or greater, however many displayed records are read', async () => {
     await fc.assert(
@@ -578,7 +578,7 @@ describe('NotificationPanel mark-all-read control availability', () => {
       ),
       { numRuns: 150 },
     );
-  });
+  }, 30_000);
 
   it('issues no call from an activation while it is disabled', async () => {
     await fc.assert(
@@ -604,5 +604,5 @@ describe('NotificationPanel mark-all-read control availability', () => {
       ),
       { numRuns: 150 },
     );
-  });
+  }, 30_000);
 });

@@ -460,7 +460,7 @@ describe('shell.css source scan', () => {
 
 describe('focus indicators (Requirements 13.4, 12.10)', () => {
   it.each(FOCUSABLE_CONTROL_CLASSES)(
-    'declares a :focus-visible outline resolving var(--focus-ring) for .%s',
+    'declares a :focus-visible outline resolving var(--pm-focus-ring) for .%s',
     (className) => {
       const focusRules = rulesFor(className, { focus: 'with' }).filter((rule) =>
         subjectParts(rule.selector, className).some((part) =>
@@ -480,7 +480,7 @@ describe('focus indicators (Requirements 13.4, 12.10)', () => {
         `.${className} has a :focus-visible rule that declares no outline`,
       ).toBeGreaterThan(0);
       for (const outline of outlines) {
-        expect(outline).toContain('var(--focus-ring)');
+        expect(outline).toContain('var(--pm-focus-ring)');
         // A hairline ring is not a visible indicator at every zoom level.
         expect(Math.max(...absoluteLengthsPx(outline), 0)).toBeGreaterThanOrEqual(2);
       }

@@ -69,6 +69,7 @@
  */
 import { useCallback, useRef, type ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Icon, NavItem, type IconName } from '../../../ui';
 import { Disclosure } from './Disclosure';
 import type { ShellNavigationSlotProps } from './ShellHeader';
 import { SHELL_DESTINATIONS, type DestinationId } from '../lib/destinations';
@@ -82,6 +83,14 @@ import { resolveDestination } from '../lib/routeResolution';
  * and the slot it fills cannot drift apart.
  */
 export type PrimaryNavigationProps = ShellNavigationSlotProps;
+
+/** Each destination's icon, beside its label. */
+const DESTINATION_ICONS: Readonly<Record<DestinationId, IconName>> = {
+  home: 'home',
+  notifications: 'bell',
+  settings: 'settings',
+  profile: 'user',
+};
 
 /**
  * Render the destination controls.
@@ -112,19 +121,25 @@ function DestinationList({
 
         return (
           <li key={destination.id} className="shell-nav__item">
-            <Link
-              to={destination.path}
-              className="shell-nav__link"
-              data-destination={destination.id}
-              // 3.5: only the active control carries the attribute at all.
-              aria-current={current ? 'page' : undefined}
-              // The same fact as an attribute the stylesheet and the layout tests
-              // can key off without reading ARIA.
-              data-current={current ? 'true' : 'false'}
-              onClick={onActivate}
-            >
-              {destination.label}
-            </Link>
+            <NavItem
+              label={destination.label}
+              icon={DESTINATION_ICONS[destination.id]}
+              // 3.5: only the active control carries `aria-current` at all, which
+              // NavItem supplies with its active styling.
+              active={current}
+              render={({ className, ...itemProps }) => (
+                <Link
+                  {...itemProps}
+                  to={destination.path}
+                  className={`shell-nav__link ${className}`}
+                  data-destination={destination.id}
+                  // The same fact as an attribute the stylesheet and the layout
+                  // tests can key off without reading ARIA.
+                  data-current={current ? 'true' : 'false'}
+                  onClick={onActivate}
+                />
+              )}
+            />
           </li>
         );
       })}
@@ -188,7 +203,8 @@ export function PrimaryNavigation({
       surfaceClassName="shell-nav__surface"
       trigger={(triggerProps) => (
         <button ref={triggerRef} type="button" className="shell-nav__toggle" {...triggerProps}>
-          {PRIMARY_NAVIGATION_TOGGLE}
+          <Icon name="menu" size={22} />
+          <span className="shell-nav__toggle-label">{PRIMARY_NAVIGATION_TOGGLE}</span>
         </button>
       )}
     >

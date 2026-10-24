@@ -60,6 +60,7 @@
  * Requirements: 4.2, 4.3, 4.4, 4.5, 4.12, 7.6
  */
 import { type ReactElement } from 'react';
+import { Icon } from '../../../ui';
 
 import {
   NOTIFICATIONS_SUBJECT,
@@ -108,7 +109,9 @@ export function NotificationIndicator(
       aria-label={label}
       {...triggerProps}
     >
-      {/* Visible, and the opening words of the accessible name (WCAG 2.5.3). */}
+      <Icon name="bell" size={22} />
+      {/* Visible from 1200px, and the opening words of the accessible name
+          (WCAG 2.5.3). Narrower, the bell shows alone. */}
       <span className="shell-notification-indicator__label">
         {NOTIFICATIONS_SUBJECT}
       </span>

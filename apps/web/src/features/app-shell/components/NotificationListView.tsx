@@ -58,6 +58,7 @@
  * Requirements: 3.9, 5.4, 5.7, 5.12, 6.11, 13.2
  */
 import { useEffect, useRef, type ReactElement } from 'react';
+import { NotificationList } from '../../../ui';
 
 import { destinationLabel } from '../lib/destinations';
 import { NO_NOTIFICATIONS } from '../lib/messages';
@@ -126,7 +127,7 @@ export function NotificationListView(): ReactElement {
        * by the state machine before this surface saw them.
        */}
       {records.length === 0 ? null : (
-        <ul className="shell-notification-list__list">
+        <NotificationList className="shell-notification-list__list">
           {records.map((record) => (
             <li key={record.notificationId} className="shell-notification-list__item">
               {/* 6.11, 6.12: one keyboard-operable control per record, and the
@@ -134,7 +135,7 @@ export function NotificationListView(): ReactElement {
               <NotificationRow record={record} nowMs={nowMs} onActivate={markRead} />
             </li>
           ))}
-        </ul>
+        </NotificationList>
       )}
     </div>
   );

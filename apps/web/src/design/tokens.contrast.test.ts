@@ -1,38 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import tokens from './tokens.json'
+import { tokenContrast as contrast, type DesignTheme as Theme } from './contrast'
 
 /*
  * WCAG 2.1 contrast for the design-system colour pairings, in both themes,
  * computed from tokens.json so a token change is re-checked automatically.
  * Text needs 4.5:1; focus rings, control borders and icons need 3:1.
  */
-
-type Theme = 'dark' | 'light'
-
-const byName = new Map(tokens.color.tokens.map((token) => [token.name, token.value]))
-
-function resolve(name: string, theme: Theme): string {
-  const value = byName.get(name)?.[theme]
-  if (value === undefined) {
-    throw new Error(`Unknown colour token ${name}`)
-  }
-  const alias = /^\{([a-z0-9-]+)\}$/.exec(value)
-  return alias ? resolve(alias[1], theme) : value
-}
-
-function luminance(hex: string): number {
-  const int = parseInt(hex.replace('#', ''), 16)
-  const [r, g, b] = [(int >> 16) & 0xff, (int >> 8) & 0xff, int & 0xff].map((channel) => {
-    const c = channel / 255
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-  })
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-
-function contrast(foreground: string, background: string, theme: Theme): number {
-  const [a, b] = [luminance(resolve(foreground, theme)), luminance(resolve(background, theme))]
-  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
-}
 
 const GROUNDS = ['bg', 'surface', 'surface-raised', 'surface-overlay']
 

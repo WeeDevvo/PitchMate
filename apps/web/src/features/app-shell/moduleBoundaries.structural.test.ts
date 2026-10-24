@@ -93,6 +93,8 @@ const srcRoot = resolve(shellRoot, '..', '..');
 const authRoot = join(srcRoot, 'features', 'auth');
 const landingRoot = join(srcRoot, 'features', 'landing');
 const themeRoot = join(srcRoot, 'theme');
+/** The shared component library, admitted through its barrel only (ADR 0004). */
+const uiRoot = join(srcRoot, 'ui');
 /** The application-level router wiring — the shell's primary permitted consumer. */
 const appWiringRoot = join(srcRoot, 'app');
 /**
@@ -398,19 +400,31 @@ describe('App_Shell containment and public entry point (Requirements 1.10, 15.4)
     expect(escaping).toEqual([]);
   });
 
-  it('resolves no shell import outside the feature root beyond the auth barrel and the shared theme module (Requirements 15.3, 15.7)', () => {
+  it('resolves no shell import outside the feature root beyond the auth barrel, the shared theme module and the component library barrel (Requirements 15.3, 15.7)', () => {
     const offenders: Array<{ file: string; specifier: string }> = [];
     for (const file of shellModules) {
       for (const { specifier, target } of inAppImports(file)) {
         if (isWithin(shellRoot, target)) continue;
-        // The two permitted outward edges: the Auth_Feature's public barrel
-        // (Requirement 15.3) and the shared Theme module (Requirement 15.7).
+        // The permitted outward edges: the Auth_Feature's public barrel
+        // (Requirement 15.3), the shared Theme module (Requirement 15.7), and the
+        // shared component library's barrel (ADR 0004).
         if (targetsBarrelOf(authRoot, target)) continue;
         if (isWithin(themeRoot, target)) continue;
+        if (targetsBarrelOf(uiRoot, target)) continue;
         offenders.push({ file: relToSrc(file), specifier });
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  it('reaches the component library through its barrel, and treats a deeper path as an offender', () => {
+    const uiEdges = shellModules.flatMap((file) =>
+      inAppImports(file).filter(({ target }) => isWithin(uiRoot, target)),
+    );
+    expect(uiEdges.length).toBeGreaterThan(0);
+    expect(uiEdges.every(({ target }) => targetsBarrelOf(uiRoot, target))).toBe(true);
+    // Control: a module of the library is not its barrel.
+    expect(targetsBarrelOf(uiRoot, norm(join(uiRoot, 'Button')))).toBe(false);
   });
 });
 
