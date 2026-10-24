@@ -87,6 +87,7 @@
  * Requirements: 7.5, 7.6, 7.7, 7.8, 9.1, 9.4, 9.5, 9.8, 19.3
  */
 import { useId, type ReactElement } from 'react';
+import { PlayerRow as UiPlayerRow } from '../../../ui';
 
 import { MembershipActionControl } from './MembershipActionControl';
 import { MembershipLabels } from './MembershipLabels';
@@ -262,8 +263,11 @@ export function PlayerRow({
   const guestEditable = isGuestEditable(row, viewer.isAdmin);
 
   return (
-    <div
+    <UiPlayerRow
       className="squads-player-row"
+      name={row.displayName}
+      guest={row.isGuest}
+      former={row.isFormerPlayer}
       // 19.6: the row is a group named by the player, so every value inside it is
       // programmatically associated with whose row it is.
       role="group"
@@ -273,30 +277,33 @@ export function PlayerRow({
       // 7.7: the muted surface of an inactive row hangs off the state itself, so
       // the cue cannot be applied to a row whose label says otherwise.
       data-membership-state={row.state}
-    >
-      {/* 9.1, 9.5, 9.8: one keyboard-operable control per row, named by the
-          player, present even for a Former_Player — and carrying the path
-          `playerStatsPath` built, so the seam is recoverable from the row (9.2). */}
-      <button
-        type="button"
-        className="squads-player-row__open"
-        data-squads-player-open="true"
-        data-player-stats-path={playerStatsPath(squadId, row.membershipId)}
-        onClick={() => onOpenPlayer(row.membershipId)}
-      >
-        <span id={nameId} className="squads-player-row__name">
-          {row.displayName}
-        </span>
-      </button>
-
-      {/* 7.5, 7.6, 7.7, 7.8, 19.3: every membership fact in words. */}
-      <MembershipLabels
-        role={row.role}
-        state={row.state}
-        isGuest={row.isGuest}
-        isFormerPlayer={row.isFormerPlayer}
-      />
-
+      nameContent={
+        // 9.1, 9.5, 9.8: one keyboard-operable control per row, named by the
+        // player, present even for a Former_Player — and carrying the path
+        // `playerStatsPath` built, so the seam is recoverable from the row (9.2).
+        <button
+          type="button"
+          className="squads-player-row__open"
+          data-squads-player-open="true"
+          data-player-stats-path={playerStatsPath(squadId, row.membershipId)}
+          onClick={() => onOpenPlayer(row.membershipId)}
+        >
+          <span id={nameId} className="squads-player-row__name">
+            {row.displayName}
+          </span>
+        </button>
+      }
+      badges={
+        // 7.5, 7.6, 7.7, 7.8, 19.3: every membership fact in words.
+        <MembershipLabels
+          role={row.role}
+          state={row.state}
+          isGuest={row.isGuest}
+          isFormerPlayer={row.isFormerPlayer}
+        />
+      }
+      end={
+        <>
       {/* 8.5, 8.8: exactly one Rating_Presentation, named for this player. */}
       <RatingBadge playerName={row.displayName} presentation={presentationOf(row)} />
 
@@ -361,7 +368,9 @@ export function PlayerRow({
           copy={REMOVAL_COPY}
         />
       )}
-    </div>
+        </>
+      }
+    />
   );
 }
 

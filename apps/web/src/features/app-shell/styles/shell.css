@@ -443,6 +443,21 @@
   box-shadow: 0 0 0 2px var(--pm-bg);
 }
 
+/* While the bell shows alone, the count sits over its corner, as the design
+   system draws it, so a count never widens the control. From 1200px, with the
+   label beside the bell, it follows the label inline. */
+.shell-frame .shell-badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+}
+
+@media (min-width: 1200px) {
+  .shell-frame .shell-badge {
+    position: static;
+  }
+}
+
 /* ------------------------------------------------------------------ *
  * Notification_Panel (5.1, 5.7, 5.8, 5.9, 5.12, 6.8, 6.9)
  *

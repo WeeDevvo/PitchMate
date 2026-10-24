@@ -12,11 +12,11 @@
 }
 
 .squads-claim-landing__preview dt {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-weight: var(--squads-font-weight-label);
 }
 
 .squads-claim-landing__preview dd {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
 }

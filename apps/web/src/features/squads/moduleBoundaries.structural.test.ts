@@ -83,6 +83,7 @@ import {
   targetsBarrelOf,
   themeRoot,
   wireRoot,
+  uiRoot,
 } from './structural/sourceScan';
 
 // --- The scanned sets --------------------------------------------------------
@@ -232,7 +233,7 @@ describe('every module of the feature lives under features/squads/ (Requirement 
     expect(squadsStyles().map(featureRel)).toContain('styles/squadsTokens.css');
   });
 
-  it('resolves no import outside the root beyond the shell barrel, the auth barrel, and the shared theme and wire modules', () => {
+  it('resolves no import outside the root beyond the shell barrel, the auth barrel, the shared theme and wire modules, and the component library barrel', () => {
     const offenders: Array<{ module: string; specifier: string }> = [];
 
     for (const file of featureModules) {
@@ -253,6 +254,8 @@ describe('every module of the feature lives under features/squads/ (Requirement 
         if (targetsBarrelOf(authRoot, target)) continue;
         if (isWithin(themeRoot, target)) continue;
         if (targetsBarrelOf(wireRoot, target)) continue;
+        // The shared component library, at its barrel (ADR 0004).
+        if (targetsBarrelOf(uiRoot, target)) continue;
 
         offenders.push({ module: featureRel(file), specifier });
       }
@@ -261,7 +264,7 @@ describe('every module of the feature lives under features/squads/ (Requirement 
     expect(offenders).toEqual([]);
   });
 
-  it('reaches the App_Shell, the Auth_Feature, and the shared theme and wire modules at all', () => {
+  it('reaches the App_Shell, the Auth_Feature, the shared theme and wire modules, and the component library at all', () => {
     // Guard: the four admitted edges are all used, so an empty offender list
     // above means the boundary is clean rather than that resolution broke.
     const targets = featureModules.flatMap((file) =>
@@ -274,6 +277,7 @@ describe('every module of the feature lives under features/squads/ (Requirement 
     expect(targets.some((target) => targetsBarrelOf(authRoot, target))).toBe(true);
     expect(targets.some((target) => isWithin(themeRoot, target))).toBe(true);
     expect(targets.some((target) => targetsBarrelOf(wireRoot, target))).toBe(true);
+    expect(targets.some((target) => targetsBarrelOf(uiRoot, target))).toBe(true);
   });
 
   it('imports nothing from the application wiring or another feature', () => {
@@ -288,6 +292,7 @@ describe('every module of the feature lives under features/squads/ (Requirement 
         if (isWithin(squadsRoot, target)) continue;
         if (isWithin(themeRoot, target)) continue;
         if (targetsBarrelOf(wireRoot, target)) continue;
+        if (targetsBarrelOf(uiRoot, target)) continue;
         if (targetsBarrelOf(appShellRoot, target)) continue;
         if (targetsBarrelOf(authRoot, target)) continue;
         if (isWithin(appWiringRoot, target) || target.startsWith(`${featuresRoot}/`)) {

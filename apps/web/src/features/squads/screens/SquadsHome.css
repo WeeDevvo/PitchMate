@@ -26,8 +26,9 @@
 
 .squads-home__heading {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-screen-heading);
+  font-family: var(--pm-font-display);
   font-weight: var(--squads-font-weight-heading);
   line-height: var(--squads-line-height-heading);
   overflow-wrap: break-word;
@@ -43,10 +44,10 @@
 .squads-home__entry-point {
   min-height: var(--squads-touch-target);
   padding: 0 var(--squads-gutter);
-  border: var(--squads-border-width) solid var(--control-border);
-  border-radius: var(--squads-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  border: var(--squads-border-width) solid var(--pm-border-control);
+  border-radius: var(--squads-radius-chip);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-body);
   font-weight: var(--squads-font-weight-label);
   line-height: var(--squads-line-height-body);
@@ -54,7 +55,7 @@
 }
 
 .squads-home__entry-point:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }
 

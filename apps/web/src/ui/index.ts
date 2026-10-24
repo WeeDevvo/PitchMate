@@ -30,6 +30,14 @@ export {
 export { Icon, type IconName, type IconProps } from './Icon';
 export { Logo, type LogoProps } from './Logo';
 export { MatchProgress, MatchStateChip, type MatchStateName } from './MatchState';
+export { PlayerRow, type PlayerRowProps } from './PlayerRow';
+export {
+  SquadCard,
+  SquadCrest,
+  type SquadCardProps,
+  type SquadCardRenderProps,
+  type SquadCrestProps,
+} from './Squad';
 export {
   NotificationItem,
   NotificationList,

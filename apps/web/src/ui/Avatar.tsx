@@ -4,6 +4,13 @@ import './Avatar.css';
 
 const TINTS = 5;
 
+/** The stylesheet's own size; only another size needs an inline override. */
+const DEFAULT_SIZE = 40;
+
+function sizeStyle(size: number): CSSProperties | undefined {
+  return size === DEFAULT_SIZE ? undefined : ({ '--pm-avatar-size': `${size}px` } as CSSProperties);
+}
+
 function initialsOf(name: string): string {
   return name
     .split(/\s+/)
@@ -33,7 +40,7 @@ export function Avatar({ name, src, size = 40, guest, tag }: AvatarProps) {
   return (
     <span
       className={cx('pm-avatar', guest ? 'pm-avatar--guest' : !src && `pm-avatar--c${tintOf(name)}`)}
-      style={{ '--pm-avatar-size': `${size}px` } as CSSProperties}
+      style={sizeStyle(size)}
       aria-hidden="true"
     >
       {src ? <img src={src} alt="" /> : initialsOf(name)}
@@ -50,7 +57,7 @@ export function AvatarStack({ names, max = 4, size = 32 }: { names: readonly str
         <Avatar key={name} name={name} size={size} />
       ))}
       {overflow > 0 && (
-        <span className="pm-avatar pm-avatar--more" style={{ '--pm-avatar-size': `${size}px` } as CSSProperties}>
+        <span className="pm-avatar pm-avatar--more" style={sizeStyle(size)}>
           +{overflow}
         </span>
       )}

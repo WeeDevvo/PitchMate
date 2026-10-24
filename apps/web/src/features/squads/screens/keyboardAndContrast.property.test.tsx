@@ -53,7 +53,7 @@
  * | --- | --- |
  * | reachable by keyboard in document order | a real Tab and Shift+Tab walk of every rendered state, compared against the tabbable elements in document order (Requirement 19.4) |
  * | operable by keyboard | every tabbable is a natively operable element, is programmatically focusable, is not `aria-hidden`, and is left again by one key press — nothing traps focus (19.4) |
- * | a focus indication at 3:1 | every rendered control resolves a declared `:focus-visible` outline painting `var(--focus-ring)`, and that token is measured at 3:1 against every surface it can be drawn on (19.4, 19.5) |
+ * | a focus indication at 3:1 | every rendered control resolves a declared `:focus-visible` outline painting `var(--pm-focus-ring)`, and that token is measured at 3:1 against every surface it can be drawn on (19.4, 19.5) |
  * | text at 4.5:1 | for every rendered text node, the colour token and the background token that **the declared cascade** gives it, measured in the active Theme (19.5) |
  *
  * ### Why contrast is computed from source text
@@ -106,6 +106,8 @@ import fc from 'fast-check';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Theme } from '../../../theme';
+import { resolveColour } from '../../../design/contrast';
+import designTokens from '../../../design/tokens.json';
 import {
   SCREEN_STATE_CASES,
   THEMES,
@@ -160,54 +162,47 @@ function stylesheetsUnder(dir: string): string[] {
 }
 
 /**
- * The stylesheet holding the declared presentation of every text field of every
- * squads form — the Auth_Feature's `FormField`, which the forms render through its
- * public barrel rather than restating.
+ * The shared component library's stylesheets. The squads screens render its
+ * SquadCard, PlayerRow, Avatar, Sidebar, NavItem, TextField and Card, so their
+ * declarations reach a rendered squads screen. They are read **before** the
+ * feature's own sheets, as the browser loads them (each squads component imports
+ * the library before its own stylesheet), so a squads rule wins a tie with the
+ * library rule it refines.
  */
-const AUTH_FIELD_STYLESHEET = join(
-  FEATURE_ROOT,
-  '..',
-  'auth',
-  'components',
-  'FormField.css',
-);
+const UI_ROOT = join(FEATURE_ROOT, '..', '..', 'ui');
 
-/**
- * The per-Theme token tables of the features that still declare the shared ten
- * as colours. The App_Shell no longer does: it moved onto the design system, and
- * its `legacyTokens.css` aliases the ten to `--pm-*` tokens, which take
- * precedence inside the frame and are contrast-checked in `legacyTokens.test.ts`.
- */
-const SHARED_THEME_TABLES: readonly { readonly name: string; readonly path: string }[] =
-  [
-    { name: 'auth', path: join(FEATURE_ROOT, '..', 'auth', 'styles', 'theme.css') },
-    { name: 'landing', path: join(FEATURE_ROOT, '..', 'landing', 'styles', 'theme.css') },
-  ];
+const UI_STYLESHEET_PATHS = readdirSync(UI_ROOT)
+  .filter((name) => name.endsWith('.css'))
+  .sort((a, b) => a.localeCompare(b))
+  .map((name) => join(UI_ROOT, name));
 
 const TOKENS_PATH = join(FEATURE_ROOT, 'styles', 'squadsTokens.css');
 
 const tokensSource = readFileSync(TOKENS_PATH, 'utf8');
 
 interface Stylesheet {
-  /** A path relative to `features/`, so a failure names the file readably. */
+  /** A path relative to `src/`, so a failure names the file readably. */
   readonly name: string;
   readonly source: string;
 }
 
 const FEATURE_STYLESHEET_PATHS = stylesheetsUnder(FEATURE_ROOT);
 
-/**
- * Every stylesheet whose declarations can reach a rendered squads screen: the
- * feature's own, plus the one shared component stylesheet its forms render
- * through.
- */
+/** Every stylesheet whose declarations can reach a rendered squads screen. */
 const STYLESHEETS: readonly Stylesheet[] = [
+  ...UI_STYLESHEET_PATHS,
   ...FEATURE_STYLESHEET_PATHS,
-  AUTH_FIELD_STYLESHEET,
 ].map((path) => ({
-  name: relative(join(FEATURE_ROOT, '..'), path).replace(/\\/g, '/'),
+  name: relative(join(FEATURE_ROOT, '..', '..'), path).replace(/\\/g, '/'),
   source: readFileSync(path, 'utf8'),
 }));
+
+/** The feature's own stylesheets, by the same names. */
+const FEATURE_SHEET_NAMES = new Set(
+  FEATURE_STYLESHEET_PATHS.map((path) =>
+    relative(join(FEATURE_ROOT, '..', '..'), path).replace(/\\/g, '/'),
+  ),
+);
 
 /** Drop `/* ... *\/` comments, so documentation text is never read as CSS. */
 function withoutComments(css: string): string {
@@ -338,6 +333,11 @@ function contrastRatio(a: string, b: string): number {
 
 /* ------------------------------------------------------------------ *
  * The declared token tables
+ *
+ * Colours are the design system's: every stylesheet here paints with `--pm-*`
+ * tokens, whose values per Theme come from `src/design/tokens.json` (the same
+ * source `tokens.css` is generated from). The feature's own table holds its
+ * Theme-invariant scale only.
  * ------------------------------------------------------------------ */
 
 /** The custom properties declared inside the first block matching `selector`. */
@@ -358,16 +358,24 @@ function tokenTable(css: string, selector: RegExp): Record<string, string> {
 
 const strippedTokens = withoutComments(tokensSource);
 
+/** Every design-system colour token, resolved for one Theme: `--pm-<name>` to its value. */
+function designTable(theme: Theme): Record<string, string> {
+  return Object.fromEntries(
+    designTokens.color.tokens.map((token) => [
+      `--pm-${token.name}`,
+      resolveColour(token.name, theme).toLowerCase(),
+    ]),
+  );
+}
+
 const TABLES: Readonly<Record<Theme, Record<string, string>>> = {
-  // The dark table is shared by `:root` and `[data-theme='dark']`, so an absent or
-  // unresolved attribute renders dark (Requirement 19.12).
-  dark: tokenTable(strippedTokens, /:root,\s*\[data-theme='dark'\]\s*\{([^}]*)\}/),
-  light: tokenTable(strippedTokens, /\[data-theme='light'\]\s*\{([^}]*)\}/),
+  dark: designTable('dark'),
+  light: designTable('light'),
 };
 
 /**
  * The Theme-invariant scale: spacing, radii, target sizes, and type sizes,
- * declared once on `:root` rather than duplicated into both colour tables.
+ * declared once on `:root` in `styles/squadsTokens.css`.
  */
 const SCALE: Record<string, string> = tokenTable(
   strippedTokens,
@@ -381,10 +389,33 @@ function declared(theme: Theme, token: string): string {
   return value;
 }
 
-/** The colour tokens of the tables — everything declared as a hex value. */
+/** The colour tokens of the tables: everything declared as a hex value. */
 const COLOUR_TOKENS: readonly string[] = Object.keys(TABLES.dark).filter((token) =>
   /^#[0-9a-f]{6}$/.test(TABLES.dark[token]),
 );
+
+/** The properties through which a stylesheet paints a colour. */
+const COLOUR_PROPERTIES = [
+  'color',
+  'background',
+  'background-color',
+  'border',
+  'border-color',
+  'border-top',
+  'border-top-color',
+  'outline',
+] as const;
+
+/** Every colour token the feature's own stylesheets paint with. */
+const PAINTED_TOKENS: readonly string[] = [
+  ...new Set(
+    RULES.filter((rule) => FEATURE_SHEET_NAMES.has(rule.sheet)).flatMap((rule) =>
+      COLOUR_PROPERTIES.flatMap((property) => tokensIn(rule.declarations[property] ?? '')),
+    ),
+  ),
+]
+  .filter((token) => COLOUR_TOKENS.includes(token))
+  .sort();
 
 /* ------------------------------------------------------------------ *
  * The floors, the surfaces, and the declared pairings
@@ -397,24 +428,20 @@ const TEXT_FLOOR = 4.5;
 const NON_TEXT_FLOOR = 3;
 
 /**
- * Every surface the feature paints, and so every background a colour can be read
+ * Every surface the screens paint, and so every background a colour can be read
  * against.
- *
- * A label chip carries an outline and text and no fill of its own, deliberately,
- * so a chip introduces no further surface: its text is read against whichever of
- * these its row or card is painted with.
  */
 const SURFACE_TOKENS = [
   // The App_Shell's Content_Region behind the Squads_Home and the Squad_Screen,
   // and the Invite_Landing_Route's own page surface outside that frame.
-  '--bg',
-  // The Squad_Card, the Player_Row, the section panels, the invite entries, and
-  // every Form_Panel, Confirm_Dialog, and Invite_Reveal.
-  '--squads-card-surface',
-  // A Player_Row whose Membership_State is inactive.
-  '--squads-inactive-surface',
-  // Every control: buttons, links styled as controls, selects, and text fields.
-  '--control-bg',
+  '--pm-bg',
+  // Squad_Cards, the Player_List and its rows, the section sidebar, every
+  // Form_Panel, Confirm_Dialog and Invite_Reveal.
+  '--pm-surface',
+  // Controls: text fields, selects, and the bordered buttons' resting fill.
+  '--pm-surface-raised',
+  // A Player_Row whose Membership_State is inactive, and an unchecked switch.
+  '--pm-surface-sunken',
 ] as const;
 
 interface Pairing {
@@ -428,258 +455,132 @@ interface Pairing {
   readonly usage: string;
 }
 
+/** One foreground against each surface, at one floor. */
+function onEverySurface(
+  foreground: string,
+  floor: Pairing['floor'],
+  usage: string,
+): Pairing[] {
+  return SURFACE_TOKENS.map((background) => ({ foreground, background, floor, usage }));
+}
+
 const PAIRINGS: readonly Pairing[] = [
   // ---- Text and interactive control text: 4.5:1 (Requirement 19.5) ----
+  ...onEverySurface(
+    '--pm-text-primary',
+    TEXT_FLOOR,
+    'headings, names, values, control labels and field text on any surface',
+  ),
+  ...onEverySurface(
+    '--pm-text-secondary',
+    TEXT_FLOOR,
+    'secondary text: label chips, an inactive row, statements and the sidebar links',
+  ),
+  ...onEverySurface(
+    '--pm-text-muted',
+    TEXT_FLOOR,
+    'field hints, timestamps and an expired invite',
+  ),
+  ...onEverySurface(
+    '--pm-accent-text',
+    TEXT_FLOOR,
+    'an active invite and the accent text the design system clears for body copy',
+  ),
+  ...onEverySurface('--pm-danger-text', TEXT_FLOOR, 'a revoked invite and a field error'),
   {
-    foreground: '--text',
-    background: '--bg',
+    foreground: '--pm-on-accent',
+    background: '--pm-accent-fill',
     floor: TEXT_FLOOR,
-    usage:
-      "each screen's level-one heading, the Squad_Screen's section headings and caller-role value, the Admin_Section's headings, and the Invite_Landing_Route's own text",
+    usage: 'the primary surface action: Ink on Pitch Green',
   },
   {
-    foreground: '--text',
-    background: '--squads-card-surface',
+    foreground: '--pm-accent-on-subtle',
+    background: '--pm-accent-subtle',
     floor: TEXT_FLOOR,
-    usage:
-      "a Squad_Card's name, an active Player_Row's name, a Placeholder_Section's heading, a surface heading and statement, a Display_Rating, an invite entry's instants, and every form field's label and validation message",
+    usage: 'a squad crest, the current sidebar link, and the first avatar tint',
   },
   {
-    foreground: '--text',
-    background: '--squads-inactive-surface',
+    foreground: '--pm-provisional-text',
+    background: '--pm-result-draw-subtle',
     floor: TEXT_FLOOR,
-    usage:
-      "a Display_Rating on an inactive Player_Row, which states its own colour rather than inheriting the row's mute",
+    usage: 'the provisional Rating_Presentation on its tinted badge',
   },
   {
-    foreground: '--muted-text',
-    background: '--bg',
+    foreground: '--pm-result-draw-text',
+    background: '--pm-result-draw-subtle',
     floor: TEXT_FLOOR,
-    usage:
-      'the Squads_Empty_State statements, the loading statement, the no-players statement, the Not_Found_Treatment body, and the Invite_Landing_Route messages',
+    usage: 'the second avatar tint',
   },
   {
-    foreground: '--muted-text',
-    background: '--squads-card-surface',
+    foreground: '--pm-info-text',
+    background: '--pm-info-subtle',
     floor: TEXT_FLOOR,
-    usage:
-      "a Squad_Card's role and state labels, a Placeholder_Section's statement, the invite entry labels and the does-not-expire label, the Invite_Reveal's field labels, and the Rating_Unavailable label",
+    usage: 'the third avatar tint',
   },
   {
-    foreground: '--muted-text',
-    background: '--squads-inactive-surface',
+    foreground: '--pm-result-loss-text',
+    background: '--pm-result-loss-subtle',
     floor: TEXT_FLOOR,
-    usage:
-      'a Former_Player label and a Rating_Unavailable label on an inactive Player_Row',
+    usage: 'the fourth avatar tint',
   },
   {
-    foreground: '--control-text',
-    background: '--control-bg',
+    foreground: '--pm-text-primary',
+    background: '--pm-surface-pressed',
     floor: TEXT_FLOOR,
-    usage:
-      "every control's own label: the Squads_Home entry points, the retry control, the Not_Found_Treatment home control, the Player_Row admin controls, the invite generate and revoke controls, the Feature_Toggle switches, the surface actions, the Invite_Landing_Route controls, and the text a person types into a form field",
-  },
-  {
-    foreground: '--squads-inactive-text',
-    background: '--squads-inactive-surface',
-    floor: TEXT_FLOOR,
-    usage:
-      "an inactive Player_Row's name and the labels that inherit its colour — one of three cues for that state, never the only one",
-  },
-  {
-    foreground: '--squads-provisional-text',
-    background: '--squads-card-surface',
-    floor: TEXT_FLOOR,
-    usage: 'the Provisional_Band label on an active Player_Row',
-  },
-  {
-    foreground: '--squads-provisional-text',
-    background: '--squads-inactive-surface',
-    floor: TEXT_FLOOR,
-    usage: 'the Provisional_Band label on an inactive Player_Row',
-  },
-  {
-    foreground: '--squads-guest-text',
-    background: '--squads-card-surface',
-    floor: TEXT_FLOOR,
-    usage: 'the Guest_Flag label on an active Player_Row',
-  },
-  {
-    foreground: '--squads-guest-text',
-    background: '--squads-inactive-surface',
-    floor: TEXT_FLOOR,
-    usage: 'the Guest_Flag label on an inactive Player_Row',
-  },
-  {
-    foreground: '--squads-invite-active-text',
-    background: '--squads-card-surface',
-    floor: TEXT_FLOOR,
-    usage: "an active Invite_State's word, on the invite entry surface",
-  },
-  {
-    foreground: '--squads-invite-revoked-text',
-    background: '--squads-card-surface',
-    floor: TEXT_FLOOR,
-    usage: "a revoked Invite_State's word, on the invite entry surface",
-  },
-  {
-    foreground: '--squads-invite-expired-text',
-    background: '--squads-card-surface',
-    floor: TEXT_FLOOR,
-    usage: "an expired Invite_State's word, on the invite entry surface",
+    usage: 'the fifth avatar tint',
   },
 
-  // ---- Focus indications, borders, and graphical cues: 3:1 (19.5) ----
+  // ---- Focus indications, borders and graphical cues: 3:1 (Requirement 19.5) ----
+  ...onEverySurface(
+    '--pm-focus-ring',
+    NON_TEXT_FLOOR,
+    'the focus indication of every control, drawn just outside it',
+  ),
+  ...onEverySurface(
+    '--pm-border-control',
+    NON_TEXT_FLOOR,
+    'the boundary of every bordered control and outlined label chip',
+  ),
   {
-    foreground: '--focus-ring',
-    background: '--bg',
+    foreground: '--pm-accent-icon',
+    background: '--pm-surface',
     floor: NON_TEXT_FLOOR,
-    usage:
-      'the focus indication of a control drawn against the region behind the screen',
+    usage: "an active invite's accent edge",
   },
   {
-    foreground: '--focus-ring',
-    background: '--squads-card-surface',
+    foreground: '--pm-provisional-text',
+    background: '--pm-result-draw-subtle',
     floor: NON_TEXT_FLOOR,
-    usage:
-      'the focus indication of a control on a card, a Player_Row, an invite entry, or an open surface',
+    usage: "the provisional badge's outline, drawn in the text amber so it shows on the light tint",
   },
   {
-    foreground: '--focus-ring',
-    background: '--squads-inactive-surface',
+    foreground: '--pm-brand-ink',
+    background: '--pm-accent-fill',
     floor: NON_TEXT_FLOOR,
-    usage: "the focus indication of an inactive Player_Row's controls",
+    usage: "a checked switch's thumb against its Pitch Green track: the state cue",
   },
   {
-    foreground: '--focus-ring',
-    background: '--control-bg',
+    foreground: '--pm-text-secondary',
+    background: '--pm-surface-sunken',
     floor: NON_TEXT_FLOOR,
-    usage:
-      "the focus indication offset from a bordered control, whose own fill is one of its adjacent colours",
-  },
-  {
-    foreground: '--control-border',
-    background: '--control-bg',
-    floor: NON_TEXT_FLOOR,
-    usage: "every bordered control's edge against its own fill",
-  },
-  {
-    foreground: '--control-border',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "a control's edge where the region behind the screen is what lies beyond it",
-  },
-  {
-    foreground: '--control-border',
-    background: '--squads-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "a control's edge where a card, a Player_Row, an invite entry, or an open surface lies beyond it",
-  },
-  {
-    foreground: '--control-border',
-    background: '--squads-inactive-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "an inactive Player_Row's admin control edges",
-  },
-  {
-    foreground: '--squads-card-border',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      'the edge of a Squad_Card, a Player_Row, a Placeholder_Section, an invite entry, or an open surface against the region behind it',
-  },
-  {
-    foreground: '--squads-card-border',
-    background: '--squads-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: 'that same edge against the surface it encloses',
-  },
-  {
-    foreground: '--squads-card-border',
-    background: '--squads-inactive-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "an inactive Player_Row's edge against its own muted fill",
-  },
-  {
-    foreground: '--squads-chip-border',
-    background: '--squads-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "every label chip's outline — the role and state labels, the membership labels, the Rating_Presentation chips, the Invite_State chip, and the Invite_Code",
-  },
-  {
-    foreground: '--squads-chip-border',
-    background: '--squads-inactive-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "a label chip's outline on an inactive Player_Row",
-  },
-  {
-    foreground: '--squads-provisional-border',
-    background: '--squads-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "the Provisional_Band chip's outline and its badge ring",
-  },
-  {
-    foreground: '--squads-provisional-border',
-    background: '--squads-inactive-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: 'that same outline on an inactive Player_Row',
-  },
-  {
-    foreground: '--squads-invite-active-accent',
-    background: '--squads-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "an active Invite_State chip's outline — the graphical cue that keeps the hue in the light Theme, where the word itself must take the text token",
-  },
-  {
-    foreground: '--accent-text',
-    background: '--control-bg',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "the primary surface action's accent edge, a checked Feature_Toggle's accent edge and knob, and the acknowledgement box's accent — against the control's own fill",
-  },
-  {
-    foreground: '--accent-text',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      'green accent emphasis and icons against the region behind the screen — never text, see the boundary assertions below',
-  },
-  {
-    foreground: '--accent-text',
-    background: '--squads-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "green accent emphasis and icons on a card or an open surface — the primary action's edge where the surface behind it is what lies beyond",
-  },
-  {
-    foreground: '--accent-text',
-    background: '--squads-inactive-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: 'green accent emphasis and icons on an inactive Player_Row',
+    usage: "an unchecked switch's thumb against its track",
   },
 ];
 
 /**
- * The tokens the tables declare and no pairing measures.
+ * Painted tokens no pairing measures, and why each needs none.
  *
- * Both are declared so that this feature's tables carry the **same ten shared
- * token names** the App_Shell's and the Auth_Feature's do — the
- * Invite_Landing_Route renders outside the shell frame and inherits nothing — and
- * the feature paints with neither:
- *
- * - `--surface` is the shell's own panel surface; a squads surface takes
- *   `--squads-card-surface`.
- * - `--accent-fill` is Pitch Green in **both** Themes, which reaches only 2.35:1
- *   on white. Nothing here fills with green (`surfaces.css` says why: no token is
- *   declared for text on green), and a green *line or shape* on a surface takes
- *   the surface-keyed `--accent-text` instead, so it clears the 3:1 floor in the
- *   light Theme too. The boundary assertions below hold the stylesheets to that.
+ * - `--pm-border-subtle` draws decorative separators and card edges only; every
+ *   control boundary is `--pm-border-control`, which is measured (the design
+ *   system's own rule).
+ * - `--pm-surface-hover` and `--pm-accent-fill-hover` are hover washes: the text
+ *   on them is the resting text, and they are never the only cue of anything.
  */
-const UNMEASURED_TOKENS = ['--accent-fill', '--surface'] as const;
+const UNMEASURED_TOKENS = [
+  '--pm-accent-fill-hover',
+  '--pm-border-subtle',
+  '--pm-surface-hover',
+] as const;
 
 /** A pairing named the way a failure should read. */
 function describePairing(theme: Theme, pairing: Pairing): string {
@@ -688,14 +589,15 @@ function describePairing(theme: Theme, pairing: Pairing): string {
 
 // Feature: web-squads-screens, Property 47: Every control is reachable in document order with a visible focus indication in both themes
 // Validates: Requirements 19.5
-describe('Property 47 — the declared token tables meet the contrast floors in both Themes', () => {
-  it('parses both tables and the Theme-invariant scale', () => {
+describe('Property 47 — the declared pairings meet the contrast floors in both Themes', () => {
+  it('resolves both design tables and the Theme-invariant scale', () => {
     expect(Object.keys(TABLES.dark).sort()).toEqual(Object.keys(TABLES.light).sort());
     expect(COLOUR_TOKENS.length).toBeGreaterThan(15);
     expect(SCALE['--squads-touch-target']).toBe('44px');
-    expect(SCALE['--squads-focus-width']).toBe('3px');
-    // The scale block declares no colour, and the colour tables declare no scale.
+    expect(SCALE['--squads-focus-width']).toBe('2px');
+    // The scale declares no colour.
     expect(Object.keys(SCALE).some((token) => token in TABLES.dark)).toBe(false);
+    expect(Object.values(SCALE).some((value) => /#[0-9a-f]{3,8}\b/i.test(value))).toBe(false);
   });
 
   it('computes the canonical ratios, so the arithmetic itself is checked', () => {
@@ -746,17 +648,18 @@ describe('Property 47 — the declared token tables meet the contrast floors in 
     expect(failures).toEqual([]);
   });
 
-  it('measures every colour token the tables declare', () => {
-    // Guards the pairing table itself: a token added to `squadsTokens.css` with no
-    // pairing here would otherwise pass by never being measured.
-    const unmeasured = COLOUR_TOKENS.filter(
+  it('measures every colour token the feature’s stylesheets paint', () => {
+    // Guards the pairing table itself: a token a stylesheet starts painting with
+    // and no pairing measures would otherwise pass by never being measured.
+    expect(PAINTED_TOKENS.length).toBeGreaterThan(10);
+    const unmeasured = PAINTED_TOKENS.filter(
       (token) =>
         !PAIRINGS.some(
           (pairing) => pairing.foreground === token || pairing.background === token,
         ),
     );
 
-    expect(unmeasured.sort()).toEqual([...UNMEASURED_TOKENS]);
+    expect(unmeasured).toEqual([...UNMEASURED_TOKENS]);
   });
 
   it('measures every surface a colour can be read against', () => {
@@ -769,104 +672,12 @@ describe('Property 47 — the declared token tables meet the contrast floors in 
       ).toBe(true);
     }
   });
-});
 
-/* ------------------------------------------------------------------ *
- * The shared theme tables, and the two green boundaries
- * ------------------------------------------------------------------ */
-
-describe('Property 47 — the restated shared tokens and the green boundaries', () => {
-  it('declares the shared token names with the shared values, in both Themes', () => {
-    // `squadsTokens.css` restates the shared ten because the Invite_Landing_Route
-    // renders outside the App_Shell frame and inherits nothing from it. A restated
-    // value can drift, so each is compared against the tables that also declare it.
-    let compared = 0;
-
-    for (const { name, path } of SHARED_THEME_TABLES) {
-      const source = withoutComments(readFileSync(path, 'utf8'));
-      const tables: Readonly<Record<Theme, Record<string, string>>> = {
-        dark: tokenTable(source, /:root,\s*\[data-theme='dark'\]\s*\{([^}]*)\}/),
-        light: tokenTable(source, /\[data-theme='light'\]\s*\{([^}]*)\}/),
-      };
-
-      for (const theme of THEMES) {
-        for (const [token, value] of Object.entries(tables[theme])) {
-          if (!(token in TABLES[theme])) {
-            continue;
-          }
-          compared += 1;
-          expect(
-            declared(theme, token),
-            `${theme} ${token} is ${declared(theme, token)} here and ${value} in features/${name}/styles/theme.css`,
-          ).toBe(value);
-        }
-      }
-    }
-
-    // Guards the comparison: a parse that found no shared name would pass vacuously.
-    // Two tables (auth, landing) across two Themes; the App_Shell table is gone.
-    expect(compared).toBeGreaterThan(20);
-  });
-
-  it('declares the green token the surface luminance rule selects', () => {
-    // Green is chosen from the surface rather than from the Theme, so each table's
-    // `--accent-text` is what the shared rule returns for that table's own
-    // background luminance. Pitch Green below the boundary, Green Dark at or above.
-    for (const theme of THEMES) {
-      const luminance = relativeLuminance(declared(theme, '--bg'));
-      const expected = luminance >= 0.05 ? '#3e8f24' : '#5bbf36';
-
-      expect(declared(theme, '--accent-text'), `${theme} --accent-text`).toBe(expected);
-    }
-  });
-
-  it('paints no text with --accent-text, which cannot reach the text floor on a light surface', () => {
-    // Green Dark reaches 4.07:1 on white and 3.70:1 on the card surface — above the
-    // 3:1 bar for icons, large text, and accents, below the 4.5:1 bar for text and
-    // interactive control labels. So the token is an accent, never a text colour,
-    // exactly as `squadsTokens.css` documents.
-    expect(
-      contrastRatio(declared('light', '--accent-text'), declared('light', '--bg')),
-    ).toBeLessThan(TEXT_FLOOR);
-
-    const offenders = RULES.flatMap((rule) =>
-      ['color', 'border-top-color'].flatMap((property) => {
-        const value = rule.declarations[property];
-        return value !== undefined && tokensIn(value).includes('--accent-text')
-          ? [`${rule.sheet}: ${rule.selector} { ${property}: ${value} }`]
-          : [];
-      }),
-    );
-
-    expect(offenders).toEqual([]);
-  });
-
-  it('paints nothing with --accent-fill, which cannot reach the non-text floor on a light surface', () => {
-    // Pitch Green is 2.35:1 on white, so a green line or shape drawn with the fill
-    // token would be a graphical cue below the 3:1 floor in the light Theme. A green
-    // line on a surface takes the surface-keyed `--accent-text` instead.
-    expect(
-      contrastRatio(declared('light', '--accent-fill'), declared('light', '--control-bg')),
-    ).toBeLessThan(NON_TEXT_FLOOR);
-
-    const offenders = RULES.flatMap((rule) =>
-      Object.entries(rule.declarations).flatMap(([property, value]) =>
-        tokensIn(value).includes('--accent-fill')
-          ? [`${rule.sheet}: ${rule.selector} { ${property}: ${value} }`]
-          : [],
-      ),
-    );
-
-    expect(offenders).toEqual([]);
-  });
-
-  it('writes no colour literal outside the token table', () => {
+  it('writes no colour literal in any stylesheet that reaches a screen', () => {
     // Requirement 18.9's other half, and the precondition for every measurement
-    // above: a colour written into a component stylesheet would be a colour no
-    // table declares and no pairing measures.
-    const offenders = STYLESHEETS.filter(
-      (sheet) => sheet.name !== 'squads/styles/squadsTokens.css',
-    ).flatMap((sheet) => {
+    // above: a colour written into a stylesheet would be a colour no table
+    // declares and no pairing measures.
+    const offenders = STYLESHEETS.flatMap((sheet) => {
       const source = withoutComments(sheet.source);
       const literals = [
         ...source.matchAll(/#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(/gi),
@@ -875,187 +686,6 @@ describe('Property 47 — the restated shared tokens and the green boundaries', 
     });
 
     expect(offenders).toEqual([]);
-  });
-});
-
-/* ------------------------------------------------------------------ *
- * The ratios the token table documents about itself
- * ------------------------------------------------------------------ */
-
-interface DocumentedRow {
-  readonly theme: Theme;
-  readonly foreground: string;
-  readonly foregroundValue: string;
-  /** The background tokens, in the order the row's ratios are written. */
-  readonly backgrounds: readonly string[];
-  readonly ratios: readonly number[];
-  readonly floor: number;
-}
-
-/**
- * The contrast rows written in `squadsTokens.css`'s header comment.
- *
- * Two shapes, e.g.
- *
- * ```text
- *   DARK  (--bg #141414, card #1e1e1e, inactive #232323):
- *     --text                        #f5f5f5  16.90 / 15.29 / 14.42  (>= 4.5)
- *     --control-text  #f5f5f5 vs --control-bg #1e1e1e      = 15.29  (>= 4.5)
- * ```
- *
- * Parsed from the **raw** source, since they live inside the comment the token
- * parsing strips, and line by line, so a row can never borrow a number from its
- * neighbour.
- */
-function documentedRows(): readonly DocumentedRow[] {
-  const darkAt = tokensSource.indexOf('DARK  (');
-  const lightAt = tokensSource.indexOf('LIGHT (');
-  const endAt = tokensSource.indexOf('### Why', lightAt);
-  expect(darkAt).toBeGreaterThan(-1);
-  expect(lightAt).toBeGreaterThan(darkAt);
-  expect(endAt).toBeGreaterThan(lightAt);
-
-  const sections: readonly (readonly [Theme, string])[] = [
-    ['dark', tokensSource.slice(darkAt, lightAt)],
-    ['light', tokensSource.slice(lightAt, endAt)],
-  ];
-
-  const rows: DocumentedRow[] = [];
-
-  for (const [theme, section] of sections) {
-    const lines = section.split('\n');
-
-    // The section's own opening names the three surfaces its columns measure
-    // against, so the columns are read from the file rather than assumed here.
-    const heading =
-      /\(--bg\s+(#[0-9a-f]{6}),\s*card\s+(#[0-9a-f]{6}),\s*inactive\s+(#[0-9a-f]{6})\)/i.exec(
-        lines[0],
-      );
-    expect(heading, `the ${theme} section names no surfaces`).not.toBeNull();
-    const surfaces = ['--bg', '--squads-card-surface', '--squads-inactive-surface'];
-    if (heading !== null) {
-      for (const [index, surface] of surfaces.entries()) {
-        expect(declared(theme, surface), `${theme} ${surface}`).toBe(
-          heading[index + 1].toLowerCase(),
-        );
-      }
-    }
-
-    for (const line of lines.slice(1)) {
-      const against =
-        /--([\w-]+)\s+(#[0-9a-f]{6})\s+vs\s+--([\w-]+)\s+#[0-9a-f]{6}\s*=\s*([\d.]+)\s*\(>=\s*([\d.]+)\)/i.exec(
-          line,
-        );
-      if (against !== null) {
-        rows.push({
-          theme,
-          foreground: `--${against[1]}`,
-          foregroundValue: against[2].toLowerCase(),
-          backgrounds: [`--${against[3]}`],
-          ratios: [Number.parseFloat(against[4])],
-          floor: Number.parseFloat(against[5]),
-        });
-        continue;
-      }
-
-      const columns =
-        /--([\w-]+)\s+(#[0-9a-f]{6})\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)\s*\(>=\s*([\d.]+)\)/i.exec(
-          line,
-        );
-      if (columns !== null) {
-        rows.push({
-          theme,
-          foreground: `--${columns[1]}`,
-          foregroundValue: columns[2].toLowerCase(),
-          backgrounds: surfaces,
-          ratios: [3, 4, 5].map((group) => Number.parseFloat(columns[group])),
-          floor: Number.parseFloat(columns[6]),
-        });
-      }
-    }
-  }
-
-  return rows;
-}
-
-const DOCUMENTED = documentedRows();
-
-describe('Property 47 — the token table’s own documented ratios', () => {
-  it('finds rows for both Themes (guards the parser itself)', () => {
-    expect(DOCUMENTED.filter((row) => row.theme === 'dark').length).toBeGreaterThan(14);
-    expect(DOCUMENTED.filter((row) => row.theme === 'light').length).toBeGreaterThan(14);
-  });
-
-  it('documents the declared value, the computed ratio, and a floor it clears', () => {
-    fc.assert(
-      fc.property(fc.constantFrom(...DOCUMENTED), (row) => {
-        const label = `${row.theme}: ${row.foreground} vs ${row.backgrounds.join(' / ')}`;
-
-        // The hex written in the comment is the hex in the table.
-        expect(declared(row.theme, row.foreground), label).toBe(row.foregroundValue);
-
-        // The documented floor is one of the two the requirement defines.
-        expect([NON_TEXT_FLOOR, TEXT_FLOOR], label).toContain(row.floor);
-
-        for (const [index, background] of row.backgrounds.entries()) {
-          const computed = contrastRatio(
-            declared(row.theme, row.foreground),
-            declared(row.theme, background),
-          );
-
-          // The documented ratio is the computed one, to the two decimal places it
-          // is written to…
-          expect(
-            Number.parseFloat(computed.toFixed(2)),
-            `${label} documents ${row.ratios[index]}:1 against ${background} but it computes to ${computed.toFixed(2)}:1`,
-          ).toBeCloseTo(row.ratios[index], 2);
-
-          // …and it clears the floor the row claims for itself.
-          expect(computed, `${label} against ${background}`).toBeGreaterThanOrEqual(
-            row.floor,
-          );
-        }
-      }),
-      { numRuns: 300 },
-    );
-  });
-
-  it('holds for every documented row exhaustively', () => {
-    const failures = DOCUMENTED.flatMap((row) =>
-      row.backgrounds.flatMap((background, index) => {
-        const value = declared(row.theme, row.foreground);
-        const computed = contrastRatio(value, declared(row.theme, background));
-        const label = `${row.theme}: ${row.foreground} vs ${background}`;
-
-        if (value !== row.foregroundValue) {
-          return [`${label} documents ${row.foregroundValue}, table declares ${value}`];
-        }
-        if (Number.parseFloat(computed.toFixed(2)) !== row.ratios[index]) {
-          return [
-            `${label} documents ${row.ratios[index]}:1, computes ${computed.toFixed(2)}:1`,
-          ];
-        }
-        if (computed < row.floor) {
-          return [`${label} is ${computed.toFixed(2)}:1, below its own ${row.floor}:1`];
-        }
-        return [];
-      }),
-    );
-
-    expect(failures).toEqual([]);
-  });
-
-  it('documents every colour token it declares', () => {
-    // A token added to the tables without a row in the header comment would be a
-    // token whose contrast nobody wrote down.
-    const undocumented = COLOUR_TOKENS.filter(
-      (token) =>
-        !UNMEASURED_TOKENS.includes(token as (typeof UNMEASURED_TOKENS)[number]) &&
-        !DOCUMENTED.some((row) => row.foreground === token) &&
-        !SURFACE_TOKENS.includes(token as (typeof SURFACE_TOKENS)[number]),
-    );
-
-    expect(undocumented.sort()).toEqual([]);
   });
 });
 
@@ -1151,7 +781,7 @@ function textColourToken(element: Element): string {
     }
   }
 
-  return '--text';
+  return '--pm-text-primary';
 }
 
 /**
@@ -1174,7 +804,7 @@ function surfaceTokenBehind(element: Element): string {
 
   // As above: the region behind both in-shell screens, and the page surface the
   // Invite_Landing_Route paints for itself.
-  return '--bg';
+  return '--pm-bg';
 }
 
 /**
@@ -1516,7 +1146,7 @@ function keyboardOperabilityOffences(focus: FocusOrder, label: string): string[]
 
 /**
  * Requirements 19.4 and 19.5: every reachable control carries a declared focus
- * indication painting `var(--focus-ring)`, at a width a person can see.
+ * indication painting `var(--pm-focus-ring)`, at a width a person can see.
  *
  * The 3 to 1 contrast of that indication against each surface it can be drawn on
  * is proved once, for the one token, by the pairing assertions above — so every
@@ -1538,7 +1168,7 @@ function focusIndicationOffences(focus: FocusOrder, label: string): string[] {
 
     for (const indication of indications) {
       const outline = outlineOf(indication);
-      if (!outline.includes('var(--focus-ring)')) {
+      if (!outline.includes('var(--pm-focus-ring)')) {
         offenders.push(`${where} paints its indication with ${outline}`);
       }
       // A hairline ring is not a visible indication at every zoom level.
@@ -1605,9 +1235,12 @@ function textContrastOffences(
  * all.
  */
 function unmeasuredColourOffences(container: HTMLElement, label: string): string[] {
-  const measured = new Set(
-    PAIRINGS.flatMap((pairing) => [pairing.foreground, pairing.background]),
-  );
+  // Measured, or one of the decorative and hover tokens the table says need no
+  // pairing, and why.
+  const measured = new Set<string>([
+    ...PAIRINGS.flatMap((pairing) => [pairing.foreground, pairing.background]),
+    ...UNMEASURED_TOKENS,
+  ]);
   const offenders: string[] = [];
 
   for (const element of container.querySelectorAll('*')) {
@@ -1710,8 +1343,8 @@ describe('the rendered checks are not vacuous', () => {
 
     const indications = declaredFocusIndications(styled);
     expect(indications).toHaveLength(1);
-    expect(outlineOf(indications[0])).toContain('var(--focus-ring)');
-    expect(absoluteLengthsPx(outlineOf(indications[0]))).toContain(3);
+    expect(outlineOf(indications[0])).toContain('var(--pm-focus-ring)');
+    expect(absoluteLengthsPx(outlineOf(indications[0]))).toContain(2);
 
     expect(declaredFocusIndications(unstyled)).toEqual([]);
   });
@@ -1784,10 +1417,10 @@ describe('the rendered checks are not vacuous', () => {
     expect(guest).not.toBeNull();
 
     if (name !== null && guest !== null) {
-      expect(textColourToken(name)).toBe('--squads-inactive-text');
-      expect(surfaceTokenBehind(name)).toBe('--squads-inactive-surface');
-      expect(textColourToken(guest)).toBe('--squads-guest-text');
-      expect(surfaceTokenBehind(guest)).toBe('--squads-inactive-surface');
+      expect(textColourToken(name)).toBe('--pm-text-secondary');
+      expect(surfaceTokenBehind(name)).toBe('--pm-surface-sunken');
+      expect(textColourToken(guest)).toBe('--pm-text-secondary');
+      expect(surfaceTokenBehind(guest)).toBe('--pm-surface-sunken');
     }
 
     // And an element nothing paints falls back to the documented default: the text
@@ -1795,8 +1428,8 @@ describe('the rendered checks are not vacuous', () => {
     const bare = fragment('<p>outside any painted region</p>').querySelector('p');
     expect(bare).not.toBeNull();
     if (bare !== null) {
-      expect(textColourToken(bare)).toBe('--text');
-      expect(surfaceTokenBehind(bare)).toBe('--bg');
+      expect(textColourToken(bare)).toBe('--pm-text-primary');
+      expect(surfaceTokenBehind(bare)).toBe('--pm-bg');
     }
   });
 
@@ -1819,7 +1452,7 @@ describe('the rendered checks are not vacuous', () => {
 
     const impossible = textContrastOffences(tree, 'light', 'the guard', 21.1);
     expect(impossible.offences).toEqual([
-      expect.stringContaining('--squads-provisional-text'),
+      expect.stringContaining('--pm-provisional-text'),
     ]);
     // The badge carries no words, so nothing is measured against it.
     expect(rendersOwnText(tree.querySelectorAll('span')[1])).toBe(false);
@@ -1832,14 +1465,13 @@ describe('the rendered checks are not vacuous', () => {
 
     expect(unmeasuredColourOffences(tree, 'the guard')).toEqual([]);
 
-    // The same control painted with the fill token — the state this file's boundary
-    // assertions keep the stylesheets out of — would be reported rather than
-    // measured, because no pairing names that token.
-    const measured = new Set(
-      PAIRINGS.flatMap((pairing) => [pairing.foreground, pairing.background]),
-    );
-    expect(measured.has('--accent-text')).toBe(true);
-    expect(measured.has('--accent-fill')).toBe(false);
+    // A design-system element the squads screens never render, painted with a token
+    // no pairing names, is reported rather than measured.
+    const bibs = fragment('<span class="pm-bib">Bibs</span>');
+    expect(unmeasuredColourOffences(bibs, 'the guard')).toEqual([
+      expect.stringContaining('--pm-on-bib'),
+      expect.stringContaining('--pm-bib '),
+    ]);
   });
 });
 
@@ -1995,7 +1627,7 @@ const FREE_TEXT_NODES = [
   'squad-screen__heading',
   'squads-invite-landing__heading',
   'squads-invite-landing__message',
-  'squads-card__name',
+  'pm-squadcard__name',
   'squads-player-row__name',
   'squads-placeholder__heading',
   'squads-placeholder__statement',
@@ -2031,8 +1663,9 @@ describe('Requirement 19.10 — the declared layout mode and the absence of fixe
     // No `@media`, `@container`, or `@supports` anywhere in the feature: the same
     // declarations apply at 360 pixels and at 1920, so what is asserted below about
     // "the layout" is asserted about the layout at every one of the five widths
-    // rather than at one of them.
-    const gated = STYLESHEETS.flatMap((sheet) => {
+    // rather than at one of them. The component library is held to its own rules:
+    // its one padding step and its reduced-motion shimmer change no layout mode.
+    const gated = STYLESHEETS.filter((sheet) => FEATURE_SHEET_NAMES.has(sheet.name)).flatMap((sheet) => {
       const source = withoutComments(sheet.source);
       return [...source.matchAll(/@(media|container|supports)[^{]*/g)].map(
         (match) => `${sheet.name}: ${match[0].trim()}`,
