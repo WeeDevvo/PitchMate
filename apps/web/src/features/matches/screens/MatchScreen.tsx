@@ -22,6 +22,8 @@
  */
 import { useCallback, type ReactElement } from 'react';
 import { useParams } from 'react-router-dom';
+import { MatchStateChip } from '../../../ui';
+import { DESIGN_STATES } from '../components/designStates';
 
 import { SQUAD_SCOPE_ROUTE_PARAMETER, usePublishSquadScopeFromRoute } from '../../app-shell';
 import { useAuth } from '../../auth';
@@ -180,7 +182,7 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
         <div>
           <dt>{STATE_LABEL}</dt>
           <dd>
-            <span className="matches-chip">{MATCH_STATE_LABELS[match.state]}</span>
+            <MatchStateChip state={DESIGN_STATES[match.state]} label={MATCH_STATE_LABELS[match.state]} />
           </dd>
         </div>
         {match.confirmedDayMs === null ? null : (

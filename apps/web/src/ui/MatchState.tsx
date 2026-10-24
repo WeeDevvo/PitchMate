@@ -14,9 +14,13 @@ const STATES: Record<MatchStateName, { label: string; icon: IconName }> = {
   cancelled: { label: 'Cancelled', icon: 'x' },
 };
 
-/** Each state has its own icon and word; Cancelled is outlined and struck through. */
-export function MatchStateChip({ state }: { state: MatchStateName }) {
-  const { label, icon } = STATES[state];
+/**
+ * Each state has its own icon and word; Cancelled is outlined and struck through.
+ * `label` replaces the word where a feature names a state differently.
+ */
+export function MatchStateChip({ state, label: override }: { state: MatchStateName; label?: string }) {
+  const { icon } = STATES[state];
+  const label = override ?? STATES[state].label;
   return (
     <span className={`pm-state pm-state--${state}`}>
       <Icon name={icon} size={16} strokeWidth={2.5} />

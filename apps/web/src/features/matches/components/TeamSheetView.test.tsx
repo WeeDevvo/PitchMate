@@ -33,8 +33,8 @@ describe('TeamSheetView', () => {
   it('flags the bib team in words, and only that team', () => {
     renderSheet();
 
-    expect(within(teamSection('Red Wolves')).getByText(WEARS_BIBS_BADGE)).toBeTruthy();
-    expect(within(teamSection('Blue Herons')).queryByText(WEARS_BIBS_BADGE)).toBeNull();
+    expect(within(teamSection('Red Wolves')).getByRole('img', { name: WEARS_BIBS_BADGE })).toBeTruthy();
+    expect(within(teamSection('Blue Herons')).queryByRole('img', { name: WEARS_BIBS_BADGE })).toBeNull();
   });
 
   it('links each player to their stats in this squad', () => {

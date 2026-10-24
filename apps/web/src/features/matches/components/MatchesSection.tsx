@@ -11,7 +11,8 @@ import { Link, useParams } from 'react-router-dom';
 import { SQUAD_SCOPE_ROUTE_PARAMETER } from '../../app-shell';
 import { useAuth } from '../../auth';
 import type { MatchesApi } from '../api/matchesApi';
-import { formatDay, headlineDayMs } from '../lib/matchDays';
+import { MatchCard } from '../../../ui';
+import { dayParts, formatDay, headlineDayMs } from '../lib/matchDays';
 import { MATCH_STATE_LABELS, isOrganiser } from '../lib/matchState';
 import {
   CREATE_MATCH_LABEL,
@@ -24,6 +25,7 @@ import {
 import type { MatchSummary } from '../lib/parse/matchList';
 import { matchPath, newMatchPath } from '../lib/routePaths';
 import { useRemote } from '../state/useRemote';
+import { DESIGN_STATES } from './designStates';
 import { FailureNotice, LoadingNotice } from './StatusNotices';
 
 import '../styles/matches.css';
@@ -42,23 +44,31 @@ function MatchEntry({
   const dayMs = headlineDayMs(match.confirmedDayMs, match.candidateDaysMs);
 
   return (
-    <li className="matches-entry">
-      <Link className="matches-entry__link" to={matchPath(squadId, match.matchId)}>
-        <span className="matches-entry__location">{match.location}</span>
-      </Link>
-      <span className="matches-entry__meta">
-        <span className="matches-chip">{MATCH_STATE_LABELS[match.state]}</span>
-        {dayMs === null ? null : (
-          <span>
-            <time dateTime={new Date(dayMs).toISOString()}>{formatDay(dayMs)}</time>
-          </span>
-        )}
-        <span>{participantCountLabel(match.participantCount)}</span>
-        {match.lockedTeamNames.length === 0 ? null : (
-          <span>{lockedTeamsLabel(match.lockedTeamNames)}</span>
-        )}
-      </span>
-    </li>
+    <MatchCard
+      as="li"
+      className="matches-entry"
+      date={dayMs === null ? undefined : dayParts(dayMs)}
+      title={
+        <Link className="matches-entry__link" to={matchPath(squadId, match.matchId)}>
+          <span className="matches-entry__location">{match.location}</span>
+        </Link>
+      }
+      state={DESIGN_STATES[match.state]}
+      stateLabel={MATCH_STATE_LABELS[match.state]}
+      meta={
+        <>
+          {dayMs === null ? null : (
+            <span>
+              <time dateTime={new Date(dayMs).toISOString()}>{formatDay(dayMs)}</time>
+            </span>
+          )}
+          <span>{participantCountLabel(match.participantCount)}</span>
+          {match.lockedTeamNames.length === 0 ? null : (
+            <span>{lockedTeamsLabel(match.lockedTeamNames)}</span>
+          )}
+        </>
+      }
+    />
   );
 }
 
