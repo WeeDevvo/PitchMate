@@ -21,7 +21,7 @@
 
 .squads-failure__message {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-body);
   line-height: var(--squads-line-height-body);
 }
@@ -34,18 +34,18 @@
 
 .squads-failure__retry {
   min-height: var(--squads-touch-target);
-  padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--control-border);
-  border-radius: var(--squads-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  padding: 0 var(--pm-space-5);
+  border: var(--squads-border-width) solid var(--pm-border-control);
+  border-radius: var(--squads-radius-chip);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-body);
   font-weight: var(--squads-font-weight-label);
   cursor: pointer;
 }
 
 .squads-failure__retry:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }
 

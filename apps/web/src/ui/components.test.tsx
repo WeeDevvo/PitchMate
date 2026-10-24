@@ -24,6 +24,7 @@ import {
   NotFoundState,
   NotificationItem,
   NotificationList,
+  PlayerRow,
   ProvisionalBadge,
   Rating,
   ResultBadge,
@@ -32,6 +33,8 @@ import {
   Select,
   Sidebar,
   SidebarLabel,
+  SquadCard,
+  SquadCrest,
   Tabs,
   TextField,
   Toast,
@@ -292,6 +295,61 @@ describe('Sidebar and NavItem', () => {
     expect(players).toHaveClass('pm-navitem', 'is-active');
     expect(screen.getByRole('link', { name: 'Matches' })).not.toHaveAttribute('aria-current');
     expect(screen.getByText('Your squads')).toBeInTheDocument();
+  });
+});
+
+describe('SquadCard and SquadCrest', () => {
+  it('is one control named by the squad and its meta, with a decorative crest', async () => {
+    const onClick = vi.fn();
+    render(
+      <SquadCard
+        name="Thursday Ballers"
+        meta={<span>Owner</span>}
+        render={(props) => <button type="button" onClick={onClick} {...props} />}
+      />,
+    );
+    const card = screen.getByRole('button', { name: 'Thursday Ballers Owner' });
+    expect(card).toHaveClass('pm-card', 'pm-squadcard');
+    expect(card.querySelector('.pm-crest')).toHaveAttribute('aria-hidden', 'true');
+    expect(card.querySelector('.pm-crest')).toHaveTextContent('TB');
+    await userEvent.click(card);
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it('uses a chosen crest over the initials', () => {
+    const { container } = render(<SquadCrest name="Thursday Ballers" crest="⚽" size="sm" />);
+    expect(container.firstElementChild).toHaveTextContent('⚽');
+    expect(container.firstElementChild).toHaveClass('pm-crest--sm');
+  });
+});
+
+describe('PlayerRow', () => {
+  it('lays out the name, badges and trailing column, passing attributes to the row', () => {
+    render(
+      <PlayerRow
+        name="Big Dave"
+        guest
+        role="group"
+        aria-label="Big Dave"
+        nameContent={<button type="button">Big Dave</button>}
+        badges={<GuestBadge />}
+        meta="12 appearances"
+        end={<Rating value="1,240" />}
+      />,
+    );
+    const row = screen.getByRole('group', { name: 'Big Dave' });
+    expect(row).toHaveClass('pm-player');
+    expect(screen.getByRole('button', { name: 'Big Dave' })).toBeInTheDocument();
+    expect(row).toHaveTextContent('Guest');
+    expect(row).toHaveTextContent('12 appearances');
+    expect(row).toHaveTextContent('1,240');
+    // The default-size avatar needs no inline style.
+    expect(row.querySelector('.pm-avatar')).not.toHaveAttribute('style');
+  });
+
+  it('mutes a former player', () => {
+    const { container } = render(<PlayerRow name="Former player" former />);
+    expect(container.firstElementChild).toHaveClass('is-former');
   });
 });
 

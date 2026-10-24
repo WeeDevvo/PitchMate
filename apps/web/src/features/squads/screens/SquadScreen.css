@@ -24,8 +24,9 @@
 
 .squad-screen__heading {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-screen-heading);
+  font-family: var(--pm-font-display);
   font-weight: var(--squads-font-weight-heading);
   line-height: var(--squads-line-height-heading);
   /* A squad name is a person's own words, so it may be one long token. */
@@ -41,8 +42,9 @@
 
 .squad-screen__section-heading {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-section-heading);
+  font-family: var(--pm-font-display);
   font-weight: var(--squads-font-weight-heading);
   line-height: var(--squads-line-height-heading);
 }
@@ -58,11 +60,67 @@
 }
 
 .squad-screen__caller-role-label {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-weight: var(--squads-font-weight-body);
 }
 
 .squad-screen__caller-role-value {
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-weight: var(--squads-font-weight-label);
+}
+
+/* ------------------------------------------------------------------ *
+ * The section sidebar and the content beside it
+ *
+ * One fluid layout with no breakpoint (Requirement 19.10): the sidebar and the
+ * content are flex items that sit side by side while the row has room for
+ * both, and wrap so the sidebar sits above the content when it does not. The
+ * sidebar's links do the same inside it: one per line in the narrow column,
+ * two or more abreast once the sidebar spans the screen. The document order
+ * (sidebar, then the five sections) is the same either way.
+ * ------------------------------------------------------------------ */
+
+.squad-screen__layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--squads-gap);
+  min-width: 0;
+}
+
+.squad-screen__nav {
+  flex: 1 1 14rem;
+  width: auto;
+  max-width: 100%;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--squads-gap-hairline);
+  padding: var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-lg);
+  background: var(--pm-surface);
+}
+
+.squad-screen__nav-link {
+  flex: 1 1 9rem;
+  min-width: 0;
+}
+
+.squad-screen__nav-link:focus-visible {
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
+  outline-offset: var(--squads-focus-offset);
+}
+
+.squad-screen__content {
+  flex: 999 1 20rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap);
+}
+
+/* A section followed from the sidebar lands clear of the sticky top bar. */
+.squad-screen__anchor {
+  min-width: 0;
+  scroll-margin-top: calc(var(--pm-topbar-h) + var(--squads-gap));
 }

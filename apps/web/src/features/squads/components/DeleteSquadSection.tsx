@@ -19,7 +19,7 @@ import { useCallback, useId, useRef, useState, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { HOME_ROUTE } from '../../app-shell';
-import { FormField } from '../../auth';
+import { TextField } from '../../../ui';
 import type { AuthState } from '../../auth';
 import type { SquadsApi } from '../api/squadsApi';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -205,10 +205,10 @@ export function DeleteSquadSection({
       >
         <p>{squadName}</p>
         <p>{DELETE_SECTION_STATEMENT}</p>
-        <FormField
+        <TextField
           label={DELETE_CONFIRM_NAME_LABEL}
           value={typedName}
-          onValueChange={setTypedName}
+          onChange={(event) => setTypedName(event.target.value)}
           name="confirmSquadName"
           autoComplete="off"
           data-squads-delete-name="true"

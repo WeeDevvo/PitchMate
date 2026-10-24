@@ -39,14 +39,14 @@
 }
 
 .squads-invite-reveal__label {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-meta);
   font-weight: var(--squads-font-weight-label);
   line-height: var(--squads-line-height-body);
 }
 
 .squads-invite-reveal__link {
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-body);
   line-height: var(--squads-line-height-body);
   /* The affordance, declared rather than left to the user agent. */
@@ -57,15 +57,15 @@
 }
 
 .squads-invite-reveal__link:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }
 
 .squads-invite-reveal__code {
   padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--squads-chip-border);
+  border: var(--squads-border-width) solid var(--pm-border-control);
   border-radius: var(--squads-radius);
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-body);
   line-height: var(--squads-line-height-body);
   overflow-wrap: anywhere;

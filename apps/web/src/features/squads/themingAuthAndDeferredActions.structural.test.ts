@@ -99,6 +99,7 @@ import { describe, expect, it } from 'vitest';
 import {
   authRoot,
   collectProductionSources,
+  designTokensPath,
   isScanSupportModule,
   isTestFile,
   isWithin,
@@ -414,9 +415,9 @@ function selfWrittenColours(value: string): string[] {
 /** Every custom property a stylesheet declares. */
 function declaredCustomProperties(file: string): string[] {
   const css = stripCssComments(readFileSync(file, 'utf8'));
-  return matchesOf(css, /(--[\w-]+)\s*:/g).map((match) =>
-    match.replace(/\s*:$/, ''),
-  );
+  // A declaration starts a block, follows a semicolon, or starts a line; a
+  // `--modifier:hover` inside a selector is none of those.
+  return [...css.matchAll(/(?:^|[{;])\s*(--[\w-]+)\s*:/gm)].map((match) => match[1]);
 }
 
 /** Every custom property a stylesheet reads. */
@@ -566,8 +567,13 @@ describe('no colour value is written outside the feature token table', () => {
     expect(inspected).toBeGreaterThan(20);
   });
 
-  it('declares every custom property it reads in styles/squadsTokens.css (18.9)', () => {
-    const declared = new Set(declaredCustomProperties(tokenTablePath));
+  it('reads only custom properties the token table or the design tokens declare (18.9)', () => {
+    // Colours come from the design system's `--pm-*` tokens; the feature's own
+    // table holds its layout scale.
+    const declared = new Set([
+      ...declaredCustomProperties(tokenTablePath),
+      ...declaredCustomProperties(designTokensPath).filter((token) => token.startsWith('--pm-')),
+    ]);
     const findings: Finding[] = [];
     const used = new Set<string>();
 
@@ -585,8 +591,8 @@ describe('no colour value is written outside the feature token table', () => {
     }
 
     expect(findings).toEqual([]);
-    // Non-vacuity from both ends: the table declares a full scale and two Theme
-    // tables, and the stylesheets really do read from it.
+    // Non-vacuity from both ends: the two tables declare a full scale and the
+    // design tokens, and the stylesheets really do read from them.
     expect(declared.size).toBeGreaterThan(30);
     expect(used.size).toBeGreaterThan(20);
   });
@@ -607,11 +613,18 @@ describe('no colour value is written outside the feature token table', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('writes a colour per token in both Theme tables, so the rule is not unfireable', () => {
-    // The exempted file is the one file that *does* write colours. If the patterns
-    // above cannot see them there, they could not see a stray colour anywhere else
+  it('holds no colour in its own table, which the design tokens supply', () => {
+    // The feature's table is its layout scale only: every colour the stylesheets
+    // paint is a design token.
+    const table = stripCssComments(readFileSync(tokenTablePath, 'utf8'));
+    expect(matchesOf(table, HEX_COLOUR)).toEqual([]);
+  });
+
+  it('finds a colour per token in both design Theme tables, so the rule is not unfireable', () => {
+    // The design tokens are where colours *are* written. If the patterns above
+    // cannot see them there, they could not see a stray colour anywhere else
     // either, and every prohibition above would be empty.
-    const css = stripCssComments(readFileSync(tokenTablePath, 'utf8'));
+    const css = stripCssComments(readFileSync(designTokensPath, 'utf8'));
     const dark = /:root,\s*\[data-theme='dark'\]\s*\{([^}]*)\}/.exec(css);
     const light = /\[data-theme='light'\]\s*\{([^}]*)\}/.exec(css);
 
@@ -626,7 +639,8 @@ describe('no colour value is written outside the feature token table', () => {
       const tokens = matchesOf(table, /(--[\w-]+)\s*:/g);
 
       expect(colours.length, `the ${name} table writes no colour`).toBeGreaterThan(20);
-      expect(colours).toHaveLength(tokens.length);
+      // Aliases (`var(--pm-...)`) and shadows are the entries without a hex.
+      expect(colours.length).toBeGreaterThan(tokens.length / 2);
     }
   });
 });

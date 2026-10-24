@@ -1,4 +1,4 @@
-import { useId, type InputHTMLAttributes, type SelectHTMLAttributes } from 'react';
+import { useId, type InputHTMLAttributes, type Ref, type SelectHTMLAttributes } from 'react';
 import { Icon, type IconName } from './Icon';
 import { cx } from './cx';
 import './Field.css';
@@ -6,16 +6,18 @@ import './Field.css';
 interface FieldMessagesProps {
   id: string;
   hint?: string;
-  error?: string;
+  error?: string | null;
 }
 
 /** The hint, or the error in its place; an error says what to do next. */
 function FieldMessage({ id, hint, error }: FieldMessagesProps) {
   if (error) {
     return (
-      <div id={id} className="pm-field__error">
+      <div className="pm-field__error">
         <Icon name="alert" size={16} />
-        {error}
+        {/* The id is on the words alone, so the field is described by the message
+            and nothing else. */}
+        <span id={id}>{error}</span>
       </div>
     );
   }
@@ -30,11 +32,13 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   /** Always visible; a placeholder is an example, never the label. */
   label: string;
   hint?: string;
-  error?: string;
+  error?: string | null;
   icon?: IconName;
   loading?: boolean;
   /** The large join-code style. */
   code?: boolean;
+  /** The input element, for moving focus to it (for example on an error). */
+  ref?: Ref<HTMLInputElement>;
 }
 
 export function TextField({
@@ -89,7 +93,7 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
   label: string;
   options: readonly (string | SelectOption)[];
   hint?: string;
-  error?: string;
+  error?: string | null;
 }
 
 export function Select({ label, options, hint, error, id, disabled, className, ...rest }: SelectProps) {

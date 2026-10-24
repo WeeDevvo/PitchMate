@@ -12,7 +12,7 @@
 
 .squads-loading {
   margin: 0;
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-body);
   line-height: var(--squads-line-height-body);
   font-weight: var(--squads-font-weight-body);

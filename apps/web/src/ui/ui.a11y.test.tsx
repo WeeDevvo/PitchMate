@@ -33,6 +33,8 @@ import {
   NotFoundState,
   NotificationItem,
   NotificationList,
+  PlayerRow,
+  SquadCard,
   Sidebar,
   SidebarLabel,
   TopBar,
@@ -142,6 +144,19 @@ function Gallery() {
       </EmptyState>
       <ErrorState onRetry={noop} />
       <NotFoundState />
+      <SquadCard
+        name="Thursday Ballers"
+        meta={<RoleBadge role="admin" />}
+        render={(props) => <button type="button" {...props} />}
+      />
+      <PlayerRow
+        name="Priya Shah"
+        role="group"
+        aria-label="Priya Shah"
+        nameContent={<a href="/players/priya">Priya Shah</a>}
+        badges={<ProvisionalBadge short />}
+        end={<Button variant="secondary" size="sm">Make admin</Button>}
+      />
       <NotificationList>
         <li>
           <NotificationItem icon="calendar" accent unread time="2 min ago" render={(props) => <button type="button" {...props} />}>
