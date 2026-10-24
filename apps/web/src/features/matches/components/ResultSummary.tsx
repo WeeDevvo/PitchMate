@@ -5,6 +5,7 @@
  * final, because an organiser can still correct it.
  */
 import { useId, type ReactElement } from 'react';
+import { Scoreboard } from '../../../ui';
 
 import { scoreLines } from '../lib/lifecycle';
 import { formatDay } from '../lib/matchDays';
@@ -39,6 +40,20 @@ export function ResultSummary({ sheet, result, completedAtMs }: ResultSummaryPro
         {RESULT_HEADING}
       </h2>
       <p className="matches-chip">{final ? FINAL_RESULT_LABEL : PROVISIONAL_RESULT_LABEL}</p>
+      {/* The big score, for two teams. Decorative: the lines below state each
+          team's score and outcome in words. */}
+      {lines !== null && lines.length === 2 ? (
+        <Scoreboard
+          teamA={lines[0].teamName}
+          teamB={lines[1].teamName}
+          scoreA={lines[0].score}
+          scoreB={lines[1].score}
+          bibs={lines[0].bibFlag ? 'a' : lines[1].bibFlag ? 'b' : null}
+          status={final ? 'final' : 'provisional'}
+          // The chip above already says whether it is final.
+          showStatus={false}
+        />
+      ) : null}
       {lines === null ? (
         <p className="matches-hint">{RESULT_UNREADABLE_STATEMENT}</p>
       ) : (

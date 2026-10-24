@@ -148,3 +148,29 @@ export function headlineDayMs(
 
   return candidateDaysMs.length === 0 ? null : Math.min(...candidateDaysMs);
 }
+
+/** A day split for a date box or a day tile: weekday, day of the month, month, time. */
+export interface DayParts {
+  readonly dow: string;
+  readonly num: string;
+  readonly mon: string;
+  readonly time: string;
+}
+
+/**
+ * The parts of `formatDay`'s rendering, from the same format, so a tile and the
+ * words it is named by always agree. `formatToParts` tags each piece, so the order
+ * the locale writes them in does not matter.
+ */
+export function dayParts(instantMs: number, format: Intl.DateTimeFormat = DAY_FORMAT): DayParts {
+  const parts = format.formatToParts(new Date(instantMs));
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((candidate) => candidate.type === type)?.value ?? '';
+
+  return {
+    dow: part('weekday'),
+    num: part('day'),
+    mon: part('month'),
+    time: `${part('hour')}:${part('minute')}`,
+  };
+}

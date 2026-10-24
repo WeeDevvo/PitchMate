@@ -29,6 +29,20 @@ export {
 } from './Feedback';
 export { Icon, type IconName, type IconProps } from './Icon';
 export { Logo, type LogoProps } from './Logo';
+export {
+  DayPicker,
+  FairnessMeter,
+  MatchCard,
+  Scoreboard,
+  TeamColumn,
+  type DateParts,
+  type DayOption,
+  type DayPickerProps,
+  type FairnessMeterProps,
+  type MatchCardProps,
+  type ScoreboardProps,
+  type TeamColumnProps,
+} from './Match';
 export { MatchProgress, MatchStateChip, type MatchStateName } from './MatchState';
 export { PlayerRow, type PlayerRowProps } from './PlayerRow';
 export {

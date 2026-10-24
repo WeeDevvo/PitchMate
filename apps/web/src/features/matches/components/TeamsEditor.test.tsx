@@ -96,7 +96,8 @@ describe('TeamsEditor with teams', () => {
     const lines = within(prediction)
       .getAllByRole('term')
       .map((term) => `${term.textContent} ${term.nextElementSibling?.textContent}`);
-    expect(lines).toEqual(['Red Wolves 46%', 'Blue Herons 44%', `${DRAW_LABEL} 10%`]);
+    // The fairness meter reads each side either side of the draw, as it is drawn.
+    expect(lines).toEqual(['Red Wolves 46%', `${DRAW_LABEL} 10%`, 'Blue Herons 44%']);
   });
 
   it('says when there is no prediction to show', async () => {

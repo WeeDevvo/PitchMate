@@ -27,9 +27,14 @@ import {
   Icon,
   IconButton,
   Logo,
+  DayPicker,
+  FairnessMeter,
+  MatchCard,
   MatchProgress,
   MatchStateChip,
   NavItem,
+  Scoreboard,
+  TeamColumn,
   NotFoundState,
   NotificationItem,
   NotificationList,
@@ -144,6 +149,27 @@ function Gallery() {
       </EmptyState>
       <ErrorState onRetry={noop} />
       <NotFoundState />
+      <MatchCard
+        title={<a href="/m">Goals Glasgow, Pitch 4</a>}
+        date={{ dow: 'Wed', num: '28', mon: 'Oct' }}
+        state="gathering"
+        meta={<span>11 players</span>}
+      />
+      <fieldset>
+        <legend>Days you can make</legend>
+        <DayPicker
+          days={[{ id: 'a', label: 'Sat 24 Oct, 19:00', dow: 'Sat', num: '24', mon: 'Oct', time: '19:00' }]}
+          selected={['a']}
+          onToggle={noop}
+        />
+      </fieldset>
+      <section aria-label="Predicted result">
+        <FairnessMeter teamA="Red Wolves" teamB="Blue Herons" winA={0.46} winB={0.44} draw={0.1} sizes={[7, 6]} />
+      </section>
+      <TeamColumn side="a" sideLabel="Team A" bibs aria-labelledby="team-a" heading={<h3 id="team-a">Red Wolves</h3>}>
+        <a href="/p1">Player 1</a>
+      </TeamColumn>
+      <Scoreboard teamA="Red Wolves" teamB="Blue Herons" scoreA={3} scoreB={2} bibs="a" status="provisional" />
       <SquadCard
         name="Thursday Ballers"
         meta={<RoleBadge role="admin" />}
