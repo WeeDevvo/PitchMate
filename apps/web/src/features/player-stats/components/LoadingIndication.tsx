@@ -49,6 +49,11 @@ export interface LoadingIndicationProps {
    * instance through `aria-describedby` — without focus ever moving to it.
    */
   readonly id?: string;
+  /**
+   * The busy statement, when the surface loading is not the player profile —
+   * the squad leaderboard passes its own. Defaults to the profile's.
+   */
+  readonly label?: string;
 }
 
 /**
@@ -57,7 +62,10 @@ export interface LoadingIndicationProps {
  *
  * Requirements: 2.2, 2.3
  */
-export function LoadingIndication({ id }: LoadingIndicationProps = {}): ReactElement {
+export function LoadingIndication({
+  id,
+  label = PROFILE_LOADING_LABEL,
+}: LoadingIndicationProps = {}): ReactElement {
   return (
     <p
       id={id}
@@ -70,7 +78,7 @@ export function LoadingIndication({ id }: LoadingIndicationProps = {}): ReactEle
       aria-atomic="true"
       data-player-stats-loading="true"
     >
-      {PROFILE_LOADING_LABEL}
+      {label}
     </p>
   );
 }

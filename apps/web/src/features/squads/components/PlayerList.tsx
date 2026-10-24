@@ -67,6 +67,7 @@ import { useMemo, type ReactElement } from 'react';
 import { PlayerRow, type ViewerContext } from './PlayerRow';
 import { NO_PLAYERS_STATEMENT } from '../lib/messages';
 import { comparePlayerRows, type PlayerListRow } from '../lib/playerList';
+import type { MembershipActionMachine } from '../state/useMembershipAction';
 import type { PromotionMachine } from '../state/usePromotion';
 
 // The feature token table, so a list rendered outside the App_Shell frame still
@@ -118,6 +119,12 @@ export interface PlayerListProps {
 
   /** Called with a row's membership identity to begin editing that guest. */
   readonly onEditGuest: (membershipId: string) => void;
+
+  /** The removal machine, handed to every row. See `PlayerRowProps.removal`. */
+  readonly removal?: MembershipActionMachine;
+
+  /** The demotion machine, handed to every row. See `PlayerRowProps.demotion`. */
+  readonly demotion?: MembershipActionMachine;
 }
 
 /**
@@ -134,6 +141,8 @@ export function PlayerList({
   onPromote,
   promotion,
   onEditGuest,
+  removal,
+  demotion,
 }: PlayerListProps): ReactElement {
   // 7.4: the rendered order is the comparator's, so it is determined by the row
   // set alone and never by the order the caller supplied. The copy keeps the
@@ -170,6 +179,8 @@ export function PlayerList({
             onEditGuest={onEditGuest}
             {...(onPromote === undefined ? {} : { onPromote })}
             {...(promotion === undefined ? {} : { promotion })}
+            {...(removal === undefined ? {} : { removal })}
+            {...(demotion === undefined ? {} : { demotion })}
           />
         </li>
       ))}

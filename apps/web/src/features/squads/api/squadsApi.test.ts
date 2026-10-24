@@ -12,7 +12,7 @@
  *
  * Six things are covered:
  *
- * - **One request per call, and no retry.** Every one of the fourteen methods
+ * - **One request per call, and no retry.** Every one of the eighteen methods
  *   issues exactly one request for one activation, on a success and on a
  *   failing status alike (Requirement 17.4).
  * - **The 10-second Squad_Call_Timeout**, driven with `vi.useFakeTimers()`: the
@@ -62,6 +62,7 @@ import {
   type RedeemInviteRequest,
   type SetFeatureFlagRequest,
   type SquadsApi,
+  type TransferOwnershipRequest,
 } from './squadsApi';
 
 // --- Contract-derived literals (Requirement 16.11) --------------------------
@@ -82,6 +83,40 @@ const GUESTS_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/guests';
 const GUEST_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/guests/{membershipId}';
 const PROMOTE_PATH_TEMPLATE: keyof paths =
   '/squads/{squadId}/members/{membershipId}/promote';
+const DEMOTE_PATH_TEMPLATE: keyof paths =
+  '/squads/{squadId}/members/{membershipId}/demote';
+const MEMBER_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/members/{membershipId}';
+const OWNERSHIP_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/ownership';
+const LEAVE_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/leave';
+const RESTORE_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/restore';
+const EXPORT_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/export';
+const PENDING_DELETION_PATH: keyof paths = '/squads/pending-deletion';
+const ISSUE_CLAIM_LINK_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/guests/{membershipId}/claims';
+const GUEST_CLAIMS_PATH_TEMPLATE: keyof paths = '/squads/{squadId}/guest-claims';
+const COMPLETE_CLAIM_PATH_TEMPLATE: keyof paths =
+  '/squads/{squadId}/guests/{membershipId}/claims/complete';
+const REVERSE_CLAIM_PATH_TEMPLATE: keyof paths =
+  '/squads/{squadId}/guests/{membershipId}/claims/reverse';
+const PREVIEW_CLAIM_PATH: keyof paths = '/squads/guest-claims/preview';
+const ACCEPT_CLAIM_PATH: keyof paths = '/squads/guest-claims/accept';
+
+/** A claim-link secret, as the landing page reads it from the path. */
+const CLAIM_SECRET = 'claim-secret-token';
+
+/** A purge instant as the backend writes one, and the epoch milliseconds it reads as. */
+const PURGE_AT = '2026-11-22T09:30:00Z';
+const PURGE_AT_MS = Date.UTC(2026, 10, 22, 9, 30, 0);
+
+/** An export body with every collection present and empty. */
+const EXPORT_BODY = {
+  squadId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+  name: 'Tuesday Five',
+  isPendingDeletion: false,
+  purgeAt: null,
+  memberships: [],
+  invites: [],
+  features: [],
+};
 
 /** The type of the leaderboard's `statistic` query value, as the contract has it. */
 type LeaderboardStatistic = NonNullable<
@@ -109,7 +144,8 @@ const REQUEST_TYPES_COME_FROM_THE_CONTRACT: readonly [
   AssertIdentical<CreateGuestRequest, Schemas['CreateGuestRequest']>,
   AssertIdentical<EditGuestRequest, Schemas['EditGuestRequest']>,
   AssertIdentical<SetFeatureFlagRequest, Schemas['SetFeatureFlagRequest']>,
-] = [true, true, true, true, true, true];
+  AssertIdentical<TransferOwnershipRequest, Schemas['TransferOwnershipRequest']>,
+] = [true, true, true, true, true, true, true];
 
 // --- Fixtures ---------------------------------------------------------------
 
@@ -256,7 +292,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// --- The fourteen operations, each with its request shape and its success ----
+// --- The eighteen operations, each with its request shape and its success ----
 
 /**
  * One operation of the facade: how it is activated, the request it must produce,
@@ -498,6 +534,184 @@ const OPERATIONS: readonly OperationCase[] = [
     invoke: (api, signal) => api.promoteToAdmin(SQUAD_ID, MEMBERSHIP_ID, signal),
   },
   {
+    name: 'demoteToMember',
+    method: 'POST',
+    path: fill(DEMOTE_PATH_TEMPLATE, {
+      squadId: SQUAD_ID,
+      membershipId: MEMBERSHIP_ID,
+    }),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.demoteToMember(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'removeMember',
+    method: 'DELETE',
+    path: fill(MEMBER_PATH_TEMPLATE, {
+      squadId: SQUAD_ID,
+      membershipId: MEMBERSHIP_ID,
+    }),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.removeMember(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'transferOwnership',
+    method: 'POST',
+    path: fill(OWNERSHIP_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: JSON.stringify({ targetMembershipId: MEMBERSHIP_ID }),
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) =>
+      api.transferOwnership(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'leaveSquad',
+    method: 'POST',
+    path: fill(LEAVE_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.leaveSquad(SQUAD_ID, signal),
+  },
+  {
+    name: 'deleteSquad',
+    method: 'DELETE',
+    path: fill(SQUAD_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    // No grace period is sent: the backend's default applies.
+    search: '',
+    requestBodyText: '',
+    successBody: { purgeAt: PURGE_AT },
+    expected: { kind: 'success', value: { purgeAtMs: PURGE_AT_MS } },
+    invoke: (api, signal) => api.deleteSquad(SQUAD_ID, signal),
+  },
+  {
+    name: 'restoreSquad',
+    method: 'POST',
+    path: fill(RESTORE_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.restoreSquad(SQUAD_ID, signal),
+  },
+  {
+    name: 'exportSquad',
+    method: 'GET',
+    path: fill(EXPORT_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: '',
+    successBody: EXPORT_BODY,
+    expected: {
+      kind: 'success',
+      value: { squadId: EXPORT_BODY.squadId, name: EXPORT_BODY.name, body: EXPORT_BODY },
+    },
+    invoke: (api, signal) => api.exportSquad(SQUAD_ID, signal),
+  },
+  {
+    name: 'listPendingDeletion',
+    method: 'GET',
+    path: PENDING_DELETION_PATH,
+    search: '',
+    requestBodyText: '',
+    successBody: [{ squadId: SQUAD_ID, name: 'Tuesday Five', purgeAt: PURGE_AT }],
+    expected: {
+      kind: 'success',
+      value: [{ squadId: SQUAD_ID, name: 'Tuesday Five', purgeAtMs: PURGE_AT_MS }],
+    },
+    invoke: (api, signal) => api.listPendingDeletion(signal),
+  },
+  {
+    name: 'issueClaimLink',
+    method: 'POST',
+    path: fill(ISSUE_CLAIM_LINK_PATH_TEMPLATE, {
+      squadId: SQUAD_ID,
+      membershipId: MEMBERSHIP_ID,
+    }),
+    search: '',
+    // No body: whoever accepts the link becomes the target.
+    requestBodyText: '',
+    successBody: {
+      claimId: MEMBERSHIP_ID,
+      redeemableLink: 'https://pitch-mate.co.uk/claim/abc',
+      expiresAt: PURGE_AT,
+    },
+    expected: {
+      kind: 'success',
+      value: {
+        claimId: MEMBERSHIP_ID,
+        redeemableLink: 'https://pitch-mate.co.uk/claim/abc',
+        expiresAtMs: PURGE_AT_MS,
+      },
+    },
+    invoke: (api, signal) => api.issueClaimLink(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'listGuestClaims',
+    method: 'GET',
+    path: fill(GUEST_CLAIMS_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
+    search: '',
+    requestBodyText: '',
+    successBody: [
+      { membershipId: MEMBERSHIP_ID, status: 'Accepted', expiresAt: PURGE_AT, acceptedByName: 'Sam' },
+    ],
+    expected: {
+      kind: 'success',
+      value: [
+        {
+          membershipId: MEMBERSHIP_ID,
+          status: 'Accepted',
+          expiresAtMs: PURGE_AT_MS,
+          acceptedByName: 'Sam',
+        },
+      ],
+    },
+    invoke: (api, signal) => api.listGuestClaims(SQUAD_ID, signal),
+  },
+  {
+    name: 'previewGuestClaim',
+    method: 'POST',
+    path: PREVIEW_CLAIM_PATH,
+    // The secret travels in the body, never the URL.
+    search: '',
+    requestBodyText: JSON.stringify({ presentedSecret: CLAIM_SECRET }),
+    successBody: { squadName: 'Tuesday Five', guestDisplayName: 'Big Dave' },
+    expected: {
+      kind: 'success',
+      value: { squadName: 'Tuesday Five', guestDisplayName: 'Big Dave' },
+    },
+    invoke: (api, signal) => api.previewGuestClaim(CLAIM_SECRET, signal),
+  },
+  {
+    name: 'acceptGuestClaim',
+    method: 'POST',
+    path: ACCEPT_CLAIM_PATH,
+    search: '',
+    requestBodyText: JSON.stringify({ presentedSecret: CLAIM_SECRET }),
+    successBody: { squadName: 'Tuesday Five' },
+    expected: { kind: 'success', value: { squadName: 'Tuesday Five' } },
+    invoke: (api, signal) => api.acceptGuestClaim(CLAIM_SECRET, signal),
+  },
+  {
+    name: 'completeGuestClaim',
+    method: 'POST',
+    path: fill(COMPLETE_CLAIM_PATH_TEMPLATE, { squadId: SQUAD_ID, membershipId: MEMBERSHIP_ID }),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.completeGuestClaim(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
+    name: 'reverseGuestClaim',
+    method: 'POST',
+    path: fill(REVERSE_CLAIM_PATH_TEMPLATE, { squadId: SQUAD_ID, membershipId: MEMBERSHIP_ID }),
+    search: '',
+    requestBodyText: '',
+    expected: { kind: 'success', value: undefined },
+    invoke: (api, signal) => api.reverseGuestClaim(SQUAD_ID, MEMBERSHIP_ID, signal),
+  },
+  {
     name: 'getFeatureFlags',
     method: 'GET',
     path: fill(FEATURES_PATH_TEMPLATE, SQUAD_ID_SEGMENTS),
@@ -542,6 +756,7 @@ describe('createSquadsApi — request shapes', () => {
       true,
       true,
       true,
+      true,
     ]);
   });
 
@@ -574,6 +789,36 @@ describe('createSquadsApi — request shapes', () => {
       const outcome = await operation.invoke(api);
 
       expect(outcome).toEqual({ kind: 'transport-failure' });
+      expect(requests).toHaveLength(1);
+    },
+  );
+
+  it.each([
+    ['leaveSquad', (api: SquadsApi) => api.leaveSquad(SQUAD_ID)],
+    ['removeMember', (api: SquadsApi) => api.removeMember(SQUAD_ID, MEMBERSHIP_ID)],
+    [
+      'transferOwnership',
+      (api: SquadsApi) => api.transferOwnership(SQUAD_ID, MEMBERSHIP_ID),
+    ],
+    ['demoteToMember', (api: SquadsApi) => api.demoteToMember(SQUAD_ID, MEMBERSHIP_ID)],
+  ] as const)(
+    '%s settles an OwnerConstraint refusal as a conflict, carrying no backend text',
+    async (_name, invoke) => {
+      const { api, requests } = makeApi(() =>
+        jsonResponse(
+          {
+            title: 'OwnerConstraint',
+            status: 409,
+            detail: 'Ownership must be transferred before leaving the squad.',
+            code: 'OwnerConstraint',
+          },
+          409,
+        ),
+      );
+
+      const outcome = await invoke(api);
+
+      expect(outcome).toEqual({ kind: 'rejected-input', reason: 'conflict' });
       expect(requests).toHaveLength(1);
     },
   );

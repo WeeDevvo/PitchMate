@@ -1,0 +1,122 @@
+/*
+ * Presentation for the squad leaderboards: the statistic switcher and one
+ * ranked list.
+ *
+ * Every value is read from a custom property declared in
+ * `styles/playerStatsTokens.css`, so no colour value is written here and a theme
+ * change is a change of one attribute on the document element.
+ *
+ * - **The switcher wraps.** Six options sit in a wrapping row of 44px targets,
+ *   so they stack on a narrow viewport instead of overflowing it.
+ * - **Position, name, value on one row.** The name column takes the slack and
+ *   wraps; position and value keep their width, so figures line up.
+ * - **Nothing is conveyed by colour.** The checked option is the native radio
+ *   state, and a level position is the same digit twice.
+ */
+
+.player-stats-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--player-stats-gap);
+  color: var(--text);
+  font-size: var(--player-stats-font-size-body);
+  line-height: var(--player-stats-line-height-body);
+}
+
+.player-stats-leaderboard__switcher {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.player-stats-leaderboard__legend {
+  margin-bottom: var(--player-stats-gap-tight);
+  padding: 0;
+  font-weight: var(--player-stats-font-weight-label);
+}
+
+.player-stats-leaderboard__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--player-stats-touch-gap);
+}
+
+.player-stats-leaderboard__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--player-stats-gap-tight);
+  min-height: var(--player-stats-touch-target);
+  padding: 0 var(--player-stats-gap-tight);
+  border: var(--player-stats-border-width) solid var(--control-border);
+  border-radius: var(--player-stats-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  cursor: pointer;
+}
+
+.player-stats-leaderboard__radio {
+  margin: 0;
+}
+
+.player-stats-leaderboard__radio:focus-visible {
+  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline-offset: var(--player-stats-focus-offset);
+}
+
+.player-stats-leaderboard__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--player-stats-gap-hairline);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.player-stats-leaderboard__entry {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--player-stats-gap-tight);
+  min-height: var(--player-stats-touch-target);
+  border-bottom: var(--player-stats-border-width) solid var(--player-stats-card-border);
+}
+
+.player-stats-leaderboard__position {
+  color: var(--muted-text);
+  font-weight: var(--player-stats-font-weight-label);
+}
+
+.player-stats-leaderboard__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--player-stats-gap-tight);
+  overflow-wrap: anywhere;
+}
+
+.player-stats-leaderboard__link {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.player-stats-leaderboard__link:focus-visible {
+  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline-offset: var(--player-stats-focus-offset);
+}
+
+.player-stats-leaderboard__former-player {
+  color: var(--muted-text);
+  font-size: var(--player-stats-font-size-meta);
+}
+
+.player-stats-leaderboard__value {
+  font-weight: var(--player-stats-font-weight-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.player-stats-leaderboard__statement {
+  margin: 0;
+  max-width: var(--player-stats-measure);
+  color: var(--muted-text);
+}

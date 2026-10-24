@@ -138,6 +138,8 @@ import {
   relTo,
   stripComments,
   stripCommentsAndStrings,
+  targetsBarrelOf,
+  wireRoot,
 } from './structural/sourceScan';
 
 // --- The scanned sets --------------------------------------------------------
@@ -358,6 +360,9 @@ function escapingImports(
   for (const { file, source } of modules) {
     for (const specifier of relativeSpecifiersOf(source)) {
       const target = norm(resolve(dirname(file), specifier));
+      // The one admitted exit: the shared wire barrel, itself pure
+      // (`src/wire/wire.structural.test.ts`), so purity stays closed under import.
+      if (targetsBarrelOf(wireRoot, target)) continue;
       if (!isWithin(libRoot, target)) {
         offenders.push({ module: libRel(file), specifier });
       }
@@ -505,7 +510,11 @@ describe('the pure logic scan sees the Player_Stats_Feature lib directory', () =
       .map(libRel)
       .filter((path) => path.startsWith('parse/'));
 
-    expect(nested).toEqual(['parse/playerProfile.ts', 'parse/primitives.ts']);
+    expect(nested).toEqual([
+      'parse/leaderboard.ts',
+      'parse/playerProfile.ts',
+      'parse/primitives.ts',
+    ]);
   });
 
   it('collects the feature-wide test files the 100-run floor binds', () => {
@@ -688,8 +697,11 @@ describe('every relative import of a lib module resolves inside lib/ (Requiremen
     // Guard: `lib/` modules do import one another — `subject.ts` takes the
     // identity check, `parse/primitives.ts` takes the duration reader — so an
     // empty offender list above means the imports resolve inside rather than
-    // that no relative import was seen.
-    const targets = libModules.flatMap(relativeTargetsOf);
+    // that no relative import was seen. The shared wire barrel is the one
+    // target outside lib/.
+    const targets = libModules
+      .flatMap(relativeTargetsOf)
+      .filter((target) => !targetsBarrelOf(wireRoot, target));
 
     expect(targets.length).toBeGreaterThan(5);
     expect(targets.every((target) => isWithin(libRoot, target))).toBe(true);

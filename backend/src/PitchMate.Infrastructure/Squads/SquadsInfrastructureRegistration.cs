@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PitchMate.Application.Squads.Abstractions;
+using PitchMate.Infrastructure.Squads.Queries;
 using PitchMate.Infrastructure.Squads.Repositories;
 
 namespace PitchMate.Infrastructure.Squads;
@@ -40,9 +41,16 @@ public static class SquadsInfrastructureRegistration
         services.TryAddScoped<IInviteRepository, EfInviteRepository>();
         services.TryAddScoped<IGuestClaimRepository, EfGuestClaimRepository>();
 
+        // The owner's pending-deletion read shares the request scope's DbContext like the repositories
+        // (Requirement 17.4).
+        services.TryAddScoped<IPendingDeletionSquadSource, EfPendingDeletionSquadSource>();
+
         // Invite secret generation/hashing is stateless and thread-safe, so a single shared
         // instance is safe as a singleton (Requirement 10.7).
         services.TryAddSingleton<IInviteSecretService, InviteSecretService>();
+
+        // Claim-link secrets follow the same scheme and are just as stateless.
+        services.TryAddSingleton<IClaimSecretService, ClaimSecretService>();
 
         // Conservative default until the match-lifecycle spec introduces the match tables this probe
         // would query; it reports no match history so erasure hard-removes rather than anonymising

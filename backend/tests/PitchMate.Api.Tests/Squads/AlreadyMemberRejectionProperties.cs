@@ -19,6 +19,7 @@ using PitchMate.Application.Common.Persistence;
 using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Domain.Rating;
 using PitchMate.Domain.Squads;
+using PitchMate.Infrastructure.Squads;
 using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 
 namespace PitchMate.Api.Tests.Squads;
@@ -32,8 +33,9 @@ namespace PitchMate.Api.Tests.Squads;
 /// <see cref="SquadErrorCode.AlreadyMember"/> used to answer a bodiless <c>200 OK</c>, on reasoning that
 /// no longer describes any reachable path: the redemption no-op is a <i>success</i> carrying
 /// <c>RedeemOutcome.AlreadyMember</c> and never produces the error code, so the only producers are
-/// guest-claim initiation and completion — where "the target user already holds a membership" is a
-/// rejection. Design D5 maps it to <c>409 Conflict</c> with a problem body.
+/// accepting a guest-claim link and completing a claim — where "the player already holds a membership"
+/// is a rejection (ADR 0003: the target is whoever accepts the link, so the check moved from initiation
+/// to acceptance). Design D5 maps it to <c>409 Conflict</c> with a problem body.
 /// </para>
 /// <para>
 /// The unit-level mapping is already pinned by <see cref="SquadErrorResultsTests"/>. What that cannot
@@ -43,8 +45,7 @@ namespace PitchMate.Api.Tests.Squads;
 /// situations rather than one example — arbitrary squad, acting, membership and target identities,
 /// arbitrary guest and existing-member display names and skill tier, either authorised acting role, any
 /// kind of membership the target already holds (active owner, admin or member, or an inactive one), a
-/// target who is sometimes the acting admin themselves, and — for completion — an open claim in either
-/// of the two states that path can reach it in.
+/// target who is sometimes the acting admin themselves.
 /// </para>
 /// <para>
 /// Two conjuncts are asserted together because neither alone is the requirement. The response
@@ -72,6 +73,12 @@ public sealed class AlreadyMemberRejectionProperties : IClassFixture<AuthApiFact
 {
     /// <summary>The problem code both guest-claim paths report when the target already holds a membership.</summary>
     private const string ExpectedCode = nameof(SquadErrorCode.AlreadyMember);
+
+    /// <summary>The claim-link secret every scenario's open claim was issued for.</summary>
+    private const string Token = "claim-link-secret-for-the-already-member-guard";
+
+    /// <summary>The production hasher, so the stored hash is what the accept path will compute.</summary>
+    private static readonly ClaimSecretService Secrets = new();
 
     private readonly ResolvingSquadRepository _squads = new();
     private readonly ScenarioMembershipRepository _memberships = new();
@@ -108,16 +115,16 @@ public sealed class AlreadyMemberRejectionProperties : IClassFixture<AuthApiFact
     // Feature: api-response-contracts, Property 12: Already-member is a rejection on both sides of the wire.
     // Validates: Requirements 6.1, 6.2, 6.6
     [Property(MaxTest = 100, Arbitrary = new[] { typeof(GuestClaimScenarioGenerators) })]
-    public Property Property12_InitiatingAClaimOntoAnExistingMemberIsRejectedAsAConflict(GuestClaimSituation situation)
+    public Property Property12_AcceptingAClaimLinkAsAnExistingMemberIsRejectedAsAConflict(GuestClaimSituation situation)
     {
         ArgumentNullException.ThrowIfNull(situation);
 
-        GuestClaimResponseFacts facts = Initiate(Materialise(situation, targetAlreadyHoldsMembership: true));
+        GuestClaimResponseFacts facts = Accept(Materialise(situation, targetAlreadyHoldsMembership: true));
         IReadOnlyList<string> failures = RejectionFailures(facts);
 
         return (failures.Count == 0)
             .ToProperty()
-            .Label($"initiate: {string.Join("; ", failures)}")
+            .Label($"accept: {string.Join("; ", failures)}")
             .Classify(situation.TargetIsActingUser, "target is the acting admin")
             .Classify(!situation.ActingIsOwner, "acting admin")
             .Classify(situation.ExistingKind == ExistingMembershipKind.InactiveMember, "target's membership inactive");
@@ -130,23 +137,23 @@ public sealed class AlreadyMemberRejectionProperties : IClassFixture<AuthApiFact
     {
         ArgumentNullException.ThrowIfNull(situation);
 
-        GuestClaimResponseFacts facts = Complete(Materialise(situation, targetAlreadyHoldsMembership: true));
+        GuestClaimResponseFacts facts =
+            Complete(WithAcceptedClaim(Materialise(situation, targetAlreadyHoldsMembership: true)));
         IReadOnlyList<string> failures = RejectionFailures(facts);
 
         return (failures.Count == 0)
             .ToProperty()
             .Label($"complete: {string.Join("; ", failures)}")
-            .Classify(situation.ConsentRecorded, "consented claim")
-            .Classify(!situation.ConsentRecorded, "pending claim")
-            .Classify(situation.TargetIsActingUser, "target is the acting admin");
+            .Classify(situation.TargetIsActingUser, "target is the acting admin")
+            .Classify(situation.ExistingKind == ExistingMembershipKind.InactiveMember, "target's membership inactive");
     }
 
     /// <summary>
     /// The non-vacuity floor. Both properties above could pass against a surface that answers <c>409</c>
     /// to everything, or against a stand-in that never resolves anything and is rejected for an unrelated
     /// reason. The control removes the one fact under test — the membership the target already holds —
-    /// from otherwise identical situations, and shows both paths then <b>succeed</b>: initiation answers
-    /// <c>200</c> and really stages a claim, completion answers <c>204</c> and really rebinds the guest.
+    /// from otherwise identical situations, and shows both paths then <b>succeed</b>: accepting answers
+    /// <c>200</c> and really binds the player, completion answers <c>204</c> and really rebinds the guest.
     /// <para>
     /// It also pins the rejection code literally rather than only via <see cref="ExpectedCode"/>, so the
     /// value the web client branches on is visible in the source; and asserts that the rejection is
@@ -163,34 +170,28 @@ public sealed class AlreadyMemberRejectionProperties : IClassFixture<AuthApiFact
         {
             // With the target already a member, both paths are the rejection under test — and it is the
             // already-member rejection specifically, not the 409 its neighbouring code would answer.
-            GuestClaimResponseFacts rejectedInitiation =
-                Initiate(Materialise(situation, targetAlreadyHoldsMembership: true));
-            Assert.Empty(RejectionFailures(rejectedInitiation));
+            GuestClaimResponseFacts rejectedAcceptance =
+                Accept(Materialise(situation, targetAlreadyHoldsMembership: true));
+            Assert.Empty(RejectionFailures(rejectedAcceptance));
             Assert.DoesNotContain(
-                nameof(SquadErrorCode.ClaimNotEligible), rejectedInitiation.RawBody, StringComparison.Ordinal);
+                nameof(SquadErrorCode.ClaimNotEligible), rejectedAcceptance.RawBody, StringComparison.Ordinal);
 
             GuestClaimResponseFacts rejectedCompletion =
-                Complete(Materialise(situation, targetAlreadyHoldsMembership: true));
+                Complete(WithAcceptedClaim(Materialise(situation, targetAlreadyHoldsMembership: true)));
             Assert.Empty(RejectionFailures(rejectedCompletion));
             Assert.DoesNotContain(
                 nameof(SquadErrorCode.ClaimNotEligible), rejectedCompletion.RawBody, StringComparison.Ordinal);
 
             // ...and with that one fact removed, both paths succeed, so the 409 is that fact's doing.
             GuestClaimScenario open = Materialise(situation, targetAlreadyHoldsMembership: false);
-            _claims.ForgetStagedClaims();
 
-            GuestClaimResponseFacts initiated = Initiate(open);
-            Assert.Equal(StatusCodes.Status200OK, initiated.Status);
-            GuestClaim staged = Assert.Single(_claims.StagedClaims);
-            Assert.Equal(open.TargetUserId, staged.TargetUserId);
-            Assert.Contains(staged.Id.ToString(), initiated.RawBody, StringComparison.OrdinalIgnoreCase);
+            GuestClaimResponseFacts accepted = Accept(open);
+            Assert.Equal(StatusCodes.Status200OK, accepted.Status);
+            Assert.Equal(GuestClaimState.Consented, open.OpenClaim!.State);
+            Assert.Equal(open.TargetUserId, open.OpenClaim.TargetUserId);
 
-            // Completion needs a consented claim to get past the consent gate; the situation's own claim
-            // state is exercised by the property above, so the control fixes it to the state that passes.
-            GuestClaimScenario completable = Materialise(situation, targetAlreadyHoldsMembership: false) with
-            {
-                OpenClaim = Consented(open.MembershipId, open.TargetUserId),
-            };
+            GuestClaimScenario completable =
+                WithAcceptedClaim(Materialise(situation, targetAlreadyHoldsMembership: false));
 
             GuestClaimResponseFacts completed = Complete(completable);
             Assert.Equal(StatusCodes.Status204NoContent, completed.Status);
@@ -298,11 +299,8 @@ public sealed class AlreadyMemberRejectionProperties : IClassFixture<AuthApiFact
             ? ExistingMembership(situation, targetUserId)
             : null;
 
-        GuestClaim claim = GuestClaim.Initiate(situation.MembershipId, targetUserId);
-        if (situation.ConsentRecorded)
-        {
-            Assert.True(claim.RecordConsent(AuthApiTestConfig.FixedNow).IsSuccess);
-        }
+        // An open link nobody has accepted yet, issued for the one secret every scenario presents.
+        GuestClaim claim = Issued(situation.MembershipId);
 
         return new GuestClaimScenario(
             situation.SquadId,
@@ -346,36 +344,46 @@ public sealed class AlreadyMemberRejectionProperties : IClassFixture<AuthApiFact
         return membership;
     }
 
-    private static GuestClaim Consented(Guid membershipId, Guid targetUserId)
+    /// <summary>A pending claim for the membership, issued for <see cref="Token"/> and not yet expired.</summary>
+    private static GuestClaim Issued(Guid membershipId) =>
+        GuestClaim.Initiate(membershipId, Secrets.Hash(Token), AuthApiTestConfig.FixedNow + GuestClaim.LinkValidity);
+
+    /// <summary>The scenario with its open claim already accepted by the scenario's target user.</summary>
+    private static GuestClaimScenario WithAcceptedClaim(GuestClaimScenario scenario)
     {
-        GuestClaim claim = GuestClaim.Initiate(membershipId, targetUserId);
-        Assert.True(claim.RecordConsent(AuthApiTestConfig.FixedNow).IsSuccess);
-        return claim;
+        GuestClaim claim = Issued(scenario.MembershipId);
+        Assert.True(claim.Accept(scenario.TargetUserId, AuthApiTestConfig.FixedNow).IsSuccess);
+        return scenario with { OpenClaim = claim };
     }
 
-    /// <summary>Drives <c>POST /squads/{squadId}/guests/{membershipId}/claims</c> for the scenario.</summary>
-    private GuestClaimResponseFacts Initiate(GuestClaimScenario scenario)
+    /// <summary>Drives <c>POST /squads/guest-claims/accept</c> as the scenario's target user.</summary>
+    private GuestClaimResponseFacts Accept(GuestClaimScenario scenario)
     {
-        string body = JsonSerializer.Serialize(new InitiateGuestClaimRequest(scenario.TargetUserId), _options);
+        string body = JsonSerializer.Serialize(new GuestClaimSecretRequest(Token), _options);
 
         return Send(
             scenario,
-            $"/squads/{scenario.SquadId}/guests/{scenario.MembershipId}/claims",
-            new StringContent(body, Encoding.UTF8, "application/json"));
+            "/squads/guest-claims/accept",
+            new StringContent(body, Encoding.UTF8, "application/json"),
+            caller: scenario.TargetUserId);
     }
 
-    /// <summary>Drives <c>POST /squads/{squadId}/guests/{membershipId}/claims/complete</c> for the scenario.</summary>
+    /// <summary>Drives <c>POST /squads/{squadId}/guests/{membershipId}/claims/complete</c> as the acting admin.</summary>
     private GuestClaimResponseFacts Complete(GuestClaimScenario scenario) =>
-        Send(scenario, $"/squads/{scenario.SquadId}/guests/{scenario.MembershipId}/claims/complete", content: null);
+        Send(
+            scenario,
+            $"/squads/{scenario.SquadId}/guests/{scenario.MembershipId}/claims/complete",
+            content: null,
+            caller: scenario.ActingUserId);
 
-    private GuestClaimResponseFacts Send(GuestClaimScenario scenario, string route, HttpContent? content)
+    private GuestClaimResponseFacts Send(GuestClaimScenario scenario, string route, HttpContent? content, Guid caller)
     {
         _memberships.Scenario = scenario;
         _claims.Scenario = scenario;
 
         using var request = new HttpRequestMessage(HttpMethod.Post, route) { Content = content };
         request.Headers.Authorization = new AuthenticationHeaderValue(
-            "Bearer", TestAccessTokens.ValidToken(scenario.ActingUserId));
+            "Bearer", TestAccessTokens.ValidToken(caller));
 
         using HttpResponseMessage response = _client.SendAsync(request).GetAwaiter().GetResult();
         string responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
@@ -410,7 +418,7 @@ public enum ExistingMembershipKind
 /// <summary>
 /// One generated guest-claim situation: the identities the routes carry, the acting caller's authorised
 /// role, the guest membership being claimed, the kind of membership the target already holds, whether the
-/// target is the acting admin themselves, and whether the open claim has recorded consent.
+/// target is the acting admin themselves.
 /// </summary>
 /// <param name="SquadId">The squad identity in the route.</param>
 /// <param name="ActingUserId">The caller stamped on the access token.</param>
@@ -422,7 +430,6 @@ public enum ExistingMembershipKind
 /// <param name="GuestSkillTier">The guest's cold-start tier seed, or <see langword="null"/>.</param>
 /// <param name="ExistingDisplayName">The display name of the membership the target already holds.</param>
 /// <param name="ExistingKind">The kind of membership the target already holds.</param>
-/// <param name="ConsentRecorded">Whether the open claim has recorded the target's consent.</param>
 public sealed record GuestClaimSituation(
     Guid SquadId,
     Guid ActingUserId,
@@ -433,8 +440,7 @@ public sealed record GuestClaimSituation(
     string GuestDisplayName,
     SkillTier? GuestSkillTier,
     string ExistingDisplayName,
-    ExistingMembershipKind ExistingKind,
-    bool ConsentRecorded);
+    ExistingMembershipKind ExistingKind);
 
 /// <summary>
 /// FsCheck arbitraries for a guest-claim situation. Identities are built from generated bytes rather than
@@ -451,15 +457,15 @@ public static class GuestClaimScenarioGenerators
         Enum.GetValues<ExistingMembershipKind>();
 
     /// <summary>
-    /// A small spread of explicit situations for the non-vacuity control — both acting roles, both claim
-    /// states, a self-target, and every kind of membership the target may already hold.
+    /// A small spread of explicit situations for the non-vacuity control — both acting roles, a
+    /// self-target, and every kind of membership the target may already hold.
     /// </summary>
     public static IReadOnlyList<GuestClaimSituation> Controls { get; } =
     [
-        Control(ExistingMembershipKind.ActiveMember, actingIsOwner: true, targetIsActingUser: false, consentRecorded: false),
-        Control(ExistingMembershipKind.ActiveAdmin, actingIsOwner: false, targetIsActingUser: false, consentRecorded: true),
-        Control(ExistingMembershipKind.ActiveOwner, actingIsOwner: true, targetIsActingUser: true, consentRecorded: true),
-        Control(ExistingMembershipKind.InactiveMember, actingIsOwner: false, targetIsActingUser: false, consentRecorded: false),
+        Control(ExistingMembershipKind.ActiveMember, actingIsOwner: true, targetIsActingUser: false),
+        Control(ExistingMembershipKind.ActiveAdmin, actingIsOwner: false, targetIsActingUser: false),
+        Control(ExistingMembershipKind.ActiveOwner, actingIsOwner: true, targetIsActingUser: true),
+        Control(ExistingMembershipKind.InactiveMember, actingIsOwner: false, targetIsActingUser: false),
     ];
 
     /// <summary>Arbitrary for a generated guest-claim situation.</summary>
@@ -473,10 +479,9 @@ public static class GuestClaimScenarioGenerators
         from tier in Gen.Elements<SkillTier?>(null, SkillTier.Beginner, SkillTier.Average, SkillTier.Strong)
         from existingName in DisplayNameGen()
         from existingKind in Gen.Elements(AllExistingKinds)
-        from consentRecorded in Gen.Elements(true, false)
         select new GuestClaimSituation(
             ids[0], ids[1], ids[2], ids[3], targetIsActingUser, actingIsOwner,
-            guestName, tier, existingName, existingKind, consentRecorded);
+            guestName, tier, existingName, existingKind);
 
     /// <summary>
     /// <paramref name="count"/> pairwise-distinct, non-empty identities. The trailing byte is stamped with
@@ -508,7 +513,7 @@ public static class GuestClaimScenarioGenerators
         select first + new string(interior) + last;
 
     private static GuestClaimSituation Control(
-        ExistingMembershipKind existingKind, bool actingIsOwner, bool targetIsActingUser, bool consentRecorded) =>
+        ExistingMembershipKind existingKind, bool actingIsOwner, bool targetIsActingUser) =>
         new(
             Guid.Parse("11111111-1111-1111-1111-111111111101"),
             Guid.Parse("22222222-2222-2222-2222-222222222202"),
@@ -519,6 +524,5 @@ public static class GuestClaimScenarioGenerators
             "Control Guest",
             SkillTier.Average,
             "Control Member",
-            existingKind,
-            consentRecorded);
+            existingKind);
 }

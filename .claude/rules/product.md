@@ -11,9 +11,9 @@ Lines marked **Today** say where the shipped code falls short of the intent, so 
 - **Joining** is via a revocable, expirable **invite link/code**. Someone without an account goes sign-up → auto-join. The link must not leak squad data before joining.
 - A **guest** is an admin-created player profile with no account and no `AuthIdentity`. It is selectable, balanced, rated and accrues stats like anyone else, but exists only in that squad. Store only a display name and optional skill tier, never contact details.
 - **Display names are unique within a squad**, for guests and members alike.
-- An admin can **claim** a guest for a registered user. The user must accept, the claim is audited and reversible, and it preserves the guest's rating and stats, because ratings belong to the membership, not the account.
+- An admin can **claim** a guest for a registered user by creating a one-time **claim link** (valid 7 days; a new link cancels the old one). The player opens it while signed in and accepts, which binds their account; the admin then sees who accepted and completes the claim. A player who already belongs to the squad can't accept. The claim is audited and reversible, and it preserves the guest's rating and stats, because ratings belong to the membership, not the account.
 - **Leaving or removal** makes a membership inactive (out of selection) but keeps its rating, stats and history. Re-joining reactivates the same membership.
-- **Deleting a squad** is owner-only: soft delete, grace period, then purge, with an export offered first. A squad in its grace period should be invisible to every read. **Today** the squad leaderboard and player profile reads still answer for it (logged in the backlog).
+- **Deleting a squad** is owner-only: soft delete, grace period (30 days by default), then purge, with an export offered first and a typed-name confirmation. A squad in its grace period should be invisible to every read except the owner's own list of deleted squads, where the owner can restore it until the purge. **Today** the squad leaderboard and player profile reads still answer for it (logged in the backlog).
 
 ## Optional features
 

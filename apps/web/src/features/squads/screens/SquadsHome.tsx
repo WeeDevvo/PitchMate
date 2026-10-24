@@ -114,6 +114,7 @@ import { CREATE_SQUAD_FORM_ID, CreateSquadForm } from '../components/CreateSquad
 import { FailureNotice } from '../components/FailureNotice';
 import { JOIN_SQUAD_FORM_ID, JoinSquadForm } from '../components/JoinSquadForm';
 import { LoadingIndication } from '../components/LoadingIndication';
+import { PendingDeletionList } from '../components/PendingDeletionList';
 import { SquadCard } from '../components/SquadCard';
 import { SquadsEmptyState } from '../components/SquadsEmptyState';
 import {
@@ -303,7 +304,12 @@ export function SquadsHome({ api }: SquadsHomeProps): ReactElement {
   // 1.11: the latch that makes every later outcome inapplicable. Closed only by
   // an unmount — a lost session returns the screen to a usable state rather than
   // to an inert one, and the Route_Guard is what decides whether it stays.
+  // Re-opened when the effect runs, because StrictMode's development-only
+  // unmount-and-remount runs the cleanup once on a screen that stays mounted;
+  // without this the latch closes on first render and every submission is
+  // refused.
   useEffect(() => {
+    leftRef.current = false;
     return () => {
       leftRef.current = true;
     };
@@ -610,6 +616,10 @@ export function SquadsHome({ api }: SquadsHomeProps): ReactElement {
       />
 
       {loadState}
+
+      {/* The owner's deleted squads, still restorable. Renders nothing for
+          anyone without one. */}
+      <PendingDeletionList api={api} authState={authState} onRestored={machine.retry} />
     </div>
   );
 }

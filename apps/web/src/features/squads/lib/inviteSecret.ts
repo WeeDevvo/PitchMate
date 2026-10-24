@@ -58,6 +58,9 @@
  */
 const INVITE_LANDING_PREFIX = '/join/';
 
+/** The path marker a guest-claim link carries its secret after, on the same scheme as an invite. */
+const CLAIM_LANDING_PREFIX = '/claim/';
+
 /** The path segment separator, which a percent-encoded secret cannot contain. */
 const PATH_SEGMENT_SEPARATOR = '/';
 
@@ -238,6 +241,29 @@ function secretFromInviteLink(candidate: string): string | null {
 export function extractInviteSecretFromPath(
   path: string,
 ): InviteSecretExtraction {
+  return extractSecretAfterMarker(path, INVITE_LANDING_PREFIX);
+}
+
+/**
+ * The secret a guest-claim landing path carries in its `code` segment, read by
+ * exactly the rules {@link extractInviteSecretFromPath} applies to an invite: the
+ * one segment after `/claim/`, percent-decoded and trimmed, with a named reason
+ * when it can't be read.
+ *
+ * @param path the requested path, as the router reports it
+ * @returns the non-empty secret, or the reason it could not be read
+ */
+export function extractClaimSecretFromPath(
+  path: string,
+): InviteSecretExtraction {
+  return extractSecretAfterMarker(path, CLAIM_LANDING_PREFIX);
+}
+
+/** The secret in the one path segment after `marker`, by the rules described above. */
+function extractSecretAfterMarker(
+  path: string,
+  marker: string,
+): InviteSecretExtraction {
   // 5.9: a route value that never arrived is not a segment. Guarded at runtime
   // rather than trusted from the type, because the path comes from the router.
   if (typeof path !== 'string') {
@@ -245,7 +271,7 @@ export function extractInviteSecretFromPath(
   }
 
   const pathname = pathWithoutQueryOrFragment(path);
-  const markerIndex = pathname.indexOf(INVITE_LANDING_PREFIX);
+  const markerIndex = pathname.indexOf(marker);
 
   // 5.9: no `/join/` marker means no `code` segment — a path of `/join`, or a
   // path belonging to some other route entirely.
@@ -253,9 +279,7 @@ export function extractInviteSecretFromPath(
     return { ok: false, reason: 'absent' };
   }
 
-  const afterMarker = pathname.slice(
-    markerIndex + INVITE_LANDING_PREFIX.length,
-  );
+  const afterMarker = pathname.slice(markerIndex + marker.length);
   const nextSeparator = afterMarker.indexOf(PATH_SEGMENT_SEPARATOR);
 
   // The `code` segment is one segment: `/join/a/b` carries the secret `a`, and

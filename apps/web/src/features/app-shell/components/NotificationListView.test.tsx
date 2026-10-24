@@ -24,6 +24,7 @@
  * Feature: app-shell
  * Requirements: 3.9, 5.4, 5.7, 5.12
  */
+import { StrictMode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -155,7 +156,7 @@ interface Rendered {
   rerender(): void;
 }
 
-function renderDestination(): Rendered {
+function renderDestination({ strict = false } = {}): Rendered {
   const transport = stubTransport();
 
   const tree = (
@@ -172,7 +173,7 @@ function renderDestination(): Rendered {
     </AuthProvider>
   );
 
-  const rendered = render(tree);
+  const rendered = render(strict ? <StrictMode>{tree}</StrictMode> : tree);
 
   const settle = async (settler: () => void): Promise<void> => {
     await act(async () => {
@@ -195,7 +196,7 @@ function renderDestination(): Rendered {
     resolveList: (records) =>
       settle(() => newest().resolve({ kind: 'success', value: [...records] })),
     failList: () => settle(() => newest().resolve({ kind: 'failure' })),
-    rerender: () => rendered.rerender(tree),
+    rerender: () => rendered.rerender(strict ? <StrictMode>{tree}</StrictMode> : tree),
   };
 }
 
@@ -336,5 +337,23 @@ describe('NotificationListView list calls (Requirements 4.7, 11.11)', () => {
 
     // 11.11: nothing retries itself; a further call comes from an activation.
     expect(rendered.transport.listCalls).toHaveLength(1);
+  });
+  // StrictMode's development-only unmount-and-remount stops the notification
+  // centre, which aborts the list call this surface asked for. The remount must
+  // load the list again, and the aborted call's failure must not be shown.
+  it('loads the list under StrictMode, disregarding the aborted call', async () => {
+    const rendered = renderDestination({ strict: true });
+    await flush();
+
+    expect(rendered.transport.listCalls).toHaveLength(2);
+
+    await act(async () => {
+      rendered.transport.listCalls[0].resolve({ kind: 'failure' });
+      await Promise.resolve();
+    });
+    await rendered.resolveList(notifications(2));
+
+    expect(rows()).toHaveLength(2);
+    expect(failureMessage()).toBeNull();
   });
 });

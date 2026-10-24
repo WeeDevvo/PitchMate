@@ -56,7 +56,8 @@ import type { RouteObject } from 'react-router-dom';
 
 import { HOME_ROUTE } from '../app-shell';
 import type { SquadsApi } from './api/squadsApi';
-import { INVITE_LANDING_ROUTE, SQUAD_ROUTE } from './lib/routePaths';
+import { CLAIM_LANDING_ROUTE, INVITE_LANDING_ROUTE, SQUAD_ROUTE } from './lib/routePaths';
+import { ClaimLandingScreen } from './screens/ClaimLandingScreen';
 import { InviteLandingScreen } from './screens/InviteLandingScreen';
 import { SquadScreen } from './screens/SquadScreen';
 
@@ -168,6 +169,10 @@ export function createSquadsPublicRoutes({
     {
       path: INVITE_LANDING_ROUTE,
       element: <InviteLandingScreen api={api} />,
+    },
+    {
+      path: CLAIM_LANDING_ROUTE,
+      element: <ClaimLandingScreen api={api} />,
     },
   ];
 }

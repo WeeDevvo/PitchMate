@@ -912,9 +912,9 @@ public sealed class Match : BaseEntity
     ///   score — a missing score for any team is rejected identifying that team (Requirement 11.7).</item>
     /// </list>
     /// On success the supplied result is stored as <see cref="RecordedResult"/> and the match remains
-    /// <see cref="MatchState.InProgress"/> (completion is a separate transition). Scores map to the
-    /// match's working <see cref="Teams"/>, which correspond one-to-one to the captured
-    /// <see cref="KickoffLineup"/> teams.
+    /// <see cref="MatchState.InProgress"/> (completion is a separate transition). Scores are keyed by the
+    /// captured <see cref="KickoffLineup"/> teams' <see cref="KickoffTeam.TeamId"/>s — the teams that
+    /// were locked and played, which the team sheet presents.
     /// </summary>
     /// <param name="result">The proposed result carrying the fidelity and each team's final score.</param>
     /// <param name="liveTrackingEnabled">Whether the match's squad has live match tracking enabled, gating a <see cref="ResultFidelity.Rich"/> result.</param>
@@ -936,7 +936,9 @@ public sealed class Match : BaseEntity
                 "A rich result cannot be recorded because the squad does not have live match tracking enabled."));
         }
 
-        var teamIds = _teams.Select(t => t.Id).ToHashSet();
+        // A result scores the locked teams: the captured lineup is what was played, and the working teams
+        // may have been edited after the lock without a re-lock. InProgress always holds a lineup.
+        var teamIds = KickoffLineup!.Teams.Select(t => t.TeamId).ToHashSet();
         var scored = new HashSet<Guid>();
         foreach (var score in result.TeamScores)
         {
@@ -991,10 +993,10 @@ public sealed class Match : BaseEntity
     /// (Requirement 11.3, 11.5).
     /// </para>
     /// <para>
-    /// The kickoff teams are captured one-to-one and in order from the working <see cref="Teams"/> at
-    /// lock, which carry the score-linking identity; the kickoff team at each captured index therefore
-    /// corresponds to the working team at the same index, whose <see cref="MatchResult"/> score sets the
-    /// rank. Player ratings are not held by the aggregate: the completion handler loads (or seeds) each
+    /// Each kickoff team captured, at lock, the identity of the working team it was taken from, and a
+    /// result's scores are keyed by those identities; the kickoff team's own <see cref="KickoffTeam.TeamId"/>
+    /// therefore finds its <see cref="MatchResult"/> score, which sets the rank. Position is never used,
+    /// because the working <see cref="Teams"/> carry no stored order. Player ratings are not held by the aggregate: the completion handler loads (or seeds) each
     /// participant's current rating and supplies them via <paramref name="ratingsByMembershipId"/>, keyed
     /// by squad-membership identity, so the produced <see cref="MatchOutcome"/> — and, preserving order,
     /// the engine's <see cref="MatchUpdate"/> output — maps back to memberships by the kickoff lineup's
@@ -1041,16 +1043,6 @@ public sealed class Match : BaseEntity
 
         var kickoffTeams = KickoffLineup.Teams;
 
-        // The kickoff teams were captured one-to-one and in order from the working teams at lock, and
-        // teams cannot be edited once the match leaves TeamsRolled, so the two stay index-aligned. The
-        // working team supplies the score-linking identity for the kickoff team at the same index.
-        if (kickoffTeams.Count != _teams.Count)
-        {
-            return Result<MatchOutcome>.Fail(new MatchError(
-                MatchErrorCode.InvalidState,
-                $"The captured kickoff lineup has {kickoffTeams.Count} team(s) but the match has {_teams.Count} working team(s); the outcome cannot be derived."));
-        }
-
         var scoresByTeamId = new Dictionary<Guid, int>(RecordedResult.TeamScores.Count);
         foreach (var teamScore in RecordedResult.TeamScores)
         {
@@ -1060,11 +1052,13 @@ public sealed class Match : BaseEntity
         var teamScores = new int[kickoffTeams.Count];
         for (var i = 0; i < kickoffTeams.Count; i++)
         {
-            if (!scoresByTeamId.TryGetValue(_teams[i].Id, out var score))
+            // Each kickoff team carries the identity it was scored by. The working teams are not used:
+            // they have no stored order, so a reloaded match may list them differently from the lineup.
+            if (!scoresByTeamId.TryGetValue(kickoffTeams[i].TeamId, out var score))
             {
                 return Result<MatchOutcome>.Fail(new MatchError(
                     MatchErrorCode.ResultRequired,
-                    $"The recorded result has no final score for team {_teams[i].Id}; the outcome cannot be derived."));
+                    $"The recorded result has no final score for team {kickoffTeams[i].TeamId}; the outcome cannot be derived."));
             }
 
             teamScores[i] = score;

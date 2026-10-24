@@ -32,6 +32,8 @@ internal static class TeamSheetReferenceOracle
             KickoffTeam locked = lineup.Teams[i];
             TeamSheetTeam team = actual.Teams[i];
 
+            // The sheet names each team by the identity the lineup captured, which a result is scored by.
+            Assert.Equal(locked.TeamId, team.TeamId);
             Assert.Equal(locked.TeamName, team.TeamName);
             Assert.Equal(locked.BibFlag, team.BibFlag);
             Assert.Equal(

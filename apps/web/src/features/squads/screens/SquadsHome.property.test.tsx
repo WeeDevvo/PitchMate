@@ -281,6 +281,8 @@ function listingApi(summaries: readonly SquadSummary[]): SquadsApi {
   };
 
   return {
+    // The Squads_Home also reads the caller's pending-deletion squads; none here.
+    listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
     listMySquads: () => Promise.resolve(listed),
     getSquad: unreached('GetSquad'),
     getDisplayRatingLeaderboard: unreached('GetSquadLeaderboard'),

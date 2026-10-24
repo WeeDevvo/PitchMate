@@ -16,7 +16,7 @@
  *
  * Requirements: 1.2, 1.9, 1.10, 2.1, 2.2, 2.5, 2.6, 3.6, 4.7, 4.8, 4.9
  */
-import { type ReactElement } from 'react';
+import { StrictMode, type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -90,6 +90,8 @@ function createFakeApi(options: FakeApiOptions): {
   const { listOutcomes, createOutcome, redeemOutcome } = options;
 
   const api: SquadsApi = {
+    // The Squads_Home also reads the caller's pending-deletion squads; none here.
+    listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
     listMySquads: () => {
       const index = Math.min(log.listCalls, listOutcomes.length - 1);
       log.listCalls += 1;
@@ -149,15 +151,17 @@ function LocationProbe(): ReactElement {
   return <output data-testid="location">{location.pathname}</output>;
 }
 
-function renderHome(api: SquadsApi): void {
-  render(
+function renderHome(api: SquadsApi, { strict = false } = {}): void {
+  const tree = (
     <AuthProvider manager={sessionManager()}>
       <MemoryRouter initialEntries={[HOME_ROUTE]}>
         <SquadsHome api={api} />
         <LocationProbe />
       </MemoryRouter>
-    </AuthProvider>,
+    </AuthProvider>
   );
+
+  render(strict ? <StrictMode>{tree}</StrictMode> : tree);
 }
 
 function summary(squadId: string, name: string): SquadSummary {
@@ -322,6 +326,35 @@ describe('SquadsHome — creating a squad', () => {
     expect(screen.queryByLabelText(SQUAD_NAME_LABEL)).toBeNull();
     // 3.6: one further list call is *not* issued — the squad was navigated to.
     expect(log.listCalls).toBe(1);
+  });
+
+  // StrictMode's development-only unmount-and-remount runs the screen's unmount
+  // cleanup once on a screen that stays mounted. The "screen was left" latch
+  // must re-open, or every submission in development is silently refused.
+  it('still submits under StrictMode', async () => {
+    const { api, log } = createFakeApi({
+      listOutcomes: [{ kind: 'success', value: [] }],
+      createOutcome: {
+        kind: 'success',
+        value: { squadId: 'new-squad', ownerMembershipId: 'owner-membership' },
+      },
+    });
+    const user = userEvent.setup();
+
+    renderHome(api, { strict: true });
+    await waitFor(() => {
+      expect(document.querySelector(SQUADS_EMPTY_STATE_SELECTOR)).not.toBeNull();
+    });
+
+    await user.click(entryPoint(CREATE_SQUAD_HEADING));
+    await user.type(screen.getByLabelText(SQUAD_NAME_LABEL), 'Sunday League');
+    await user.type(screen.getByLabelText(CREATOR_DISPLAY_NAME_LABEL), 'Dave');
+    await user.click(screen.getByRole('button', { name: CREATE_SQUAD_SUBMIT_LABEL }));
+
+    await waitFor(() => {
+      expect(renderedPath()).toBe(squadPath('new-squad'));
+    });
+    expect(log.createCommands).toEqual([{ name: 'Sunday League', displayName: 'Dave' }]);
   });
 });
 

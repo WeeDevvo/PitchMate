@@ -962,6 +962,10 @@ namespace PitchMate.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
                     b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("completed_at");
@@ -982,6 +986,10 @@ namespace PitchMate.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
@@ -998,9 +1006,15 @@ namespace PitchMate.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("state");
 
-                    b.Property<Guid>("TargetUserId")
+                    b.Property<Guid?>("TargetUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("target_user_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1021,6 +1035,10 @@ namespace PitchMate.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("MembershipId")
                         .HasDatabaseName("ix_guest_claim_membership_id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_guest_claim_token_hash");
 
                     b.ToTable("guest_claim", (string)null);
                 });

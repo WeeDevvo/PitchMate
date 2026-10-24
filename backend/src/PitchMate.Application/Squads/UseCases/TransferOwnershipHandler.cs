@@ -18,12 +18,12 @@ namespace PitchMate.Application.Squads.UseCases;
 /// (Requirement 6.3), while targeting the owner's own membership is rejected as already the owner
 /// (Requirement 6.4).
 /// <para>
-/// The swap steps the current owner down to <see cref="SquadRole.Admin"/> first and only then
-/// promotes the target to <see cref="SquadRole.Owner"/>, so that at no point in the staged change are
-/// there two owners, and both role changes are committed together in a single
-/// <see cref="IUnitOfWork.SaveChangesAsync"/> — if the commit fails neither change is persisted and
-/// both memberships retain their prior role, keeping the single-owner invariant intact throughout
-/// (Requirement 6.1, 6.2).
+/// The swap steps the current owner down to <see cref="SquadRole.Admin"/> and saves that before
+/// promoting the target to <see cref="SquadRole.Owner"/> and saving again, so the database's
+/// per-statement single-owner index never sees two owners whatever order the rows sort in. Both saves
+/// run in one <see cref="IUnitOfWork.ExecuteInTransactionAsync"/> transaction — if either fails
+/// neither change is persisted and both memberships retain their prior role, keeping the single-owner
+/// invariant intact throughout (Requirement 6.1, 6.2).
 /// </para>
 /// </summary>
 public sealed class TransferOwnershipHandler
@@ -111,22 +111,39 @@ public sealed class TransferOwnershipHandler
                 "The target is already the owner of this squad."));
         }
 
-        // Step the current owner down first so the staged change never holds two owners, then promote
-        // the target; both guards are already satisfied by the checks above (Requirement 6.1, 6.2).
-        Result stepDown = acting.StepDownToAdmin();
-        if (!stepDown.IsSuccess)
-        {
-            return stepDown;
-        }
+        // Step the current owner down and save it before promoting the target. The single-owner index
+        // is checked per statement and one save orders its UPDATEs by key, not by staging order, so a
+        // single save fails whenever the target's row sorts first. Both saves share one transaction, so
+        // a failure rolls back both and the squad never has zero or two owners (Requirement 6.1, 6.2).
+        Result outcome = Result.Ok();
+        await _unitOfWork.ExecuteInTransactionAsync(
+            async ct =>
+            {
+                outcome = acting.StepDownToAdmin();
+                if (!outcome.IsSuccess)
+                {
+                    return;
+                }
 
-        Result assign = target.AssignOwner();
-        if (!assign.IsSuccess)
-        {
-            return assign;
-        }
+                await _unitOfWork.SaveChangesAsync(ct);
 
-        // Commit both role changes atomically; a failure rolls back both (Requirement 6.2).
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                outcome = target.AssignOwner();
+                if (!outcome.IsSuccess)
+                {
+                    // The checks above make this unreachable; throwing rolls the saved demotion back
+                    // rather than committing a squad with no owner.
+                    throw new InvalidOperationException(
+                        "Assigning ownership failed after the target passed every eligibility check.");
+                }
+
+                await _unitOfWork.SaveChangesAsync(ct);
+            },
+            cancellationToken);
+
+        if (!outcome.IsSuccess)
+        {
+            return outcome;
+        }
 
         // Only after the transfer has committed do we raise the directed OwnershipTransferred notification
         // to the new and former owners. The publish runs on its own unit of work, so any failure is logged

@@ -23,11 +23,12 @@
  *    `apps/web/src/features/player-stats/`, every module and directory the
  *    design's layout names is present inside it, the one token table is there,
  *    and no module of the feature resolves an in-app import to a path outside
- *    that root other than the four edges Requirement 14.4 admits: the App_Shell
- *    barrel, the Squads_Feature barrel, the Auth_Feature barrel, and the shared
- *    `src/theme` module. So no part of the feature is assembled from a module
+ *    that root other than the five admitted edges: the four Requirement 14.4
+ *    names (the App_Shell barrel, the Squads_Feature barrel, the Auth_Feature
+ *    barrel, and the shared `src/theme` module) plus the shared `src/wire`
+ *    barrel. So no part of the feature is assembled from a module
  *    living elsewhere, and the dependency direction stays `app` → `player-stats`
- *    → (`app-shell`, `squads`, `auth`, `theme`) — nothing here reaches back into
+ *    → (`app-shell`, `squads`, `auth`, `theme`, `wire`) — nothing here reaches back into
  *    `src/app/`, and nothing reaches into another feature's internals.
  * 2. **One public barrel** (Requirement 14.1). `index.ts` exists at the feature
  *    root and nowhere else beneath it, re-exports feature modules only, declares
@@ -63,7 +64,7 @@
  * that passes because the code complies, so every rule below is stated as a
  * function over sources and run twice: once over the real feature, and once over
  * a synthetic module or barrel written here that violates it. The outward-import
- * rule gets a second kind of control — each of its four admitted edges is
+ * rule gets a second kind of control — each of its five admitted edges is
  * asserted to be *reached*, so an empty offender list means the boundary is
  * clean rather than that specifier resolution broke.
  *
@@ -102,6 +103,7 @@ import {
   stripCommentsAndStrings,
   targetsBarrelOf,
   themeRoot,
+  wireRoot,
 } from './structural/sourceScan';
 
 // --- The scanned sets --------------------------------------------------------
@@ -269,8 +271,8 @@ function emptyDirectories(
 }
 
 /**
- * True when a resolved target is one of the four outward edges Requirement 14.4
- * admits.
+ * True when a resolved target is one of the five admitted outward edges: the
+ * four Requirement 14.4 names, plus the shared wire barrel.
  *
  * Both features and the Auth_Feature are admitted **at their barrel only**, so a
  * deeper path into any of them is an offender: `screens/PlayerStatsScreen.tsx`
@@ -282,13 +284,16 @@ function emptyDirectories(
  * (Requirement 1.2). The shared Theme module is admitted throughout, because
  * Requirement 15.1 puts the one appearance store, bootstrap, and resolution
  * function there and forbids this feature from resolving a Theme of its own.
+ * The shared wire module is admitted at its barrel, which
+ * `lib/parse/primitives.ts` re-exports beside the feature's own duration reader.
  */
 function isAdmittedOutwardTarget(target: string): boolean {
   return (
     targetsBarrelOf(appShellRoot, target) ||
     targetsBarrelOf(squadsRoot, target) ||
     targetsBarrelOf(authRoot, target) ||
-    isWithin(themeRoot, target)
+    isWithin(themeRoot, target) ||
+    targetsBarrelOf(wireRoot, target)
   );
 }
 
@@ -383,7 +388,7 @@ describe('every module of the feature lives under features/player-stats/ (Requir
     expect(stylesheets).not.toContain('styles/playerStatsTokens.scss');
   });
 
-  it('resolves no import outside the root beyond the four admitted edges (Requirement 14.4)', () => {
+  it('resolves no import outside the root beyond the five admitted edges (Requirement 14.4)', () => {
     expect(outwardOffenders(scannedModules)).toEqual([]);
   });
 
@@ -419,7 +424,7 @@ describe('every module of the feature lives under features/player-stats/ (Requir
     ]);
   });
 
-  it('admits an import of each of the four edges', () => {
+  it('admits an import of each of the five edges', () => {
     // The other half of the control: the rule must *not* fire on the edges
     // Requirement 14.4 admits, or the clean result above would be an accident of
     // an over-broad predicate.
@@ -441,12 +446,16 @@ describe('every module of the feature lives under features/player-stats/ (Requir
           'screens/ControlModule.tsx',
           "import type { Theme } from '../../../theme';",
         ),
+        control(
+          'lib/parse/ControlModule.ts',
+          "import { readUuid } from '../../../../wire';",
+        ),
       ]),
     ).toEqual([]);
   });
 
-  it('reaches the App_Shell, the Squads_Feature, the Auth_Feature, and the shared theme module at all', () => {
-    // Non-vacuity of the allowance itself: all four edges are in fact used, so
+  it('reaches the App_Shell, the Squads_Feature, the Auth_Feature, and the shared theme and wire modules at all', () => {
+    // Non-vacuity of the allowance itself: all five edges are in fact used, so
     // the empty offender list above means the boundary is clean rather than that
     // specifier resolution broke or that an allowance is dead.
     const targets = featureModules.flatMap((file) =>
@@ -461,6 +470,7 @@ describe('every module of the feature lives under features/player-stats/ (Requir
     );
     expect(targets.some((target) => targetsBarrelOf(authRoot, target))).toBe(true);
     expect(targets.some((target) => isWithin(themeRoot, target))).toBe(true);
+    expect(targets.some((target) => targetsBarrelOf(wireRoot, target))).toBe(true);
   });
 
   it('imports nothing from the application wiring or another feature internal', () => {
@@ -577,16 +587,18 @@ describe('the feature exposes exactly one public barrel (Requirement 14.1)', () 
 // --- Invariant 3: the barrel's surface (Requirement 14.2) -------------------
 
 /**
- * The three modules the design admits into the barrel.
+ * The four modules the design admits into the barrel.
  *
- * The route table, the screen, and the transport seam — the registration a
- * consumer nests, the element of that table, and the facade `appRouter.tsx`
- * builds from the Authenticated_Api_Client and threads in.
+ * The route table, the screen, the transport seam, and the squad leaderboards —
+ * the registration a consumer nests, the element of that table, the facade
+ * `appRouter.tsx` builds from the Authenticated_Api_Client and threads in, and
+ * the stats section body it injects into the squad screen.
  */
 const ADMITTED_BARREL_MODULES: readonly string[] = [
   './api/playerStatsApi',
   './playerStatsRoutes',
   './screens/PlayerStatsScreen',
+  './screens/SquadLeaderboards',
 ];
 
 /**
@@ -635,7 +647,7 @@ function crossingNames(
 }
 
 describe('the barrel exports the registration, the screen, and the facade only (Requirement 14.2)', () => {
-  it('names exactly the three modules the design admits', () => {
+  it('names exactly the four modules the design admits', () => {
     expect([...new Set(barrelSpecifiers)].sort()).toEqual([
       ...ADMITTED_BARREL_MODULES,
     ]);
@@ -731,7 +743,7 @@ describe('the barrel exports the registration, the screen, and the facade only (
     );
   });
 
-  it('exports the route factory, the screen, the facade, and their types', () => {
+  it('exports the route factory, the screen, the facade, the leaderboards, and their types', () => {
     // The other half of 14.2: the barrel must carry what a consumer does need, or
     // "one entry point" would be satisfied by an empty file.
     expect([...barrelExportedNames].sort()).toEqual(
@@ -741,6 +753,8 @@ describe('the barrel exports the registration, the screen, and the facade only (
         'PlayerStatsRoutesOptions',
         'PlayerStatsScreen',
         'PlayerStatsScreenProps',
+        'SquadLeaderboards',
+        'SquadLeaderboardsProps',
         'createPlayerStatsApi',
         'createPlayerStatsShellRoutes',
       ].sort(),
@@ -1148,7 +1162,8 @@ describe('the feature declares neither route pattern (Requirements 1.2, 1.7)', (
     // *obtained*. The route table imports the pattern it registers, and the
     // surfaces that navigate import the two builders — so an empty finding list
     // above means the feature asks the barrel rather than that it navigates
-    // nowhere.
+    // nowhere. The leaderboards harness mounts its section at the squad route,
+    // which it also takes from the barrel.
     const fromBarrel = new Set(
       scannedModules.flatMap(({ file, source }) =>
         namedImportsFrom(source, file, squadsRoot),
@@ -1157,6 +1172,7 @@ describe('the feature declares neither route pattern (Requirements 1.2, 1.7)', (
 
     expect([...fromBarrel].sort()).toEqual([
       'PLAYER_STATS_ROUTE',
+      'SQUAD_ROUTE',
       'playerStatsPath',
       'squadPath',
     ]);

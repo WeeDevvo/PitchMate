@@ -172,6 +172,30 @@ export function isRatingState(candidate: unknown): candidate is RatingState {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Leaderboard_Statistic — `LeaderboardStatistic`                             */
+/* -------------------------------------------------------------------------- */
+
+/** The statistic a squad leaderboard ranks by, as the contract names it. */
+export type LeaderboardStatistic = components['schemas']['LeaderboardStatistic'];
+
+/** Every `LeaderboardStatistic` name, in the contract's declaration order. */
+export const LEADERBOARD_STATISTIC_NAMES = [
+  'Appearances',
+  'WinPercentage',
+  'DisplayRating',
+  'WinStreak',
+  'UnbeatenStreak',
+  'BibAppearances',
+] as const satisfies WireEnumNames<LeaderboardStatistic>;
+
+/** Whether a value is a `LeaderboardStatistic` name. Total, and free of exceptions. */
+export function isLeaderboardStatistic(
+  candidate: unknown,
+): candidate is LeaderboardStatistic {
+  return isWireEnumName(LEADERBOARD_STATISTIC_NAMES, candidate);
+}
+
+/* -------------------------------------------------------------------------- */
 /* The other half of the compile-time check                                   */
 /* -------------------------------------------------------------------------- */
 
@@ -199,5 +223,9 @@ export const WIRE_ENUM_COVERAGE = {
   RatingState: {} satisfies UncoveredNames<
     RatingState,
     typeof RATING_STATE_NAMES
+  >,
+  LeaderboardStatistic: {} satisfies UncoveredNames<
+    LeaderboardStatistic,
+    typeof LEADERBOARD_STATISTIC_NAMES
   >,
 } as const;

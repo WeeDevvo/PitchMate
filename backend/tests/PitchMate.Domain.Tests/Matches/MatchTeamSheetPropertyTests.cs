@@ -123,6 +123,54 @@ public class MatchTeamSheetPropertyTests
         });
 
     /// <summary>
+    /// Each sheet team carries the identity of the working team at the same position, and those are the
+    /// identities a result is scored against: once started, a result keyed by the sheet's team ids is
+    /// accepted, so a reader of the sheet can put each recorded score beside its team.
+    /// </summary>
+    [Property(MaxTest = 100)]
+    public Property TeamSheetTeamIdsAreTheIdsAResultIsScoredAgainst() =>
+        Prop.ForAll(Arb.From(ScenarioGen()), scenario =>
+        {
+            var squadId = Guid.NewGuid();
+            var match = ConfirmedMatch(squadId, scenario.Location, NowUtc.AddDays(scenario.DayOffsetDays));
+
+            var participantIds = new List<Guid>(scenario.SizeA + scenario.SizeB);
+            for (var i = 0; i < scenario.SizeA + scenario.SizeB; i++)
+            {
+                var membership = SquadMembership.CreateRegistered(squadId, Guid.NewGuid(), $"Player {i}").Value!;
+                if (!match.AddParticipant(membership).IsSuccess)
+                {
+                    return false;
+                }
+
+                participantIds.Add(membership.Id);
+            }
+
+            var proposal = new List<ProposedTeam>
+            {
+                new(scenario.NameA, scenario.BibOnA, participantIds.Take(scenario.SizeA).ToList()),
+                new(scenario.NameB, !scenario.BibOnA, participantIds.Skip(scenario.SizeA).ToList())
+            };
+
+            if (!match.ApplyTeamProposal(proposal).IsSuccess || !match.Lock().IsSuccess)
+            {
+                return false;
+            }
+
+            var sheet = match.ProduceTeamSheet(new Dictionary<Guid, string>()).Value!;
+            var sheetIds = sheet.Teams.Select(t => t.TeamId).ToList();
+
+            if (!sheetIds.SequenceEqual(match.Teams.Select(t => t.Id)) || sheetIds.Distinct().Count() != sheetIds.Count)
+            {
+                return false;
+            }
+
+            var scores = sheetIds.Select((id, index) => new TeamScore(id, index)).ToList();
+            return match.Start().IsSuccess
+                && match.RecordResult(new MatchResult(ResultFidelity.Basic, scores), liveTrackingEnabled: false).IsSuccess;
+        });
+
+    /// <summary>
     /// Creates a match drafted for <paramref name="squadId"/> at <paramref name="location"/> with the
     /// single candidate day <paramref name="day"/>, confirmed on that day with an empty participant
     /// pool, leaving it in <see cref="MatchState.Confirmed"/> with <paramref name="day"/> as its

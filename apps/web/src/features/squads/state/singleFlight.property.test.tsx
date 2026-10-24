@@ -3,7 +3,8 @@
  *
  * **Property 6: Every submitting control is single-flight.** *For any* sequence
  * of activations of a submitting control — create squad, redeem invite, generate
- * invite, revoke invite, create guest, edit guest, promote, set feature flag —
+ * invite, revoke invite, create guest, edit guest, promote, set feature flag,
+ * leave, remove, demote, transfer ownership —
  * occurring while a call from that control awaits a response, at most one call of
  * that operation is in flight at any instant, the control is rendered disabled
  * while the call is pending, and no second concurrent call for the same operation
@@ -16,7 +17,7 @@
  * | no second concurrent call for the same operation and target | the call count *and* the recorded targets, which must be the first activation's alone |
  * | the control is available again once the call settles | {@link SingleFlightDriver.expectAvailable}, so the guard is single-flight rather than one-shot |
  *
- * ### Nine subjects, one property
+ * ### Thirteen subjects, one property
  *
  * Requirement | Operation | Driven through
  * --- | --- | ---
@@ -26,6 +27,7 @@
  * 11.11 | `GenerateInvite`, `RevokeInvite` | `useInviteManager`
  * 12.13 | `CreateGuest`, `EditGuest` | `useGuestManager`
  * 13.6 | `PromoteToAdmin` | `usePromotion`
+ * — | `LeaveSquad`, `RemoveMember`, `DemoteToMember`, `TransferOwnership` | `useMembershipAction`, one instance per action
  * 14.4 | `SetFeatureFlag` | `useFeatureToggles`
  *
  * The split is not a matter of taste. Create-squad and redeem-invite single-flight
@@ -104,6 +106,15 @@ import {
   useInviteRedemption,
   type InviteRedemptionMachine,
 } from './useInviteRedemption';
+import {
+  DEMOTE_CALL,
+  LEAVE_CALL,
+  REMOVE_CALL,
+  TRANSFER_CALL,
+  useMembershipAction,
+  type MembershipActionCall,
+  type MembershipActionMachine,
+} from './useMembershipAction';
 import { usePromotion, type PromotionMachine } from './usePromotion';
 
 // --- The operations under test ----------------------------------------------
@@ -118,7 +129,11 @@ type OperationName =
   | 'create-guest'
   | 'edit-guest'
   | 'promote'
-  | 'set-feature-flag';
+  | 'set-feature-flag'
+  | 'leave'
+  | 'remove'
+  | 'demote'
+  | 'transfer-ownership';
 
 const OPERATIONS: readonly OperationName[] = [
   'create-squad',
@@ -130,6 +145,10 @@ const OPERATIONS: readonly OperationName[] = [
   'edit-guest',
   'promote',
   'set-feature-flag',
+  'leave',
+  'remove',
+  'demote',
+  'transfer-ownership',
 ];
 
 // --- Fixed identities and values --------------------------------------------
@@ -235,6 +254,8 @@ function unreached(method: string): () => never {
 /** Every method refused, so each subject opts in to exactly what it needs. */
 function refusingApi(): SquadsApi {
   return {
+    // The Squads_Home also reads the caller's pending-deletion squads; none here.
+    listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
     listMySquads: unreached('ListMySquads'),
     getSquad: unreached('GetSquad'),
     getDisplayRatingLeaderboard: unreached('GetSquadLeaderboard'),
@@ -249,6 +270,10 @@ function refusingApi(): SquadsApi {
     promoteToAdmin: unreached('PromoteToAdmin'),
     getFeatureFlags: unreached('GetFeatureFlags'),
     setFeatureFlag: unreached('SetFeatureFlag'),
+    demoteToMember: unreached('DemoteToMember'),
+    removeMember: unreached('RemoveMember'),
+    transferOwnership: unreached('TransferOwnership'),
+    leaveSquad: unreached('LeaveSquad'),
   };
 }
 
@@ -569,6 +594,69 @@ function PromotionHost({
   return <span data-testid="promotion" />;
 }
 
+function MembershipActionHost({
+  api,
+  perform,
+  capture,
+}: {
+  readonly api: SquadsApi;
+  readonly perform: MembershipActionCall;
+  readonly capture: (machine: MembershipActionMachine) => void;
+}): ReactElement {
+  const machine = useMembershipAction({
+    api,
+    squadId: SQUAD_ID,
+    perform,
+    onSucceeded: noRefresh,
+  });
+
+  useEffect(() => {
+    capture(machine);
+  }, [capture, machine]);
+
+  return <span data-testid="membership-action" />;
+}
+
+/**
+ * The membership actions: each guarded per target. Leaving targets the squad,
+ * the other three a membership, so every activation of a run names the same
+ * target.
+ */
+async function startMembershipAction(
+  scenario: Scenario,
+  perform: MembershipActionCall,
+  method: 'leaveSquad' | 'removeMember' | 'demoteToMember' | 'transferOwnership',
+  target: string,
+): Promise<SingleFlightDriver> {
+  const { record, recorder, settle } = createRecorder<void>(
+    outcomeFor(scenario.outcome, undefined),
+  );
+
+  // `leaveSquad` takes no target, so its second argument is the signal.
+  const api: SquadsApi = {
+    ...refusingApi(),
+    [method]:
+      method === 'leaveSquad'
+        ? () => record(null)
+        : (_squadId: string, targetId: string) => record(targetId),
+  };
+
+  const machine = await mountHost<MembershipActionMachine>((capture) => (
+    <MembershipActionHost api={api} perform={perform} capture={capture} />
+  ));
+
+  return hookDriver<MembershipActionMachine>({
+    machine,
+    recorder,
+    settle,
+    activate: (current) => {
+      current.run(target);
+    },
+    pending: (current) => current.isPending(target),
+    firstTarget: method === 'leaveSquad' ? null : target,
+  });
+}
+
 function FeatureTogglesHost({
   api,
   capture,
@@ -677,6 +765,8 @@ async function startSubject(scenario: Scenario): Promise<SingleFlightDriver> {
 
       const api: SquadsApi = {
         ...refusingApi(),
+        // The Squads_Home also reads the caller's pending-deletion squads; none here.
+        listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
         listMySquads: () => Promise.resolve(LISTED_SQUADS),
         createSquad: () => record(),
       };
@@ -703,6 +793,8 @@ async function startSubject(scenario: Scenario): Promise<SingleFlightDriver> {
 
       const api: SquadsApi = {
         ...refusingApi(),
+        // The Squads_Home also reads the caller's pending-deletion squads; none here.
+        listPendingDeletion: () => Promise.resolve({ kind: 'success', value: [] }),
         listMySquads: () => Promise.resolve(LISTED_SQUADS),
         redeemInvite: () => record(),
       };
@@ -941,6 +1033,23 @@ async function startSubject(scenario: Scenario): Promise<SingleFlightDriver> {
         firstTarget: null,
       });
     }
+
+    case 'leave':
+      return startMembershipAction(scenario, LEAVE_CALL, 'leaveSquad', SQUAD_ID);
+
+    case 'remove':
+      return startMembershipAction(scenario, REMOVE_CALL, 'removeMember', MEMBERSHIP_ID);
+
+    case 'demote':
+      return startMembershipAction(scenario, DEMOTE_CALL, 'demoteToMember', MEMBERSHIP_ID);
+
+    case 'transfer-ownership':
+      return startMembershipAction(
+        scenario,
+        TRANSFER_CALL,
+        'transferOwnership',
+        MEMBERSHIP_ID,
+      );
   }
 }
 
@@ -994,9 +1103,9 @@ describe('Property 6 — every submitting control is single-flight', () => {
           cleanup();
         }
       }),
-      // Well above the 100-iteration floor, and enough that each of the nine
+      // Well above the 100-iteration floor, and enough that each of the
       // operations is reached many times over rather than by luck of the draw.
-      { numRuns: 180 },
+      { numRuns: 260 },
     );
   }, 240_000);
 });

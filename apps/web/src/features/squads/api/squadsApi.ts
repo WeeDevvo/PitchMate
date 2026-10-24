@@ -76,6 +76,16 @@ import { parseCreatedGuest, type CreatedGuest } from '../lib/parse/createdGuest'
 import { parseCreatedSquad, type CreatedSquad } from '../lib/parse/createdSquad';
 import { parseFeatureFlags, type FeatureFlag } from '../lib/parse/featureFlags';
 import {
+  parseAcceptedGuestClaim,
+  parseGuestClaimPreview,
+  parseGuestClaimRows,
+  parseIssuedClaimLink,
+  type AcceptedGuestClaim,
+  type GuestClaimPreview,
+  type GuestClaimRow,
+  type IssuedClaimLink,
+} from '../lib/parse/guestClaim';
+import {
   parseGeneratedInvite,
   type GeneratedInvite,
 } from '../lib/parse/generatedInvite';
@@ -93,7 +103,14 @@ import {
 } from '../lib/parse/leaderboard';
 import { ok, type ParseResult } from '../lib/parse/primitives';
 import { parseRedemption, type Redemption } from '../lib/parse/redemption';
+import {
+  parsePendingDeletionSquadList,
+  parseSquadDeletion,
+  type PendingDeletionSquad,
+  type SquadDeletion,
+} from '../lib/parse/squadDeletion';
 import { parseSquadDetail, type SquadDetail } from '../lib/parse/squadDetail';
+import { parseSquadExport, type SquadExportFile } from '../lib/parse/squadExport';
 import {
   parseSquadSummaryList,
   type SquadSummary,
@@ -125,6 +142,9 @@ export type EditGuestRequest = Schemas['EditGuestRequest'];
 
 /** `PUT /squads/{squadId}/features` body: one feature and its desired state. */
 export type SetFeatureFlagRequest = Schemas['SetFeatureFlagRequest'];
+
+/** `POST /squads/{squadId}/ownership` body: the membership becoming owner. */
+export type TransferOwnershipRequest = Schemas['TransferOwnershipRequest'];
 
 /** The query of `GET /squads/{squadId}/leaderboard`, as the contract types it. */
 type LeaderboardQuery = NonNullable<
@@ -174,6 +194,36 @@ const GUEST_PATH = '/squads/{squadId}/guests/{membershipId}';
 
 /** `POST /squads/{squadId}/members/{membershipId}/promote`. */
 const PROMOTE_PATH = '/squads/{squadId}/members/{membershipId}/promote';
+
+/** `POST /squads/{squadId}/members/{membershipId}/demote`. */
+const DEMOTE_PATH = '/squads/{squadId}/members/{membershipId}/demote';
+
+/** `DELETE /squads/{squadId}/members/{membershipId}` — remove a membership. */
+const MEMBER_PATH = '/squads/{squadId}/members/{membershipId}';
+
+/** `POST /squads/{squadId}/ownership` — transfer ownership. */
+const OWNERSHIP_PATH = '/squads/{squadId}/ownership';
+
+/** `POST /squads/{squadId}/leave` — the caller leaves the squad. */
+const LEAVE_PATH = '/squads/{squadId}/leave';
+
+const RESTORE_PATH = '/squads/{squadId}/restore';
+
+const EXPORT_PATH = '/squads/{squadId}/export';
+
+const PENDING_DELETION_PATH = '/squads/pending-deletion';
+
+const GUEST_CLAIMS_PATH = '/squads/{squadId}/guest-claims';
+
+const ISSUE_CLAIM_LINK_PATH = '/squads/{squadId}/guests/{membershipId}/claims';
+
+const COMPLETE_CLAIM_PATH = '/squads/{squadId}/guests/{membershipId}/claims/complete';
+
+const REVERSE_CLAIM_PATH = '/squads/{squadId}/guests/{membershipId}/claims/reverse';
+
+const PREVIEW_CLAIM_PATH = '/squads/guest-claims/preview';
+
+const ACCEPT_CLAIM_PATH = '/squads/guest-claims/accept';
 
 // --- The facade's result type ------------------------------------------------
 
@@ -288,6 +338,99 @@ export interface SquadsApi {
     signal?: AbortSignal,
   ): Promise<CallResult<void>>;
 
+  /** `POST …/members/{membershipId}/demote` — demote an admin to member. */
+  demoteToMember(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** `DELETE …/members/{membershipId}` — remove a membership, keeping its history. */
+  removeMember(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** `POST /squads/{squadId}/ownership` — transfer ownership to another member. */
+  transferOwnership(
+    squadId: string,
+    targetMembershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** `POST /squads/{squadId}/leave` — the caller leaves, keeping their history. */
+  leaveSquad(squadId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /**
+   * `DELETE /squads/{squadId}` — the owner deletes the squad. It is hidden at
+   * once and purged when the default grace period ends; the result carries when.
+   */
+  deleteSquad(squadId: string, signal?: AbortSignal): Promise<CallResult<SquadDeletion>>;
+
+  /** `POST /squads/{squadId}/restore` — the owner undoes a deletion before the purge. */
+  restoreSquad(squadId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** `GET /squads/{squadId}/export` — the owner's copy of the squad's data. */
+  exportSquad(
+    squadId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<SquadExportFile>>;
+
+  /**
+   * `GET /squads/pending-deletion` — the squads the caller owns that are deleted
+   * and still restorable, soonest purge first. Empty for anyone else.
+   */
+  listPendingDeletion(
+    signal?: AbortSignal,
+  ): Promise<CallResult<readonly PendingDeletionSquad[]>>;
+
+  /**
+   * `POST …/guests/{membershipId}/claims` — an owner or admin issues a one-time
+   * claim link for a guest, cancelling any open one. The link is in this result
+   * and nowhere else.
+   */
+  issueClaimLink(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<IssuedClaimLink>>;
+
+  /** `GET /squads/{squadId}/guest-claims` — where each guest's claim stands (admins only). */
+  listGuestClaims(
+    squadId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<readonly GuestClaimRow[]>>;
+
+  /**
+   * `POST /squads/guest-claims/preview` — what a claim link is for, before a
+   * signed-in player accepts it. The secret goes in the body, never the URL.
+   */
+  previewGuestClaim(
+    secret: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<GuestClaimPreview>>;
+
+  /** `POST /squads/guest-claims/accept` — a signed-in player accepts a claim link. */
+  acceptGuestClaim(
+    secret: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<AcceptedGuestClaim>>;
+
+  /** `POST …/claims/complete` — an admin confirms an accepted claim. */
+  completeGuestClaim(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** `POST …/claims/reverse` — an admin undoes a completed claim. */
+  reverseGuestClaim(
+    squadId: string,
+    membershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
   /** `GET /squads/{squadId}/features` — the Feature_Flag set (Req 14.7). */
   getFeatureFlags(
     squadId: string,
@@ -320,7 +463,7 @@ export const SQUAD_CALL_TIMEOUT_MS = 10_000;
  * Create the Squads_Api over an injected Authenticated_Api_Client.
  *
  * @param dependencies the injected client (Requirements 16.1, 16.2)
- * @returns the fourteen-method facade, each method issuing exactly one request
+ * @returns the eighteen-method facade, each method issuing exactly one request
  *
  * Requirements: 16.1, 16.2, 16.3, 16.11, 17.4, 18.3
  */
@@ -476,6 +619,56 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
       );
     },
 
+    demoteToMember(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'DemoteToMember'> =>
+          apiClient.POST(DEMOTE_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    removeMember(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'RemoveMember'> =>
+          apiClient.DELETE(MEMBER_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    transferOwnership(squadId, targetMembershipId, signal) {
+      const body: TransferOwnershipRequest = { targetMembershipId };
+      return call(
+        (callSignal): ClientCall<'TransferOwnership'> =>
+          apiClient.POST(OWNERSHIP_PATH, {
+            params: { path: { squadId } },
+            body,
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    leaveSquad(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'LeaveSquad'> =>
+          apiClient.POST(LEAVE_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
     getFeatureFlags(squadId, signal) {
       return call(
         (callSignal): ClientCall<'GetFeatureFlags'> =>
@@ -500,6 +693,123 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
         signal,
       );
     },
+
+    deleteSquad(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'DeleteSquad'> =>
+          apiClient.DELETE(SQUAD_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        parseSquadDeletion,
+        signal,
+      );
+    },
+
+    restoreSquad(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'ReverseSquadDeletion'> =>
+          apiClient.POST(RESTORE_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    exportSquad(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'ExportSquad'> =>
+          apiClient.GET(EXPORT_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        parseSquadExport,
+        signal,
+      );
+    },
+
+    listPendingDeletion(signal) {
+      return call(
+        (callSignal): ClientCall<'ListMyPendingDeletionSquads'> =>
+          apiClient.GET(PENDING_DELETION_PATH, { signal: callSignal }),
+        parsePendingDeletionSquadList,
+        signal,
+      );
+    },
+
+    issueClaimLink(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'InitiateGuestClaim'> =>
+          apiClient.POST(ISSUE_CLAIM_LINK_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        parseIssuedClaimLink,
+        signal,
+      );
+    },
+
+    listGuestClaims(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'ListGuestClaims'> =>
+          apiClient.GET(GUEST_CLAIMS_PATH, {
+            params: { path: { squadId } },
+            signal: callSignal,
+          }),
+        parseGuestClaimRows,
+        signal,
+      );
+    },
+
+    previewGuestClaim(secret, signal) {
+      return call(
+        (callSignal): ClientCall<'PreviewGuestClaim'> =>
+          apiClient.POST(PREVIEW_CLAIM_PATH, {
+            body: { presentedSecret: secret },
+            signal: callSignal,
+          }),
+        parseGuestClaimPreview,
+        signal,
+      );
+    },
+
+    acceptGuestClaim(secret, signal) {
+      return call(
+        (callSignal): ClientCall<'AcceptGuestClaim'> =>
+          apiClient.POST(ACCEPT_CLAIM_PATH, {
+            body: { presentedSecret: secret },
+            signal: callSignal,
+          }),
+        parseAcceptedGuestClaim,
+        signal,
+      );
+    },
+
+    completeGuestClaim(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'CompleteGuestClaim'> =>
+          apiClient.POST(COMPLETE_CLAIM_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    reverseGuestClaim(squadId, membershipId, signal) {
+      return call(
+        (callSignal): ClientCall<'ReverseGuestClaim'> =>
+          apiClient.POST(REVERSE_CLAIM_PATH, {
+            params: { path: { squadId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
   };
 }
 
@@ -513,7 +823,7 @@ export function createSquadsApi({ apiClient }: SquadsApiDependencies): SquadsApi
  * the operation's evidence of success is its status, and the refreshed state
  * comes from a subsequent read. Routing these calls through the same
  * {@link call} helper as the valued ones is what keeps the timeout, the abort
- * chaining, and the classification identical for all fourteen.
+ * chaining, and the classification identical for all eighteen.
  */
 function acceptNoValue(): ParseResult<void> {
   return ok(undefined);

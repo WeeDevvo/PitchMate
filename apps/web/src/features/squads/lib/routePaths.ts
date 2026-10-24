@@ -73,6 +73,14 @@ export const PLAYER_STATS_ROUTE = '/app/squads/:squadId/players/:membershipId';
 export const INVITE_LANDING_ROUTE = '/join/:code';
 
 /**
+ * The Claim_Landing_Route: where a guest-claim link opens, outside the
+ * Route_Guard and the App_Shell frame for the same reason the Invite_Landing_Route
+ * is, so a signed-out player can be sent to log in and brought back with the
+ * secret still in the path.
+ */
+export const CLAIM_LANDING_ROUTE = '/claim/:code';
+
+/**
  * The path of the Squad_Screen for a squad identity.
  *
  * Total over every well-formed string and free of exceptions.
@@ -127,4 +135,16 @@ export function playerStatsPath(squadId: string, membershipId: string): string {
  */
 export function inviteLandingPath(secret: string): string {
   return `/join/${encodeURIComponent(secret)}`;
+}
+
+/**
+ * The Claim_Landing_Route path for a guest-claim secret, encoded the way
+ * {@link inviteLandingPath} encodes an invite's. The matching extraction is
+ * `extractClaimSecretFromPath` in `lib/inviteSecret.ts`.
+ *
+ * @param secret the claim-link secret to carry in the `code` segment
+ * @returns a path matching {@link CLAIM_LANDING_ROUTE}
+ */
+export function claimLandingPath(secret: string): string {
+  return `/claim/${encodeURIComponent(secret)}`;
 }

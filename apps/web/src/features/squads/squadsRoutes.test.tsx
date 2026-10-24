@@ -11,7 +11,7 @@
  *     `SQUAD_ROUTE` pattern `lib/routePaths.ts` owns — the derivation cannot drift
  *     from the pattern the path builders and the later player-stats registration
  *     use;
- *   - the public table carries exactly the top-level `INVITE_LANDING_ROUTE`, with
+ *   - the public table carries exactly the top-level `INVITE_LANDING_ROUTE` and `CLAIM_LANDING_ROUTE`, with
  *     no guard and no frame around it (Requirement 18.5);
  *   - neither table registers the Squads_Home (it is the shell's injected
  *     Home_Slot content, Requirement 18.6) nor the Player_Stats_Route (a seam a
@@ -33,7 +33,16 @@ import { describe, expect, it } from 'vitest';
 
 import { HOME_ROUTE } from '../app-shell';
 import type { SquadsApi } from './api/squadsApi';
-import { INVITE_LANDING_ROUTE, PLAYER_STATS_ROUTE, SQUAD_ROUTE } from './lib/routePaths';
+import {
+  CLAIM_LANDING_ROUTE,
+  INVITE_LANDING_ROUTE,
+  PLAYER_STATS_ROUTE,
+  SQUAD_ROUTE,
+} from './lib/routePaths';
+import {
+  ClaimLandingScreen,
+  type ClaimLandingScreenProps,
+} from './screens/ClaimLandingScreen';
 import {
   InviteLandingScreen,
   type InviteLandingScreenProps,
@@ -106,13 +115,27 @@ describe('createSquadsShellRoutes', () => {
 });
 
 describe('createSquadsPublicRoutes', () => {
-  it('registers exactly the top-level Invite_Landing_Route', () => {
+  it('registers exactly the top-level Invite_Landing_Route and Claim_Landing_Route', () => {
     const routes = createSquadsPublicRoutes({ api });
 
-    expect(routes).toHaveLength(1);
-    expect(routes[0].path).toBe(INVITE_LANDING_ROUTE);
-    expect(routes[0].path?.startsWith('/')).toBe(true);
-    expect(routes[0].children).toBeUndefined();
+    expect(routes.map((route) => route.path)).toEqual([
+      INVITE_LANDING_ROUTE,
+      CLAIM_LANDING_ROUTE,
+    ]);
+    for (const route of routes) {
+      expect(route.path?.startsWith('/')).toBe(true);
+      expect(route.children).toBeUndefined();
+    }
+  });
+
+  it('renders the Claim_Landing_Screen with the injected api', () => {
+    const [, route] = createSquadsPublicRoutes({ api });
+
+    expect(isValidElement(route.element)).toBe(true);
+    const element = route.element as ReactElement<ClaimLandingScreenProps>;
+
+    expect(element.type).toBe(ClaimLandingScreen);
+    expect(element.props.api).toBe(api);
   });
 
   it('renders the Invite_Landing_Screen with the injected api', () => {

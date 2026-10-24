@@ -31,5 +31,5 @@ public sealed class KickoffLineup
     /// <param name="teams">The validated, locked working teams to snapshot, in order.</param>
     /// <returns>A fresh immutable <see cref="KickoffLineup"/> mirroring the locked teams.</returns>
     internal static KickoffLineup Capture(IEnumerable<MatchTeam> teams) =>
-        new(teams.Select(team => new KickoffTeam(team.TeamName, team.BibFlag, team.Roster)));
+        new(teams.Select(team => new KickoffTeam(team.Id, team.TeamName, team.BibFlag, team.Roster)));
 }

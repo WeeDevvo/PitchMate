@@ -1,0 +1,50 @@
+/*
+ * Presentation for the Squads_Home's "Scheduled for deletion" list. Every value
+ * is read from a custom property in `styles/squadsTokens.css`; nothing here is
+ * conveyed by colour alone (the purge date is stated in words).
+ */
+
+.squads-pending-deletion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+}
+
+.squads-pending-deletion__heading {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--squads-font-size-section-heading);
+  font-weight: var(--squads-font-weight-heading);
+  line-height: var(--squads-line-height-heading);
+}
+
+.squads-pending-deletion__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.squads-pending-deletion__entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--squads-gap-tight);
+  padding: var(--squads-gap-tight);
+  border: var(--squads-border-width) solid var(--control-border);
+  border-radius: var(--squads-radius);
+  overflow-wrap: anywhere;
+}
+
+.squads-pending-deletion__name {
+  flex: 1 1 auto;
+  color: var(--text);
+  font-weight: var(--squads-font-weight-label);
+}
+
+.squads-pending-deletion__purge {
+  color: var(--muted-text);
+  font-size: var(--squads-font-size-meta);
+}

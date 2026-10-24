@@ -89,6 +89,7 @@ import {
   type Theme,
 } from '../../../theme';
 import type { CallResult, SquadsApi } from '../api/squadsApi';
+import type { PendingDeletionSquad } from '../lib/parse/squadDeletion';
 import { ADMIN_SECTION_SELECTOR } from '../components/AdminSection';
 import { CREATE_SQUAD_FORM_ID } from '../components/CreateSquadForm';
 import { FAILURE_NOTICE_SELECTOR } from '../components/FailureNotice';
@@ -106,6 +107,15 @@ import {
 import { JOIN_SQUAD_FORM_ID } from '../components/JoinSquadForm';
 import { LOADING_INDICATION_SELECTOR } from '../components/LoadingIndication';
 import { NOT_FOUND_TREATMENT_SELECTOR } from '../components/NotFoundTreatment';
+import { LEAVE_SQUAD_TRIGGER_SELECTOR } from '../components/LeaveSquadControl';
+import {
+  DEMOTE_TRIGGER_SELECTOR,
+  REMOVE_TRIGGER_SELECTOR,
+} from '../components/MembershipActionControl';
+import {
+  OWNERSHIP_TARGET_SELECTOR,
+  OWNERSHIP_TRANSFER_TRIGGER_SELECTOR,
+} from '../components/OwnershipTransfer';
 import { PLAYER_LIST_EMPTY_SELECTOR } from '../components/PlayerList';
 import {
   PLAYER_ROW_EDIT_GUEST_SELECTOR,
@@ -127,12 +137,16 @@ import type { SquadDetail, SquadMember } from '../lib/parse/squadDetail';
 import type { SquadSummary } from '../lib/parse/squadSummary';
 import {
   CREATE_SQUAD_HEADING,
+  DEMOTION_CONFIRM_HEADING,
   INVITE_LINK_INCOMPLETE,
   INVITE_SIGN_IN_REQUIRED_INSTRUCTION,
   INVITE_UNUSABLE,
   JOIN_SQUAD_HEADING,
+  LEAVE_CONFIRM_HEADING,
   PROMOTION_CONFIRM_HEADING,
+  REMOVAL_CONFIRM_HEADING,
   REVOKE_INVITE_HEADING,
+  TRANSFER_OWNERSHIP_CONFIRM_HEADING,
 } from '../lib/messages';
 import {
   INVITE_LANDING_ROUTE,
@@ -228,6 +242,9 @@ export const INACTIVE_MEMBERSHIP_ID = '44444444-5555-4666-8777-888888888888';
 
 /** A membership whose display name is the Anonymised_Placeholder. */
 export const FORMER_MEMBERSHIP_ID = '55555555-6666-4777-8888-999999999999';
+
+/** An admin, added to the member list only for the demotion state. */
+export const ADMIN_MEMBERSHIP_ID = '66666666-7777-4888-8999-aaaaaaaaaaaa';
 
 /** The active invite the revoke confirmation is opened from. */
 export const ACTIVE_INVITE_ID = '66666666-7777-4888-8999-aaaaaaaaaaaa';
@@ -434,6 +451,14 @@ export interface StubApiOptions {
     | Promise<CallResult<readonly InviteSummary[]>>;
   readonly preview?: CallResult<InvitePreview> | Promise<CallResult<InvitePreview>>;
   readonly redemption?: CallResult<Redemption> | Promise<CallResult<Redemption>>;
+  /**
+   * What the Squads_Home's pending-deletion read answers. Unlike the reads
+   * above it defaults to an empty list, because the home screen always issues it
+   * and an owner with nothing pending is the ordinary case.
+   */
+  readonly pendingDeletion?:
+    | CallResult<readonly PendingDeletionSquad[]>
+    | Promise<CallResult<readonly PendingDeletionSquad[]>>;
 }
 
 /**
@@ -473,7 +498,24 @@ export function createStubApi(options: StubApiOptions = {}): SquadsApi {
     createGuest: () => pendingCall<never>(),
     editGuest: () => pendingCall<void>(),
     promoteToAdmin: () => pendingCall<void>(),
+    demoteToMember: () => pendingCall<void>(),
+    removeMember: () => pendingCall<void>(),
+    transferOwnership: () => pendingCall<void>(),
+    leaveSquad: () => pendingCall<void>(),
     setFeatureFlag: () => pendingCall<void>(),
+    listPendingDeletion: () =>
+      Promise.resolve(options.pendingDeletion ?? { kind: 'success', value: [] }),
+    deleteSquad: () => pendingCall<never>(),
+    restoreSquad: () => pendingCall<void>(),
+    exportSquad: () => pendingCall<never>(),
+    // The admin claim list is read by every admin view; with nothing supplied it
+    // reports no claim activity, the ordinary case.
+    listGuestClaims: () => Promise.resolve({ kind: 'success', value: [] }),
+    issueClaimLink: () => pendingCall<never>(),
+    completeGuestClaim: () => pendingCall<void>(),
+    reverseGuestClaim: () => pendingCall<void>(),
+    previewGuestClaim: () => pendingCall<never>(),
+    acceptGuestClaim: () => pendingCall<never>(),
   } as SquadsApi;
 }
 
@@ -709,6 +751,9 @@ export interface SquadScreenStateOverrides {
 
   /** The stats Placeholder_Section's injected body (Requirement 15.3). */
   readonly statsContent?: ReactNode;
+
+  /** The squad's members, in place of {@link PLAYER_LIST_MEMBERS}. */
+  readonly members?: readonly SquadMember[];
 }
 
 /**
@@ -744,7 +789,12 @@ export async function renderSquadScreenState(
       ? pendingCall<SquadDetail>()
       : state === 'failed'
         ? { kind: 'transport-failure' }
-        : { kind: 'success', value: squadDetail() };
+        : {
+            kind: 'success',
+            value: squadDetail(
+              overrides.members === undefined ? {} : { members: overrides.members },
+            ),
+          };
 
   const leaderboard: StubApiOptions['leaderboard'] =
     state === 'loading'
@@ -885,6 +935,55 @@ export async function openPromotionConfirmation(
     CONFIRM_DIALOG_SELECTOR,
     PROMOTION_CONFIRM_HEADING,
     'promotion confirmation',
+  );
+}
+
+/** Open the leave confirmation from the Squad_Detail region. */
+export async function openLeaveConfirmation(rendered: RenderedScreen): Promise<void> {
+  await activate(rendered, LEAVE_SQUAD_TRIGGER_SELECTOR, 'leave');
+  requireSurfaceHeaded(CONFIRM_DIALOG_SELECTOR, LEAVE_CONFIRM_HEADING, 'leave confirmation');
+}
+
+/** Open the removal confirmation from the first removable row. */
+export async function openRemovalConfirmation(
+  rendered: RenderedScreen,
+): Promise<void> {
+  await activate(rendered, REMOVE_TRIGGER_SELECTOR, 'removal');
+  requireSurfaceHeaded(
+    CONFIRM_DIALOG_SELECTOR,
+    REMOVAL_CONFIRM_HEADING,
+    'removal confirmation',
+  );
+}
+
+/** Open the demotion confirmation from the first admin's row. */
+export async function openDemotionConfirmation(
+  rendered: RenderedScreen,
+): Promise<void> {
+  await activate(rendered, DEMOTE_TRIGGER_SELECTOR, 'demotion');
+  requireSurfaceHeaded(
+    CONFIRM_DIALOG_SELECTOR,
+    DEMOTION_CONFIRM_HEADING,
+    'demotion confirmation',
+  );
+}
+
+/** Choose a new owner and open the transfer confirmation. */
+export async function openOwnershipConfirmation(
+  rendered: RenderedScreen,
+): Promise<void> {
+  const select = rendered.container.querySelector(OWNERSHIP_TARGET_SELECTOR);
+
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`no ownership select was rendered (${OWNERSHIP_TARGET_SELECTOR})`);
+  }
+
+  await rendered.user.selectOptions(select, RATED_MEMBERSHIP_ID);
+  await activate(rendered, OWNERSHIP_TRANSFER_TRIGGER_SELECTOR, 'ownership transfer');
+  requireSurfaceHeaded(
+    CONFIRM_DIALOG_SELECTOR,
+    TRANSFER_OWNERSHIP_CONFIRM_HEADING,
+    'ownership confirmation',
   );
 }
 
@@ -1105,6 +1204,47 @@ export const SCREEN_STATE_CASES: readonly ScreenStateCase[] = [
     render: async (theme) => {
       const rendered = await renderSquadScreenState('admin', theme);
       await openPromotionConfirmation(rendered);
+      return rendered;
+    },
+  },
+  {
+    name: 'the leave confirmation open',
+    render: async (theme) => {
+      const rendered = await renderSquadScreenState('players', theme);
+      await openLeaveConfirmation(rendered);
+      return rendered;
+    },
+  },
+  {
+    name: 'the removal confirmation open',
+    render: async (theme) => {
+      const rendered = await renderSquadScreenState('admin', theme);
+      await openRemovalConfirmation(rendered);
+      return rendered;
+    },
+  },
+  {
+    name: 'the demotion confirmation open',
+    render: async (theme) => {
+      const rendered = await renderSquadScreenState('admin', theme, {
+        members: [
+          ...PLAYER_LIST_MEMBERS,
+          squadMember({
+            membershipId: ADMIN_MEMBERSHIP_ID,
+            displayName: 'Lin',
+            role: 'Admin',
+          }),
+        ],
+      });
+      await openDemotionConfirmation(rendered);
+      return rendered;
+    },
+  },
+  {
+    name: 'the ownership transfer confirmation open',
+    render: async (theme) => {
+      const rendered = await renderSquadScreenState('admin', theme);
+      await openOwnershipConfirmation(rendered);
       return rendered;
     },
   },

@@ -360,9 +360,8 @@ export const FORMER_PLAYER_LABEL = 'Former player, details removed';
  * `RatingBadge` builds its own — no message here takes an interpolation
  * parameter, so a name is composed at the call site rather than folded into copy.
  *
- * Promotion is the only membership-changing action in the feature: no control
- * demotes an admin, transfers a squad, or removes a membership
- * (Requirement 13.8), so there is no sibling label here.
+ * Its siblings — demote, remove, transfer ownership and leave — follow
+ * {@link PROMOTION_SUCCEEDED}.
  */
 export const PROMOTE_TO_ADMIN_LABEL = 'Make admin';
 
@@ -384,8 +383,7 @@ export const PROMOTION_CONFIRM_HEADING = 'Make this player an admin?';
  * promotion itself — so the person confirming knows what they are handing over.
  * It names nobody: the player being promoted is rendered beside it.
  *
- * Promotion is the only membership-changing action in the feature, so the
- * statement promises no way back through the interface (Requirement 13.8).
+ * The way back is the demote control, which an owner or admin can use later.
  */
 export const PROMOTION_CONFIRM_STATEMENT =
   'An admin can manage invites, add and edit guests, change the optional features, and make other members admins.';
@@ -403,6 +401,108 @@ export const PROMOTION_CONFIRM_STATEMENT =
  * other message here: there is no parameter to name one through.
  */
 export const PROMOTION_SUCCEEDED = 'That player is now an admin.';
+
+// --- Membership actions: demote, remove, transfer ownership, leave -----------
+//
+// Each action reads as the promotion does: a visible label, a confirmation
+// heading and statement (the player is rendered beside it, because no message
+// takes a parameter), a success message, and a conflict message for a refusal
+// the squad's own rules explain. Every other failure reads
+// {@link GENERIC_SQUADS_FAILURE}.
+
+/** The visible label of the demote control on an admin's Player_Row. */
+export const DEMOTE_TO_MEMBER_LABEL = 'Remove admin';
+
+/** The heading of the demote confirmation. */
+export const DEMOTION_CONFIRM_HEADING = 'Make this admin a regular member?';
+
+/** The demote confirmation's statement of what changes. */
+export const DEMOTION_CONFIRM_STATEMENT =
+  'They stay in the squad with the same rating and history, but can no longer manage invites, guests or features.';
+
+/** Announced when a demotion succeeds. */
+export const DEMOTION_SUCCEEDED = 'That player is no longer an admin.';
+
+/** Announced when the backend refuses a demotion under the squad's rules. */
+export const DEMOTION_CONFLICT =
+  'That player can no longer be demoted. Refresh to see the latest roles.';
+
+/** The visible label of the remove control on a Player_Row. */
+export const REMOVE_MEMBER_LABEL = 'Remove from squad';
+
+/** The heading of the removal confirmation. */
+export const REMOVAL_CONFIRM_HEADING = 'Remove this player from the squad?';
+
+/**
+ * The removal confirmation's statement. Product rule: removal makes the
+ * membership inactive, keeping its rating, stats and history, and re-joining by
+ * invite reactivates it.
+ */
+export const REMOVAL_CONFIRM_STATEMENT =
+  'They drop out of match selection. Their rating, stats and match history are kept, and come back if they re-join with an invite.';
+
+/** Announced when a removal succeeds. */
+export const REMOVAL_SUCCEEDED = 'That player has been removed from the squad.';
+
+/** Announced when the backend refuses a removal under the squad's rules. */
+export const REMOVAL_CONFLICT =
+  'That player cannot be removed. The owner has to transfer ownership first.';
+
+/** The heading of the Admin_Section subsection holding the ownership transfer. */
+export const OWNERSHIP_SECTION_HEADING = 'Ownership';
+
+/** The label of the select naming who becomes the owner. */
+export const TRANSFER_OWNERSHIP_TARGET_LABEL = 'New owner';
+
+/** The select's first, empty option. */
+export const TRANSFER_OWNERSHIP_PLACEHOLDER = 'Choose a member';
+
+/** Shown in place of the select when no member can take ownership. */
+export const TRANSFER_OWNERSHIP_NO_CANDIDATES =
+  'Nobody else can take ownership yet. Only active members with an account can become the owner.';
+
+/** The visible label of the transfer control, and of its confirm action. */
+export const TRANSFER_OWNERSHIP_LABEL = 'Transfer ownership';
+
+/** The heading of the transfer confirmation. */
+export const TRANSFER_OWNERSHIP_CONFIRM_HEADING = 'Make this player the owner?';
+
+/** The transfer confirmation's statement: what the current owner becomes. */
+export const TRANSFER_OWNERSHIP_CONFIRM_STATEMENT =
+  'There is only ever one owner. You will become an admin, and only the new owner can transfer ownership back.';
+
+/** Announced when a transfer succeeds. */
+export const TRANSFER_OWNERSHIP_SUCCEEDED =
+  'Ownership has been transferred. You are now an admin.';
+
+/** Announced when the backend refuses a transfer under the squad's rules. */
+export const TRANSFER_OWNERSHIP_CONFLICT =
+  'Ownership could not be transferred to that player. Refresh and choose again.';
+
+/** The visible label of the leave control in the Squad_Detail region. */
+export const LEAVE_SQUAD_LABEL = 'Leave squad';
+
+/** The heading of the leave confirmation. */
+export const LEAVE_CONFIRM_HEADING = 'Leave this squad?';
+
+/**
+ * The leave confirmation's statement. Product rule: leaving makes the
+ * membership inactive and keeps its rating, stats and history; re-joining by
+ * invite restores them.
+ */
+export const LEAVE_CONFIRM_STATEMENT =
+  'You will drop out of match selection and lose access to the squad. Your rating, stats and match history are kept, and come back if you re-join with an invite.';
+
+/**
+ * Shown to the owner in place of the leave control. Product rule: the owner
+ * must transfer ownership before leaving.
+ */
+export const OWNER_MUST_TRANSFER_BEFORE_LEAVING =
+  'You own this squad. Transfer ownership to another member before you leave.';
+
+/** Announced when the backend refuses a leave under the squad's rules. */
+export const LEAVE_CONFLICT =
+  'You cannot leave yet. Transfer ownership to another member first.';
 
 /**
  * The visible label of the guest edit control on an editable guest Player_Row
@@ -1103,3 +1203,171 @@ export const INVITE_REDEEM_RETRY_LABEL = 'Try again';
  * to (which is also why a successful redemption *replaces* the history entry).
  */
 export const SQUADS_HOME_CONTROL_LABEL = 'Go to your squads';
+
+// --- Squad deletion ----------------------------------------------------------
+
+/** The heading of the owner's deletion area in Administration. */
+export const DELETE_SECTION_HEADING = 'Delete squad';
+
+/**
+ * What deleting does, stated before the owner starts. The grace period is the
+ * backend's default, which this client never overrides.
+ */
+export const DELETE_SECTION_STATEMENT =
+  'Deleting hides the squad from everyone straight away. You can restore it from your squads page for 30 days. After that it is removed for good, with its matches and stats.';
+
+/** The control that downloads the owner's copy of the squad's data. */
+export const EXPORT_SQUAD_LABEL = 'Download an export';
+
+/** Why the export is offered first. */
+export const EXPORT_SQUAD_STATEMENT =
+  'Save a copy of the players, invites and settings before you delete.';
+
+/** Announced once the export has been handed to the browser to save. */
+export const EXPORT_SQUAD_SUCCEEDED = 'Export downloaded.';
+
+/** The control that opens the deletion confirmation, and confirms it. */
+export const DELETE_SQUAD_LABEL = 'Delete squad';
+
+/** The heading of the deletion confirmation. */
+export const DELETE_CONFIRM_HEADING = 'Delete this squad?';
+
+/** The label of the field the owner types the squad's name into. */
+export const DELETE_CONFIRM_NAME_LABEL = 'Type the squad name to confirm';
+
+/** Shown under the field while what is typed does not match the name. */
+export const DELETE_CONFIRM_NAME_HINT =
+  'The delete button works once the name matches exactly.';
+
+/** The heading of the owner's list of deleted squads on the Squads_Home. */
+export const PENDING_DELETION_HEADING = 'Scheduled for deletion';
+
+/** The words before a deleted squad's purge date. */
+export const PENDING_DELETION_PURGE_LABEL = 'Removed for good on';
+
+/** The control that undoes a deletion. */
+export const RESTORE_SQUAD_LABEL = 'Restore';
+
+/** Announced when a restore succeeds. */
+export const RESTORE_SQUAD_SUCCEEDED = 'Squad restored.';
+
+// --- Guest claims by claim link ----------------------------------------------
+
+/** The heading of the admins' claim list, inside the Guests subsection. */
+export const CLAIMS_HEADING = 'Link a guest to a player';
+
+/** What linking a guest does, stated above the list. */
+export const CLAIMS_STATEMENT =
+  "Send a guest's link to the player. Once they open it signed in and accept, you complete the claim here and the guest's rating, stats and history become theirs.";
+
+/** Shown in place of the list when the squad has no guests to link. */
+export const CLAIMS_NO_GUESTS = 'There are no guests to link yet.';
+
+/** The control that issues a guest's first claim link. */
+export const CREATE_CLAIM_LINK_LABEL = 'Create claim link';
+
+/** The control that replaces a guest's link with a new one, cancelling the old one. */
+export const NEW_CLAIM_LINK_LABEL = 'Create new link';
+
+/** The words before a live link's expiry. */
+export const CLAIM_LINK_SENT_LABEL = 'Link sent, expires';
+
+/** A link that expired before anyone accepted it. */
+export const CLAIM_LINK_EXPIRED = 'Link expired before anyone accepted it.';
+
+/** The words before the account name of the player who accepted. */
+export const CLAIM_ACCEPTED_BY_LABEL = 'Accepted by';
+
+/** A guest whose claim is complete. */
+export const CLAIM_CLAIMED = 'Linked to a player.';
+
+/** The control that completes an accepted claim, and confirms it. */
+export const COMPLETE_CLAIM_LABEL = 'Complete claim';
+
+/** The heading of the completion confirmation. */
+export const COMPLETE_CLAIM_CONFIRM_HEADING = 'Complete this claim?';
+
+/** What completing does, stated in the confirmation. */
+export const COMPLETE_CLAIM_CONFIRM_STATEMENT =
+  "This guest's rating, stats and match history become the player's. You can undo it later.";
+
+/** Announced once a claim completes. */
+export const COMPLETE_CLAIM_SUCCEEDED = 'Claim completed.';
+
+/** The control that undoes a completed claim, and confirms it. */
+export const UNDO_CLAIM_LABEL = 'Undo claim';
+
+/** The heading of the undo confirmation. */
+export const UNDO_CLAIM_CONFIRM_HEADING = 'Undo this claim?';
+
+/** What undoing does, stated in the confirmation. */
+export const UNDO_CLAIM_CONFIRM_STATEMENT =
+  'The player goes back to being a guest. The rating, stats and match history stay with the guest.';
+
+/** Announced once a claim is undone. */
+export const UNDO_CLAIM_SUCCEEDED = 'Claim undone.';
+
+/** The heading of the one-time claim link reveal. */
+export const CLAIM_REVEAL_HEADING = 'Claim link';
+
+/** The statement that the claim link is shown once and works once. */
+export const CLAIM_SHOWN_ONCE =
+  'This link is shown once and works once. Copy it now and send it to the player.';
+
+/** The label of the revealed link. */
+export const CLAIM_LINK_LABEL = 'Link';
+
+/** The words before the revealed link's expiry. */
+export const CLAIM_LINK_EXPIRES_LABEL = 'Expires';
+
+/** The control that copies the revealed claim link. */
+export const COPY_CLAIM_LINK_LABEL = 'Copy link';
+
+/** Announced once the claim link is on the clipboard. */
+export const CLAIM_LINK_COPIED = 'Link copied.';
+
+/** The heading of the Claim_Landing_Route. */
+export const CLAIM_LANDING_HEADING = 'Link your account to a guest';
+
+/** What a signed-out visitor is asked to do. */
+export const CLAIM_SIGN_IN_INSTRUCTION = 'Log in or sign up to accept this link.';
+
+/** The log-in control on the Claim_Landing_Route. */
+export const CLAIM_LOG_IN_LABEL = 'Log in';
+
+/** The sign-up control on the Claim_Landing_Route. */
+export const CLAIM_SIGN_UP_LABEL = 'Sign up';
+
+/** The busy statement while the link is being read. */
+export const CLAIM_PREVIEWING_LABEL = 'Checking this link';
+
+/** The label of the guest a link is for. */
+export const CLAIM_PREVIEW_GUEST_LABEL = 'Guest';
+
+/** The label of the squad a link is for. */
+export const CLAIM_PREVIEW_SQUAD_LABEL = 'Squad';
+
+/** What accepting does, stated beside the preview. */
+export const CLAIM_PREVIEW_EXPLANATION =
+  "Accepting links this guest's rating, stats and match history to your account once an admin confirms it.";
+
+/** The control that accepts the link. */
+export const ACCEPT_CLAIM_LABEL = 'Accept';
+
+/** The busy statement while accepting. */
+export const CLAIM_ACCEPTING_LABEL = 'Accepting';
+
+/** Shown once the link is accepted. */
+export const CLAIM_ACCEPTED_STATEMENT =
+  'Accepted. Once an admin confirms it, the guest and their history are yours.';
+
+/**
+ * Shown for a link that can't be accepted, whatever the reason: unknown, expired,
+ * replaced, already used, or the player already belongs to the squad.
+ */
+export const CLAIM_UNUSABLE =
+  "This link can't be used. It may have expired or been replaced, or you may already be in this squad. Ask an admin for a new link.";
+
+/** Shown for a link whose secret can't be read from the address. */
+export const CLAIM_LINK_INCOMPLETE =
+  'This claim link is incomplete. Ask an admin for the full link.';

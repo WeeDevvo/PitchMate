@@ -348,6 +348,10 @@ export function createStubApi(
 
       return Promise.resolve(outcome);
     },
+    // The profile screen reads no leaderboard, so this one never settles.
+    getLeaderboard() {
+      return new Promise(() => undefined);
+    },
   };
 }
 

@@ -44,9 +44,8 @@ import type { SquadMember } from './parse/squadDetail';
  * - **Self-exclusion is by membership identity, exactly compared.** Including the
  *   unidentified caller (Requirement 6.10), who is refused by the authority
  *   conjunct rather than by matching nobody.
- * - **The predicate is pure and total**, and its module offers nothing else — no
- *   demote, transfer, or remove predicate to render a control from
- *   (Requirement 13.8).
+ * - **The predicate is pure and total**, and its module offers nothing else. The
+ *   other membership actions have their own module, `./membershipActions`.
  *
  * What is deliberately **not** claimed here: that a Player_Row renders the control
  * exactly while this returns `true` (Property 26, at the rendering site), that the
@@ -709,14 +708,12 @@ describe('isPromotable — the predicate is pure and total', () => {
 // Feature: web-squads-screens, Property 27: Promotion eligibility is exact and
 // never offers the deferred actions
 // Validates: Requirements 13.8
-describe('promotionEligibility — promotion is the only membership-changing predicate', () => {
+describe('promotionEligibility — this module holds the promotion predicate alone', () => {
   it('exports exactly the promotion predicate, and nothing that demotes, transfers, or removes', () => {
     const exported = Object.keys(promotionEligibilityModule).sort();
 
-    // 13.8: demotion, ownership transfer, and removal are out of scope. A control
-    // for one of them would need an eligibility rule, and this is the module such a
-    // rule would live in — so its surface is pinned to promotion alone. The
-    // rendering half of the criterion is held by the structural source scan.
+    // The other membership actions live in `./membershipActions`, so this
+    // module's surface stays pinned to promotion alone.
     expect(exported).toEqual(['isPromotable']);
 
     for (const name of exported) {

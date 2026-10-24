@@ -324,6 +324,7 @@ const API_METHODS: readonly (keyof SquadsApi)[] = [
   'redeemInvite',
   'previewInvite',
   'listInvites',
+  'listGuestClaims',
   'generateInvite',
   'revokeInvite',
   'createGuest',
@@ -376,6 +377,10 @@ function createRecordingApi(testCase: ScreenCase): {
     },
     listInvites: (squadId) => {
       record('listInvites', squadId);
+      return Promise.resolve({ kind: 'success', value: [] });
+    },
+    listGuestClaims: (squadId) => {
+      record('listGuestClaims', squadId);
       return Promise.resolve({ kind: 'success', value: [] });
     },
     createSquad: () => refused('createSquad', null),
@@ -529,7 +534,7 @@ function expectIssuedCalls(
     'getDisplayRatingLeaderboard',
     'getSquad',
     'listMySquads',
-    ...(adminAuthority ? ['listInvites'] : []),
+    ...(adminAuthority ? ['listInvites', 'listGuestClaims'] : []),
   ].sort();
 
   expect(calls.map((call) => call.method).sort()).toEqual(expected);
@@ -546,6 +551,9 @@ function expectIssuedCalls(
   // it is mounted, which is exactly while Admin_Authority holds.
   expect(countOf(calls, 'listInvites')).toBe(adminAuthority ? 1 : 0);
 
+  // The admins' claim list is read by the same section, so on the same terms.
+  expect(countOf(calls, 'listGuestClaims')).toBe(adminAuthority ? 1 : 0);
+
   // 14.2: the Squad_Detail carries `features`, so no feature-flag read is owed.
   expect(countOf(calls, 'getFeatureFlags')).toBe(0);
 
@@ -556,7 +564,8 @@ function expectIssuedCalls(
       method === 'getSquad' ||
       method === 'getDisplayRatingLeaderboard' ||
       method === 'listMySquads' ||
-      method === 'listInvites'
+      method === 'listInvites' ||
+      method === 'listGuestClaims'
     ) {
       continue;
     }

@@ -70,6 +70,7 @@ public sealed class TeamSheet
         // Every rostered identity is carried, anonymised ones included; an identity with no resolved
         // name reports the placeholder, never an empty name (match-read-models Requirement 10.7).
         var teams = lineup.Teams.Select(team => new TeamSheetTeam(
+            team.TeamId,
             team.TeamName,
             team.BibFlag,
             team.ParticipantMembershipIds.Select(membershipId => new RosterEntry(

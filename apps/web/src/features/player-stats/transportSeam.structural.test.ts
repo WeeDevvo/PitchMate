@@ -1012,6 +1012,11 @@ describe('no hand-written type duplicates a generated shape (Requirement 12.6)',
     expect(withStrings).toContain("operations[TOperation]['responses']");
     expect(withStrings).toContain("'application/json': infer TBody");
     expect(withStrings).toMatch(/:\s*ClientCall<'GetPlayerProfile'>\s*=>/);
-    expect(code).toMatch(/\bparsePlayerProfile\s*\(\s*settlement\.body\s*\)/);
+    expect(withStrings).toMatch(/:\s*ClientCall<'GetSquadLeaderboard'>\s*=>/);
+    // Each operation hands its own parser to the one call path, which applies
+    // it to the body exactly as the client typed it.
+    expect(code).toMatch(/\bparsePlayerProfile,/);
+    expect(code).toMatch(/\bparseLeaderboard\s*\(\s*body\s*,\s*statistic\s*\)/);
+    expect(code).toMatch(/\bparse\s*\(\s*settlement\.body\s*\)/);
   });
 });

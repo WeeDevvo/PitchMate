@@ -38,6 +38,7 @@ import { validateHeadingOutline } from '../lib/headingOutline';
 import {
   ADD_GUEST_HEADING,
   ADMIN_SECTION_HEADING,
+  CLAIMS_HEADING,
   FEATURES_SECTION_HEADING,
   GUESTS_SECTION_HEADING,
   INVITES_SECTION_HEADING,
@@ -91,6 +92,7 @@ interface ApiDouble {
   /** Every admin method, so a call to any of them can be counted. */
   readonly calls: readonly ReturnType<typeof vi.fn>[];
   readonly listInvites: ReturnType<typeof vi.fn>;
+  readonly listGuestClaims: ReturnType<typeof vi.fn>;
 }
 
 /**
@@ -100,6 +102,10 @@ interface ApiDouble {
  */
 function apiDouble(): ApiDouble {
   const listInvites = vi.fn(async () => ({
+    kind: 'success' as const,
+    value: [] as const,
+  }));
+  const listGuestClaims = vi.fn(async () => ({
     kind: 'success' as const,
     value: [] as const,
   }));
@@ -114,6 +120,7 @@ function apiDouble(): ApiDouble {
   return {
     api: {
       listInvites,
+      listGuestClaims,
       generateInvite,
       revokeInvite,
       createGuest,
@@ -124,6 +131,7 @@ function apiDouble(): ApiDouble {
     } as unknown as SquadsApi,
     calls: [
       listInvites,
+      listGuestClaims,
       generateInvite,
       revokeInvite,
       createGuest,
@@ -133,6 +141,7 @@ function apiDouble(): ApiDouble {
       getFeatureFlags,
     ],
     listInvites,
+    listGuestClaims,
   };
 }
 
@@ -234,8 +243,8 @@ describe('AdminSection — the authority gate', () => {
     },
   );
 
-  it('issues no admin call beyond the invite listing while authority holds', async () => {
-    const { api, calls, listInvites } = apiDouble();
+  it('issues no admin call beyond the invite and claim listings while authority holds', async () => {
+    const { api, calls, listInvites, listGuestClaims } = apiDouble();
 
     render(<Harness api={api} role="Owner" state="Active" />);
 
@@ -243,9 +252,11 @@ describe('AdminSection — the authority gate', () => {
     // the section is not itself a mutation of anything.
     await waitFor(() => {
       expect(listInvites).toHaveBeenCalledTimes(1);
+      expect(listGuestClaims).toHaveBeenCalledTimes(1);
     });
 
-    for (const call of calls.filter((candidate) => candidate !== listInvites)) {
+    const listings = [listInvites, listGuestClaims];
+    for (const call of calls.filter((candidate) => !listings.includes(candidate))) {
       expect(call).not.toHaveBeenCalled();
     }
   });
@@ -273,9 +284,10 @@ describe('AdminSection — the heading outline', () => {
       FEATURES_SECTION_HEADING,
     ]);
 
-    // The three children render no section heading of their own, so the guest
-    // control's words appear on a control rather than on a heading.
-    expect(headingsAtLevel(container, 4)).toEqual([]);
+    // The children render no section heading of their own, so the guest
+    // control's words appear on a control rather than on a heading. The one h4
+    // is the claim list, nested under Guests.
+    expect(headingsAtLevel(container, 4)).toEqual([CLAIMS_HEADING]);
     expect(screen.getByRole('button', { name: ADD_GUEST_HEADING }).tagName).toBe(
       'BUTTON',
     );
@@ -285,7 +297,7 @@ describe('AdminSection — the heading outline', () => {
     expect(validateHeadingOutline(headingLevels(container))).toEqual({
       ok: true,
     });
-    expect(headingLevels(container)).toEqual([1, 2, 3, 3, 3]);
+    expect(headingLevels(container)).toEqual([1, 2, 3, 3, 4, 3]);
   });
 
   it('names each region by its own heading', async () => {

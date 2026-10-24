@@ -414,10 +414,12 @@ public class NotificationProducerWiringProperties
                     SquadMembership newOwner = store.FindMembershipById(targetId)!;
                     SquadMembership formerOwner = store.FindMembershipById(owner.Id)!;
 
-                    // Committed transfer publishes exactly once, after the single commit, and the
-                    // owner/admin swap stays committed and successful regardless of the publisher outcome.
+                    // Committed transfer publishes exactly once, after the transaction's demote and promote
+                    // saves, and the owner/admin swap stays committed and successful regardless of the
+                    // publisher outcome.
                     ok = result.IsSuccess
-                        && store.SaveCallCount == 1
+                        && store.SaveCallCount == 2
+                        && store.TransactionCount == 1
                         && publisher.Calls.Count == 1
                         && publisher.Calls[0].Type == NotificationType.OwnershipTransferred
                         && publisher.Calls[0].SquadId == squad.Id

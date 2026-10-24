@@ -75,8 +75,11 @@ import type { FeatureFlag } from '../lib/parse/featureFlags';
 import type { PlayerListRow } from '../lib/playerList';
 import type { SquadRefreshOptions } from '../state/useSquadScreen';
 import { FeatureToggles } from './FeatureToggles';
+import { GuestClaims } from './GuestClaims';
 import { GuestManager } from './GuestManager';
 import { InviteManager } from './InviteManager';
+import { DeleteSquadSection } from './DeleteSquadSection';
+import { OwnershipTransfer } from './OwnershipTransfer';
 import '../styles/squadsTokens.css';
 import './AdminSection.css';
 
@@ -102,6 +105,12 @@ export interface AdminSectionProps {
   /** The squad being administered, from the parsed Squad_Detail. */
   readonly squadId: string;
 
+  /**
+   * The squad's name, which the owner types to confirm deleting it. Without one,
+   * the "Delete squad" area is not offered.
+   */
+  readonly squadName?: string;
+
   /** The Squads_Api facade — the feature's only transport seam. */
   readonly api: SquadsApi;
 
@@ -118,6 +127,13 @@ export interface AdminSectionProps {
    * (Requirements 12.6, 12.10, 14.2).
    */
   readonly onSquadChanged: (options?: SquadRefreshOptions) => void;
+
+  /**
+   * The re-read after a change to the caller's own standing — an ownership
+   * transfer, which makes the owner an admin. Re-reads the squad and the
+   * caller's `ListMySquads` summary. Falls back to {@link onSquadChanged}.
+   */
+  readonly onCallerStandingChanged?: () => void;
 
   /**
    * The composed Player_List the screen is rendering, from which the
@@ -161,9 +177,11 @@ export interface AdminSectionProps {
  */
 export function AdminSection({
   squadId,
+  squadName,
   api,
   flags,
   onSquadChanged,
+  onCallerStandingChanged,
   rows,
   viewerRole,
   viewerState,
@@ -249,6 +267,17 @@ export function AdminSection({
           {...(editOpenerRef === undefined ? {} : { editOpenerRef })}
           {...authStateProp}
         />
+        {/* Linking a guest to a player's account (ADR 0003): its own h4 list,
+            beneath the guests it applies to. */}
+        <GuestClaims
+          squadId={squadId}
+          api={api}
+          rows={rows}
+          viewerRole={viewerRole}
+          viewerState={viewerState}
+          onSquadChanged={onCallerStandingChanged ?? refreshDetail}
+          {...authStateProp}
+        />
       </section>
 
       <section
@@ -267,6 +296,33 @@ export function AdminSection({
           {...authStateProp}
         />
       </section>
+
+      {/* Owner only: the component asks `resolveOwnerAuthority` itself and
+          renders nothing for an admin. */}
+      <OwnershipTransfer
+        squadId={squadId}
+        api={api}
+        rows={rows}
+        viewerRole={viewerRole}
+        viewerState={viewerState}
+        onSquadChanged={onCallerStandingChanged ?? refreshDetail}
+        confirmHeadingLevel={CHILD_SURFACE_HEADING_LEVEL}
+        {...authStateProp}
+      />
+
+      {/* Owner only, and last: deleting is the one action here that ends the
+          squad, so it sits below everything that changes it. */}
+      {squadName === undefined ? null : (
+        <DeleteSquadSection
+          squadId={squadId}
+          squadName={squadName}
+          api={api}
+          viewerRole={viewerRole}
+          viewerState={viewerState}
+          confirmHeadingLevel={CHILD_SURFACE_HEADING_LEVEL}
+          {...authStateProp}
+        />
+      )}
     </section>
   );
 }
