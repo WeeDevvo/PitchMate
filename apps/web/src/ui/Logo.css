@@ -1,0 +1,35 @@
+.pm-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--pm-text-primary);
+  text-decoration: none;
+}
+
+.pm-logo img {
+  display: block;
+}
+
+.pm-logo__word {
+  font-family: var(--pm-font-display);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.pm-logo__word b {
+  color: var(--pm-accent-text);
+  font-weight: 800;
+}
+
+.pm-logo__mark--light {
+  display: none;
+}
+
+[data-theme='light'] .pm-logo__mark--dark {
+  display: none;
+}
+
+[data-theme='light'] .pm-logo__mark--light {
+  display: block;
+}

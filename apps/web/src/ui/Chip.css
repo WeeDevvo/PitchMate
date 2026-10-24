@@ -1,0 +1,31 @@
+.pm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--pm-radius-pill);
+  border: 1.5px solid var(--pm-border-control);
+  background: transparent;
+  color: var(--pm-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pm-chip:hover {
+  background: var(--pm-surface-hover);
+}
+
+.pm-chip.is-selected {
+  background: var(--pm-accent-fill);
+  border-color: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+.pm-chip:disabled {
+  color: var(--pm-text-disabled);
+  border-style: dashed;
+  cursor: not-allowed;
+}

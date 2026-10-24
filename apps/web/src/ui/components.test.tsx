@@ -1,0 +1,336 @@
+/**
+ * Behaviour of the shared components: accessible names and states, the
+ * never-colour-alone rules, and the controlled interactions.
+ */
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
+import { describe, expect, it, vi } from 'vitest';
+
+import {
+  Avatar,
+  AvatarStack,
+  BibFlag,
+  Button,
+  Chip,
+  ErrorState,
+  FormGuide,
+  GuestBadge,
+  IconButton,
+  Logo,
+  MatchProgress,
+  MatchStateChip,
+  NotFoundState,
+  ProvisionalBadge,
+  Rating,
+  ResultBadge,
+  RoleBadge,
+  SegmentedControl,
+  Select,
+  Tabs,
+  TextField,
+  Toast,
+  Toggle,
+} from '.';
+
+describe('Button', () => {
+  it('is a plain button by default, so it never submits a form by accident', () => {
+    render(<Button>Roll teams</Button>);
+    expect(screen.getByRole('button', { name: 'Roll teams' })).toHaveAttribute('type', 'button');
+  });
+
+  it('announces loading with aria-busy and keeps its name', () => {
+    render(<Button loading>Lock teams</Button>);
+    expect(screen.getByRole('button', { name: 'Lock teams' })).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('calls onClick', async () => {
+    const onClick = vi.fn();
+    render(<Button onClick={onClick}>Complete match</Button>);
+    await userEvent.click(screen.getByRole('button', { name: 'Complete match' }));
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+});
+
+describe('IconButton', () => {
+  it('takes its accessible name from the label', () => {
+    render(<IconButton icon="more" label="More actions" />);
+    expect(screen.getByRole('button', { name: 'More actions' })).toBeInTheDocument();
+  });
+});
+
+describe('TextField', () => {
+  it('labels the input and links the hint', () => {
+    render(<TextField label="Email" hint="We'll send a link" />);
+    const input = screen.getByLabelText('Email');
+    expect(input).toHaveAccessibleDescription("We'll send a link");
+    expect(input).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('marks an error invalid and describes it instead of the hint', () => {
+    render(<TextField label="Email" hint="We'll send a link" error="Add the rest of your email" />);
+    const input = screen.getByLabelText('Email');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription('Add the rest of your email');
+  });
+
+  it('gives two fields with the same label distinct ids', () => {
+    render(
+      <>
+        <TextField label="Name" />
+        <TextField label="Name" />
+      </>,
+    );
+    const [first, second] = screen.getAllByLabelText('Name');
+    expect(first.id).not.toBe(second.id);
+  });
+});
+
+describe('Select', () => {
+  it('renders string and labelled options', () => {
+    render(<Select label="Tier" options={['Beginner', { value: 'avg', label: 'Average' }]} />);
+    expect(screen.getByRole('combobox', { name: 'Tier' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Average' })).toHaveValue('avg');
+  });
+});
+
+describe('Toggle', () => {
+  it('is a switch that flips and reports its state', async () => {
+    const onChange = vi.fn();
+    render(<Toggle label="Live tracking" onChange={onChange} />);
+    const toggle = screen.getByRole('switch', { name: 'Live tracking' });
+    expect(toggle).not.toBeChecked();
+    await userEvent.click(toggle);
+    expect(toggle).toBeChecked();
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('Chip', () => {
+  it('exposes its selection as aria-pressed', () => {
+    render(<Chip selected>Guests</Chip>);
+    expect(screen.getByRole('button', { name: 'Guests' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+describe('badges', () => {
+  it('gives members no role badge', () => {
+    const { container } = render(<RoleBadge role="member" />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('labels owners and admins in words', () => {
+    render(
+      <>
+        <RoleBadge role="owner" />
+        <RoleBadge role="admin" />
+      </>,
+    );
+    expect(screen.getByText('Owner')).toBeInTheDocument();
+    expect(screen.getByText('Admin')).toBeInTheDocument();
+  });
+
+  it('always spells out provisional with the ~', () => {
+    render(
+      <>
+        <ProvisionalBadge />
+        <ProvisionalBadge short />
+        <GuestBadge />
+      </>,
+    );
+    expect(screen.getByText('~ Provisional')).toBeInTheDocument();
+    expect(screen.getByText('~ Prov')).toBeInTheDocument();
+    expect(screen.getByText('Guest')).toBeInTheDocument();
+  });
+});
+
+describe('Rating', () => {
+  it('shows the value with a signed delta', () => {
+    render(
+      <>
+        <Rating value="1,240" delta={12} />
+        <Rating value="1,180" delta={-8} />
+      </>,
+    );
+    expect(screen.getByText('▲ +12')).toBeInTheDocument();
+    expect(screen.getByText('▼ -8')).toBeInTheDocument();
+  });
+
+  it('shows only the band for a provisional player', () => {
+    const { container } = render(<Rating provisional band="1,1xx" />);
+    expect(container).toHaveTextContent('~1,1xx');
+    expect(screen.getByText('~ Prov')).toBeInTheDocument();
+  });
+});
+
+describe('results', () => {
+  it('names each result in words and shows its letter', () => {
+    render(
+      <>
+        <ResultBadge result="W" />
+        <ResultBadge result="L" />
+        <ResultBadge result="D" />
+      </>,
+    );
+    for (const [word, letter] of [
+      ['Win', 'W'],
+      ['Loss', 'L'],
+      ['Draw', 'D'],
+    ]) {
+      expect(screen.getByRole('img', { name: word })).toHaveTextContent(letter);
+    }
+  });
+
+  it('reads a form guide as one sentence', () => {
+    render(<FormGuide results={['W', 'D', 'L']} />);
+    expect(screen.getByRole('img', { name: 'Last 3: Win, Draw, Loss' })).toBeInTheDocument();
+  });
+});
+
+describe('match state', () => {
+  it('puts a word beside every state colour', () => {
+    render(<MatchStateChip state="rolled" />);
+    expect(screen.getByText('Teams rolled')).toBeInTheDocument();
+  });
+
+  it('names the current step of the progress bar', () => {
+    render(<MatchProgress state="live" />);
+    expect(screen.getByRole('img', { name: 'Match progress: In progress' })).toBeInTheDocument();
+  });
+});
+
+describe('BibFlag', () => {
+  it('says which team wears bibs, and the other says it does not', () => {
+    render(
+      <>
+        <BibFlag />
+        <BibFlag off />
+      </>,
+    );
+    expect(screen.getByRole('img', { name: 'This team wears bibs' })).toBeInTheDocument();
+    expect(screen.getByText('No bibs')).toBeInTheDocument();
+  });
+});
+
+describe('Avatar', () => {
+  it('shows up to two initials and is hidden from assistive technology', () => {
+    const { container } = render(<Avatar name="Sam Ade Okafor" />);
+    expect(container.firstElementChild).toHaveTextContent('SA');
+    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('keeps a name on the same tint every time', () => {
+    const first = render(<Avatar name="Priya" />).container.firstElementChild?.className;
+    const second = render(<Avatar name="Priya" />).container.firstElementChild?.className;
+    expect(first).toBe(second);
+  });
+
+  it('counts the players beyond the stack', () => {
+    const { container } = render(<AvatarStack names={['A', 'B', 'C', 'D', 'E', 'F']} max={4} />);
+    expect(container).toHaveTextContent('+2');
+  });
+});
+
+describe('Logo', () => {
+  it('is one image named PitchMate, or a link when given an href', () => {
+    render(
+      <>
+        <Logo />
+        <Logo href="/" />
+      </>,
+    );
+    expect(screen.getByRole('img', { name: 'PitchMate' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'PitchMate' })).toHaveAttribute('href', '/');
+  });
+});
+
+function TabsHarness() {
+  const [active, setActive] = useState('players');
+  return (
+    <Tabs
+      label="Squad sections"
+      active={active}
+      onChange={setActive}
+      tabs={[
+        { id: 'players', label: 'Players', count: 14 },
+        { id: 'matches', label: 'Matches' },
+        { id: 'admin', label: 'Admin', disabled: true },
+        { id: 'stats', label: 'Stats' },
+      ]}
+    />
+  );
+}
+
+describe('Tabs', () => {
+  it('has one tab stop, on the selected tab', () => {
+    render(<TabsHarness />);
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((tab) => tab.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1']);
+  });
+
+  it('moves and selects with the arrow keys, skipping disabled tabs and wrapping', async () => {
+    render(<TabsHarness />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Matches' }));
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Stats' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'Stats' })).toHaveAttribute('aria-selected', 'true');
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: /Players/ })).toHaveFocus();
+    await userEvent.keyboard('{End}');
+    expect(screen.getByRole('tab', { name: 'Stats' })).toHaveFocus();
+  });
+});
+
+function SegmentedHarness() {
+  const [value, setValue] = useState('appearances');
+  return (
+    <SegmentedControl
+      label="Rank by"
+      value={value}
+      onChange={setValue}
+      options={[
+        { value: 'appearances', label: 'Appearances' },
+        { value: 'rating', label: 'Rating' },
+        { value: 'bibs', label: 'Bibs' },
+      ]}
+    />
+  );
+}
+
+describe('SegmentedControl', () => {
+  it('is a radio group that the arrow keys move through', async () => {
+    render(<SegmentedHarness />);
+    expect(screen.getByRole('radiogroup', { name: 'Rank by' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: 'Appearances' }));
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('radio', { name: 'Bibs' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Bibs' })).toHaveFocus();
+  });
+});
+
+describe('feedback states', () => {
+  it('retries from the error state', async () => {
+    const onRetry = vi.fn();
+    render(<ErrorState onRetry={onRetry} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('says the same thing whether content is missing or not shared', () => {
+    const { container } = render(<NotFoundState />);
+    expect(screen.getByRole('heading', { name: 'Nothing here' })).toBeInTheDocument();
+    expect(container).toHaveTextContent("This page doesn't exist, or it isn't shared with you.");
+  });
+
+  it('runs a toast action', async () => {
+    const onAction = vi.fn();
+    render(
+      <Toast actionLabel="Undo" onAction={onAction}>
+        Goal recorded
+      </Toast>,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('Goal recorded');
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(onAction).toHaveBeenCalledOnce();
+  });
+});
