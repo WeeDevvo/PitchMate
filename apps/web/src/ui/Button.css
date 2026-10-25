@@ -127,6 +127,28 @@
   background: transparent;
 }
 
+/* Busy, not unavailable: a button disabled while its action is in flight keeps
+   its own colours, so "Signing you in…" reads as working rather than broken. */
+.pm-btn--primary:disabled[aria-busy='true'] {
+  background: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+.pm-btn--secondary:disabled[aria-busy='true'] {
+  background: transparent;
+  color: var(--pm-text-primary);
+  border-color: var(--pm-border-control);
+}
+
+.pm-btn--destructive:disabled[aria-busy='true'] {
+  background: var(--pm-danger);
+  color: var(--pm-on-result);
+}
+
+.pm-btn:disabled[aria-busy='true'] {
+  cursor: progress;
+}
+
 .pm-btn.is-loading {
   color: transparent;
   cursor: progress;
