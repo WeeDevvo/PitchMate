@@ -22,14 +22,15 @@
   font-weight: 800;
 }
 
-.pm-logo__mark--light {
+/* Scoped under .pm-logo so the theme toggle outranks the img rule above. */
+.pm-logo .pm-logo__mark--light {
   display: none;
 }
 
-[data-theme='light'] .pm-logo__mark--dark {
+[data-theme='light'] .pm-logo .pm-logo__mark--dark {
   display: none;
 }
 
-[data-theme='light'] .pm-logo__mark--light {
+[data-theme='light'] .pm-logo .pm-logo__mark--light {
   display: block;
 }

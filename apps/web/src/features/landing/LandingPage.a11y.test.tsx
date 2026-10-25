@@ -15,20 +15,20 @@
  *   - focus is never trapped: tabbing advances through every interactive control
  *     and past the last one (Req 6.4);
  *   - the shared control declares a visible `:focus-visible` indicator built on
- *     the `--focus-ring` token (Req 6.5);
- *   - the brand logo is informative with the exact alt text "PitchMate", every
- *     image declares an alt attribute, and any decorative image has empty alt
- *     (Req 6.6, 6.7);
+ *     the `--pm-focus-ring` token (Req 6.5);
+ *   - the brand logo is one informative image named exactly "PitchMate", every
+ *     image declares an alt attribute, and the decorative marks inside the logo
+ *     have empty alt (Req 6.6, 6.7);
  *   - colour-conveyed information (primary vs secondary CTA) is paired with a
- *     non-colour cue — distinct labels plus shape/weight/border differences in
- *     the stylesheet, not colour alone (Req 6.8);
+ *     non-colour cue — distinct labels plus the design system's filled and
+ *     outlined button shapes, not colour alone (Req 6.8);
  *   - `jest-axe` reports no violations on the fully rendered page in BOTH the
  *     dark and light themes (Req 6.2 supporting / overall a11y).
  *
  * jsdom does not implement `window.matchMedia` (so `ThemeProvider` resolves the
  * dark-first default) and does not compute colour/contrast (so axe's contrast
  * check is reported as incomplete, not a violation) — contrast thresholds are
- * covered separately by the theme-token tests (task 6.3). We install a small
+ * covered separately by the design-token contrast test. We install a small
  * `matchMedia` stub, mirroring the ThemeProvider test, to force light vs dark.
  *
  * The `LandingPage` renders CTAs through a control that calls `useNavigate`, so
@@ -83,8 +83,7 @@ function interactiveAnchors(container: HTMLElement): HTMLAnchorElement[] {
 // ---- Stylesheet contracts (read once; they are static build artifacts) ----
 const here = dirname(fileURLToPath(import.meta.url))
 const ctaCss = readFileSync(join(here, 'components/Cta.css'), 'utf8')
-const themeCss = readFileSync(join(here, 'styles/theme.css'), 'utf8')
-const landingCss = readFileSync(join(here, 'styles/landing.css'), 'utf8')
+const designTokensCss = readFileSync(join(here, '../../design/tokens.css'), 'utf8')
 
 describe('LandingPage accessibility', () => {
   const originalMatchMedia = window.matchMedia
@@ -194,19 +193,20 @@ describe('LandingPage accessibility', () => {
   })
 
   // Validates: Requirements 6.5
-  it('declares a visible focus indicator via the --focus-ring token', () => {
+  it('declares a visible focus indicator via the --pm-focus-ring token', () => {
     // The shared control (rendered by every CTA and link) defines a
-    // :focus-visible outline built on the theme --focus-ring token, so focus is
+    // :focus-visible outline built on the --pm-focus-ring token, so focus is
     // shown for keyboard/programmatic focus and is distinct from the unfocused
     // state.
     expect(ctaCss).toMatch(/\.cta:focus-visible\s*\{/)
     expect(ctaCss).toMatch(/outline:/)
-    expect(ctaCss).toMatch(/var\(--focus-ring\)/)
+    expect(ctaCss).toMatch(/var\(--pm-focus-ring\)/)
 
-    // The focus-ring token is defined for both themes so the indicator exists
-    // whichever theme is active (contrast thresholds are asserted in task 6.3).
-    expect(themeCss).toMatch(/\[data-theme='dark'\][^}]*--focus-ring/s)
-    expect(themeCss).toMatch(/\[data-theme='light'\][^}]*--focus-ring/s)
+    // The design system defines the focus-ring token for both themes, so the
+    // indicator exists whichever theme is active (its contrast is asserted in
+    // `src/design/tokens.contrast.test.ts`).
+    expect(designTokensCss).toMatch(/\[data-theme='dark'\][^}]*--pm-focus-ring/s)
+    expect(designTokensCss).toMatch(/\[data-theme='light'\][^}]*--pm-focus-ring/s)
   })
 
   // Validates: Requirements 6.6, 6.7
@@ -223,10 +223,15 @@ describe('LandingPage accessibility', () => {
       expect(img.getAttribute('alt')).not.toBeNull()
     }
 
-    // The brand logo is informative with the exact alt text "PitchMate".
-    const logo = container.querySelector<HTMLImageElement>('.landing-header__logo')
+    // The brand logo is one informative image named exactly "PitchMate"; the
+    // marks inside it are decorative so the name is announced once.
+    const logo = container.querySelector<HTMLElement>('.landing-header__logo')
     expect(logo).not.toBeNull()
-    expect(logo?.getAttribute('alt')).toBe('PitchMate')
+    expect(logo?.getAttribute('role')).toBe('img')
+    expect(logo?.getAttribute('aria-label')).toBe('PitchMate')
+    for (const mark of Array.from(logo?.querySelectorAll('img') ?? [])) {
+      expect(mark.getAttribute('alt')).toBe('')
+    }
   })
 
   // Validates: Requirements 6.8
@@ -251,15 +256,11 @@ describe('LandingPage accessibility', () => {
     expect(primary?.getAttribute('data-cta-kind')).toBe('primary')
     expect(secondary?.getAttribute('data-cta-kind')).toBe('secondary')
 
-    // 3) The stylesheet differentiates them by shape/weight/border, not colour
-    //    alone: the primary is a filled, bolder button; the secondary carries a
-    //    visible border outline.
-    expect(landingCss).toMatch(
-      /\.cta\[data-cta-kind='primary'\][^}]*font-weight/s,
-    )
-    expect(landingCss).toMatch(
-      /\.cta\[data-cta-kind='secondary'\][^}]*border/s,
-    )
+    // 3) They are the design system's filled primary and outlined secondary
+    //    buttons, so they differ by shape as well as colour.
+    expect(primary).toHaveClass('pm-btn', 'pm-btn--primary')
+    expect(secondary).toHaveClass('pm-btn', 'pm-btn--secondary')
+    expect(primary).not.toHaveClass('pm-btn--secondary')
   })
 
   // Validates: Requirements 6.2 (supporting) / overall accessibility

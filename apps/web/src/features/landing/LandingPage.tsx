@@ -44,7 +44,6 @@ import NavigationErrorRegion, {
 } from './components/NavigationErrorRegion'
 import type { NavigationErrorHandler } from './components/Cta'
 import { landingContent, type LandingContent } from './content/landingContent'
-import './styles/theme.css'
 import './styles/landing.css'
 
 /** A navigation failure to surface in the page-level live region. */
