@@ -9,8 +9,8 @@
  *     subordinate headings (`h2`+) beneath it, keeping the outline well-formed
  *     with no skipped levels (Requirement 14.1).
  *   - It paints a themed surface and a centred, width-constrained form column
- *     entirely from the per-Theme CSS custom-property tokens in
- *     `styles/theme.css`, never from hard-coded colours (Requirements 13.4).
+ *     entirely from the design system's `--pm-*` tokens, never from
+ *     hard-coded colours (Requirements 13.4), with the PitchMate mark above it.
  *   - The heading is programmatically associated with the surrounding region
  *     via `aria-labelledby`, so assistive technology announces the screen by
  *     its heading.
@@ -22,9 +22,7 @@
  * Requirements: 13.4, 14.1
  */
 import { useId, type ReactNode } from 'react'
-// Import the per-Theme token tables so any screen rendered through the layout
-// has the auth theme tokens available (dark-mode-first; Requirements 13.1–13.4).
-import '../styles/theme.css'
+import { Logo } from '../../../ui'
 import './AuthLayout.css'
 
 export interface AuthLayoutProps {
@@ -49,6 +47,7 @@ export function AuthLayout({ heading, children, className }: AuthLayoutProps) {
 
   return (
     <div className={classes}>
+      <Logo size={36} className="auth-layout__logo" />
       <section className="auth-layout__surface" aria-labelledby={headingId}>
         <h1 id={headingId} className="auth-layout__heading">
           {heading}

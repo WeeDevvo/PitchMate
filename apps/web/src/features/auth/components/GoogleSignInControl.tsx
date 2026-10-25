@@ -42,6 +42,7 @@ import type {
   AuthSessionPayload,
   FailureOutcome,
 } from '../api/authApi'
+import { Button } from '../../../ui'
 import { messageForOutcome } from '../lib/errorMapping'
 import { LiveRegion } from './LiveRegion'
 import './GoogleSignInControl.css'
@@ -178,19 +179,18 @@ export function GoogleSignInControl({
     }
   }, [requestGoogleAssertion, authApi, onSession, onFailure])
 
-  const classes = ['auth-google', className].filter(Boolean).join(' ')
-
   return (
     <div className="auth-google__wrap">
-      <button
-        type="button"
-        className={classes}
+      <Button
+        variant="secondary"
+        block
+        className={className}
         onClick={handleActivate}
         disabled={pending}
         aria-busy={pending || undefined}
       >
         {pending ? pendingLabel : children}
-      </button>
+      </Button>
       <LiveRegion message={message} politeness="assertive" />
     </div>
   )

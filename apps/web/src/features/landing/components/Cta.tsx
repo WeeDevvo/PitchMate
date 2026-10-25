@@ -32,6 +32,7 @@ import {
   type NavigationAttempt,
 } from '../lib/navigation'
 import type { CtaModel } from '../content/landingContent'
+import { buttonClasses } from '../../../ui'
 import './Cta.css'
 
 /** Called when navigation to `href` does not complete within the budget. */
@@ -45,9 +46,9 @@ export interface NavAnchorProps
   /** The navigation destination. Rendered as a real `href` and used to navigate. */
   href: string
   /**
-   * Visual role of the control. Purely presentational here (exposed as a
-   * `data-cta-kind` attribute); section components layer their own styling on
-   * top. Footer links omit this and render as plain links.
+   * Visual role of the control: the design system's primary or secondary
+   * button, also exposed as a `data-cta-kind` attribute. Footer links omit it
+   * and render as plain links.
    */
   kind?: CtaModel['kind']
   /** Invoked when navigation fails or exceeds the time budget. */
@@ -119,7 +120,11 @@ export function NavAnchor({
     })
   }
 
-  const classes = ['cta', className].filter(Boolean).join(' ')
+  // A call to action reads as the design system's button, primary or
+  // secondary by its kind; a footer link (no kind) stays a plain link.
+  const classes = ['cta', kind && buttonClasses({ variant: kind }), className]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <a

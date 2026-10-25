@@ -8,6 +8,7 @@ export { Avatar, AvatarStack, type AvatarProps } from './Avatar';
 export { Badge, FormerBadge, GuestBadge, ProvisionalBadge, RoleBadge, type BadgeProps, type BadgeTone } from './Badge';
 export { BibFlag } from './BibFlag';
 export { Button, IconButton, type ButtonProps, type IconButtonProps } from './Button';
+export { buttonClasses, type ButtonClassOptions } from './buttonClasses';
 export { Card, type CardProps } from './Card';
 export { Chip, type ChipProps } from './Chip';
 export { Dialog, type DialogProps } from './Dialog';

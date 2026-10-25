@@ -28,15 +28,21 @@
  *   4.6        every image / media element is constrained to the viewport width
  *              (max-width: 100%; height: auto) so nothing forces a scrollbar.
  *
- * Colours come from the theme tokens in styles/theme.css (--bg, --text,
- * --accent-fill, --accent-text, --focus-ring); this file owns layout only.
+ * Colours, type and the buttons come from the design system: `--pm-*` tokens
+ * and the `src/ui` button classes the CTAs carry. This file owns layout and
+ * never writes a colour.
  */
 
 /* ------------------------------------------------------------------ *
  * Design tokens (layout) and box model
  * ------------------------------------------------------------------ */
 
-.landing-page {
+/* The page renders its landmarks without a .landing-page wrapper, so the
+   layout properties are declared on each landmark as well as the wrapper. */
+.landing-page,
+.landing-header,
+.landing-main,
+.landing-footer {
   /* Outer bound of any centred region. Kept below the 1920px max viewport so
      desktop content is width-constrained rather than edge-to-edge (Req 4.2). */
   --landing-content-max: 72rem; /* ~1152px */
@@ -48,7 +54,9 @@
      the viewport but capped so desktop margins stay sensible. */
   --landing-gutter: clamp(1rem, 5vw, 3rem);
   --landing-gap: clamp(1.5rem, 4vw, 2.5rem);
+}
 
+.landing-page {
   width: 100%;
   max-width: 100%;
   margin: 0;
@@ -56,8 +64,8 @@
      (Req 4.1, 4.5). Width constraints below are the primary defence; this clips
      any residual overflow without affecting vertical scrolling. */
   overflow-x: clip;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--pm-bg);
+  color: var(--pm-text-primary);
 }
 
 /* Predictable sizing everywhere on the landing surface: padding/borders are
@@ -99,7 +107,6 @@
 .landing-page video,
 .landing-page canvas,
 .landing-page iframe,
-.landing-header__logo,
 .hero img,
 .benefit img {
   display: block;
@@ -107,10 +114,16 @@
   height: auto;
 }
 
-/* The brand logo carries intrinsic width/height attributes for CLS; keep its
-   aspect ratio while allowing it to shrink on narrow phones (Req 4.6). */
+/* The brand logo's marks carry intrinsic width/height attributes for CLS;
+   keep their aspect ratio while letting the logo shrink on narrow phones
+   (Req 4.6). Display is left to the logo, which shows one mark per theme. */
 .landing-header__logo {
+  max-width: 100%;
+}
+
+.landing-header__logo img {
   width: auto;
+  max-width: 100%;
   max-height: 2.5rem;
 }
 
@@ -168,8 +181,9 @@
 .hero__headline {
   max-width: 20ch; /* headlines read best short; well under any overflow risk */
   margin: 0;
-  font-size: clamp(1.75rem, 6vw, 3.25rem);
-  line-height: 1.1;
+  font: var(--pm-type-display-xl);
+  font-size: clamp(2.25rem, 8vw, 4.5rem);
+  text-transform: uppercase;
 }
 
 .hero__subheadline {
@@ -179,6 +193,7 @@
   margin: 0;
   font-size: clamp(1rem, 2.5vw, 1.25rem);
   line-height: 1.5;
+  color: var(--pm-text-secondary);
 }
 
 /* ------------------------------------------------------------------ *
@@ -198,8 +213,10 @@
 .benefit__heading {
   max-width: var(--landing-measure);
   margin: 0;
-  font-size: clamp(1.25rem, 3.5vw, 1.75rem);
-  line-height: 1.25;
+  font: var(--pm-type-headline);
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  text-transform: uppercase;
+  color: var(--pm-accent-text);
 }
 
 .benefit__description {
@@ -207,6 +224,7 @@
   margin: 0;
   font-size: clamp(1rem, 2.5vw, 1.125rem);
   line-height: 1.6;
+  color: var(--pm-text-secondary);
 }
 
 /* ------------------------------------------------------------------ *
@@ -243,11 +261,21 @@ section[data-testid='closing-cta'] > p {
   justify-content: space-between;
   gap: 0.75rem 1.5rem;
   padding-block: clamp(1.5rem, 4vw, 2.5rem);
+  border-top: 1px solid var(--pm-border-subtle);
+  color: var(--pm-text-secondary);
 }
 
 .landing-footer__brand {
   margin: 0;
-  font-weight: 600;
+  font-family: var(--pm-font-display);
+  font-weight: 700;
+  color: var(--pm-text-primary);
+}
+
+.landing-footer__links .cta {
+  color: var(--pm-text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .landing-footer__links {
@@ -258,36 +286,22 @@ section[data-testid='closing-cta'] > p {
 }
 
 /* ------------------------------------------------------------------ *
- * Calls to action — inline controls that never exceed the viewport and
- * remain tappable at any width (Req 4.4). Colour/focus come from theme
- * tokens and components/Cta.css; this only guarantees layout containment.
+ * Calls to action — the design system's buttons (primary filled, secondary
+ * outlined, so the two differ by shape as well as colour; Req 6.8). Here they
+ * are only held inside their column and allowed to wrap, so they stay visible
+ * and tappable at any width (Req 4.4).
  * ------------------------------------------------------------------ */
 
 .cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
   max-width: 100%;
-  padding: 0.625rem 1.25rem;
-  border-radius: 0.5rem;
-  text-decoration: none;
-  line-height: 1.2;
-  color: var(--text);
 }
 
-/* Primary CTA reads as a filled button; secondary as an outline. Both use
-   brand tokens and pair the colour with shape so meaning is not colour-only. */
-.cta[data-cta-kind='primary'] {
-  background: var(--accent-fill);
-  color: var(--bg);
-  font-weight: 600;
-}
-
-.cta[data-cta-kind='secondary'] {
-  background: transparent;
-  border: 1px solid var(--accent-text);
-  color: var(--accent-text);
+.cta.pm-btn {
+  height: auto;
+  min-height: var(--pm-control-h);
+  padding-block: var(--pm-space-2);
+  white-space: normal;
+  text-align: center;
 }
 
 /* The hero's standalone primary CTA gets a touch more presence without risking

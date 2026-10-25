@@ -15,8 +15,8 @@
  *   1. The structural DOM contract — at every width the page renders a single
  *      main content column, all regions (header, hero, every benefit, closing
  *      CTA, footer) are present without being clipped away, every CTA is a real,
- *      focusable, reachable anchor, and the only image (the brand logo) carries
- *      the class the containment CSS targets.
+ *      focusable, reachable anchor, and the only images (the brand logo's
+ *      marks) sit inside the element the containment CSS targets.
  *
  *   2. The stylesheet contract — `styles/landing.css` declares the rules that
  *      guarantee no horizontal overflow (overflow-x guard + border-box sizing +
@@ -193,8 +193,8 @@ describe('Landing page responsive layout — structural DOM contract', () => {
       expect(images.length).toBeGreaterThanOrEqual(1)
 
       for (const img of images) {
-        // Each image must carry a class/selector the containment CSS targets.
-        expect(img).toHaveClass('landing-header__logo')
+        // Each image must sit where the containment CSS targets it.
+        expect(img.closest('.landing-header__logo')).not.toBeNull()
         // Intrinsic width attribute (used for CLS) must fit even 360px.
         const declaredWidth = Number(img.getAttribute('width') ?? '0')
         expect(declaredWidth).toBeLessThanOrEqual(360)

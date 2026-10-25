@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Icon, type IconName } from './Icon';
+import { buttonClasses } from './buttonClasses';
 import { cx } from './cx';
-import './Button.css';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** One primary per view; destructive only behind a confirmation. */
@@ -32,14 +32,11 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
+      aria-busy={loading || undefined}
       {...rest}
       type={type}
-      aria-busy={loading || undefined}
       className={cx(
-        'pm-btn',
-        `pm-btn--${variant}`,
-        size !== 'md' && `pm-btn--${size}`,
-        block && 'pm-btn--block',
+        buttonClasses({ variant, size, block }),
         loading && 'is-loading',
         glow && 'pm-btn--glow',
         className,
