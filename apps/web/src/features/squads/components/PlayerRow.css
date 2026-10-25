@@ -30,6 +30,13 @@
   line-height: var(--squads-line-height-body);
 }
 
+/* The name column asks for less room than the design system's default, so
+   at tablet width the name, the rating and both actions share one line; it
+   still wraps beneath the name once the row runs out of room. */
+.squads-player-row .pm-player__main {
+  flex-basis: 8rem;
+}
+
 .squads-player-row[data-membership-state='inactive'] {
   background: var(--pm-surface-sunken);
   color: var(--pm-text-secondary);

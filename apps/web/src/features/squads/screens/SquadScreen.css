@@ -75,8 +75,10 @@
  * One fluid layout with no breakpoint (Requirement 19.10): the sidebar and the
  * content are flex items that sit side by side while the row has room for
  * both, and wrap so the sidebar sits above the content when it does not. The
- * sidebar's links do the same inside it: one per line in the narrow column,
- * two or more abreast once the sidebar spans the screen. The document order
+ * content asks for 36rem before it will sit beside the sidebar, so at tablet
+ * width the sidebar goes on top rather than squeezing the player rows until
+ * their actions stack. The sidebar's links do the same inside it: one per line
+ * in the narrow column, several abreast once the sidebar spans the screen. The document order
  * (sidebar, then the five sections) is the same either way.
  * ------------------------------------------------------------------ */
 
@@ -112,7 +114,7 @@
 }
 
 .squad-screen__content {
-  flex: 999 1 20rem;
+  flex: 999 1 36rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
