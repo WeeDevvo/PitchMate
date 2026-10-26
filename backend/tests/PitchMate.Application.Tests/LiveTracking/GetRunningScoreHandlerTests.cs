@@ -298,7 +298,7 @@ public class GetRunningScoreHandlerTests
             }
 
             Match match = Match.CreateDraft(Guid.CreateVersion7(), squadId, "Hackney Marshes", [MatchDay], Anchor).Value!;
-            match.Confirm(MatchDay, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+            match.Confirm(MatchDay, activeMembers: []);
             foreach (SquadMembership player in players)
             {
                 match.AddParticipant(player);

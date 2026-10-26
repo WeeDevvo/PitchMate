@@ -7,19 +7,20 @@ using SquadMembership = PitchMate.Domain.Squads.SquadMembership;
 namespace PitchMate.Application.Matches.UseCases;
 
 /// <summary>
-/// Adds a guest to a confirmed match's playing pool as a guest <see cref="MatchParticipant"/>
+/// Adds a member or guest to a confirmed match's playing pool as a <see cref="MatchParticipant"/>
 /// (Requirement 7.1). The handler loads the squad-scoped match, resolves the acting membership from
 /// the authenticated user and the match's squad, and gates via
 /// <see cref="MatchAuthorization.RequireOrganiser"/>, so only an active registered owner or admin may
-/// add a guest; every other actor — a plain member, an inactive membership, a guest, or a non-member —
+/// add a player; every other actor — a plain member, an inactive membership, a guest, or a non-member —
 /// and a match that cannot be found is rejected with the uniform
 /// <see cref="MatchErrorCode.Unauthorized"/> failure that discloses neither the squad nor the match,
 /// and no participant is added (Requirement 14.1, 14.2).
 /// <para>
 /// The membership to add is resolved through <see cref="ISquadMembershipRepository.GetByIdAsync"/>
-/// and must be an active guest membership of the match's squad: a membership that cannot be found or
-/// is not a guest is rejected with a <see cref="MatchErrorCode.ValidationFailed"/> failure identifying
-/// it as ineligible, leaving the participant set unchanged (Requirement 7.3, 7.7). The
+/// and may be any membership, registered or guest: one that cannot be found is rejected with a
+/// <see cref="MatchErrorCode.ValidationFailed"/> failure identifying it as ineligible, leaving the
+/// participant set unchanged (Requirement 7.3, 7.7). Members can also join themselves through
+/// <see cref="JoinMatchHandler"/>. The
 /// <see cref="Match"/> aggregate is the authority for the remaining invariants:
 /// <see cref="Match.AddParticipant"/> rejects the addition unless the match is in
 /// <see cref="MatchState.Confirmed"/> (Requirement 2.3, 2.5), rejects a membership that belongs to a
@@ -37,7 +38,7 @@ namespace PitchMate.Application.Matches.UseCases;
 /// acting membership is always resolved from the match's own squad (Requirement 7.3, 7.4, 7.6).
 /// </para>
 /// </summary>
-public sealed class AddGuestParticipantHandler
+public sealed class AddParticipantHandler
 {
     private readonly IMatchRepository _matches;
     private readonly ISquadMembershipRepository _memberships;
@@ -45,10 +46,10 @@ public sealed class AddGuestParticipantHandler
 
     /// <summary>
     /// Creates the handler with the match repository it loads the squad-scoped match through, the
-    /// membership repository it resolves the acting and guest memberships in, and the unit of work it
+    /// membership repository it resolves the acting and added memberships in, and the unit of work it
     /// commits the mutated aggregate through.
     /// </summary>
-    public AddGuestParticipantHandler(
+    public AddParticipantHandler(
         IMatchRepository matches,
         ISquadMembershipRepository memberships,
         IUnitOfWork unitOfWork)
@@ -63,15 +64,15 @@ public sealed class AddGuestParticipantHandler
     }
 
     /// <summary>
-    /// Handles an <see cref="AddGuestParticipantCommand"/>, returning the created participant's
+    /// Handles an <see cref="AddParticipantCommand"/>, returning the created participant's
     /// identity on success or a typed <see cref="MatchError"/> — a uniform authorisation failure for a
     /// non-organiser or an unfindable match, a validation failure for an ineligible membership or a
     /// wrong state, or an already-participant failure for a duplicate.
     /// </summary>
-    /// <param name="command">The guest-addition request.</param>
+    /// <param name="command">The addition request.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    public async Task<Result<AddGuestParticipantResult>> HandleAsync(
-        AddGuestParticipantCommand command,
+    public async Task<Result<AddParticipantResult>> HandleAsync(
+        AddParticipantCommand command,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -96,7 +97,7 @@ public sealed class AddGuestParticipantHandler
         }
 
         // Resolve the acting membership and gate: only an active registered owner or admin may add a
-        // guest; every other actor is rejected with the uniform failure that adds nothing
+        // player; every other actor is rejected with the uniform failure that adds nothing
         // (Requirement 14.1, 14.2).
         SquadMembership? acting =
             await _memberships.GetByUserAndSquadAsync(command.ActingUserId, match.SquadId, cancellationToken);
@@ -104,40 +105,39 @@ public sealed class AddGuestParticipantHandler
         Result gate = MatchAuthorization.RequireOrganiser(acting);
         if (!gate.IsSuccess)
         {
-            return Result<AddGuestParticipantResult>.Fail(gate.Error!);
+            return Result<AddParticipantResult>.Fail(gate.Error!);
         }
 
-        // Resolve the membership to add and require it to be a guest; a missing or non-guest membership
-        // is ineligible for this guest-add path and the participant set is left unchanged
-        // (Requirement 7.1, 7.3, 7.7). The aggregate owns the squad-scope, active, and no-duplicate
-        // checks against the loaded match.
-        SquadMembership? guest = await _memberships.GetByIdAsync(command.GuestMembershipId, cancellationToken);
-        if (guest is null || !guest.IsGuest)
+        // Resolve the membership to add, registered or guest; a missing one is ineligible and the
+        // participant set is left unchanged (Requirement 7.1, 7.3, 7.7). The aggregate owns the
+        // squad-scope, active, and no-duplicate checks against the loaded match.
+        SquadMembership? membership = await _memberships.GetByIdAsync(command.MembershipId, cancellationToken);
+        if (membership is null)
         {
             return Fail(
                 MatchErrorCode.ValidationFailed,
-                $"Membership {command.GuestMembershipId} is ineligible: it must be an active guest membership of this match's squad.");
+                $"Membership {command.MembershipId} is ineligible: it must be an active membership of this match's squad.");
         }
 
         // The aggregate enforces the Confirmed state gate, squad-scope/active eligibility, and the
         // no-duplicate invariant; a failure leaves the participant set unchanged
         // (Requirement 2.3, 7.3, 7.4).
-        Result<MatchParticipant> added = match.AddParticipant(guest);
+        Result<MatchParticipant> added = match.AddParticipant(membership);
         if (!added.IsSuccess)
         {
-            return Result<AddGuestParticipantResult>.Fail(added.Error!);
+            return Result<AddParticipantResult>.Fail(added.Error!);
         }
 
         // Commit the mutated aggregate atomically; a failed commit adds no participant.
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<AddGuestParticipantResult>.Ok(new AddGuestParticipantResult(added.Value!.Id));
+        return Result<AddParticipantResult>.Ok(new AddParticipantResult(added.Value!.Id));
     }
 
-    private static Result<AddGuestParticipantResult> Unauthorized() =>
-        Result<AddGuestParticipantResult>.Fail(new MatchError(
+    private static Result<AddParticipantResult> Unauthorized() =>
+        Result<AddParticipantResult>.Fail(new MatchError(
             MatchErrorCode.Unauthorized, "The requested action is not permitted."));
 
-    private static Result<AddGuestParticipantResult> Fail(MatchErrorCode code, string message) =>
-        Result<AddGuestParticipantResult>.Fail(new MatchError(code, message));
+    private static Result<AddParticipantResult> Fail(MatchErrorCode code, string message) =>
+        Result<AddParticipantResult>.Fail(new MatchError(code, message));
 }

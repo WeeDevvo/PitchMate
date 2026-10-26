@@ -75,7 +75,7 @@ public sealed class ReloadedOutcomeIntegrationTests
                 for (var m = 0; m < MatchCount; m++)
                 {
                     Match match = Match.CreateDraft(Guid.CreateVersion7(), squad.Id, "Pitch 1", [day], nowUtc).Value!;
-                    Assert.True(match.Confirm(day, availableCount: 10, minimumThreshold: 10, []).IsSuccess);
+                    Assert.True(match.Confirm(day, []).IsSuccess);
                     foreach (var member in members)
                     {
                         Assert.True(match.AddParticipant(member).IsSuccess);

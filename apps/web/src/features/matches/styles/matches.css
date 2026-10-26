@@ -222,6 +222,28 @@
   min-height: var(--matches-touch-target);
 }
 
+/* A guest's days sit on one line where they fit, wrapping on a phone. */
+.matches-checklist--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: var(--matches-gap);
+}
+
+.matches-guest-availability {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap);
+}
+
+.matches-guest-availability__row + .matches-guest-availability__row {
+  border-top: var(--matches-border-width) solid var(--control-border);
+  padding-top: var(--matches-gap);
+}
+
 .matches-checkbox {
   width: 1.5rem;
   height: 1.5rem;

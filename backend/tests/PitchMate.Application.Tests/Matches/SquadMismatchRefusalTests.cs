@@ -15,7 +15,7 @@ namespace PitchMate.Application.Tests.Matches;
 /// Unit tests for the squad-mismatch refusal the six path-corrected operations gained in task 2.2 —
 /// <see cref="SubmitAvailabilityResponseHandler"/>, <see cref="ClearAvailabilityResponseHandler"/>,
 /// <see cref="GetAvailabilityTallyHandler"/>, <see cref="ConfirmMatchHandler"/>,
-/// <see cref="AddGuestParticipantHandler"/> and <see cref="RemoveParticipantHandler"/>
+/// <see cref="AddParticipantHandler"/> and <see cref="RemoveParticipantHandler"/>
 /// (Requirements 7.4, 7.6).
 /// <para>
 /// Each operation gets a matched pair of tests over the same fixture. The <em>mismatch</em> test
@@ -228,7 +228,7 @@ public class SquadMismatchRefusalTests
     }
 
     // ---------------------------------------------------------------------------------------------
-    // AddGuestParticipant
+    // AddParticipant
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>
@@ -237,12 +237,12 @@ public class SquadMismatchRefusalTests
     /// participant (Requirements 7.4, 7.6).
     /// </summary>
     [Fact]
-    public async Task AddGuestParticipant_MismatchedSquad_RefusedUniformlyWithoutResolvingMembershipOrWriting()
+    public async Task AddParticipant_MismatchedSquad_RefusedUniformlyWithoutResolvingMembershipOrWriting()
     {
         ParticipantFixture f = ParticipantFixture.Create(seedGuestAsParticipant: false);
 
-        Result<AddGuestParticipantResult> result = await f.AddHandler.HandleAsync(
-            new AddGuestParticipantCommand(
+        Result<AddParticipantResult> result = await f.AddHandler.HandleAsync(
+            new AddParticipantCommand(
                 f.OwnerUserId, OtherSquadId(f.SquadId), f.MatchId, f.GuestMembershipId),
             CancellationToken.None);
 
@@ -257,12 +257,12 @@ public class SquadMismatchRefusalTests
     /// adds the guest as a participant (Requirement 7.4).
     /// </summary>
     [Fact]
-    public async Task AddGuestParticipant_MatchingSquad_ReachesTheNormalPath()
+    public async Task AddParticipant_MatchingSquad_ReachesTheNormalPath()
     {
         ParticipantFixture f = ParticipantFixture.Create(seedGuestAsParticipant: false);
 
-        Result<AddGuestParticipantResult> result = await f.AddHandler.HandleAsync(
-            new AddGuestParticipantCommand(f.OwnerUserId, f.SquadId, f.MatchId, f.GuestMembershipId),
+        Result<AddParticipantResult> result = await f.AddHandler.HandleAsync(
+            new AddParticipantCommand(f.OwnerUserId, f.SquadId, f.MatchId, f.GuestMembershipId),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -505,8 +505,8 @@ public class SquadMismatchRefusalTests
             Match match = Match.CreateDraft(
                 Guid.CreateVersion7(), squad.Id, Location, CandidateDays, Now).Value!;
 
-            // The default minimum player threshold is 10, so seed exactly ten available members.
-            for (int i = 0; i < ConfirmMatchHandler.DefaultMinimumPlayerThreshold; i++)
+            // Ten available members, enough to roll teams afterwards.
+            for (int i = 0; i < 10; i++)
             {
                 SquadMembership member =
                     SquadMembership.CreateRegistered(squad.Id, Guid.NewGuid(), $"Player {i + 1}").Value!;
@@ -521,7 +521,6 @@ public class SquadMismatchRefusalTests
 
             var handler = new ConfirmMatchHandler(
                 new ConcealmentMatchRepository(match),
-                new ConfirmFakeAvailabilityRepository([.. match.AvailabilityResponses]),
                 memberships,
                 new FakeSquadRepository(squadStore),
                 unitOfWork,
@@ -553,11 +552,11 @@ public class SquadMismatchRefusalTests
             GuestMembershipId = guestMembershipId;
 
             var matches = new ConcealmentMatchRepository(match);
-            AddHandler = new AddGuestParticipantHandler(matches, memberships, unitOfWork);
+            AddHandler = new AddParticipantHandler(matches, memberships, unitOfWork);
             RemoveHandler = new RemoveParticipantHandler(matches, memberships, unitOfWork);
         }
 
-        public AddGuestParticipantHandler AddHandler { get; }
+        public AddParticipantHandler AddHandler { get; }
 
         public RemoveParticipantHandler RemoveHandler { get; }
 
@@ -597,7 +596,7 @@ public class SquadMismatchRefusalTests
             // aggregate with a zero threshold so the fixture is not entangled with the availability
             // tally, which the confirmation tests above own.
             MatchResultTriad confirmed = match.Confirm(
-                CandidateDays[0], availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+                CandidateDays[0], activeMembers: []);
             Assert.True(confirmed.IsSuccess);
 
             if (seedGuestAsParticipant)

@@ -86,7 +86,9 @@ describe.each(THEMES)('in the %s theme', (theme) => {
   it('the match screen while gathering availability', async () => {
     applyThemeAttribute(theme);
     renderAtRoute(<MatchScreen api={fakeMatchesApi()} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
-    await screen.findAllByText(/needed$/);
+    await screen.findAllByText(/^\d+ can play$/);
+    // The organiser's guest-availability panel, with its guest row loaded.
+    await screen.findByRole('group', { name: 'Guest Gary' });
     await expectNoWcagViolations(document.body);
   });
 

@@ -48,6 +48,50 @@ public class GetMatchDetailHandlerTests
         Assert.Equal([Now.AddDays(8)], detail.CallerAvailability.MarkedDays);
     }
 
+    // An organiser sees what was marked for each active guest, and only for guests: a registered
+    // member's own response and an inactive guest's stored one are left out.
+    [Fact]
+    public async Task Organiser_SeesTheActiveGuestsMarkedAvailability()
+    {
+        Fixture f = Fixture.WithOwner(out SquadMembership guest, out SquadMembership inactiveGuest, out SquadMembership member);
+        var handler = f.HandlerWith(new StoredResponseAvailabilityRepository(
+            f.RespondAs(guest.Id, [Now.AddDays(7)]),
+            f.RespondAs(inactiveGuest.Id, [Now.AddDays(7)]),
+            f.RespondAs(member.Id, [Now.AddDays(8)])));
+
+        Result<MatchDetail> result = await handler.HandleAsync(f.Command, CancellationToken.None);
+
+        GuestAvailabilityView view = Assert.Single(result.Value!.GuestAvailability);
+        Assert.Equal(guest.Id, view.SquadMembershipId);
+        Assert.Equal([Now.AddDays(7)], view.MarkedDays);
+    }
+
+    // Once availability has closed the guests' markings are no longer read or shown.
+    [Fact]
+    public async Task Organiser_SeesNoGuestAvailabilityOnceConfirmed()
+    {
+        Fixture f = Fixture.WithOwner(out SquadMembership guest, out _, out _, MatchState.Confirmed);
+        var availability = new StoredResponseAvailabilityRepository(f.RespondAs(guest.Id, [Now.AddDays(7)]));
+
+        Result<MatchDetail> result = await f.HandlerWith(availability).HandleAsync(f.Command, CancellationToken.None);
+
+        Assert.Empty(result.Value!.GuestAvailability);
+        Assert.Equal(0, availability.ListCount);
+    }
+
+    // A plain member is shown no guest's availability, and the squad's responses aren't read for them.
+    [Fact]
+    public async Task Member_SeesNoGuestAvailability()
+    {
+        Fixture f = Fixture.WithActiveMember(MatchState.GatheringAvailability);
+        var availability = new StoredResponseAvailabilityRepository(f.RespondAs(Guid.NewGuid(), [Now.AddDays(7)]));
+
+        Result<MatchDetail> result = await f.HandlerWith(availability).HandleAsync(f.Command, CancellationToken.None);
+
+        Assert.Empty(result.Value!.GuestAvailability);
+        Assert.Equal(0, availability.ListCount);
+    }
+
     [Theory]
     [InlineData(MatchState.GatheringAvailability)]
     [InlineData(MatchState.Confirmed)]
@@ -106,15 +150,20 @@ public class GetMatchDetailHandlerTests
         Assert.Equal(f.Acting.Id, membershipId);
     }
 
+    // The detail says whether the caller is playing, so the screen offers Join or Leave.
     [Fact]
-    public async Task EffectiveThreshold_IsTheConfirmationPathsDefault()
+    public async Task CallerIsParticipant_IsTrueExactlyWhenTheCallerIsInThePool()
     {
-        Fixture f = Fixture.WithActiveMember(MatchState.GatheringAvailability);
+        Fixture outside = Fixture.WithActiveMember(MatchState.Confirmed);
+        Fixture inside = Fixture.WithActiveMember(MatchState.Confirmed, callerPlays: true);
 
-        Result<MatchDetail> result = await f.HandlerWith(new StoredResponseAvailabilityRepository())
-            .HandleAsync(f.Command, CancellationToken.None);
+        Result<MatchDetail> notPlaying = await outside.HandlerWith(new StoredResponseAvailabilityRepository())
+            .HandleAsync(outside.Command, CancellationToken.None);
+        Result<MatchDetail> playing = await inside.HandlerWith(new StoredResponseAvailabilityRepository())
+            .HandleAsync(inside.Command, CancellationToken.None);
 
-        Assert.Equal(ConfirmMatchHandler.DefaultMinimumPlayerThreshold, result.Value!.EffectiveMinimumPlayerThreshold);
+        Assert.False(notPlaying.Value!.CallerIsParticipant);
+        Assert.True(playing.Value!.CallerIsParticipant);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -223,11 +272,39 @@ public class GetMatchDetailHandlerTests
             return draft.SubmitAvailability(membershipId, markedDays, Now).Value!;
         }
 
-        public static Fixture WithActiveMember(MatchState state)
+        public static Fixture WithActiveMember(MatchState state, bool callerPlays = false)
         {
             MatchDetailProjection projection = ProjectionIn(Guid.NewGuid(), state);
             SquadMembership acting = Member(projection.SquadId);
+            if (callerPlays)
+            {
+                projection = projection with
+                {
+                    Participants =
+                    [
+                        .. projection.Participants,
+                        new ParticipantView(acting.Id, "Member", IsGuest: false, RosterPosition: 5),
+                    ],
+                };
+            }
             return new Fixture(projection, true, acting, new ConcealmentMembershipRepository(acting));
+        }
+
+        /// <summary>The squad's owner reading, with an active guest, an inactive guest and a member beside them.</summary>
+        public static Fixture WithOwner(
+            out SquadMembership guest,
+            out SquadMembership inactiveGuest,
+            out SquadMembership member,
+            MatchState state = MatchState.GatheringAvailability)
+        {
+            MatchDetailProjection projection = ProjectionIn(Guid.NewGuid(), state);
+            SquadMembership owner = SquadMembership.CreateOwner(projection.SquadId, Guid.NewGuid(), "Owner").Value!;
+            guest = SquadMembership.CreateGuest(projection.SquadId, "Guest", skillTier: null, Now).Value!;
+            inactiveGuest = SquadMembership.CreateGuest(projection.SquadId, "Gone", skillTier: null, Now).Value!;
+            inactiveGuest.Deactivate();
+            member = Member(projection.SquadId);
+            return new Fixture(
+                projection, true, owner, new ConcealmentMembershipRepository(owner, guest, inactiveGuest, member));
         }
 
         public static Fixture WithNoMembership()

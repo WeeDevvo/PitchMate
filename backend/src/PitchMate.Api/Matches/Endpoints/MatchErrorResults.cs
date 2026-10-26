@@ -65,9 +65,6 @@ internal static class MatchErrorResults
             // The action is not permitted from the match's current lifecycle state.
             MatchErrorCode.InvalidState => StatusCodes.Status409Conflict,
 
-            // The available player count did not meet the squad's minimum confirmation threshold.
-            MatchErrorCode.ThresholdNotMet => StatusCodes.Status409Conflict,
-
             // The targeted membership is not a participant of the match — nothing to act on.
             MatchErrorCode.NotAParticipant => StatusCodes.Status404NotFound,
 

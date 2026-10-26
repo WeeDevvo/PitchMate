@@ -95,10 +95,10 @@ public sealed class Match : BaseEntity
     public IReadOnlyCollection<AvailabilityResponse> AvailabilityResponses => _availabilityResponses;
 
     /// <summary>
-    /// The match's playing pool. Registered participants are seeded on a successful
-    /// <see cref="Confirm"/>, one per active registered member whose availability response marks the
-    /// confirmed day (Requirement 6.5); guests are added by an admin once the match is
-    /// <see cref="MatchState.Confirmed"/>. A membership appears at most once (Requirement 7.4).
+    /// The match's playing pool. Participants are seeded on a successful <see cref="Confirm"/>, one
+    /// per active member whose availability response marks the confirmed day, guests included when an
+    /// admin marked their availability (Requirement 6.5); further guests can be added by an admin once
+    /// the match is <see cref="MatchState.Confirmed"/>. A membership appears at most once (Requirement 7.4).
     /// </summary>
     public IReadOnlyCollection<MatchParticipant> Participants => _participants;
 
@@ -309,8 +309,8 @@ public sealed class Match : BaseEntity
     /// and the underlying computation resolves a member's single most recent response by submission
     /// time regardless (Requirement 5.3).
     /// <para>
-    /// This computation counts exactly the responses stored on the match; scoping to active registered
-    /// members is the caller's (Application layer's) concern, matching how authorisation is handled
+    /// This computation counts exactly the responses stored on the match; scoping to active members is
+    /// the caller's (Application layer's) concern, matching how authorisation is handled
     /// outside the aggregate.
     /// </para>
     /// </summary>
@@ -370,30 +370,25 @@ public sealed class Match : BaseEntity
     ///   returned (Requirement 2.3, 6.8);</item>
     ///   <item><paramref name="day"/> must resolve to one of this match's candidate days, else a
     ///   <see cref="MatchErrorCode.ValidationFailed"/> failure identifying the invalid day is returned
-    ///   (Requirement 6.4);</item>
-    ///   <item><paramref name="availableCount"/> must be greater than or equal to
-    ///   <paramref name="minimumThreshold"/>, else a <see cref="MatchErrorCode.ThresholdNotMet"/>
-    ///   failure stating the available count and the threshold is returned (Requirement 6.2).</item>
+    ///   (Requirement 6.4).</item>
     /// </list>
+    /// Availability is a guide, not a gate: any candidate day can be confirmed however few marked it,
+    /// and more players join or are added afterwards.
     /// On success the confirmed day becomes the <see cref="ConfirmedDay"/>, the state becomes
     /// <see cref="MatchState.Confirmed"/>, and the participant set is seeded with exactly the supplied
-    /// active registered members whose stored availability response marks the confirmed day, each as a
-    /// registered <see cref="MatchParticipant"/> carrying its display-name-at-time (Requirement 6.5).
-    /// Scoping <paramref name="activeRegisteredMembers"/> to active registered memberships of the
-    /// squad is the caller's concern; the aggregate contributes the "response marks the confirmed day"
-    /// filter from its own stored responses. Duplicate memberships in
-    /// <paramref name="activeRegisteredMembers"/> yield at most one participant (Requirement 7.4).
+    /// active members whose stored availability response marks the confirmed day, each as a
+    /// <see cref="MatchParticipant"/> carrying its display-name-at-time and guest flag (Requirement 6.5).
+    /// A guest's response is one an admin marked for it. Scoping <paramref name="activeMembers"/> to
+    /// active memberships of the squad is the caller's concern; the aggregate contributes the "response
+    /// marks the confirmed day" filter from its own stored responses. Duplicate memberships in
+    /// <paramref name="activeMembers"/> yield at most one participant (Requirement 7.4).
     /// </summary>
     /// <param name="day">The candidate day to confirm on; must resolve, by instant, to one of the match's candidate days.</param>
-    /// <param name="availableCount">The count of available active registered members on <paramref name="day"/>, evaluated by the caller.</param>
-    /// <param name="minimumThreshold">The squad's minimum player threshold that the available count must meet.</param>
-    /// <param name="activeRegisteredMembers">The active registered memberships of the squad (identity plus display name) from which participants are seeded.</param>
-    /// <returns>A success once confirmed and seeded, or a validation/state/threshold failure that leaves the match unchanged.</returns>
+    /// <param name="activeMembers">The active memberships of the squad, registered and guest, from which participants are seeded.</param>
+    /// <returns>A success once confirmed and seeded, or a validation/state failure that leaves the match unchanged.</returns>
     public Result Confirm(
         DateTimeOffset day,
-        int availableCount,
-        int minimumThreshold,
-        IReadOnlyList<RegisteredMember> activeRegisteredMembers)
+        IReadOnlyList<ConfirmableMember> activeMembers)
     {
         var guard = EnsureState(MatchState.GatheringAvailability);
         if (!guard.IsSuccess)
@@ -409,16 +404,9 @@ public sealed class Match : BaseEntity
                 $"Cannot confirm on {day.ToUniversalTime():O} because it is not a candidate day of this match."));
         }
 
-        if (availableCount < minimumThreshold)
-        {
-            return Result.Fail(new MatchError(
-                MatchErrorCode.ThresholdNotMet,
-                $"Cannot confirm: {availableCount} available player(s) is below the minimum threshold of {minimumThreshold}."));
-        }
-
-        // Seed exactly the active registered members whose stored response marks the confirmed day.
-        // Eligibility (active, registered) is the caller's concern; the aggregate owns the response check.
-        var members = activeRegisteredMembers ?? [];
+        // Seed exactly the active members whose stored response marks the confirmed day, guests
+        // included. Eligibility (active) is the caller's concern; the aggregate owns the response check.
+        var members = activeMembers ?? [];
         var seeded = new List<MatchParticipant>(members.Count);
         var seenMemberships = new HashSet<Guid>();
         foreach (var member in members)
@@ -431,7 +419,7 @@ public sealed class Match : BaseEntity
             var response = _availabilityResponses.FirstOrDefault(r => r.SquadMembershipId == member.SquadMembershipId);
             if (response is not null && response.Marks(confirmedDay))
             {
-                seeded.Add(new MatchParticipant(Id, member.SquadMembershipId, member.DisplayName, isGuest: false, rosterPosition: seeded.Count));
+                seeded.Add(new MatchParticipant(Id, member.SquadMembershipId, member.DisplayName, member.IsGuest, rosterPosition: seeded.Count));
             }
         }
 
@@ -459,8 +447,9 @@ public sealed class Match : BaseEntity
     ///   <see cref="MatchErrorCode.AlreadyParticipant"/> failure is returned and the membership is
     ///   retained as exactly one participant (Requirement 7.4).</item>
     /// </list>
-    /// The Application layer decides which memberships an admin may add (a guest via
-    /// <c>AddGuestParticipant</c>); the aggregate owns eligibility and the no-duplicate invariant.
+    /// The Application layer decides who may add whom (an admin adds anyone through
+    /// <c>AddParticipant</c>; a member joins themselves through <c>JoinMatch</c>); the aggregate owns
+    /// eligibility and the no-duplicate invariant.
     /// </summary>
     /// <param name="membership">The squad membership to add; must belong to this squad and be active.</param>
     /// <returns>A success carrying the new participant, or a state/validation/duplicate failure that leaves the participant set unchanged.</returns>
@@ -510,7 +499,8 @@ public sealed class Match : BaseEntity
     ///   <item>the membership must currently be a participant, else a
     ///   <see cref="MatchErrorCode.NotAParticipant"/> failure is returned (Requirement 7.5).</item>
     /// </list>
-    /// Remaining participants keep their existing roster positions.
+    /// Remaining participants keep their existing roster positions. A removed participant is also taken
+    /// off any working team, so they can't be carried into the kickoff lineup.
     /// </summary>
     /// <param name="squadMembershipId">The identity of the participant membership to remove.</param>
     /// <returns>A success once removed, or a state/not-a-participant failure that leaves the participant set unchanged.</returns>
@@ -531,6 +521,11 @@ public sealed class Match : BaseEntity
         }
 
         _participants.Remove(participant);
+        foreach (var team in _teams.Where(t => t.Contains(squadMembershipId)))
+        {
+            team.RemoveParticipant(squadMembershipId);
+        }
+
         return Result.Ok();
     }
 
@@ -630,11 +625,10 @@ public sealed class Match : BaseEntity
     ///   <item>the membership must be a current participant of the match, else a
     ///   <see cref="MatchErrorCode.NotAParticipant"/> failure is returned;</item>
     ///   <item>the target team must be one of the match's working teams, else a
-    ///   <see cref="MatchErrorCode.ValidationFailed"/> failure is returned;</item>
-    ///   <item>the participant must currently be assigned to a working team, else a
     ///   <see cref="MatchErrorCode.ValidationFailed"/> failure is returned.</item>
     /// </list>
-    /// Moving a participant to the team it is already on is a success that changes nothing.
+    /// A participant on no team yet, such as one who joined after the roll, is placed on the target
+    /// team. Moving a participant to the team it is already on is a success that changes nothing.
     /// </summary>
     /// <param name="squadMembershipId">The identity of the participant to move.</param>
     /// <param name="toTeamId">The identity of the destination working team.</param>
@@ -662,20 +656,14 @@ public sealed class Match : BaseEntity
                 $"Team {toTeamId} is not a working team of this match."));
         }
 
+        // A player who joined after the teams were rolled is on no team yet; moving them places them.
         var current = _teams.FirstOrDefault(t => t.Contains(squadMembershipId));
-        if (current is null)
-        {
-            return Result.Fail(new MatchError(
-                MatchErrorCode.ValidationFailed,
-                $"Participant {squadMembershipId} is not assigned to any working team; apply a team proposal first."));
-        }
-
-        if (current.Id == target.Id)
+        if (current?.Id == target.Id)
         {
             return Result.Ok();
         }
 
-        current.RemoveParticipant(squadMembershipId);
+        current?.RemoveParticipant(squadMembershipId);
         target.AddParticipant(squadMembershipId);
         return Result.Ok();
     }
@@ -792,6 +780,15 @@ public sealed class Match : BaseEntity
                     MatchErrorCode.ValidationFailed,
                     $"Each team must have {TeamMinSize} to {TeamMaxSize} players, but a team has {team.Roster.Count}."));
             }
+        }
+
+        // Someone who joined after the roll must be placed before the lineup is captured, or they
+        // would be silently left out of it.
+        if (_participants.Any(p => !_teams.Any(t => t.Contains(p.SquadMembershipId))))
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.ValidationFailed,
+                "Put every player on a team before locking."));
         }
 
         var bibCount = _teams.Count(t => t.BibFlag);

@@ -724,6 +724,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/squads/{squadId}/matches/{matchId}/guest-availability/{membershipId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetGuestAvailability"];
+        post?: never;
+        delete: operations["ClearGuestAvailability"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/squads/{squadId}/matches/{matchId}/availability/tally": {
         parameters: {
             query?: never;
@@ -765,7 +781,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AddGuestParticipant"];
+        post: operations["AddParticipant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -783,6 +799,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["RemoveParticipant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/squads/{squadId}/matches/{matchId}/participants/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["JoinMatch"];
+        delete: operations["LeaveMatch"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1092,11 +1124,11 @@ export interface components {
             avatarReference: null | string;
             linkedIdentities: components["schemas"]["LinkedIdentityView"][];
         };
-        AddGuestParticipantRequest: {
+        AddParticipantRequest: {
             /** Format: uuid */
-            guestMembershipId: string;
+            membershipId: string;
         };
-        AddGuestParticipantResult: {
+        AddParticipantResult: {
             /** Format: uuid */
             participantId: string;
         };
@@ -1255,6 +1287,11 @@ export interface components {
             /** Format: date-time */
             expiresAt: null | string;
         };
+        GuestAvailabilityView: {
+            /** Format: uuid */
+            squadMembershipId: string;
+            markedDays: string[];
+        };
         GuestClaimPreview: {
             squadName: string;
             guestDisplayName: string;
@@ -1356,12 +1393,12 @@ export interface components {
             /** Format: int32 */
             participantCount: number | string;
             participants: components["schemas"]["ParticipantView"][];
-            /** Format: int32 */
-            effectiveMinimumPlayerThreshold: number | string;
+            callerIsParticipant: boolean;
             callerAvailability: components["schemas"]["CallerAvailability"];
             recordedResult: null | components["schemas"]["RecordedResultView"];
             /** Format: date-time */
             completedAt: null | string;
+            guestAvailability: components["schemas"]["GuestAvailabilityView"][];
         };
         MatchList: {
             matches: components["schemas"]["MatchListEntry"][];
@@ -5808,6 +5845,164 @@ export interface operations {
             };
         };
     };
+    SetGuestAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                squadId: string;
+                matchId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitAvailabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmitAvailabilityResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ClearGuestAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                squadId: string;
+                matchId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     GetAvailabilityTally: {
         parameters: {
             query?: never;
@@ -5957,7 +6152,7 @@ export interface operations {
             };
         };
     };
-    AddGuestParticipant: {
+    AddParticipant: {
         parameters: {
             query?: never;
             header?: never;
@@ -5969,7 +6164,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AddGuestParticipantRequest"];
+                "application/json": components["schemas"]["AddParticipantRequest"];
             };
         };
         responses: {
@@ -5979,7 +6174,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AddGuestParticipantResult"];
+                    "application/json": components["schemas"]["AddParticipantResult"];
                 };
             };
             /** @description Bad Request */
@@ -6046,6 +6241,156 @@ export interface operations {
                 squadId: string;
                 matchId: string;
                 membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    JoinMatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                squadId: string;
+                matchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LeaveMatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                squadId: string;
+                matchId: string;
             };
             cookie?: never;
         };

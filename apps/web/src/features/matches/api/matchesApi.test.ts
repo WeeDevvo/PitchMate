@@ -169,8 +169,10 @@ describe('organiser writes', () => {
 
     const results = [
       await api.confirmMatch(SQUAD_ID, MATCH_ID, DAY_ISO[0]),
-      await api.addGuest(SQUAD_ID, MATCH_ID, GUEST_ID),
+      await api.addParticipant(SQUAD_ID, MATCH_ID, GUEST_ID),
       await api.removeParticipant(SQUAD_ID, MATCH_ID, GUEST_ID),
+      await api.joinMatch(SQUAD_ID, MATCH_ID),
+      await api.leaveMatch(SQUAD_ID, MATCH_ID),
       await api.rerollTeams(MATCH_ID),
       await api.moveParticipant(MATCH_ID, GUEST_ID, TEAM_ID),
       await api.setTeamName(MATCH_ID, TEAM_ID, null),
@@ -181,8 +183,10 @@ describe('organiser writes', () => {
     expect(results.every((result) => result.kind === 'success')).toBe(true);
     expect(requests.map(({ method, url, body }) => [method, url.slice(BASE_URL.length), body])).toEqual([
       ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/confirm`, { day: DAY_ISO[0] }],
-      ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants`, { guestMembershipId: GUEST_ID }],
+      ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants`, { membershipId: GUEST_ID }],
       ['DELETE', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants/${GUEST_ID}`, undefined],
+      ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants/me`, undefined],
+      ['DELETE', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants/me`, undefined],
       ['POST', `/matches/${MATCH_ID}/teams/reroll`, undefined],
       ['POST', `/matches/${MATCH_ID}/teams/moves`, { squadMembershipId: GUEST_ID, toTeamId: TEAM_ID }],
       ['PUT', `/matches/${MATCH_ID}/teams/${TEAM_ID}/name`, { teamName: null }],
@@ -191,7 +195,7 @@ describe('organiser writes', () => {
     ]);
   });
 
-  it('reads the working teams and the squad’s guests', async () => {
+  it('reads the working teams and the squad’s players', async () => {
     const { api, requests } = harness((request) =>
       request.url.endsWith('/teams')
         ? json({ teams: [], prediction: null, unassignedParticipants: [] })
@@ -202,7 +206,7 @@ describe('organiser writes', () => {
       kind: 'success',
       value: { teams: [], prediction: null, unassigned: [] },
     });
-    expect(await api.getSquadGuests(SQUAD_ID)).toEqual({ kind: 'success', value: [] });
+    expect(await api.getSquadPlayers(SQUAD_ID)).toEqual({ kind: 'success', value: [] });
     expect(requests.map(({ url }) => url.slice(BASE_URL.length))).toEqual([
       `/matches/${MATCH_ID}/teams`,
       `/squads/${SQUAD_ID}`,
@@ -222,10 +226,10 @@ describe('organiser writes', () => {
   });
 
   it('names a refused confirm by its problem code', async () => {
-    const { api } = harness(() => problem(409, 'ThresholdNotMet'));
+    const { api } = harness(() => problem(409, 'InvalidState'));
     expect(await api.confirmMatch(SQUAD_ID, MATCH_ID, DAY_ISO[0])).toEqual({
       kind: 'rejected',
-      reason: 'threshold-not-met',
+      reason: 'invalid-state',
     });
   });
 

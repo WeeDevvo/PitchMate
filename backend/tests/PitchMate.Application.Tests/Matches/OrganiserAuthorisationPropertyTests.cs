@@ -203,7 +203,6 @@ public class OrganiserAuthorisationPropertyTests
 
         var handler = new ConfirmMatchHandler(
             new FakeMatchRepository(match),
-            new FakeAvailabilityRepository([.. match.AvailabilityResponses]),
             new FakeMembershipRepository(actingUserId, squadId, acting, members),
             new FakeSquadRepository(),
             new FakeUnitOfWork(),
@@ -224,14 +223,14 @@ public class OrganiserAuthorisationPropertyTests
         // An active guest of the squad, resolvable by id, that is not yet a participant.
         SquadMembership guest = SquadMembership.CreateGuest(squadId, "Guest To Add", skillTier: null, Anchor).Value!;
 
-        var handler = new AddGuestParticipantHandler(
+        var handler = new AddParticipantHandler(
             new FakeMatchRepository(match),
             new FakeMembershipRepository(actingUserId, squadId, acting, [guest]),
             new FakeUnitOfWork());
 
         var result = handler
             .HandleAsync(
-                new AddGuestParticipantCommand(actingUserId, squadId, match.Id, guest.Id), CancellationToken.None)
+                new AddParticipantCommand(actingUserId, squadId, match.Id, guest.Id), CancellationToken.None)
             .GetAwaiter().GetResult();
 
         return ToOutcome(result.IsSuccess, result.Error);
@@ -413,7 +412,7 @@ public class OrganiserAuthorisationPropertyTests
     private static (Match Match, List<SquadMembership> Participants) BuildConfirmed(Guid squadId)
     {
         Match match = Match.CreateDraft(Guid.CreateVersion7(), squadId, Location, [Day], Anchor).Value!;
-        match.Confirm(Day, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+        match.Confirm(Day, activeMembers: []);
 
         var participants = new List<SquadMembership>(ParticipantCount);
         for (int i = 0; i < ParticipantCount; i++)

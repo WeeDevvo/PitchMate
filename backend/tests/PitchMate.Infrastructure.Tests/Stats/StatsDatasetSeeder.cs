@@ -156,7 +156,7 @@ public sealed class StatsDatasetSeeder
             return TeamlessMatch(match, matchId, MatchState.GatheringAvailability, spec.Fidelity);
         }
 
-        Check(match.Confirm(candidateDay, availableCount: 0, minimumThreshold: 0, Array.Empty<RegisteredMember>()), "confirm");
+        Check(match.Confirm(candidateDay, Array.Empty<ConfirmableMember>()), "confirm");
 
         if (spec.State == MatchState.Confirmed)
         {

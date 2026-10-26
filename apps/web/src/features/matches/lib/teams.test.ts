@@ -10,7 +10,7 @@ import {
   workingTeam,
   workingTeams,
 } from '../testing/matchesFixtures';
-import { parseSquadGuests, parseWorkingTeams } from './parse/teams';
+import { guestsOf, parseSquadPlayers, parseWorkingTeams } from './parse/teams';
 import {
   TEAM_MAX_SIZE,
   TEAM_MIN_SIZE,
@@ -121,7 +121,7 @@ describe('parseWorkingTeams', () => {
   });
 });
 
-describe('parseSquadGuests', () => {
+describe('parseSquadPlayers', () => {
   const member = (
     membershipId: string,
     displayName: string,
@@ -137,24 +137,32 @@ describe('parseSquadGuests', () => {
     ratingState: null,
   });
 
-  it('keeps only active guests', () => {
-    expect(
-      parseSquadGuests({
-        squadId: SQUAD_ID,
-        name: 'Tuesday 5s',
-        features: [],
-        members: [
-          member(MATCH_ID, 'Alex', false),
-          member(GUESTS[0].membershipId, GUESTS[0].displayName, true),
-          member(playerId(1), 'Old Guest', true, 'Inactive'),
-        ],
-      }),
-    ).toEqual({ ok: true, value: GUESTS });
+  it('keeps every active member and guest, and the guests among them', () => {
+    const parsed = parseSquadPlayers({
+      squadId: SQUAD_ID,
+      name: 'Tuesday 5s',
+      features: [],
+      members: [
+        member(MATCH_ID, 'Alex', false),
+        member(GUESTS[0].membershipId, GUESTS[0].displayName, true),
+        member(playerId(1), 'Old Guest', true, 'Inactive'),
+        member(playerId(2), 'Gone Member', false, 'Inactive'),
+      ],
+    });
+
+    expect(parsed).toEqual({
+      ok: true,
+      value: [
+        { membershipId: MATCH_ID, displayName: 'Alex', isGuest: false },
+        { ...GUESTS[0], isGuest: true },
+      ],
+    });
+    expect(parsed.ok && guestsOf(parsed.value)).toEqual(GUESTS);
   });
 
   it('fails the body on one malformed member', () => {
     expect(
-      parseSquadGuests({ members: [member('not-an-id', 'Alex', true)] }).ok,
+      parseSquadPlayers({ members: [member('not-an-id', 'Alex', true)] }).ok,
     ).toBe(false);
   });
 });

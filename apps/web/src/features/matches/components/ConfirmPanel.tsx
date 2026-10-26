@@ -1,7 +1,7 @@
 /**
- * The organiser's confirm step: choose one of the days that has reached the
- * threshold, and confirm the match on it. Days below the threshold are not
- * offered, because the backend would refuse them.
+ * The organiser's confirm step: choose any candidate day, seeing how many can
+ * make each, and confirm the match on it. Everyone who marked that day becomes
+ * a player; others join or are added afterwards.
  */
 import { useId, useState, type FormEvent, type ReactElement } from 'react';
 
@@ -15,7 +15,6 @@ import {
   CONFIRM_LABEL,
   CONFIRMING_LABEL,
   GENERIC_MATCHES_FAILURE,
-  NO_DAY_READY_STATEMENT,
   REJECTION_MESSAGES,
   tallyCountLabel,
 } from '../lib/messages';
@@ -23,7 +22,6 @@ import { useAction } from '../state/useAction';
 
 export interface ConfirmPanelProps {
   readonly dayCounts: readonly DayCount[];
-  readonly threshold: number;
   readonly confirm: (day: string, signal: AbortSignal) => Promise<CallResult<void>>;
   /** Called after a confirm settles, so the screen can re-read. */
   readonly onSettled: () => void;
@@ -31,22 +29,20 @@ export interface ConfirmPanelProps {
 
 export function ConfirmPanel({
   dayCounts,
-  threshold,
   confirm,
   onSettled,
 }: ConfirmPanelProps): ReactElement {
   const idPrefix = useId();
   const headingId = `${idPrefix}-heading`;
-  const ready = dayCounts.filter(({ count }) => count >= threshold);
 
-  // The organiser's pick while it is still a ready day; otherwise the
-  // best-attended ready day, the earliest of any tie.
+  // The organiser's pick while it is still a candidate day; otherwise the
+  // best-attended day, the earliest of any tie.
   const [picked, setChosen] = useState<number | null>(null);
-  const chosen = ready.some((day) => day.dayMs === picked)
+  const chosen = dayCounts.some((day) => day.dayMs === picked)
     ? picked
-    : ready.length === 0
+    : dayCounts.length === 0
       ? null
-      : ready.reduce((best, day) => (day.count > best.count ? day : best)).dayMs;
+      : dayCounts.reduce((best, day) => (day.count > best.count ? day : best)).dayMs;
   const action = useAction<void>();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -71,15 +67,13 @@ export function ConfirmPanel({
       <h2 id={headingId} className="matches-subheading">
         {CONFIRM_HEADING}
       </h2>
-      {ready.length === 0 ? (
-        <p className="matches-hint">{NO_DAY_READY_STATEMENT}</p>
-      ) : (
+      {dayCounts.length === 0 ? null : (
         <form noValidate onSubmit={(event) => void handleSubmit(event)}>
           <fieldset className="matches-fieldset">
             <legend>{CONFIRM_DAY_LEGEND}</legend>
             <p className="matches-hint">{CONFIRM_HINT}</p>
             <ul className="matches-checklist">
-              {ready.map(({ dayMs, count }) => {
+              {dayCounts.map(({ dayMs, count }) => {
                 const fieldId = `${idPrefix}-${dayMs}`;
                 return (
                   <li key={dayMs}>
@@ -94,7 +88,7 @@ export function ConfirmPanel({
                     <label htmlFor={fieldId}>
                       <time dateTime={new Date(dayMs).toISOString()}>{formatDay(dayMs)}</time>
                       {' '}
-                      <span className="matches-hint">({tallyCountLabel(count, threshold)})</span>
+                      <span className="matches-hint">({tallyCountLabel(count)})</span>
                     </label>
                   </li>
                 );

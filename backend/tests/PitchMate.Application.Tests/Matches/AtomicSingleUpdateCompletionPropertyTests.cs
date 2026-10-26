@@ -238,7 +238,7 @@ public class AtomicSingleUpdateCompletionPropertyTests
             // Draft -> confirm (empty pool) -> add the exact participant count -> partition into two
             // named teams with a single bib team -> lock -> start, leaving the match InProgress.
             Match match = Match.CreateDraft(Guid.Empty, squadId, "Community Astro Pitch", [MatchDay], NowUtc).Value!;
-            match.Confirm(MatchDay, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+            match.Confirm(MatchDay, activeMembers: []);
 
             int total = scenario.SizeA + scenario.SizeB;
             var participants = new List<SquadMembership>(total);

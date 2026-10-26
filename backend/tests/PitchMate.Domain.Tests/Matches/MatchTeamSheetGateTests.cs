@@ -205,7 +205,7 @@ public class MatchTeamSheetGateTests
 
         private static Dictionary<Guid, string> Confirm(Match match)
         {
-            Assert.True(match.Confirm(Now.AddDays(3), availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []).IsSuccess);
+            Assert.True(match.Confirm(Now.AddDays(3), activeMembers: []).IsSuccess);
 
             var names = new Dictionary<Guid, string>();
             for (int i = 0; i < 11; i++)

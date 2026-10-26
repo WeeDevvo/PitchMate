@@ -24,7 +24,11 @@ export function countsByDay(
   }));
 }
 
-/** True when at least one candidate day has reached the threshold. */
-export function anyDayAtThreshold(counts: readonly DayCount[], threshold: number): boolean {
-  return counts.some(({ count }) => count >= threshold);
+/**
+ * The best-attended days: every day sharing the highest count, or none when
+ * nobody has marked any day. A guide only; any day can be confirmed.
+ */
+export function mostAvailableDays(counts: readonly DayCount[]): ReadonlySet<number> {
+  const highest = counts.reduce((best, { count }) => Math.max(best, count), 0);
+  return new Set(highest === 0 ? [] : counts.filter(({ count }) => count === highest).map(({ dayMs }) => dayMs));
 }

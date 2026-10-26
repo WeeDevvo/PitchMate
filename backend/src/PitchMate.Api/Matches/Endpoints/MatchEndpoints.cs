@@ -238,6 +238,52 @@ public static class MatchEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .WithMatchProblemResponses();
 
+        // An owner or admin marks the days a guest can play, on the guest's behalf: guests have no
+        // account to respond with.
+        group.MapPut("/{matchId:guid}/guest-availability/{membershipId:guid}", static async (
+            Guid squadId,
+            Guid matchId,
+            Guid membershipId,
+            SubmitAvailabilityRequest request,
+            ClaimsPrincipal principal,
+            SetGuestAvailabilityHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            var command = new SetGuestAvailabilityCommand(userId, squadId, matchId, membershipId, request.MarkedDays ?? []);
+            return ToHttpResult(await handler.HandleAsync(command, ct));
+        })
+            .RequireAuthorization()
+            .WithName("SetGuestAvailability")
+            .Produces<SubmitAvailabilityResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
+
+        // An owner or admin clears what was marked for a guest.
+        group.MapDelete("/{matchId:guid}/guest-availability/{membershipId:guid}", static async (
+            Guid squadId,
+            Guid matchId,
+            Guid membershipId,
+            ClaimsPrincipal principal,
+            ClearGuestAvailabilityHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(
+                new ClearGuestAvailabilityCommand(userId, squadId, matchId, membershipId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("ClearGuestAvailability")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithMatchProblemResponses();
+
         // Read the availability tally — gated to active members; existence concealed otherwise
         // (Requirement 5.1, 5.5, 5.6, 5.7).
         group.MapGet("/{matchId:guid}/availability/tally", static async (
@@ -293,13 +339,13 @@ public static class MatchEndpoints
     /// <summary>Maps participant add/remove under the squad-scoped group (Requirement 7).</summary>
     private static void MapParticipantEndpoints(RouteGroupBuilder group)
     {
-        // Add a guest participant to a confirmed match (Requirement 7.1).
+        // An organiser adds any active member or guest to a confirmed match (Requirement 7.1).
         group.MapPost("/{matchId:guid}/participants", static async (
             Guid squadId,
             Guid matchId,
-            AddGuestParticipantRequest request,
+            AddParticipantRequest request,
             ClaimsPrincipal principal,
-            AddGuestParticipantHandler handler,
+            AddParticipantHandler handler,
             CancellationToken ct) =>
         {
             if (CallerIdentity.ResolveUserId(principal) is not { } userId)
@@ -307,12 +353,12 @@ public static class MatchEndpoints
                 return MatchErrorResults.Unauthenticated();
             }
 
-            var command = new AddGuestParticipantCommand(userId, squadId, matchId, request.GuestMembershipId);
+            var command = new AddParticipantCommand(userId, squadId, matchId, request.MembershipId);
             return ToHttpResult(await handler.HandleAsync(command, ct));
         })
             .RequireAuthorization()
-            .WithName("AddGuestParticipant")
-            .Produces<AddGuestParticipantResult>(StatusCodes.Status200OK)
+            .WithName("AddParticipant")
+            .Produces<AddParticipantResult>(StatusCodes.Status200OK)
             .WithMatchProblemResponses();
 
         // Remove a registered or guest participant from a confirmed match (Requirement 7.2).
@@ -334,6 +380,46 @@ public static class MatchEndpoints
         })
             .RequireAuthorization()
             .WithName("RemoveParticipant")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithMatchProblemResponses();
+
+        // A member joins a confirmed match themselves, whether or not they marked its day.
+        group.MapPost("/{matchId:guid}/participants/me", static async (
+            Guid squadId,
+            Guid matchId,
+            ClaimsPrincipal principal,
+            JoinMatchHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new JoinMatchCommand(userId, squadId, matchId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("JoinMatch")
+            .Produces(StatusCodes.Status204NoContent)
+            .WithMatchProblemResponses();
+
+        // A member leaves a confirmed match they are playing in.
+        group.MapDelete("/{matchId:guid}/participants/me", static async (
+            Guid squadId,
+            Guid matchId,
+            ClaimsPrincipal principal,
+            LeaveMatchHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new LeaveMatchCommand(userId, squadId, matchId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("LeaveMatch")
             .Produces(StatusCodes.Status204NoContent)
             .WithMatchProblemResponses();
     }

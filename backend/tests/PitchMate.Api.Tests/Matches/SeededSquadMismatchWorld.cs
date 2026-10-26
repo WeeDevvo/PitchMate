@@ -25,6 +25,7 @@ namespace PitchMate.Api.Tests.Matches;
 /// <param name="ParticipantMatchId">A <c>Confirmed</c> match with seeded participants for the participant operations' success paths.</param>
 /// <param name="AddableGuestMembershipId">An active guest of the match's squad, not a participant of the participant match.</param>
 /// <param name="RemovableParticipantMembershipId">A membership that is a participant of the participant match.</param>
+/// <param name="JoinerUserId">An active registered member who marked no day, so is in no match until they join.</param>
 /// <param name="CandidateDay">A genuine candidate day of every seeded match, as request bodies send it.</param>
 public sealed record SeededSquadMismatchWorld(
     Guid MatchSquadId,
@@ -41,4 +42,5 @@ public sealed record SeededSquadMismatchWorld(
     Guid ParticipantMatchId,
     Guid AddableGuestMembershipId,
     Guid RemovableParticipantMembershipId,
+    Guid JoinerUserId,
     DateTimeOffset CandidateDay);
