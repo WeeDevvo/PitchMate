@@ -551,6 +551,26 @@ public static class MatchEndpoints
             .Produces<LockTeamsResult>(StatusCodes.Status200OK)
             .WithMatchProblemResponses();
 
+        // Unlock the teams before kickoff, so players can be added or removed and the teams re-locked —
+        // organiser-only, under the same uniform authorisation failure as the lock.
+        group.MapPost("/teams/unlock", static async (
+            Guid matchId,
+            ClaimsPrincipal principal,
+            UnlockTeamsHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new UnlockTeamsCommand(userId, matchId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("UnlockTeams")
+            .Produces<UnlockTeamsResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
+
         // Read the team sheet — gated to active members; existence concealed otherwise
         // (Requirement 9.1, 9.2, 9.4, 9.5).
         group.MapGet("/team-sheet", static async (

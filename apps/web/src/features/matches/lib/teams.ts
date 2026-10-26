@@ -15,6 +15,20 @@ export const TEAM_MAX_SIZE = 8;
 export const ROLL_MIN_PARTICIPANTS = 10;
 export const ROLL_MAX_PARTICIPANTS = 16;
 
+/**
+ * How far a player count is from what rolling needs: how many more to add, how
+ * many to take off, or `null` when the count can be rolled.
+ */
+export type RollGap =
+  | { readonly kind: 'add'; readonly count: number }
+  | { readonly kind: 'remove'; readonly count: number };
+
+export function rollGap(playerCount: number): RollGap | null {
+  if (playerCount < ROLL_MIN_PARTICIPANTS) return { kind: 'add', count: ROLL_MIN_PARTICIPANTS - playerCount };
+  if (playerCount > ROLL_MAX_PARTICIPANTS) return { kind: 'remove', count: playerCount - ROLL_MAX_PARTICIPANTS };
+  return null;
+}
+
 /** The longest team name the backend accepts. */
 export const TEAM_NAME_MAX_LENGTH = 50;
 

@@ -178,6 +178,7 @@ describe('organiser writes', () => {
       await api.setTeamName(MATCH_ID, TEAM_ID, null),
       await api.setBibTeam(MATCH_ID, TEAM_ID),
       await api.lockTeams(MATCH_ID),
+      await api.unlockTeams(MATCH_ID),
     ];
 
     expect(results.every((result) => result.kind === 'success')).toBe(true);
@@ -192,6 +193,7 @@ describe('organiser writes', () => {
       ['PUT', `/matches/${MATCH_ID}/teams/${TEAM_ID}/name`, { teamName: null }],
       ['PUT', `/matches/${MATCH_ID}/teams/${TEAM_ID}/bib`, undefined],
       ['POST', `/matches/${MATCH_ID}/teams/lock`, undefined],
+      ['POST', `/matches/${MATCH_ID}/teams/unlock`, undefined],
     ]);
   });
 

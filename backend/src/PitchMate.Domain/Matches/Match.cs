@@ -380,15 +380,17 @@ public sealed class Match : BaseEntity
     /// <see cref="MatchParticipant"/> carrying its display-name-at-time and guest flag (Requirement 6.5).
     /// A guest's response is one an admin marked for it. Scoping <paramref name="activeMembers"/> to
     /// active memberships of the squad is the caller's concern; the aggregate contributes the "response
-    /// marks the confirmed day" filter from its own stored responses. Duplicate memberships in
-    /// <paramref name="activeMembers"/> yield at most one participant (Requirement 7.4).
+    /// marks the confirmed day" filter. Duplicate memberships in <paramref name="activeMembers"/> yield
+    /// at most one participant (Requirement 7.4).
     /// </summary>
     /// <param name="day">The candidate day to confirm on; must resolve, by instant, to one of the match's candidate days.</param>
     /// <param name="activeMembers">The active memberships of the squad, registered and guest, from which participants are seeded.</param>
+    /// <param name="storedResponses">The match's stored availability responses. Responses are written through the availability repository and are not loaded with the match, so a caller working from storage must pass them; when omitted, the responses held on this instance are used. A response for another match is ignored.</param>
     /// <returns>A success once confirmed and seeded, or a validation/state failure that leaves the match unchanged.</returns>
     public Result Confirm(
         DateTimeOffset day,
-        IReadOnlyList<ConfirmableMember> activeMembers)
+        IReadOnlyList<ConfirmableMember> activeMembers,
+        IReadOnlyCollection<AvailabilityResponse>? storedResponses = null)
     {
         var guard = EnsureState(MatchState.GatheringAvailability);
         if (!guard.IsSuccess)
@@ -407,6 +409,7 @@ public sealed class Match : BaseEntity
         // Seed exactly the active members whose stored response marks the confirmed day, guests
         // included. Eligibility (active) is the caller's concern; the aggregate owns the response check.
         var members = activeMembers ?? [];
+        IReadOnlyCollection<AvailabilityResponse> responses = storedResponses ?? _availabilityResponses;
         var seeded = new List<MatchParticipant>(members.Count);
         var seenMemberships = new HashSet<Guid>();
         foreach (var member in members)
@@ -416,7 +419,7 @@ public sealed class Match : BaseEntity
                 continue;
             }
 
-            var response = _availabilityResponses.FirstOrDefault(r => r.SquadMembershipId == member.SquadMembershipId);
+            var response = responses.FirstOrDefault(r => r.MatchId == Id && r.SquadMembershipId == member.SquadMembershipId);
             if (response is not null && response.Marks(confirmedDay))
             {
                 seeded.Add(new MatchParticipant(Id, member.SquadMembershipId, member.DisplayName, member.IsGuest, rosterPosition: seeded.Count));
@@ -829,6 +832,28 @@ public sealed class Match : BaseEntity
 
         State = MatchState.TeamsRolled;
         KickoffLineup = PitchMate.Domain.Matches.KickoffLineup.Capture(_teams);
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Unlocks the match's teams before kickoff, transitioning <see cref="MatchState.TeamsRolled"/> →
+    /// <see cref="MatchState.Confirmed"/> and discarding the captured <see cref="KickoffLineup"/>, so
+    /// players can be added or removed again before the teams are re-locked. The working teams, their
+    /// names and the bib flag are kept, so a re-lock after a small change needs no re-roll. Nothing is
+    /// lost: the lineup is only immutable once play starts, and a match that has started, finished or
+    /// been cancelled cannot be unlocked.
+    /// </summary>
+    /// <returns>A success once unlocked, or an <see cref="MatchErrorCode.InvalidState"/> failure, leaving the match unchanged, when it is not locked.</returns>
+    public Result Unlock()
+    {
+        var guard = EnsureState(MatchState.TeamsRolled);
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        State = MatchState.Confirmed;
+        KickoffLineup = null;
         return Result.Ok();
     }
 

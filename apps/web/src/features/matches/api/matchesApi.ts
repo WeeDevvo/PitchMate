@@ -67,6 +67,7 @@ const MOVES_PATH = '/matches/{matchId}/teams/moves';
 const TEAM_NAME_PATH = '/matches/{matchId}/teams/{teamId}/name';
 const TEAM_BIB_PATH = '/matches/{matchId}/teams/{teamId}/bib';
 const LOCK_PATH = '/matches/{matchId}/teams/lock';
+const UNLOCK_PATH = '/matches/{matchId}/teams/unlock';
 const TEAM_SHEET_PATH = '/matches/{matchId}/team-sheet';
 const START_PATH = '/matches/{matchId}/start';
 const RESULT_PATH = '/matches/{matchId}/result';
@@ -211,6 +212,9 @@ export interface MatchesApi {
 
   /** Lock the teams, capturing the kickoff lineup. */
   lockTeams(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** Unlock locked teams before kickoff, so players can be added or removed. */
+  unlockTeams(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
 
   /** Start a match whose teams are locked. */
   startMatch(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
@@ -512,6 +516,15 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
       return call(
         (callSignal): ClientCall<'LockTeams'> =>
           apiClient.POST(LOCK_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    unlockTeams(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'UnlockTeams'> =>
+          apiClient.POST(UNLOCK_PATH, { params: { path: { matchId } }, signal: callSignal }),
         acceptNoValue,
         signal,
       );

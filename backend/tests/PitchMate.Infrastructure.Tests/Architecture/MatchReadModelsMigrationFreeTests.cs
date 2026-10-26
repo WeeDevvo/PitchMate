@@ -40,6 +40,16 @@ public sealed class MatchReadModelsMigrationFreeTests
         "SubmitAvailability",
     ];
 
+    /// <summary>
+    /// Operations later features added after the chore, each named here by the feature that added it,
+    /// so an operation slipping in unannounced still fails this guard.
+    /// </summary>
+    private static readonly string[] LaterFeatureOperations =
+    [
+        // Unlocking teams before kickoff, to add or remove players (match-guest-availability).
+        "Unlock",
+    ];
+
     [Fact]
     public void NoMigrationIsAddedAndNoModelChangeIsPending()
     {
@@ -62,7 +72,9 @@ public sealed class MatchReadModelsMigrationFreeTests
             .Select(static method => method.Name)
             .Distinct();
 
-        Assert.Equal(MatchOperations.Order(StringComparer.Ordinal), operations.Order(StringComparer.Ordinal));
+        Assert.Equal(
+            MatchOperations.Concat(LaterFeatureOperations).Order(StringComparer.Ordinal),
+            operations.Order(StringComparer.Ordinal));
     }
 
     /// <summary>A production context over a connection string that is never opened.</summary>

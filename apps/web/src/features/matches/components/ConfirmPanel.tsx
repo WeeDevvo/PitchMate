@@ -72,7 +72,7 @@ export function ConfirmPanel({
           <fieldset className="matches-fieldset">
             <legend>{CONFIRM_DAY_LEGEND}</legend>
             <p className="matches-hint">{CONFIRM_HINT}</p>
-            <ul className="matches-checklist">
+            <ul className="matches-choices">
               {dayCounts.map(({ dayMs, count }) => {
                 const fieldId = `${idPrefix}-${dayMs}`;
                 return (

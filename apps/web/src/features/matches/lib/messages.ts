@@ -4,7 +4,14 @@
  */
 import { CANDIDATE_DAY_MAX_COUNT, LOCATION_MAX_LENGTH, type DraftProblem } from './matchDays';
 import type { RejectionReason } from './callOutcome';
-import { ROLL_MAX_PARTICIPANTS, ROLL_MIN_PARTICIPANTS, TEAM_MAX_SIZE, TEAM_MIN_SIZE, type LockProblem } from './teams';
+import {
+  ROLL_MAX_PARTICIPANTS,
+  ROLL_MIN_PARTICIPANTS,
+  TEAM_MAX_SIZE,
+  TEAM_MIN_SIZE,
+  type LockProblem,
+  type RollGap,
+} from './teams';
 
 /* Boundary states ---------------------------------------------------------- */
 
@@ -135,6 +142,14 @@ export const ROLL_TEAMS_LABEL = 'Roll teams';
 export const REROLL_TEAMS_LABEL = 'Re-roll teams';
 export const ROLLING_LABEL = 'Rolling…';
 export const ROLL_HINT = `Rolling needs ${ROLL_MIN_PARTICIPANTS} to ${ROLL_MAX_PARTICIPANTS} players. The balancer splits them as fairly as it can; you can then move players, rename teams and choose who wears bibs.`;
+/** What stands between the player list and a roll, said as the next thing to do. */
+export function rollGapStatement(playerCount: number, gap: RollGap): string {
+  const have = `You have ${playerCountStatement(playerCount)}.`;
+  const players = gap.count === 1 ? 'player' : 'players';
+  return gap.kind === 'add'
+    ? `${have} Add ${gap.count} more ${players} to roll teams.`
+    : `${have} Take off ${gap.count} ${players} to roll teams.`;
+}
 export const PREDICTION_HEADING = 'Predicted result';
 export const DRAW_LABEL = 'Draw';
 export const NO_PREDICTION_STATEMENT = 'A prediction appears once two teams have players.';
@@ -145,6 +160,10 @@ export const LOCK_TEAMS_LABEL = 'Lock teams';
 export const RELOCK_TEAMS_LABEL = 'Lock changes';
 export const LOCKING_LABEL = 'Locking…';
 export const LOCK_HINT = 'Locking fixes the kickoff line-up and shows the team sheet to everyone.';
+export const UNLOCK_TEAMS_LABEL = 'Unlock to change players';
+export const UNLOCKING_LABEL = 'Unlocking…';
+export const UNLOCK_HINT =
+  'Need to add or remove someone? Unlock the teams, make the change, then lock them again before kickoff.';
 export const TEAMS_LOCKED_STATEMENT = 'Teams are locked. You can still change them until the match starts.';
 
 export function teamHeading(name: string, size: number): string {

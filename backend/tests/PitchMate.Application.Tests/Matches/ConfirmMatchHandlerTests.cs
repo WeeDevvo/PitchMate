@@ -203,9 +203,13 @@ public class ConfirmMatchHandlerTests
             squadStore.AddCommittedMembership(
                 SquadMembership.CreateOwner(squad.Id, ownerUserId, "Owner").Value!);
 
-            // The match, drafted in GatheringAvailability with the single candidate day.
-            Match match = Match.CreateDraft(
-                Guid.CreateVersion7(),
+            // The responses are marked on one instance of the match and stored in the availability
+            // repository; the handler is given a second instance with the same identity and none
+            // loaded, as the real match repository returns it. So a seed that read the responses off
+            // the aggregate instead of from storage would seed nobody and fail these tests.
+            Guid matchId = Guid.CreateVersion7();
+            Match marked = Match.CreateDraft(
+                matchId,
                 squad.Id,
                 Location,
                 new[] { ConfirmedDay },
@@ -219,7 +223,7 @@ public class ConfirmMatchHandlerTests
                     SquadMembership.CreateRegistered(squad.Id, Guid.NewGuid(), $"Player {i + 1}").Value!;
                 squadStore.AddCommittedMembership(member);
 
-                match.SubmitAvailability(member.Id, new[] { ConfirmedDay }, Anchor.AddHours(i + 1));
+                marked.SubmitAvailability(member.Id, new[] { ConfirmedDay }, Anchor.AddHours(i + 1));
             }
 
             // Guests whose availability an admin marked for the confirmed day. An inactive guest's
@@ -234,14 +238,23 @@ public class ConfirmMatchHandlerTests
                 }
 
                 squadStore.AddCommittedMembership(guest);
-                match.SubmitAvailability(guest.Id, new[] { ConfirmedDay }, Anchor.AddMinutes(i + 1));
+                marked.SubmitAvailability(guest.Id, new[] { ConfirmedDay }, Anchor.AddMinutes(i + 1));
             }
+
+            // The match drafted in GatheringAvailability with the single candidate day, as loaded.
+            Match match = Match.CreateDraft(
+                matchId,
+                squad.Id,
+                Location,
+                new[] { ConfirmedDay },
+                Anchor).Value!;
 
             var unitOfWork = new ConfirmFakeUnitOfWork(throwOnSave);
             var publisher = new CapturingConfirmPublisher(mode, unitOfWork);
 
             var handler = new ConfirmMatchHandler(
                 new ConfirmFakeMatchRepository(match),
+                new ConfirmFakeAvailabilityRepository(marked.AvailabilityResponses.ToList()),
                 new FakeSquadMembershipRepository(squadStore),
                 new FakeSquadRepository(squadStore),
                 unitOfWork,

@@ -50,6 +50,7 @@ namespace PitchMate.Application.Matches.UseCases;
 public sealed class ConfirmMatchHandler
 {
     private readonly IMatchRepository _matches;
+    private readonly IAvailabilityRepository _availability;
     private readonly ISquadMembershipRepository _memberships;
     private readonly ISquadRepository _squads;
     private readonly IUnitOfWork _unitOfWork;
@@ -58,7 +59,8 @@ public sealed class ConfirmMatchHandler
 
     /// <summary>
     /// Creates the handler with the match repository it loads and confirms the match through, the
-    /// membership repository it resolves and gates the acting membership and lists the active members
+    /// availability repository it reads the stored responses from (they are not part of the loaded
+    /// match graph), the membership repository it resolves and gates the acting membership and lists the active members
     /// through, the squad repository it reads the squad name from, the unit of
     /// work it commits through, the notification publisher it raises the <c>MatchConfirmed</c> event
     /// through after a committed confirmation, and the logger it records an isolated publish failure
@@ -66,6 +68,7 @@ public sealed class ConfirmMatchHandler
     /// </summary>
     public ConfirmMatchHandler(
         IMatchRepository matches,
+        IAvailabilityRepository availability,
         ISquadMembershipRepository memberships,
         ISquadRepository squads,
         IUnitOfWork unitOfWork,
@@ -73,6 +76,7 @@ public sealed class ConfirmMatchHandler
         ILogger<ConfirmMatchHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(matches);
+        ArgumentNullException.ThrowIfNull(availability);
         ArgumentNullException.ThrowIfNull(memberships);
         ArgumentNullException.ThrowIfNull(squads);
         ArgumentNullException.ThrowIfNull(unitOfWork);
@@ -80,6 +84,7 @@ public sealed class ConfirmMatchHandler
         ArgumentNullException.ThrowIfNull(logger);
 
         _matches = matches;
+        _availability = availability;
         _memberships = memberships;
         _squads = squads;
         _unitOfWork = unitOfWork;
@@ -152,10 +157,16 @@ public sealed class ConfirmMatchHandler
             .Select(m => new ConfirmableMember(m.Id, m.DisplayName, m.IsGuest))
             .ToList();
 
+        // The stored responses, members' own and guests' marked by an admin. They are written through
+        // the availability repository and are not part of the loaded match graph, so they are read here
+        // rather than from the aggregate; without them nobody would be seeded.
+        IReadOnlyList<AvailabilityResponse> responses =
+            await _availability.ListResponsesAsync(match.Id, cancellationToken);
+
         // Confirm on the aggregate: it validates the state and the candidate day, and seeds participants
         // from the members whose stored response marks the confirmed day (Requirement 6.1, 6.4, 6.5).
         // On any failure the match is left unchanged.
-        Result confirmed = match.Confirm(command.Day, activeMembers);
+        Result confirmed = match.Confirm(command.Day, activeMembers, responses);
         if (!confirmed.IsSuccess)
         {
             return Result<ConfirmMatchResult>.Fail(confirmed.Error!);

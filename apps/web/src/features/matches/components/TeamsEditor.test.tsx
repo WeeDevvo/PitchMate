@@ -10,8 +10,10 @@ import {
   NO_TEAMS_STATEMENT,
   REJECTION_MESSAGES,
   RELOCK_TEAMS_LABEL,
+  UNLOCK_TEAMS_LABEL,
   REROLL_TEAMS_LABEL,
   ROLL_TEAMS_LABEL,
+  rollGapStatement,
   SAVE_TEAM_NAME_LABEL,
   lockProblemMessage,
   moveToLabel,
@@ -32,13 +34,16 @@ import {
 } from '../testing/matchesFixtures';
 import { TeamsEditor } from './TeamsEditor';
 
-function renderEditor(api = fakeMatchesApi(), { locked = false, onLocked = vi.fn() } = {}) {
+function renderEditor(
+  api = fakeMatchesApi(),
+  { locked = false, onLocked = vi.fn(), playerCount = 11 } = {},
+) {
   render(
     <AuthProvider manager={sessionManagerReporting('authenticated')}>
       <TeamsEditor
         api={api}
         matchId={MATCH_ID}
-        participants={participants(11)}
+        participants={participants(playerCount)}
         locked={locked}
         authState="authenticated"
         onLocked={onLocked}
@@ -65,6 +70,13 @@ describe('TeamsEditor before a roll', () => {
 
     expect(api.rerollTeams).toHaveBeenCalledWith(MATCH_ID, expect.any(AbortSignal));
     expect(await screen.findByRole('heading', { name: /^Red Wolves/ })).toBeTruthy();
+  });
+
+  it('says how many more players a roll needs, and offers no roll until then', async () => {
+    renderEditor(fakeMatchesApi({ getWorkingTeams: async () => success(NO_TEAMS) }), { playerCount: 7 });
+
+    expect(await screen.findByText(rollGapStatement(7, { kind: 'add', count: 3 }))).toBeTruthy();
+    expect(screen.queryByRole('button', { name: ROLL_TEAMS_LABEL })).toBeNull();
   });
 
   it('states a roll the backend refuses', async () => {
@@ -209,6 +221,22 @@ describe('TeamsEditor with teams', () => {
     await userEvent.click(await screen.findByRole('button', { name: LOCK_TEAMS_LABEL }));
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(onLocked).not.toHaveBeenCalled();
+  });
+
+  it('offers an unlock only once locked, and tells the screen when it succeeds', async () => {
+    const { api, onLocked } = renderEditor(fakeMatchesApi(), { locked: true });
+
+    await userEvent.click(await screen.findByRole('button', { name: UNLOCK_TEAMS_LABEL }));
+
+    expect(api.unlockTeams).toHaveBeenCalledWith(MATCH_ID, expect.any(AbortSignal));
+    await expect.poll(() => onLocked.mock.calls.length).toBe(1);
+  });
+
+  it('offers no unlock while the teams are not locked', async () => {
+    renderEditor();
+
+    expect(await screen.findByRole('button', { name: LOCK_TEAMS_LABEL })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: UNLOCK_TEAMS_LABEL })).toBeNull();
   });
 
   it('offers to re-roll, and words the lock as a re-lock once locked', async () => {

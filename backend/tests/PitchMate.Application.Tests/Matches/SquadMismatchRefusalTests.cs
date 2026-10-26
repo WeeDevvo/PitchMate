@@ -521,6 +521,7 @@ public class SquadMismatchRefusalTests
 
             var handler = new ConfirmMatchHandler(
                 new ConcealmentMatchRepository(match),
+                new ConcealmentAvailabilityRepository([.. match.AvailabilityResponses]),
                 memberships,
                 new FakeSquadRepository(squadStore),
                 unitOfWork,

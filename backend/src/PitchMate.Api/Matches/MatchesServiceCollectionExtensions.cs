@@ -68,6 +68,7 @@ public static class MatchesServiceCollectionExtensions
         services.AddScoped<ProposeTeamsHandler>();
         services.AddScoped<AdjustTeamsHandler>();
         services.AddScoped<LockTeamsHandler>();
+        services.AddScoped<UnlockTeamsHandler>();
         services.AddScoped<GetTeamSheetHandler>();
 
         // Play: start, record result, complete, and cancel.

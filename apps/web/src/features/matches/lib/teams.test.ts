@@ -12,11 +12,14 @@ import {
 } from '../testing/matchesFixtures';
 import { guestsOf, parseSquadPlayers, parseWorkingTeams } from './parse/teams';
 import {
+  ROLL_MAX_PARTICIPANTS,
+  ROLL_MIN_PARTICIPANTS,
   TEAM_MAX_SIZE,
   TEAM_MIN_SIZE,
   formatProbability,
   lockProblems,
   participantsEditable,
+  rollGap,
   teamsEditable,
 } from './teams';
 import { MATCH_STATE_NAMES } from './wireEnums';
@@ -51,6 +54,22 @@ describe('lockProblems', () => {
   it('needs two teams, and counts players on no team', () => {
     expect(lockProblems([], 0)).toEqual([{ kind: 'too-few-teams' }]);
     expect(lockProblems(workingTeams().teams, 2)).toEqual([{ kind: 'unassigned', count: 2 }]);
+  });
+});
+
+describe('rollGap', () => {
+  it('is null exactly in the rollable range, and otherwise closes the gap to it', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 40 }), (count) => {
+        const gap = rollGap(count);
+        const inRange = count >= ROLL_MIN_PARTICIPANTS && count <= ROLL_MAX_PARTICIPANTS;
+        expect(gap === null).toBe(inRange);
+        if (gap === null) return;
+        const after = gap.kind === 'add' ? count + gap.count : count - gap.count;
+        expect(gap.count).toBeGreaterThan(0);
+        expect(after).toBe(gap.kind === 'add' ? ROLL_MIN_PARTICIPANTS : ROLL_MAX_PARTICIPANTS);
+      }),
+    );
   });
 });
 
