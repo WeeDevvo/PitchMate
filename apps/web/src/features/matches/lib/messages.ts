@@ -4,7 +4,14 @@
  */
 import { CANDIDATE_DAY_MAX_COUNT, LOCATION_MAX_LENGTH, type DraftProblem } from './matchDays';
 import type { RejectionReason } from './callOutcome';
-import { ROLL_MAX_PARTICIPANTS, ROLL_MIN_PARTICIPANTS, TEAM_MAX_SIZE, TEAM_MIN_SIZE, type LockProblem } from './teams';
+import {
+  ROLL_MAX_PARTICIPANTS,
+  ROLL_MIN_PARTICIPANTS,
+  TEAM_MAX_SIZE,
+  TEAM_MIN_SIZE,
+  type LockProblem,
+  type RollGap,
+} from './teams';
 
 /* Boundary states ---------------------------------------------------------- */
 
@@ -72,17 +79,25 @@ export const CLEAR_AVAILABILITY_LABEL = 'Clear my response';
 export const AVAILABILITY_SAVED_STATEMENT = 'Your availability is saved.';
 export const AVAILABILITY_CLEARED_STATEMENT = 'Your response is cleared.';
 export const AVAILABILITY_CLOSED_STATEMENT = 'Availability is closed for this match.';
+
+export const GUEST_AVAILABILITY_HEADING = "Guests' availability";
+export const GUEST_AVAILABILITY_HINT =
+  'Guests have no account, so tick the days each guest can play. They count like anyone else.';
+export const GUEST_AVAILABILITY_NO_GUESTS =
+  "This squad has no guests yet. Add them from the squad's Administration section.";
+export const GUEST_AVAILABILITY_NOT_MARKED = 'Not marked yet';
+export const SAVE_GUEST_AVAILABILITY_LABEL = 'Save';
+export const CLEAR_GUEST_AVAILABILITY_LABEL = 'Clear';
+export const GUEST_AVAILABILITY_SAVED_STATEMENT = 'Saved.';
+export const GUEST_AVAILABILITY_CLEARED_STATEMENT = 'Cleared.';
 export const TALLY_HEADING = 'Who can play';
 export const TALLY_LOADING_LABEL = 'Loading availability';
-export const AT_THRESHOLD_LABEL = 'Enough to play';
-export const BELOW_THRESHOLD_LABEL = 'Not enough yet';
+export const MOST_PLAYERS_LABEL = 'Most players';
+export const TALLY_HINT =
+  'A guide to the best day. An admin can confirm any day, and others can join afterwards.';
 
-export function tallyCountLabel(count: number, threshold: number): string {
-  return `${count} can play, ${threshold} needed`;
-}
-
-export function thresholdStatement(threshold: number): string {
-  return `A day needs ${threshold} players before an admin can confirm it.`;
+export function tallyCountLabel(count: number): string {
+  return `${count} can play`;
 }
 
 /* Confirming ------------------------------------------------------------------ */
@@ -91,16 +106,24 @@ export const CONFIRM_HEADING = 'Confirm the match';
 export const CONFIRM_DAY_LEGEND = 'Day to confirm';
 export const CONFIRM_LABEL = 'Confirm match';
 export const CONFIRMING_LABEL = 'Confirming…';
-export const NO_DAY_READY_STATEMENT = 'No day has enough players yet. You can confirm once one does.';
 export const CONFIRM_HINT =
-  'Confirming closes availability. Everyone who can make that day becomes a player.';
+  'Confirming closes availability. Everyone who marked that day becomes a player. Others can join or be added afterwards.';
 
 export const PARTICIPANTS_HEADING = 'Players';
 export const GUEST_LABEL = 'Guest';
-export const ADD_GUEST_LABEL = 'Guest to add';
-export const ADD_GUEST_SUBMIT_LABEL = 'Add guest';
-export const NO_GUESTS_TO_ADD = 'Every guest in this squad is already playing, or the squad has none.';
+export const ADD_PLAYER_LABEL = 'Player to add';
+export const ADD_PLAYER_SUBMIT_LABEL = 'Add player';
+export const NO_PLAYERS_TO_ADD = 'Everyone in this squad is already playing.';
 export const GUESTS_LOADING_LABEL = 'Loading guests';
+export const PLAYERS_LOADING_LABEL = 'Loading the squad';
+export const JOIN_MATCH_LABEL = 'Join this match';
+export const LEAVE_MATCH_LABEL = 'Leave this match';
+export const NOT_PLAYING_STATEMENT = "You're not playing in this match yet.";
+export const PLAYING_STATEMENT = "You're playing in this match.";
+
+export function guestOptionLabel(name: string): string {
+  return `${name} (guest)`;
+}
 
 export function removeParticipantLabel(name: string): string {
   return `Remove ${name}`;
@@ -119,6 +142,14 @@ export const ROLL_TEAMS_LABEL = 'Roll teams';
 export const REROLL_TEAMS_LABEL = 'Re-roll teams';
 export const ROLLING_LABEL = 'Rolling…';
 export const ROLL_HINT = `Rolling needs ${ROLL_MIN_PARTICIPANTS} to ${ROLL_MAX_PARTICIPANTS} players. The balancer splits them as fairly as it can; you can then move players, rename teams and choose who wears bibs.`;
+/** What stands between the player list and a roll, said as the next thing to do. */
+export function rollGapStatement(playerCount: number, gap: RollGap): string {
+  const have = `You have ${playerCountStatement(playerCount)}.`;
+  const players = gap.count === 1 ? 'player' : 'players';
+  return gap.kind === 'add'
+    ? `${have} Add ${gap.count} more ${players} to roll teams.`
+    : `${have} Take off ${gap.count} ${players} to roll teams.`;
+}
 export const PREDICTION_HEADING = 'Predicted result';
 export const DRAW_LABEL = 'Draw';
 export const NO_PREDICTION_STATEMENT = 'A prediction appears once two teams have players.';
@@ -129,6 +160,10 @@ export const LOCK_TEAMS_LABEL = 'Lock teams';
 export const RELOCK_TEAMS_LABEL = 'Lock changes';
 export const LOCKING_LABEL = 'Locking…';
 export const LOCK_HINT = 'Locking fixes the kickoff line-up and shows the team sheet to everyone.';
+export const UNLOCK_TEAMS_LABEL = 'Unlock to change players';
+export const UNLOCKING_LABEL = 'Unlocking…';
+export const UNLOCK_HINT =
+  'Need to add or remove someone? Unlock the teams, make the change, then lock them again before kickoff.';
 export const TEAMS_LOCKED_STATEMENT = 'Teams are locked. You can still change them until the match starts.';
 
 export function teamHeading(name: string, size: number): string {
@@ -157,8 +192,8 @@ export function lockProblemMessage(problem: LockProblem): string {
       return 'Choose exactly one team to wear bibs.';
     case 'unassigned':
       return problem.count === 1
-        ? '1 player is not on a team and will not play.'
-        : `${problem.count} players are not on a team and will not play.`;
+        ? '1 player is not on a team yet. Put them on one before locking.'
+        : `${problem.count} players are not on a team yet. Put them on one before locking.`;
   }
 }
 
@@ -232,7 +267,6 @@ export const COMPLETED_LABEL = 'Completed';
 export const REJECTION_MESSAGES: Readonly<Record<RejectionReason, string>> = {
   validation: 'That was not accepted. Check the details and try again.',
   'invalid-state': 'This match has moved on, so that is no longer possible. The page has been refreshed.',
-  'threshold-not-met': 'That day does not have enough players yet.',
   'result-required': 'Save the score before completing the match.',
   conflict: 'Someone else changed this match at the same time. The page has been refreshed.',
 };

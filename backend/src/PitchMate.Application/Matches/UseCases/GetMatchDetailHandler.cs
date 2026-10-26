@@ -82,6 +82,14 @@ public sealed class GetMatchDetailHandler
             HasStoredResponse: response is not null,
             MarkedDays: response?.MarkedDays.Select(day => day.Instant).ToList() ?? []);
 
+        // Guest availability can only be marked, and only matters, while availability is being
+        // gathered; every other read keeps its fixed round-trip count.
+        IReadOnlyList<GuestAvailabilityView> guestAvailability =
+            projection.State == MatchState.GatheringAvailability
+            && MatchAuthorization.RequireOrganiser(acting).IsSuccess
+                ? await ReadGuestAvailabilityAsync(projection, cancellationToken)
+                : [];
+
         return MatchDetailResult.Ok(new MatchDetail(
             projection.MatchId,
             projection.SquadId,
@@ -91,9 +99,36 @@ public sealed class GetMatchDetailHandler
             projection.ConfirmedDay,
             projection.Participants.Count,
             projection.Participants,
-            ConfirmMatchHandler.ResolveMinimumThreshold(squad: null),
+            projection.Participants.Any(p => p.SquadMembershipId == acting.Id),
             callerAvailability,
             projection.RecordedResult,
-            projection.CompletedAt));
+            projection.CompletedAt,
+            guestAvailability));
+    }
+
+    /// <summary>
+    /// The stored responses of the squad's active guests, in the squad's membership order. Only an
+    /// owner or admin marks these, so only they are shown them.
+    /// </summary>
+    private async Task<IReadOnlyList<GuestAvailabilityView>> ReadGuestAvailabilityAsync(
+        MatchDetailProjection projection, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<SquadMembership> members =
+            await _memberships.ListForSquadAsync(projection.SquadId, activeOnly: true, cancellationToken);
+        IReadOnlyList<AvailabilityResponse> responses =
+            await _availability.ListResponsesAsync(projection.MatchId, cancellationToken);
+
+        // At most one response per membership is stored; the latest wins regardless.
+        var byMembership = responses
+            .GroupBy(r => r.SquadMembershipId)
+            .ToDictionary(g => g.Key, g => g.MaxBy(r => r.SubmittedAt)!);
+        return
+        [
+            .. members
+                .Where(m => m.IsGuest && byMembership.ContainsKey(m.Id))
+                .Select(m => new GuestAvailabilityView(
+                    m.Id,
+                    [.. byMembership[m.Id].MarkedDays.Select(day => day.Instant)])),
+        ];
     }
 }

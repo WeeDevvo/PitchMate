@@ -15,9 +15,6 @@ public enum MatchErrorCode
     /// <summary>The operation is not permitted from the match's current lifecycle state.</summary>
     InvalidState,
 
-    /// <summary>The available player count did not meet the squad's minimum threshold for confirmation.</summary>
-    ThresholdNotMet,
-
     /// <summary>The targeted membership is not a participant of the match.</summary>
     NotAParticipant,
 

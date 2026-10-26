@@ -15,7 +15,6 @@
 export type RejectionReason =
   | 'validation'
   | 'invalid-state'
-  | 'threshold-not-met'
   | 'result-required'
   | 'conflict';
 
@@ -50,7 +49,6 @@ const REJECTION_REASONS_BY_PROBLEM_CODE: Readonly<Record<string, RejectionReason
   {
     ValidationFailed: 'validation',
     InvalidState: 'invalid-state',
-    ThresholdNotMet: 'threshold-not-met',
     ResultRequired: 'result-required',
     LiveTrackingDisabled: 'validation',
     AlreadyParticipant: 'conflict',

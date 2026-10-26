@@ -22,9 +22,9 @@ import { parseMatchDetail, type MatchDetail } from '../lib/parse/matchDetail';
 import { parseMatchList, type MatchList } from '../lib/parse/matchList';
 import { parseTeamSheet, type TeamSheet } from '../lib/parse/teamSheet';
 import {
-  parseSquadGuests,
+  parseSquadPlayers,
   parseWorkingTeams,
-  type SquadGuest,
+  type SquadPlayer,
   type WorkingTeams,
 } from '../lib/parse/teams';
 import {
@@ -55,16 +55,19 @@ const SQUAD_MATCHES_PATH = '/squads/{squadId}/matches';
 const MATCH_PATH = '/matches/{matchId}';
 const AVAILABILITY_PATH = '/squads/{squadId}/matches/{matchId}/availability';
 const TALLY_PATH = '/squads/{squadId}/matches/{matchId}/availability/tally';
+const GUEST_AVAILABILITY_PATH = '/squads/{squadId}/matches/{matchId}/guest-availability/{membershipId}';
 const SQUAD_PATH = '/squads/{squadId}';
 const CONFIRM_PATH = '/squads/{squadId}/matches/{matchId}/confirm';
 const PARTICIPANTS_PATH = '/squads/{squadId}/matches/{matchId}/participants';
 const PARTICIPANT_PATH = '/squads/{squadId}/matches/{matchId}/participants/{membershipId}';
+const OWN_PARTICIPATION_PATH = '/squads/{squadId}/matches/{matchId}/participants/me';
 const TEAMS_PATH = '/matches/{matchId}/teams';
 const REROLL_PATH = '/matches/{matchId}/teams/reroll';
 const MOVES_PATH = '/matches/{matchId}/teams/moves';
 const TEAM_NAME_PATH = '/matches/{matchId}/teams/{teamId}/name';
 const TEAM_BIB_PATH = '/matches/{matchId}/teams/{teamId}/bib';
 const LOCK_PATH = '/matches/{matchId}/teams/lock';
+const UNLOCK_PATH = '/matches/{matchId}/teams/unlock';
 const TEAM_SHEET_PATH = '/matches/{matchId}/team-sheet';
 const START_PATH = '/matches/{matchId}/start';
 const RESULT_PATH = '/matches/{matchId}/result';
@@ -140,14 +143,31 @@ export interface MatchesApi {
     signal?: AbortSignal,
   ): Promise<CallResult<void>>;
 
-  /** The squad's active guests, any of whom can be added to a confirmed match. */
-  getSquadGuests(squadId: string, signal?: AbortSignal): Promise<CallResult<readonly SquadGuest[]>>;
-
-  /** Add a guest to a confirmed match. */
-  addGuest(
+  /** Replace a guest's availability, marked on their behalf, with exactly these candidate days. */
+  setGuestAvailability(
     squadId: string,
     matchId: string,
     guestMembershipId: string,
+    markedDays: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** Withdraw the availability marked for a guest altogether. */
+  clearGuestAvailability(
+    squadId: string,
+    matchId: string,
+    guestMembershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** The squad's active members and guests: anyone can be added to a confirmed match, and guests' availability can be marked. */
+  getSquadPlayers(squadId: string, signal?: AbortSignal): Promise<CallResult<readonly SquadPlayer[]>>;
+
+  /** Add any active member or guest to a confirmed match. */
+  addParticipant(
+    squadId: string,
+    matchId: string,
+    membershipId: string,
     signal?: AbortSignal,
   ): Promise<CallResult<void>>;
 
@@ -158,6 +178,12 @@ export interface MatchesApi {
     membershipId: string,
     signal?: AbortSignal,
   ): Promise<CallResult<void>>;
+
+  /** The caller joins a confirmed match themselves. Any registered member may. */
+  joinMatch(squadId: string, matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** The caller leaves a confirmed match they are playing in. */
+  leaveMatch(squadId: string, matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
 
   /** The working teams, the engine's prediction for them, and who is on no team. */
   getWorkingTeams(matchId: string, signal?: AbortSignal): Promise<CallResult<WorkingTeams>>;
@@ -186,6 +212,9 @@ export interface MatchesApi {
 
   /** Lock the teams, capturing the kickoff lineup. */
   lockTeams(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** Unlock locked teams before kickoff, so players can be added or removed. */
+  unlockTeams(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
 
   /** Start a match whose teams are locked. */
   startMatch(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
@@ -337,19 +366,45 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
       );
     },
 
-    getSquadGuests(squadId, signal) {
+    setGuestAvailability(squadId, matchId, guestMembershipId, markedDays, signal) {
+      const body: Schemas['SubmitAvailabilityRequest'] = { markedDays: [...markedDays] };
       return call(
-        (callSignal): ClientCall<'GetSquad'> =>
-          apiClient.GET(SQUAD_PATH, { params: { path: { squadId } }, signal: callSignal }),
-        parseSquadGuests,
+        (callSignal): ClientCall<'SetGuestAvailability'> =>
+          apiClient.PUT(GUEST_AVAILABILITY_PATH, {
+            params: { path: { squadId, matchId, membershipId: guestMembershipId } },
+            body,
+            signal: callSignal,
+          }),
+        acceptNoValue,
         signal,
       );
     },
 
-    addGuest(squadId, matchId, guestMembershipId, signal) {
-      const body: Schemas['AddGuestParticipantRequest'] = { guestMembershipId };
+    clearGuestAvailability(squadId, matchId, guestMembershipId, signal) {
       return call(
-        (callSignal): ClientCall<'AddGuestParticipant'> =>
+        (callSignal): ClientCall<'ClearGuestAvailability'> =>
+          apiClient.DELETE(GUEST_AVAILABILITY_PATH, {
+            params: { path: { squadId, matchId, membershipId: guestMembershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    getSquadPlayers(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'GetSquad'> =>
+          apiClient.GET(SQUAD_PATH, { params: { path: { squadId } }, signal: callSignal }),
+        parseSquadPlayers,
+        signal,
+      );
+    },
+
+    addParticipant(squadId, matchId, membershipId, signal) {
+      const body: Schemas['AddParticipantRequest'] = { membershipId };
+      return call(
+        (callSignal): ClientCall<'AddParticipant'> =>
           apiClient.POST(PARTICIPANTS_PATH, {
             params: { path: { squadId, matchId } },
             body,
@@ -365,6 +420,30 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
         (callSignal): ClientCall<'RemoveParticipant'> =>
           apiClient.DELETE(PARTICIPANT_PATH, {
             params: { path: { squadId, matchId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    joinMatch(squadId, matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'JoinMatch'> =>
+          apiClient.POST(OWN_PARTICIPATION_PATH, {
+            params: { path: { squadId, matchId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    leaveMatch(squadId, matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'LeaveMatch'> =>
+          apiClient.DELETE(OWN_PARTICIPATION_PATH, {
+            params: { path: { squadId, matchId } },
             signal: callSignal,
           }),
         acceptNoValue,
@@ -437,6 +516,15 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
       return call(
         (callSignal): ClientCall<'LockTeams'> =>
           apiClient.POST(LOCK_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    unlockTeams(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'UnlockTeams'> =>
+          apiClient.POST(UNLOCK_PATH, { params: { path: { matchId } }, signal: callSignal }),
         acceptNoValue,
         signal,
       );

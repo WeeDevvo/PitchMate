@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
+  DAY_ISO,
   DAY_MS,
   MATCH_ID,
   SQUAD_ID,
@@ -28,8 +29,9 @@ const REQUIRED_DETAIL_FIELDS = [
   'candidateDays',
   'participantCount',
   'participants',
-  'effectiveMinimumPlayerThreshold',
+  'callerIsParticipant',
   'callerAvailability',
+  'guestAvailability',
 ] as const;
 
 /** A value that is wrong for every field the parsers read. */
@@ -85,9 +87,11 @@ describe('parseMatchDetail', () => {
         fc.constantFrom(...REQUIRED_DETAIL_FIELDS),
         hostileArb,
         (field, value) => {
+          // `true` is a well-formed value for the one boolean field.
+          fc.pre(!(field === 'callerIsParticipant' && typeof value === 'boolean'));
           const body: Record<string, unknown> = { ...wireMatchDetail() };
           body[field] = value;
-          // Every hostile value is wrong for every required field: `{}` lacks
+          // Every other hostile value is wrong for every required field: `{}` lacks
           // callerAvailability's own fields, and `[{}]` holds a malformed element.
           expect(parseMatchDetail(body).ok).toBe(false);
         },
@@ -118,6 +122,59 @@ describe('parseMatchDetail', () => {
         const parsed = parseMatchDetail(value);
         expect(typeof parsed.ok).toBe('boolean');
       }),
+    );
+  });
+});
+
+describe('parseMatchDetail guest availability', () => {
+  const membershipIdArb = fc.uuid({ version: 4 });
+
+  it('reads what was marked for each guest, in order', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({ membershipId: membershipIdArb, days: fc.subarray([0, 1, 2]) }),
+          { maxLength: 6 },
+        ),
+        (guests) => {
+          const parsed = parseMatchDetail(
+            wireMatchDetail({
+              guestAvailability: guests.map(({ membershipId, days }) => ({
+                squadMembershipId: membershipId,
+                markedDays: days.map((index) => DAY_ISO[index]!),
+              })),
+            }),
+          );
+
+          expect(parsed).toEqual({
+            ok: true,
+            value: matchDetail({
+              guestAvailability: guests.map(({ membershipId, days }) => ({
+                membershipId,
+                markedDaysMs: days.map((index) => DAY_MS[index]!),
+              })),
+            }),
+          });
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it('fails the whole body for a malformed guest entry', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom<unknown>(
+          {},
+          { squadMembershipId: 'not-a-uuid', markedDays: [] },
+          { squadMembershipId: '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f01', markedDays: ['2030-03-02T20:15:00'] },
+          { squadMembershipId: '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f01' },
+        ),
+        (entry) => {
+          expect(parseMatchDetail({ ...wireMatchDetail(), guestAvailability: [entry] }).ok).toBe(false);
+        },
+      ),
+      { numRuns: 100 },
     );
   });
 });

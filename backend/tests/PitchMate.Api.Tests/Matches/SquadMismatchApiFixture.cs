@@ -20,12 +20,12 @@ namespace PitchMate.Api.Tests.Matches;
 
 /// <summary>
 /// Boots the real Api against a throwaway PostgreSQL container, seeds one world of squads, memberships and
-/// matches into it, discovers the six squad-scoped operations' route templates off the running host, and
+/// matches into it, discovers the ten squad-scoped operations' route templates off the running host, and
 /// captures the <b>baseline</b> each refusal is compared against — all once, before any test runs.
 /// <para>
 /// The baseline is the whole point of the fixture. Requirement 7.8 does not ask whether a mismatched squad
 /// produces "a 403" or "a 404": it asks whether the response is the one the <em>same operation</em> already
-/// returns to a caller holding no membership in the match's squad. So for each of the six, the fixture
+/// returns to a caller holding no membership in the match's squad. So for each of the ten, the fixture
 /// sends exactly that request — the match's own <c>squadId</c>, a user with no membership anywhere — and
 /// keeps the bytes. Every later comparison is against a response the shipped surface genuinely produced,
 /// never against a status this test decided was right.
@@ -44,14 +44,17 @@ namespace PitchMate.Api.Tests.Matches;
 /// </summary>
 public sealed class SquadMismatchApiFixture : IAsyncLifetime
 {
-    /// <summary>The number of active registered members who mark the candidate day of each seeded match.</summary>
-    private const int AvailableMemberCount = ConfirmMatchHandler.DefaultMinimumPlayerThreshold;
+    /// <summary>
+    /// The number of active registered members who mark the candidate day of each seeded match: enough
+    /// to roll teams, though confirming no longer needs any.
+    /// </summary>
+    private const int AvailableMemberCount = 10;
 
     private const string Location = "Hackney Marshes, Pitch 12";
 
     /// <summary>
     /// The tables whose every column is compared before and after a refusal sweep. The set spans the match
-    /// row, every child row the six operations can write, and the squad/membership rows they read, so an
+    /// row, every child row the ten operations can write, and the squad/membership rows they read, so an
     /// unintended <c>SaveChanges</c> — including one that only stamps an audit or soft-delete column —
     /// fails the comparison.
     /// </summary>
@@ -75,7 +78,7 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
     private IReadOnlyDictionary<SquadScopedMatchOperation, SquadScopedMatchSuccessCase> _successCases =
         new Dictionary<SquadScopedMatchOperation, SquadScopedMatchSuccessCase>();
 
-    /// <summary>The six operations as the running host mapped them.</summary>
+    /// <summary>The squad-scoped operations as the running host mapped them.</summary>
     public IReadOnlyList<SquadScopedMatchRoute> Routes { get; private set; } = [];
 
     /// <summary>The seeded identities every request addresses.</summary>
@@ -277,17 +280,18 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
     private HttpContent? BodyFor(SquadScopedMatchOperation operation, Guid guestMembershipId) =>
         operation switch
         {
-            SquadScopedMatchOperation.SubmitAvailabilityResponse => JsonContent.Create(
+            SquadScopedMatchOperation.SubmitAvailabilityResponse
+                or SquadScopedMatchOperation.SetGuestAvailability => JsonContent.Create(
                 new SubmitAvailabilityRequest([World.CandidateDay]), options: BodyJson),
             SquadScopedMatchOperation.ConfirmMatch => JsonContent.Create(
                 new ConfirmMatchRequest(World.CandidateDay), options: BodyJson),
-            SquadScopedMatchOperation.AddGuestParticipant => JsonContent.Create(
-                new AddGuestParticipantRequest(guestMembershipId), options: BodyJson),
+            SquadScopedMatchOperation.AddParticipant => JsonContent.Create(
+                new AddParticipantRequest(guestMembershipId), options: BodyJson),
             _ => null,
         };
 
     /// <summary>
-    /// Captures, for each of the six, the response a caller with no membership in the match's squad receives
+    /// Captures, for each of the ten, the response a caller with no membership in the match's squad receives
     /// when the path names the match's <em>own</em> squad.
     /// </summary>
     private Dictionary<SquadScopedMatchOperation, CapturedMatchResponse> CaptureBaselines()
@@ -310,8 +314,8 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
 
     /// <summary>
     /// Pairs each operation with a match in the state it requires and a caller its gate admits, and with the
-    /// success status it produces today: <c>200 OK</c> for the four value-bearing operations, <c>204 No
-    /// Content</c> for the two that return none.
+    /// success status it produces today: <c>200 OK</c> for the five value-bearing operations, <c>204 No
+    /// Content</c> for the five that return none.
     /// </summary>
     private static Dictionary<SquadScopedMatchOperation, SquadScopedMatchSuccessCase> BuildSuccessCases(
         SeededSquadMismatchWorld world) =>
@@ -333,6 +337,23 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
                 world.AddableGuestMembershipId,
                 StatusCodes.Status204NoContent),
 
+            // The guest-availability writes name the guest in the path.
+            [SquadScopedMatchOperation.SetGuestAvailability] = new(
+                SquadScopedMatchOperation.SetGuestAvailability,
+                world.GatheringMatchId,
+                world.OrganiserUserId,
+                world.AddableGuestMembershipId,
+                world.AddableGuestMembershipId,
+                StatusCodes.Status200OK),
+
+            [SquadScopedMatchOperation.ClearGuestAvailability] = new(
+                SquadScopedMatchOperation.ClearGuestAvailability,
+                world.GatheringMatchId,
+                world.OrganiserUserId,
+                world.AddableGuestMembershipId,
+                world.AddableGuestMembershipId,
+                StatusCodes.Status204NoContent),
+
             [SquadScopedMatchOperation.GetAvailabilityTally] = new(
                 SquadScopedMatchOperation.GetAvailabilityTally,
                 world.GatheringMatchId,
@@ -349,13 +370,30 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
                 world.AddableGuestMembershipId,
                 StatusCodes.Status200OK),
 
-            [SquadScopedMatchOperation.AddGuestParticipant] = new(
-                SquadScopedMatchOperation.AddGuestParticipant,
+            [SquadScopedMatchOperation.AddParticipant] = new(
+                SquadScopedMatchOperation.AddParticipant,
                 world.ParticipantMatchId,
                 world.OrganiserUserId,
                 world.ProbeParticipantMembershipId,
                 world.AddableGuestMembershipId,
                 StatusCodes.Status200OK),
+
+            // A member joins the confirmed match themselves; another member who plays in it leaves.
+            [SquadScopedMatchOperation.JoinMatch] = new(
+                SquadScopedMatchOperation.JoinMatch,
+                world.ParticipantMatchId,
+                world.JoinerUserId,
+                world.ProbeParticipantMembershipId,
+                world.AddableGuestMembershipId,
+                StatusCodes.Status204NoContent),
+
+            [SquadScopedMatchOperation.LeaveMatch] = new(
+                SquadScopedMatchOperation.LeaveMatch,
+                world.ParticipantMatchId,
+                world.MemberUserId,
+                world.ProbeParticipantMembershipId,
+                world.AddableGuestMembershipId,
+                StatusCodes.Status204NoContent),
 
             [SquadScopedMatchOperation.RemoveParticipant] = new(
                 SquadScopedMatchOperation.RemoveParticipant,
@@ -385,6 +423,7 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
         User organiser = User.Create("Organiser A", UniqueEmail(), emailVerified: true);
         User otherOwner = User.Create("Owner B", UniqueEmail(), emailVerified: true);
         User stranger = User.Create("Stranger", UniqueEmail(), emailVerified: true);
+        User joiner = User.Create("Joiner", UniqueEmail(), emailVerified: true);
 
         SquadMembership organiserMembership = Required(
             SquadMembership.CreateOwner(matchSquad.Id, organiser.Id, "Organiser A"), "the organiser");
@@ -413,8 +452,11 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
             "the addable guest");
 
         db.AddRange(matchSquad, otherSquad);
-        db.AddRange(organiser, otherOwner, stranger);
-        db.AddRange(organiserMembership, otherOwnerMembership, probeGuest, addableGuest);
+        SquadMembership joinerMembership = Required(
+            SquadMembership.CreateRegistered(matchSquad.Id, joiner.Id, "Joiner"), "the joiner");
+
+        db.AddRange(organiser, otherOwner, stranger, joiner);
+        db.AddRange(organiserMembership, otherOwnerMembership, probeGuest, addableGuest, joinerMembership);
 
         foreach ((User user, SquadMembership membership) in players)
         {
@@ -423,9 +465,9 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
 
         await db.SaveChangesAsync();
 
-        IReadOnlyList<RegisteredMember> registeredMembers =
+        IReadOnlyList<ConfirmableMember> registeredMembers =
         [
-            .. players.Select(player => new RegisteredMember(player.Membership.Id, player.Membership.DisplayName)),
+            .. players.Select(player => new ConfirmableMember(player.Membership.Id, player.Membership.DisplayName, player.Membership.IsGuest)),
         ];
 
         Match Draft()
@@ -446,14 +488,14 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
         // the match's own squad and an organiser's token would genuinely act — the refusal under test is
         // then caused by the squad in the path and nothing else.
         Match probe = Draft();
-        Require(probe.Confirm(firstDay, registeredMembers.Count, minimumThreshold: 0, registeredMembers), "the probe match");
+        Require(probe.Confirm(firstDay, registeredMembers), "the probe match");
 
         Match gathering = Draft();
         Match confirmable = Draft();
 
         Match participantMatch = Draft();
         Require(
-            participantMatch.Confirm(firstDay, registeredMembers.Count, minimumThreshold: 0, registeredMembers),
+            participantMatch.Confirm(firstDay, registeredMembers),
             "the participant match");
 
         db.AddRange(probe, gathering, confirmable, participantMatch);
@@ -474,6 +516,7 @@ public sealed class SquadMismatchApiFixture : IAsyncLifetime
             ParticipantMatchId: participantMatch.Id,
             AddableGuestMembershipId: addableGuest.Id,
             RemovableParticipantMembershipId: players[^1].Membership.Id,
+            JoinerUserId: joiner.Id,
             CandidateDay: firstDay);
     }
 

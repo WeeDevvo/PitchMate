@@ -48,10 +48,11 @@ public sealed class MatchDetailEndpointIntegrationTests : IClassFixture<RoutingA
         "confirmedDay",
         "participantCount",
         "participants",
-        "effectiveMinimumPlayerThreshold",
+        "callerIsParticipant",
         "callerAvailability",
         "recordedResult",
         "completedAt",
+        "guestAvailability",
     ];
 
     private readonly RoutingApiFactory _factory;
@@ -109,9 +110,7 @@ public sealed class MatchDetailEndpointIntegrationTests : IClassFixture<RoutingA
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("confirmedDay").ValueKind);
         Assert.Equal(0, detail.GetProperty("participantCount").GetInt32());
         Assert.Equal(0, detail.GetProperty("participants").GetArrayLength());
-        Assert.Equal(
-            ConfirmMatchHandler.DefaultMinimumPlayerThreshold,
-            detail.GetProperty("effectiveMinimumPlayerThreshold").GetInt32());
+        Assert.False(detail.GetProperty("callerIsParticipant").GetBoolean());
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("recordedResult").ValueKind);
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("completedAt").ValueKind);
 

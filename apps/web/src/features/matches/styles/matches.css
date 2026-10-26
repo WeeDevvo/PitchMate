@@ -322,6 +322,37 @@
   margin-bottom: var(--pm-space-1);
 }
 
+.matches-guest-availability {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap);
+}
+
+.matches-guest-availability__row + .matches-guest-availability__row {
+  border-top: var(--matches-border-width) solid var(--pm-border-subtle);
+  padding-top: var(--matches-gap);
+}
+
+/* The day to confirm: one radio per day, its count beside it. */
+.matches-choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-2);
+}
+
+.matches-choices li {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-2);
+  min-height: var(--pm-target-touch);
+}
+
 .matches-checkbox {
   width: 1.25rem;
   height: 1.25rem;

@@ -22,12 +22,12 @@ Features are opt-in per squad (admin toggle). **Live match tracking** is the mai
 ## Match lifecycle and availability
 
 1. An admin creates a **match draft** with a location and 1–14 candidate days; members are notified.
-2. **Gathering availability**: registered members mark the candidate days they can make, changeable until confirmation. Guests can't respond; admins add them later.
-3. **Confirm**: once a day meets the squad's **minimum player threshold**, an admin confirms the match on that day. **Today** the threshold is a fixed 10, read through `ConfirmMatchHandler.ResolveMinimumThreshold`. The squad setting isn't built yet.
-4. **Add guests**, then **roll teams**: the balancer proposes, the admin tweaks, sets team names (or uses the silly-name generator) and bibs, then **locks**. The lock captures the immutable **kickoff lineup**.
+2. **Gathering availability**: registered members mark the candidate days they can make, changeable until confirmation. Guests have no account, so an admin marks the days each guest can make. Availability is a **guide** to the best day, not a requirement: there is no minimum number of players to confirm.
+3. **Confirm**: an admin confirms the match on any candidate day, seeing how many can make each. Everyone marked for that day, guests included, becomes a player.
+4. **Fill the match**: until teams are locked, members **join or leave** it themselves, and an admin **adds or removes** anyone, member or guest, whether or not they marked the day. Then **roll teams** (needs 10–16 players): the balancer proposes, the admin tweaks, sets team names (or uses the silly-name generator) and bibs, then **locks**. Anyone who joined after the roll must be put on a team before locking. The lock captures the **kickoff lineup**. Until the match starts, an admin can **unlock** the teams (back to Confirmed, teams kept, lineup discarded) to add or remove players, then lock again; once play starts the lineup is immutable.
 5. **Play, then record** the result (basic or rich), then **complete**, which updates ratings.
 
-States: `GatheringAvailability → Confirmed → TeamsRolled → InProgress → Completed`, plus `Cancelled` (from GatheringAvailability, Confirmed or TeamsRolled). There is no separate Draft state: creating a draft starts at GatheringAvailability.
+States: `GatheringAvailability → Confirmed → TeamsRolled → InProgress → Completed`, plus `Cancelled` (from GatheringAvailability, Confirmed or TeamsRolled). Unlocking returns `TeamsRolled → Confirmed`. There is no separate Draft state: creating a draft starts at GatheringAvailability.
 
 **Every match is recorded**, uneven ones included. Matches run about an hour, from 5v5 to 8v8, and may be uneven (e.g. 7v6).
 

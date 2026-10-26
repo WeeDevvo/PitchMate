@@ -10,13 +10,16 @@ import {
   workingTeam,
   workingTeams,
 } from '../testing/matchesFixtures';
-import { parseSquadGuests, parseWorkingTeams } from './parse/teams';
+import { guestsOf, parseSquadPlayers, parseWorkingTeams } from './parse/teams';
 import {
+  ROLL_MAX_PARTICIPANTS,
+  ROLL_MIN_PARTICIPANTS,
   TEAM_MAX_SIZE,
   TEAM_MIN_SIZE,
   formatProbability,
   lockProblems,
   participantsEditable,
+  rollGap,
   teamsEditable,
 } from './teams';
 import { MATCH_STATE_NAMES } from './wireEnums';
@@ -51,6 +54,22 @@ describe('lockProblems', () => {
   it('needs two teams, and counts players on no team', () => {
     expect(lockProblems([], 0)).toEqual([{ kind: 'too-few-teams' }]);
     expect(lockProblems(workingTeams().teams, 2)).toEqual([{ kind: 'unassigned', count: 2 }]);
+  });
+});
+
+describe('rollGap', () => {
+  it('is null exactly in the rollable range, and otherwise closes the gap to it', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 40 }), (count) => {
+        const gap = rollGap(count);
+        const inRange = count >= ROLL_MIN_PARTICIPANTS && count <= ROLL_MAX_PARTICIPANTS;
+        expect(gap === null).toBe(inRange);
+        if (gap === null) return;
+        const after = gap.kind === 'add' ? count + gap.count : count - gap.count;
+        expect(gap.count).toBeGreaterThan(0);
+        expect(after).toBe(gap.kind === 'add' ? ROLL_MIN_PARTICIPANTS : ROLL_MAX_PARTICIPANTS);
+      }),
+    );
   });
 });
 
@@ -121,7 +140,7 @@ describe('parseWorkingTeams', () => {
   });
 });
 
-describe('parseSquadGuests', () => {
+describe('parseSquadPlayers', () => {
   const member = (
     membershipId: string,
     displayName: string,
@@ -137,24 +156,32 @@ describe('parseSquadGuests', () => {
     ratingState: null,
   });
 
-  it('keeps only active guests', () => {
-    expect(
-      parseSquadGuests({
-        squadId: SQUAD_ID,
-        name: 'Tuesday 5s',
-        features: [],
-        members: [
-          member(MATCH_ID, 'Alex', false),
-          member(GUESTS[0].membershipId, GUESTS[0].displayName, true),
-          member(playerId(1), 'Old Guest', true, 'Inactive'),
-        ],
-      }),
-    ).toEqual({ ok: true, value: GUESTS });
+  it('keeps every active member and guest, and the guests among them', () => {
+    const parsed = parseSquadPlayers({
+      squadId: SQUAD_ID,
+      name: 'Tuesday 5s',
+      features: [],
+      members: [
+        member(MATCH_ID, 'Alex', false),
+        member(GUESTS[0].membershipId, GUESTS[0].displayName, true),
+        member(playerId(1), 'Old Guest', true, 'Inactive'),
+        member(playerId(2), 'Gone Member', false, 'Inactive'),
+      ],
+    });
+
+    expect(parsed).toEqual({
+      ok: true,
+      value: [
+        { membershipId: MATCH_ID, displayName: 'Alex', isGuest: false },
+        { ...GUESTS[0], isGuest: true },
+      ],
+    });
+    expect(parsed.ok && guestsOf(parsed.value)).toEqual(GUESTS);
   });
 
   it('fails the body on one malformed member', () => {
     expect(
-      parseSquadGuests({ members: [member('not-an-id', 'Alex', true)] }).ok,
+      parseSquadPlayers({ members: [member('not-an-id', 'Alex', true)] }).ok,
     ).toBe(false);
   });
 });

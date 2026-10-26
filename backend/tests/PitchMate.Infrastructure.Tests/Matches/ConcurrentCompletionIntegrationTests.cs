@@ -133,13 +133,11 @@ public sealed class ConcurrentCompletionIntegrationTests
             }
 
             var registeredMembers = registered
-                .Select(m => new RegisteredMember(m.Id, m.DisplayName))
+                .Select(m => new ConfirmableMember(m.Id, m.DisplayName, m.IsGuest))
                 .ToList();
 
             Assert.True(match.Confirm(
                 confirmedDay,
-                availableCount: registeredMembers.Count,
-                minimumThreshold: ParticipantCount,
                 registeredMembers).IsSuccess);
             Assert.Equal(ParticipantCount, match.Participants.Count);
 

@@ -257,7 +257,6 @@ public static class SeamBehaviourBaseline
         Problem(MatchStandard, nameof(MatchErrorCode.ValidationFailed), StatusCodes.Status400BadRequest),
         Problem(MatchStandard, nameof(MatchErrorCode.Unauthorized), StatusCodes.Status403Forbidden),
         Problem(MatchStandard, nameof(MatchErrorCode.InvalidState), StatusCodes.Status409Conflict),
-        Problem(MatchStandard, nameof(MatchErrorCode.ThresholdNotMet), StatusCodes.Status409Conflict),
         Problem(MatchStandard, nameof(MatchErrorCode.NotAParticipant), StatusCodes.Status404NotFound),
         Problem(MatchStandard, nameof(MatchErrorCode.AlreadyParticipant), StatusCodes.Status409Conflict),
         Problem(MatchStandard, nameof(MatchErrorCode.LiveTrackingDisabled), StatusCodes.Status409Conflict),
@@ -273,7 +272,6 @@ public static class SeamBehaviourBaseline
                 + "and code 'Unauthorized'; routed through MatchErrorResults.Concealed() by task 11.1 "
                 + "(Requirements 2.11, 5.2, 5.6)"),
         Problem(MatchConcealed, nameof(MatchErrorCode.InvalidState), StatusCodes.Status409Conflict),
-        Problem(MatchConcealed, nameof(MatchErrorCode.ThresholdNotMet), StatusCodes.Status409Conflict),
         Problem(MatchConcealed, nameof(MatchErrorCode.NotAParticipant), StatusCodes.Status404NotFound),
         Problem(MatchConcealed, nameof(MatchErrorCode.AlreadyParticipant), StatusCodes.Status409Conflict),
         Problem(MatchConcealed, nameof(MatchErrorCode.LiveTrackingDisabled), StatusCodes.Status409Conflict),

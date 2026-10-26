@@ -12,13 +12,17 @@ import { useCallback, useId, useState, type FormEvent, type ReactElement } from 
 import { FairnessMeter, TeamColumn } from '../../../ui';
 import type { AuthState } from '../../auth';
 import type { CallResult, MatchesApi } from '../api/matchesApi';
-import { formatProbability, lockProblems, predictionLines, TEAM_NAME_MAX_LENGTH } from '../lib/teams';
+import { formatProbability, lockProblems, predictionLines, rollGap, TEAM_NAME_MAX_LENGTH } from '../lib/teams';
 import {
   DRAW_LABEL,
   GENERIC_MATCHES_FAILURE,
   LOCK_HINT,
   LOCK_TEAMS_LABEL,
   LOCKING_LABEL,
+  rollGapStatement,
+  UNLOCK_HINT,
+  UNLOCK_TEAMS_LABEL,
+  UNLOCKING_LABEL,
   NO_PREDICTION_STATEMENT,
   NO_TEAMS_STATEMENT,
   PREDICTION_HEADING,
@@ -53,11 +57,11 @@ export interface TeamsEditorProps {
   /** True once the match is locked (`TeamsRolled`), for the wording of Lock. */
   readonly locked: boolean;
   readonly authState: AuthState;
-  /** Called after a lock settles, so the screen can re-read the match. */
+  /** Called after a lock or an unlock succeeds, so the screen can re-read the match. */
   readonly onLocked: () => void;
 }
 
-type Write = 'roll' | 'lock' | 'edit';
+type Write = 'roll' | 'lock' | 'unlock' | 'edit';
 
 function failureMessage(outcome: ActionOutcome<void> | null): string | null {
   if (outcome === null || outcome.kind === 'success') return null;
@@ -176,7 +180,7 @@ export function TeamsEditor({
     const outcome = await action.run(invoke);
     if (outcome === null) return;
     teams.reload();
-    if (kind === 'lock' && outcome.kind === 'success') onLocked();
+    if ((kind === 'lock' || kind === 'unlock') && outcome.kind === 'success') onLocked();
   };
 
   const names = new Map(participants.map((p) => [p.membershipId, p.displayName]));
@@ -189,20 +193,29 @@ export function TeamsEditor({
   } else if (teams.value === null) {
     body = <LoadingNotice label={TEAMS_LOADING_LABEL} />;
   } else if (teams.value.teams.length === 0) {
+    // The roll is only offered once the player count is in range; until then
+    // the panel says how far off it is, so the admin adds or removes players.
+    const gap = rollGap(participants.length);
     body = (
       <>
         <p className="matches-notice">{NO_TEAMS_STATEMENT}</p>
         <p className="matches-hint">{ROLL_HINT}</p>
-        <div className="matches-actions">
-          <button
-            type="button"
-            className="matches-button matches-button--primary"
-            aria-disabled={action.busy ? true : undefined}
-            onClick={() => void write('roll', (signal) => api.rerollTeams(matchId, signal))}
-          >
-            {action.busy && lastWrite === 'roll' ? ROLLING_LABEL : ROLL_TEAMS_LABEL}
-          </button>
-        </div>
+        {gap === null ? (
+          <div className="matches-actions">
+            <button
+              type="button"
+              className="matches-button matches-button--primary"
+              aria-disabled={action.busy ? true : undefined}
+              onClick={() => void write('roll', (signal) => api.rerollTeams(matchId, signal))}
+            >
+              {action.busy && lastWrite === 'roll' ? ROLLING_LABEL : ROLL_TEAMS_LABEL}
+            </button>
+          </div>
+        ) : (
+          <p className="matches-notice" data-matches-roll-gap={gap.kind}>
+            {rollGapStatement(participants.length, gap)}
+          </p>
+        )}
       </>
     );
   } else {
@@ -347,7 +360,18 @@ export function TeamsEditor({
                 ? RELOCK_TEAMS_LABEL
                 : LOCK_TEAMS_LABEL}
           </button>
+          {locked ? (
+            <button
+              type="button"
+              className="matches-button"
+              aria-disabled={action.busy ? true : undefined}
+              onClick={() => void write('unlock', (signal) => api.unlockTeams(matchId, signal))}
+            >
+              {action.busy && lastWrite === 'unlock' ? UNLOCKING_LABEL : UNLOCK_TEAMS_LABEL}
+            </button>
+          ) : null}
         </div>
+        {locked ? <p className="matches-hint">{UNLOCK_HINT}</p> : null}
       </>
     );
   }

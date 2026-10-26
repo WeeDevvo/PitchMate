@@ -145,11 +145,11 @@ public sealed class MatchPersistenceRoundTripIntegrationTests
             }
 
             var registeredMembers = registered
-                .Select(m => new RegisteredMember(m.Id, m.DisplayName))
+                .Select(m => new ConfirmableMember(m.Id, m.DisplayName, m.IsGuest))
                 .ToList();
 
             Assert.True(
-                match.Confirm(confirmedDay, availableCount: registeredMembers.Count, minimumThreshold: 9, registeredMembers)
+                match.Confirm(confirmedDay, registeredMembers)
                     .IsSuccess);
             Assert.Equal(9, match.Participants.Count);
 

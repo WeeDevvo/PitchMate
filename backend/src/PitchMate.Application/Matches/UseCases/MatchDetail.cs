@@ -4,7 +4,7 @@ namespace PitchMate.Application.Matches.UseCases;
 
 /// <summary>
 /// One match as the match detail read reports it: its identity and owning squad, its lifecycle state,
-/// location, candidate and confirmed days, its playing pool, the effective confirmation threshold, the
+/// location, candidate and confirmed days, its playing pool, whether the caller is in it, the
 /// caller's own availability, and its recorded result and completion instant (Requirements 2.2–2.7, 3.2).
 /// <para>
 /// <see cref="SquadId"/> is resolved from the identified match, never from the request: this is the one
@@ -31,14 +31,15 @@ namespace PitchMate.Application.Matches.UseCases;
 /// <param name="ConfirmedDay">The confirmed day as a bare UTC instant where the match has one; otherwise an explicit <see langword="null"/>.</param>
 /// <param name="ParticipantCount">The number of <see cref="Participants"/> carried, guests and registered members alike.</param>
 /// <param name="Participants">One view per participant, in ascending roster-position order, with no maximum and no truncation.</param>
-/// <param name="EffectiveMinimumPlayerThreshold">
-/// The confirmation threshold the confirmation path would apply to this match. It is the
-/// <b>effective</b> value, read through the same seam that path uses — not a squad setting, which does
-/// not exist yet (Requirement 2.5).
-/// </param>
+/// <param name="CallerIsParticipant">Whether the calling member is one of the <see cref="Participants"/>, so they can join or leave.</param>
 /// <param name="CallerAvailability">The calling member's own stored availability response, present on every detail.</param>
 /// <param name="RecordedResult">The recorded result where the match has one; otherwise an explicit <see langword="null"/>.</param>
 /// <param name="CompletedAt">The completion instant for a <c>Completed</c> match; otherwise an explicit <see langword="null"/>.</param>
+/// <param name="GuestAvailability">
+/// The stored availability responses of the squad's active guests, which an owner or admin marks on
+/// their behalf. Present on every detail: filled for an owner or admin while the match is gathering
+/// availability, and empty otherwise, so the read's audience and window match the write's.
+/// </param>
 public sealed record MatchDetail(
     Guid MatchId,
     Guid SquadId,
@@ -48,7 +49,8 @@ public sealed record MatchDetail(
     DateTimeOffset? ConfirmedDay,
     int ParticipantCount,
     IReadOnlyList<ParticipantView> Participants,
-    int EffectiveMinimumPlayerThreshold,
+    bool CallerIsParticipant,
     CallerAvailability CallerAvailability,
     RecordedResultView? RecordedResult,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt,
+    IReadOnlyList<GuestAvailabilityView> GuestAvailability);

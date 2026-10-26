@@ -99,6 +99,7 @@ public class OrganiserAuthorisationPropertyTests
         ProposeTeams,
         AdjustTeams,
         LockTeams,
+        UnlockTeams,
         StartMatch,
         RecordResult,
         CompleteMatch,
@@ -107,7 +108,7 @@ public class OrganiserAuthorisationPropertyTests
 
     // Feature: match-lifecycle, Property 19: Organising actions require an active owner or admin - for
     // any organising action (create draft, confirm, add/remove participant, roll/lock teams, start,
-    // record result, complete, cancel) and any actor, the action is permitted iff the actor holds an
+    // record result, complete, cancel, unlock teams) and any actor, the action is permitted iff the actor holds an
     // active registered Owner or Admin membership in the match's squad; every other actor (plain
     // member, inactive, guest, non-member) is rejected with a single uniform Unauthorized failure that
     // discloses no match data and leaves the match unchanged.
@@ -160,6 +161,7 @@ public class OrganiserAuthorisationPropertyTests
             OrganiserAction.ProposeTeams => InvokeProposeTeams(squadId, actingUserId, acting),
             OrganiserAction.AdjustTeams => InvokeAdjustTeams(squadId, actingUserId, acting),
             OrganiserAction.LockTeams => InvokeLockTeams(squadId, actingUserId, acting),
+            OrganiserAction.UnlockTeams => InvokeUnlockTeams(squadId, actingUserId, acting),
             OrganiserAction.StartMatch => InvokeStartMatch(squadId, actingUserId, acting),
             OrganiserAction.RecordResult => InvokeRecordResult(squadId, actingUserId, acting),
             OrganiserAction.CompleteMatch => InvokeCompleteMatch(squadId, actingUserId, acting),
@@ -203,7 +205,7 @@ public class OrganiserAuthorisationPropertyTests
 
         var handler = new ConfirmMatchHandler(
             new FakeMatchRepository(match),
-            new FakeAvailabilityRepository([.. match.AvailabilityResponses]),
+            new FakeAvailabilityRepository(match.AvailabilityResponses.ToList()),
             new FakeMembershipRepository(actingUserId, squadId, acting, members),
             new FakeSquadRepository(),
             new FakeUnitOfWork(),
@@ -224,14 +226,14 @@ public class OrganiserAuthorisationPropertyTests
         // An active guest of the squad, resolvable by id, that is not yet a participant.
         SquadMembership guest = SquadMembership.CreateGuest(squadId, "Guest To Add", skillTier: null, Anchor).Value!;
 
-        var handler = new AddGuestParticipantHandler(
+        var handler = new AddParticipantHandler(
             new FakeMatchRepository(match),
             new FakeMembershipRepository(actingUserId, squadId, acting, [guest]),
             new FakeUnitOfWork());
 
         var result = handler
             .HandleAsync(
-                new AddGuestParticipantCommand(actingUserId, squadId, match.Id, guest.Id), CancellationToken.None)
+                new AddParticipantCommand(actingUserId, squadId, match.Id, guest.Id), CancellationToken.None)
             .GetAwaiter().GetResult();
 
         return ToOutcome(result.IsSuccess, result.Error);
@@ -312,6 +314,22 @@ public class OrganiserAuthorisationPropertyTests
 
         var result = handler
             .HandleAsync(new LockTeamsCommand(actingUserId, match.Id), CancellationToken.None)
+            .GetAwaiter().GetResult();
+
+        return ToOutcome(result.IsSuccess, result.Error);
+    }
+
+    private static Outcome InvokeUnlockTeams(Guid squadId, Guid actingUserId, SquadMembership? acting)
+    {
+        (Match match, List<SquadMembership> participants) = BuildLocked(squadId);
+
+        var handler = new UnlockTeamsHandler(
+            new FakeMatchRepository(match),
+            new FakeMembershipRepository(actingUserId, squadId, acting, participants),
+            new FakeUnitOfWork());
+
+        var result = handler
+            .HandleAsync(new UnlockTeamsCommand(actingUserId, match.Id), CancellationToken.None)
             .GetAwaiter().GetResult();
 
         return ToOutcome(result.IsSuccess, result.Error);
@@ -413,7 +431,7 @@ public class OrganiserAuthorisationPropertyTests
     private static (Match Match, List<SquadMembership> Participants) BuildConfirmed(Guid squadId)
     {
         Match match = Match.CreateDraft(Guid.CreateVersion7(), squadId, Location, [Day], Anchor).Value!;
-        match.Confirm(Day, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+        match.Confirm(Day, activeMembers: []);
 
         var participants = new List<SquadMembership>(ParticipantCount);
         for (int i = 0; i < ParticipantCount; i++)

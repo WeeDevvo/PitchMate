@@ -30,7 +30,7 @@ import { LocationProbe } from './LocationProbe';
 import type { MatchList, MatchSummary } from '../lib/parse/matchList';
 import type { DayTally, SquadStanding } from '../lib/parse/responses';
 import type { TeamSheet } from '../lib/parse/teamSheet';
-import type { SquadGuest, WorkingTeam, WorkingTeams } from '../lib/parse/teams';
+import type { SquadGuest, SquadPlayer, WorkingTeam, WorkingTeams } from '../lib/parse/teams';
 
 type Schemas = components['schemas'];
 
@@ -94,10 +94,11 @@ export function wireMatchDetail(
     confirmedDay: null,
     participantCount: 0,
     participants: [],
-    effectiveMinimumPlayerThreshold: 10,
+    callerIsParticipant: false,
     callerAvailability: { hasStoredResponse: true, markedDays: [DAY_ISO[1]] },
     recordedResult: null,
     completedAt: null,
+    guestAvailability: [],
     ...overrides,
   };
 }
@@ -144,10 +145,11 @@ export function matchDetail(overrides: Partial<MatchDetail> = {}): MatchDetail {
     confirmedDayMs: null,
     participantCount: 0,
     participants: [],
-    minimumPlayerThreshold: 10,
+    callerIsParticipant: false,
     callerAvailability: { hasStoredResponse: true, markedDaysMs: [DAY_MS[1]] },
     recordedResult: null,
     completedAtMs: null,
+    guestAvailability: [],
     ...overrides,
   };
 }
@@ -232,6 +234,12 @@ export const GUESTS: readonly SquadGuest[] = [
   { membershipId: '0198e2a7-6666-7a5e-9c2f-6b1d4a5e7f01', displayName: 'Guest Gary' },
 ];
 
+/** The squad's active players: the guests above and one registered member who isn't playing. */
+export const PLAYERS: readonly SquadPlayer[] = [
+  ...GUESTS.map((guest) => ({ ...guest, isGuest: true })),
+  { membershipId: '0198e2a7-6666-7a5e-9c2f-6b1d4a5e7f09', displayName: 'Member Mo', isGuest: false },
+];
+
 export const ORGANISER: SquadStanding = { squadId: SQUAD_ID, role: 'Admin', state: 'Active' };
 export const MEMBER: SquadStanding = { squadId: SQUAD_ID, role: 'Member', state: 'Active' };
 
@@ -253,9 +261,13 @@ export function fakeMatchesApi(overrides: Partial<MatchesApi> = {}): FakeMatches
     createDraft: async () => success(MATCH_ID),
     submitAvailability: async () => success(undefined),
     clearAvailability: async () => success(undefined),
+    setGuestAvailability: async () => success(undefined),
+    clearGuestAvailability: async () => success(undefined),
     confirmMatch: async () => success(undefined),
-    getSquadGuests: async () => success(GUESTS),
-    addGuest: async () => success(undefined),
+    getSquadPlayers: async () => success(PLAYERS),
+    addParticipant: async () => success(undefined),
+    joinMatch: async () => success(undefined),
+    leaveMatch: async () => success(undefined),
     removeParticipant: async () => success(undefined),
     getWorkingTeams: async () => success(workingTeams()),
     rerollTeams: async () => success(undefined),
@@ -263,6 +275,7 @@ export function fakeMatchesApi(overrides: Partial<MatchesApi> = {}): FakeMatches
     setTeamName: async () => success(undefined),
     setBibTeam: async () => success(undefined),
     lockTeams: async () => success(undefined),
+    unlockTeams: async () => success(undefined),
     getTeamSheet: async () => success(teamSheet()),
     startMatch: async () => success(undefined),
     recordResult: async () => success(undefined),

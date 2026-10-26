@@ -172,7 +172,7 @@ public class SquadScopedConcealmentPropertyTests
         // partition into two named teams with a single bib team -> lock, leaving it in TeamsRolled so a
         // member's team-sheet read succeeds.
         var match = Match.CreateDraft(Guid.Empty, squadId, scenario.Location, [day], NowUtc).Value!;
-        match.Confirm(day, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+        match.Confirm(day, activeMembers: []);
 
         var participantIds = new List<Guid>(scenario.SizeA + scenario.SizeB);
         for (var i = 0; i < scenario.SizeA + scenario.SizeB; i++)

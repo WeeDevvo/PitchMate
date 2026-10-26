@@ -175,7 +175,7 @@ export function parseWorkingTeams(body: unknown): ParseResult<WorkingTeams> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* The squad's guests                                                         */
+/* The squad's players                                                        */
 /* -------------------------------------------------------------------------- */
 
 export interface SquadGuest {
@@ -183,12 +183,17 @@ export interface SquadGuest {
   readonly displayName: string;
 }
 
+/** An active member or guest of the squad, any of whom can be added to a match. */
+export interface SquadPlayer extends SquadGuest {
+  readonly isGuest: boolean;
+}
+
 /**
- * Parse a `SquadData` body to the squad's active guests. Every member is read
- * (so one malformed member still fails the body), and only active guests are
- * kept; ratings and other member fields are never named.
+ * Parse a `SquadData` body to the squad's active members and guests. Every
+ * member is read (so one malformed member still fails the body), and only
+ * active ones are kept; ratings and other member fields are never named.
  */
-export function parseSquadGuests(body: unknown): ParseResult<readonly SquadGuest[]> {
+export function parseSquadPlayers(body: unknown): ParseResult<readonly SquadPlayer[]> {
   const object = readObject(body, 'squad');
   if (!object.ok) return object;
 
@@ -213,14 +218,22 @@ export function parseSquadGuests(body: unknown): ParseResult<readonly SquadGuest
     return ok({
       membershipId: membershipId.value,
       displayName: displayName.value,
-      guest: isGuest.value && state.value === 'Active',
+      isGuest: isGuest.value,
+      active: state.value === 'Active',
     });
   });
   if (!members.ok) return members;
 
   return ok(
     members.value
-      .filter((member) => member.guest)
-      .map(({ membershipId, displayName }) => ({ membershipId, displayName })),
+      .filter((member) => member.active)
+      .map(({ membershipId, displayName, isGuest }) => ({ membershipId, displayName, isGuest })),
   );
+}
+
+/** The guests among the squad's players. */
+export function guestsOf(players: readonly SquadPlayer[]): readonly SquadGuest[] {
+  return players
+    .filter((player) => player.isGuest)
+    .map(({ membershipId, displayName }) => ({ membershipId, displayName }));
 }

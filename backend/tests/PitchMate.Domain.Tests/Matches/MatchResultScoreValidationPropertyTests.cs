@@ -112,7 +112,7 @@ public class MatchResultScoreValidationPropertyTests
     {
         var day = NowUtc.AddDays(7);
         var match = Match.CreateDraft(Guid.Empty, squadId, "Community Astro Pitch", [day], NowUtc).Value!;
-        match.Confirm(day, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+        match.Confirm(day, activeMembers: []);
 
         var participantIds = new List<Guid>(TeamSize * 2);
         for (var i = 0; i < TeamSize * 2; i++)

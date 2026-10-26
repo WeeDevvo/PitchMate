@@ -192,8 +192,6 @@ internal sealed class MatchListDatasetSeeder
         Check(
             match.Confirm(
                 candidateDays[spec.ConfirmedDayIndex],
-                availableCount: 0,
-                minimumThreshold: 0,
                 []),
             "confirm");
 

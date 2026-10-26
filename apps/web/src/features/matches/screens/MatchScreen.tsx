@@ -1,11 +1,13 @@
 /**
  * One match's screen, rendered by state.
  *
- * - **Gathering availability:** the caller's own availability form and the
- *   per-day tally against the confirmation threshold; an organiser can confirm
- *   the match on a day that has reached it.
- * - **Confirmed:** the players. An organiser can add guests, remove players, and
- *   roll, adjust and lock the teams.
+ * - **Gathering availability:** the caller's own availability form and how
+ *   many can make each day, as a guide. An organiser also marks the days each
+ *   guest can play, and can confirm the match on any day; everyone marked for
+ *   it becomes a player.
+ * - **Confirmed:** the players. A member can join or leave; an organiser can
+ *   add any member or guest, remove players, and roll, adjust and lock the
+ *   teams.
  * - **Teams locked and later:** everyone sees the team sheet; until the match
  *   starts, an organiser can still adjust and re-lock the teams, then start it.
  * - **In progress:** an organiser records the score, correcting it as needed,
@@ -33,6 +35,7 @@ import { AvailabilityForm } from '../components/AvailabilityForm';
 import { AvailabilityTally } from '../components/AvailabilityTally';
 import { CompletePanel } from '../components/CompletePanel';
 import { ConfirmPanel } from '../components/ConfirmPanel';
+import { GuestAvailabilityPanel } from '../components/GuestAvailabilityPanel';
 import { MatchActionsPanel } from '../components/MatchActionsPanel';
 import { ParticipantsPanel } from '../components/ParticipantsPanel';
 import { ResultForm } from '../components/ResultForm';
@@ -60,6 +63,7 @@ import {
   TEAM_SHEET_LOADING_LABEL,
 } from '../lib/messages';
 import { MATCH_ROUTE_PARAMETER } from '../lib/routePaths';
+import { guestsOf } from '../lib/parse/teams';
 import { hasTeamSheet, participantsEditable, teamsEditable } from '../lib/teams';
 import { useRemote } from '../state/useRemote';
 
@@ -115,10 +119,14 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
 
   const editingParticipants = belongs && organiser && participantsEditable(match.state);
 
-  const guests = useRemote(
-    editingParticipants ? squadId : null,
+  // Any active member can put themselves in or take themselves out of a confirmed match.
+  const playsThemselves = belongs && participantsEditable(match.state) && standing.value?.state === 'Active';
+
+  // An organiser needs the squad's players to mark guests' availability, and later to add anyone.
+  const players = useRemote(
+    editingParticipants || (gathering && organiser) ? squadId : null,
     useCallback(
-      (signal: AbortSignal) => api.getSquadGuests(squadId ?? '', signal),
+      (signal: AbortSignal) => api.getSquadPlayers(squadId ?? '', signal),
       [api, squadId],
     ),
     authState,
@@ -241,6 +249,22 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
             onSettled={reloadAfterWrite}
           />
 
+          {organiser ? (
+            <GuestAvailabilityPanel
+              key={`guests-${match.matchId}`}
+              candidateDaysMs={match.candidateDaysMs}
+              guests={
+                players.phase === 'failed' ? 'failed' : players.value === null ? null : guestsOf(players.value)
+              }
+              marked={match.guestAvailability}
+              submit={(guestId, days, signal) =>
+                api.setGuestAvailability(squadId, matchId, guestId, days, signal)
+              }
+              clear={(guestId, signal) => api.clearGuestAvailability(squadId, matchId, guestId, signal)}
+              onSettled={reloadAfterWrite}
+            />
+          ) : null}
+
           {tally.phase === 'failed' ? (
             <FailureNotice onRetry={tally.reload} />
           ) : tally.value === null ? (
@@ -250,12 +274,10 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
               <AvailabilityTally
                 candidateDaysMs={match.candidateDaysMs}
                 tally={tally.value}
-                threshold={match.minimumPlayerThreshold}
               />
               {organiser ? (
                 <ConfirmPanel
                   dayCounts={dayCounts}
-                  threshold={match.minimumPlayerThreshold}
                   confirm={(day, signal) => api.confirmMatch(squadId, matchId, day, signal)}
                   onSettled={reloadAfterWrite}
                 />
@@ -276,15 +298,27 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
             ) : (
               <TeamSheetView squadId={squadId} sheet={sheet.value} />
             )
-          ) : match.state === 'Cancelled' ? null : match.participants.length > 0 || editingParticipants ? (
+          ) : match.state === 'Cancelled' ? null : match.participants.length > 0 ||
+            editingParticipants ||
+            playsThemselves ? (
             <ParticipantsPanel
               participants={match.participants}
+              self={
+                playsThemselves
+                  ? {
+                      isParticipant: match.callerIsParticipant,
+                      join: (signal) => api.joinMatch(squadId, matchId, signal),
+                      leave: (signal) => api.leaveMatch(squadId, matchId, signal),
+                      onSettled: reloadDetail,
+                    }
+                  : undefined
+              }
               editing={
                 editingParticipants
                   ? {
-                      guests: guests.phase === 'failed' ? 'failed' : guests.value,
-                      addGuest: (membershipId, signal) =>
-                        api.addGuest(squadId, matchId, membershipId, signal),
+                      players: players.phase === 'failed' ? 'failed' : players.value,
+                      addParticipant: (membershipId, signal) =>
+                        api.addParticipant(squadId, matchId, membershipId, signal),
                       remove: (membershipId, signal) =>
                         api.removeParticipant(squadId, matchId, membershipId, signal),
                       onSettled: reloadDetail,
@@ -295,7 +329,7 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
           ) : null}
           {organiser && teamsEditable(match.state) ? (
             <TeamsEditor
-              // A changed player list re-reads the teams, so a new guest shows
+              // A changed player list re-reads the teams, so someone new shows
               // up as unassigned straight away.
               key={match.participants.map((p) => p.membershipId).join()}
               api={api}

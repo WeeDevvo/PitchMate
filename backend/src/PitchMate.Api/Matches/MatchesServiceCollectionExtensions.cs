@@ -48,22 +48,27 @@ public static class MatchesServiceCollectionExtensions
         // Draft creation.
         services.AddScoped<CreateMatchDraftHandler>();
 
-        // Availability (submit / clear / tally).
+        // Availability (submit / clear / tally, and an organiser's marking for a guest).
         services.AddScoped<SubmitAvailabilityResponseHandler>();
         services.AddScoped<ClearAvailabilityResponseHandler>();
         services.AddScoped<GetAvailabilityTallyHandler>();
+        services.AddScoped<SetGuestAvailabilityHandler>();
+        services.AddScoped<ClearGuestAvailabilityHandler>();
 
         // Confirmation.
         services.AddScoped<ConfirmMatchHandler>();
 
         // Participant management.
-        services.AddScoped<AddGuestParticipantHandler>();
+        services.AddScoped<AddParticipantHandler>();
         services.AddScoped<RemoveParticipantHandler>();
+        services.AddScoped<JoinMatchHandler>();
+        services.AddScoped<LeaveMatchHandler>();
 
         // Team proposal, adjustment, and locking.
         services.AddScoped<ProposeTeamsHandler>();
         services.AddScoped<AdjustTeamsHandler>();
         services.AddScoped<LockTeamsHandler>();
+        services.AddScoped<UnlockTeamsHandler>();
         services.AddScoped<GetTeamSheetHandler>();
 
         // Play: start, record result, complete, and cancel.

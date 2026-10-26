@@ -79,7 +79,6 @@ internal static class MatchDetailReferenceOracle
                 actual.ConfirmedDay, actual.Participants, actual.RecordedResult, actual.CompletedAt));
 
         Assert.Equal(actual.Participants.Count, actual.ParticipantCount);
-        Assert.Equal(ConfirmMatchHandler.DefaultMinimumPlayerThreshold, actual.EffectiveMinimumPlayerThreshold);
         Assert.Equal(expectedCaller.HasStoredResponse, actual.CallerAvailability.HasStoredResponse);
         Assert.Equal(expectedCaller.MarkedDays.Order(), actual.CallerAvailability.MarkedDays.Order());
     }
