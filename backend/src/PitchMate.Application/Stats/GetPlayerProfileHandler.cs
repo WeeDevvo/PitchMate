@@ -183,7 +183,8 @@ public sealed class GetPlayerProfileHandler
     /// <summary>
     /// Builds the rating progression: one point per snapshot ordered by completion instant then match
     /// identity, each carrying the snapshot's μ/σ, its state from <see cref="IRatingEngine.GetState"/>,
-    /// and a display rating iff established (Requirement 8.1, 8.2, 8.3, 8.6). Empty when no snapshot
+    /// a display rating iff established and an estimated rating iff provisional (Requirement 8.1, 8.2,
+    /// 8.3, 8.6). Empty when no snapshot
     /// exists (Requirement 8.4).
     /// </summary>
     private IReadOnlyList<RatingProgressionPoint> BuildProgression(
@@ -207,7 +208,9 @@ public sealed class GetPlayerProfileHandler
 
             RatingState state = stateResult.Value;
             int? displayRating = DisplayRatingCalculator.Compute(state, snapshot.Mu, snapshot.Sigma, parameters);
-            points.Add(new RatingProgressionPoint(snapshot.CompletedAt, snapshot.Mu, snapshot.Sigma, state, displayRating));
+            int? estimatedRating = DisplayRatingCalculator.Estimate(state, snapshot.Mu, snapshot.Sigma, parameters);
+            points.Add(new RatingProgressionPoint(
+                snapshot.CompletedAt, snapshot.Mu, snapshot.Sigma, state, displayRating, estimatedRating));
         }
 
         return points;

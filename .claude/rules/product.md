@@ -42,7 +42,7 @@ States: `GatheringAvailability → Confirmed → TeamsRolled → InProgress → 
 ## Ratings
 
 - **Squad-scoped**, attached to the `SquadMembership`. Any cross-squad number is a vanity stat that never feeds balancing.
-- Each player has **μ (skill)** and **σ (uncertainty)**. New players start with high σ and are **provisional**. σ decays back up after about 4–6 weeks inactive (**today** the engine supports decay but no scheduled job runs it).
+- Each player has **μ (skill)** and **σ (uncertainty)**. New players start with high σ and are **provisional** until σ ≤ 7.75 (`RatingEngineConfig.ProvisionalThreshold`), which takes about 10 matches at 5v5 and 15 at 8v8. σ decays back up after about 4–6 weeks inactive (**today** the engine supports decay but no scheduled job runs it).
 - **Cold start:** an admin may seed a starting **skill tier** (Beginner / Average / Strong), which sets the initial μ while σ stays high. The tier is an input only.
 - Ratings move on **outcome rank** (win/loss/draw, draws first-class). The score is always stored, but margin doesn't count by default: a capped margin-of-victory weight and a participation weight exist as switchable levers, both **off**.
 - **One match = one kickoff lineup = one outcome = one rating update.** Late arrivals, early leavers and substitutions count for stats only. Re-mixing teams mid-session makes a new match.
@@ -66,7 +66,7 @@ Stats views degrade gracefully when only basic results exist.
 
 Squad-scoped leaderboards and per-player profiles. A player's screen shows only the stats from the squad it was opened from.
 
-- **Always available:** appearances, W/L/D and win %, current rating and provisional state, rating progression (from μ/σ snapshots), longest win/unbeaten streak, most played with/against, best partnerships and bogey opponents, bib appearances.
+- **Always available:** appearances, W/L/D and win %, current rating and provisional state, rating progression (from μ/σ snapshots; provisional points are plotted at their estimate and shown only as the "~" band), longest win/unbeaten streak, most played with/against, best partnerships and bogey opponents, bib appearances.
 - **Rich tracking only:** goals and top scorer, clean sheets, goals conceded as keeper, keeper time.
 
 New "fun stat" ideas go in the backlog.

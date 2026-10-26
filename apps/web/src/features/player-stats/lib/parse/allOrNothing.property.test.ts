@@ -117,7 +117,7 @@ const DECLARED_KEYS = {
   ].join(','),
   record: ['appearances', 'draws', 'losses', 'wins'].join(','),
   rating: ['displayRating', 'state'].join(','),
-  progressionPoint: ['completedAtMs', 'displayRating'].join(','),
+  progressionPoint: ['completedAtMs', 'displayRating', 'provisional'].join(','),
   coAppearance: ['count', 'displayName', 'membershipId'].join(','),
   pairedStat: [
     'displayName',
@@ -311,6 +311,12 @@ function progressionFaults(candidate: unknown): string[] {
     if (!isFiniteNumber(point.displayRating)) {
       faults.push(
         `\`progression[${String(index)}].displayRating\` is not a finite number`,
+      );
+    }
+
+    if (typeof point.provisional !== 'boolean') {
+      faults.push(
+        `\`progression[${String(index)}].provisional\` is not a boolean`,
       );
     }
   });
@@ -662,26 +668,34 @@ describe('a parsed profile is never partially populated', () => {
     );
   });
 
-  it('carries exactly the progression records that bear a display rating', () => {
+  it('carries exactly the progression records that bear a rating number', () => {
     fc.assert(
       fc.property(anyProfileFixtureArb, (fixture) => {
         const profile = acceptedProfile(fixture);
         const records = wireArray(fixture.wire, 'progression');
 
         // The one declared normalisation that shortens a collection: a record
-        // with nothing to plot parses and contributes no point. Every *other*
-        // record must survive, in order.
+        // with neither a display rating nor an estimate parses and contributes
+        // no point. Every *other* record must survive, in order, a settled
+        // number winning over an estimate.
         const rated = records.filter(
-          (record) => absentAsNull(record, 'displayRating') !== null,
+          (record) =>
+            absentAsNull(record, 'displayRating') !== null ||
+            absentAsNull(record, 'estimatedRating') !== null,
         );
 
         expect(profile.progression).toHaveLength(rated.length);
 
         rated.forEach((record, index) => {
           const point = profile.progression[index];
+          const settled = absentAsNull(record, 'displayRating') !== null;
 
+          expect(point.provisional).toBe(!settled);
           expect(
-            Object.is(point.displayRating, wireMember(record, 'displayRating')),
+            Object.is(
+              point.displayRating,
+              wireMember(record, settled ? 'displayRating' : 'estimatedRating'),
+            ),
           ).toBe(true);
         });
       }),

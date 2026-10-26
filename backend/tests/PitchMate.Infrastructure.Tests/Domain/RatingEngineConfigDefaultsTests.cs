@@ -35,9 +35,9 @@ public class RatingEngineConfigDefaultsTests
     }
 
     [Fact]
-    public void ProvisionalThreshold_IsTwentyFiveSixths()
+    public void ProvisionalThreshold_IsSevenPointSevenFive()
     {
-        Assert.Equal(25.0 / 6.0, Config.ProvisionalThreshold);
+        Assert.Equal(7.75, Config.ProvisionalThreshold);
     }
 
     [Fact]

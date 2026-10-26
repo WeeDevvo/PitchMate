@@ -25,7 +25,7 @@
  * remove a player from a ranked list — "most played with" missing the person you
  * have played with most — which is worse than showing nothing and saying so.
  *
- * ## The seven declared absences, and nothing else
+ * ## The eight declared absences, and nothing else
  *
  * Exactly these members accept null-or-absent, and `null` and an absent property
  * are the same absence (Requirement 13.6):
@@ -36,7 +36,8 @@
  * | `state` | the membership has no recorded lifecycle state |
  * | `rating.state` | the rating has not been classified |
  * | `rating.displayRating` | there is no settled number to show |
- * | a progression point's `displayRating` | that match produced nothing to plot |
+ * | a progression point's `displayRating` | the rating was still provisional after that match |
+ * | a progression point's `estimatedRating` | the rating was established after that match |
  * | `rich` | the squad's live-tracking feature is off |
  * | each member of `rich` | tracking is on but that figure was never recorded |
  *
@@ -66,15 +67,20 @@
  * printer's output shaped like the contract's; emitting zeros keeps the printer
  * free of any rating quantity.
  *
- * ## A progression record with nothing to plot
+ * ## Provisional progression points
  *
- * `ProgressionPoint.displayRating` is non-nullable by design, because a point is
- * a thing the chart and the Progression_Table can show. A wire record whose
- * `displayRating` is absent is therefore **not a parse failure** — the absence is
- * one of the seven declared above — and {@link parseProgressionPoint} reports it
- * as an accepted reading carrying **no point** (`ok(null)`). The body parses; the
- * record simply contributes no plottable point, and `lib/progression.ts` derives
- * the series from exactly the points that carry a rating (Requirement 8.1).
+ * The backend sends exactly one number per progression record: a settled
+ * `displayRating`, or an `estimatedRating` while the rating is still provisional.
+ * Both are on the same scale, so the parser reads whichever is present into
+ * `ProgressionPoint.displayRating` and records which one it was in `provisional`.
+ * A provisional point's number is plotted for its trend and only ever *shown* as
+ * the design system's rough "~" band, never as a precise figure.
+ *
+ * `ProgressionPoint.displayRating` stays non-nullable, because a point is a thing
+ * the chart and the Progression_Table can show. A wire record carrying neither
+ * number is **not a parse failure** — both absences are declared above — and
+ * {@link parseProgressionPoint} reports it as an accepted reading carrying **no
+ * point** (`ok(null)`).
  *
  * Pure, React-free, and DOM-free: this module reads no clock, locale, storage, or
  * global, imports no `@pitchmate/api-client`, and resolves every import inside
@@ -134,15 +140,18 @@ export interface RatingSummary {
 }
 
 /**
- * One plottable point of the rating progression: when a match completed, and the
- * Display_Rating recorded for it.
+ * One plottable point of the rating progression: when a match completed, the
+ * rating number recorded for it, and whether that rating was still provisional.
  *
- * `displayRating` is non-nullable — a record that carries none is no point at all
- * (see the module note) — and there is no `state`, no mean, and no uncertainty.
+ * `displayRating` is non-nullable — a record that carries no number is no point
+ * at all (see the module note). Where `provisional` is true it is the backend's
+ * estimate, which is plotted but only displayed as a "~" band. There is no mean
+ * and no uncertainty.
  */
 export interface ProgressionPoint {
   readonly completedAtMs: number;
   readonly displayRating: number;
+  readonly provisional: boolean;
 }
 
 /** One row of "most played with" or "most played against". */
@@ -406,10 +415,10 @@ export function printRatingSummary(rating: RatingSummary): unknown {
  *
  * The completion instant is required and is normalised to epoch milliseconds on
  * read, which is what lets the round-trip property compare instants rather than
- * wire strings. The `displayRating` is declared-optional, and its absence yields
- * `ok(null)`: the record parses, and contributes nothing to plot. Deriving the
- * series from exactly the points that carry a rating is the business of
- * `lib/progression.ts` (Requirement 8.1), which is handed only points.
+ * wire strings. A settled `displayRating` makes an established point; failing
+ * that, an `estimatedRating` makes a provisional one. Both are declared-optional,
+ * and a record carrying neither yields `ok(null)`: it parses, and contributes
+ * nothing to plot.
  *
  * A record whose instant is malformed fails — and so fails the whole body
  * (Requirement 13.3) — whether or not it carries a rating: a progression the
@@ -447,13 +456,32 @@ export function parseProgressionPoint(
     return displayRating;
   }
 
-  if (displayRating.value === null) {
+  if (displayRating.value !== null) {
+    return ok({
+      completedAtMs: completedAtMs.value,
+      displayRating: displayRating.value,
+      provisional: false,
+    });
+  }
+
+  const estimatedRating = readOptional(
+    readProperty(source.value, 'estimatedRating'),
+    'progression point estimatedRating',
+    readNumber,
+  );
+
+  if (!estimatedRating.ok) {
+    return estimatedRating;
+  }
+
+  if (estimatedRating.value === null) {
     return ok(null);
   }
 
   return ok({
     completedAtMs: completedAtMs.value,
-    displayRating: displayRating.value,
+    displayRating: estimatedRating.value,
+    provisional: true,
   });
 }
 
@@ -461,7 +489,7 @@ export function parseProgressionPoint(
  * A progression point rendered back into the wire shape
  * {@link parseProgressionPoint} accepts, with the rating-model members emitted as
  * placeholder zeros (see the module note). No `state` is emitted, because none is
- * read.
+ * read. The number goes back to whichever member it was read from.
  *
  * Requirements: 13.7
  */
@@ -470,7 +498,8 @@ export function printProgressionPoint(point: ProgressionPoint): unknown {
     completedAt: printInstant(point.completedAtMs),
     mu: RATING_MODEL_PLACEHOLDER,
     sigma: RATING_MODEL_PLACEHOLDER,
-    displayRating: point.displayRating,
+    displayRating: point.provisional ? null : point.displayRating,
+    estimatedRating: point.provisional ? point.displayRating : null,
   };
 }
 
@@ -905,7 +934,7 @@ export function parsePlayerProfile(body: unknown): ParseResult<PlayerProfile> {
     record: record.value,
     winPercentage: winPercentage.value,
     rating: rating.value,
-    // A record carrying no Display_Rating reads as no point (see the module
+    // A record carrying no rating number reads as no point (see the module
     // note); the body is accepted and contributes nothing to plot.
     progression: progression.value.filter(
       (point): point is ProgressionPoint => point !== null,

@@ -46,7 +46,9 @@
  * reading exists at that position — a mark is a shape, visible in greyscale,
  * under a forced-colours mode, and to a reader who perceives no colour at all.
  * The stroked line between the marks states the direction of travel by its
- * slope. The two hues from the token table reinforce those cues and carry
+ * slope. A provisional reading's mark is a **dashed** ring and the line
+ * through it is dashed, so it stays distinct from a settled one without its
+ * amber, and the table states it as the "~" band in words. The two hues from the token table reinforce those cues and carry
  * nothing on their own, and every figure is also stated in words by the table.
  *
  * ### The two degenerate series are handled here as the geometry handles them
@@ -66,7 +68,11 @@
 import { type ReactElement, type SVGProps } from 'react';
 import { RatingChart } from '../../../ui';
 
-import { plotProgression, type ChartExtent } from '../lib/chartGeometry';
+import {
+  plotProgression,
+  provisionalLines,
+  type ChartExtent,
+} from '../lib/chartGeometry';
 import type { ProgressionPoint } from '../lib/parse/playerProfile';
 import '../styles/playerStatsTokens.css';
 import './ProgressionChart.css';
@@ -179,12 +185,15 @@ export function ProgressionChart({
       // cannot be drawn as a trend.
       polyline={plot.polyline}
       lineProps={LINE_HOOK}
+      // The stretches through provisional readings, drawn dashed.
+      provisionalLines={provisionalLines(plot.points)}
       // 15.6: a mark is a shape at a position. Both carry the reading without
       // reference to the hue.
       marks={plot.points.map((plotted, index) => ({
         key: `${String(plotted.point.completedAtMs)}:${String(plotted.point.displayRating)}:${String(index)}`,
         x: plotted.x,
         y: plotted.y,
+        provisional: plotted.point.provisional,
       }))}
       pointRadius={POINT_MARK_RADIUS}
       pointProps={pointHook}

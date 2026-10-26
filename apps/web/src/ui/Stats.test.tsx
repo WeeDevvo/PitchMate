@@ -113,4 +113,23 @@ describe('RatingChart', () => {
       { numRuns: 30 },
     );
   });
+
+  it('rings provisional readings dashed and draws the line through them dashed', () => {
+    const { container } = render(
+      <RatingChart
+        width={100}
+        height={40}
+        polyline="0,30 50,20 100,10"
+        provisionalLines={['0,30 50,20 100,10']}
+        marks={[
+          { key: 'a', x: 0, y: 30, provisional: true },
+          { key: 'b', x: 50, y: 20, provisional: true },
+          { key: 'c', x: 100, y: 10 },
+        ]}
+      />,
+    );
+    const dots = Array.from(container.querySelectorAll('.pm-chart__dot'));
+    expect(dots.map((dot) => dot.classList.contains('pm-chart__dot--prov'))).toEqual([true, true, false]);
+    expect(container.querySelector('.pm-chart__line--prov')).toHaveAttribute('points', '0,30 50,20 100,10');
+  });
 });

@@ -160,3 +160,23 @@
 .pm-chart__dot--last {
   fill: var(--pm-chart-line);
 }
+
+.pm-chart__line--prov-cover {
+  stroke: var(--pm-surface);
+  stroke-width: 4;
+}
+
+.pm-chart__line--prov {
+  stroke: var(--pm-provisional);
+  stroke-dasharray: 6 5;
+}
+
+.pm-chart__dot--prov {
+  stroke: var(--pm-provisional);
+  stroke-dasharray: 2 2;
+}
+
+.pm-chart__dot--prov.pm-chart__dot--last {
+  fill: var(--pm-provisional);
+  stroke-dasharray: none;
+}

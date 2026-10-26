@@ -8532,7 +8532,8 @@
           "mu",
           "sigma",
           "state",
-          "displayRating"
+          "displayRating",
+          "estimatedRating"
         ],
         "type": "object",
         "properties": {
@@ -8560,6 +8561,15 @@
             "$ref": "#/components/schemas/RatingState"
           },
           "displayRating": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estimatedRating": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
