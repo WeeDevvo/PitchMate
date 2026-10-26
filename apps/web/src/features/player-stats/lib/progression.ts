@@ -4,7 +4,7 @@
  * The parsed `PlayerProfile` carries its progression in whatever order the
  * backend sent it. Requirement 8.1 asks for the series the chart and the
  * Progression_Table read to be derived by a **pure function** — no React, no DOM
- * — retaining exactly the records that carry a Display_Rating, in ascending
+ * — retaining exactly the records that carry a rating number, in ascending
  * order of completion instant, with a **deterministic tie-break**. This module is
  * that function.
  *
@@ -30,10 +30,10 @@
  * by luck.
  *
  * So the comparator is a **total order**: completion instant ascending, then
- * Display_Rating ascending. Two points compare equal only when **both** fields
- * match, and at that point they are indistinguishable — a `ProgressionPoint` has
- * no third field, so swapping them cannot change a coordinate, a table row, or a
- * pixel. The series is consequently a function of the input *set* rather than of
+ * rating ascending, then established before provisional. Two points compare
+ * equal only when **all three** fields match, and at that point they are
+ * indistinguishable — a `ProgressionPoint` has no fourth field, so swapping them
+ * cannot change a coordinate, a table row, or a pixel. The series is consequently a function of the input *set* rather than of
  * its arrival order, which is the property the chart's determinism rests on and
  * what Property 19 asserts.
  *
@@ -57,10 +57,10 @@ import type { ProgressionPoint } from './parse/playerProfile';
 
 /**
  * Two Progression_Points in the series' order: completion instant ascending,
- * then Display_Rating ascending (Requirement 8.1).
+ * then rating ascending, then established before provisional (Requirement 8.1).
  *
  * A **total** order. Every pair of points compares as one of `-1`, `0`, or `1`,
- * and `0` only when both fields match — so the ordering never defers to the
+ * and `0` only when all three fields match — so the ordering never defers to the
  * arrival order of the collection it came from.
  *
  * Pure and total over any two points, including ones carrying values no parsed
@@ -99,7 +99,12 @@ export function compareProgressionPoints(
     return 1;
   }
 
-  // Equal in both fields, and a point has no third field: indistinguishable.
+  // Last key: an established reading before a provisional one.
+  if (left.provisional !== right.provisional) {
+    return left.provisional ? 1 : -1;
+  }
+
+  // Equal in every field: indistinguishable.
   return 0;
 }
 

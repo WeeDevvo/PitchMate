@@ -1546,6 +1546,8 @@ export interface components {
             state: components["schemas"]["RatingState"];
             /** Format: int32 */
             displayRating: null | number | string;
+            /** Format: int32 */
+            estimatedRating: null | number | string;
         };
         /** @enum {unknown} */
         RatingState: "Provisional" | "Established" | null;

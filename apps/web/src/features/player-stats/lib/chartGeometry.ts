@@ -28,7 +28,7 @@
  * | --- | --- |
  * | empty series | no points, and `polyline` is `null` — the component renders the no-history statement and no axes (Requirement 8.6) |
  * | one point | one point at the horizontal centre, and `polyline` is `null`, so a single reading is never drawn as a trend (Requirement 8.7) |
- * | all instants equal | the time domain has no width; every point sits at the horizontal centre |
+ * | all instants equal | there is one match slot; every point sits at the horizontal centre |
  * | all ratings equal | the rating domain is widened symmetrically by {@link FLAT_DOMAIN_MARGIN}, so `y` is finite and the flat line sits at the vertical centre (Requirement 8.8) |
  * | extent narrower or shorter than twice its padding | the drawing box collapses to its centre line; coordinates stay finite and inside the box |
  *
@@ -48,6 +48,15 @@
  * bounds that {@link resolveBand} guarantees are finite. Non-finiteness
  * therefore has nowhere to enter, which is why Property 20 can assert it over
  * arbitrary series and extents rather than over a chosen few.
+ *
+ * ## One step per match, not per day
+ *
+ * The horizontal axis is the **order** of matches, not elapsed time: each
+ * distinct completion instant gets one evenly spaced slot. A squad that plays
+ * several matches in one evening and then nothing for a week would otherwise
+ * bunch those readings into a vertical stack at one edge, and the chart exists
+ * to show how the rating moved from match to match. Points sharing an instant
+ * share a slot, so the plot still depends only on the set of points.
  *
  * React-free and DOM-free like every module under `lib/` (Requirement 14.3):
  * one imported **type**, no clock, no locale, no storage, no global, and nothing
@@ -286,40 +295,37 @@ function place(fraction: number, band: Band): number {
   return coordinate;
 }
 
+/** Each distinct completion instant's slot, and the domain the slots span. */
+interface MatchSlots {
+  readonly slotOf: ReadonlyMap<number, number>;
+  readonly domain: Domain;
+}
+
 /**
- * The time domain a series spans.
+ * The evenly spaced slot of each distinct completion instant, in ascending
+ * order (see the module note).
  *
- * Read as a plain fold rather than through `Math.min`/`Math.max` so that the
- * answer is derived by comparisons alone — a value that compares false against
- * everything would leave the fold's seed in place instead of poisoning the
- * result. An empty series yields a zero-width domain, which {@link unitFraction}
- * reads as the centre; so does a series whose instants are all equal, which is
- * exactly the intended treatment of both.
+ * An empty series, and a series whose instants are all equal, yield a
+ * zero-width domain, which {@link unitFraction} reads as the centre — exactly
+ * the intended treatment of both. `-0` and `0` share a slot, because a `Map`
+ * keys them as one.
  *
  * @param series the Progression_Series, in order or not
- * @returns the interval its completion instants occupy
+ * @returns the slot of each instant and the domain of slots
  */
-function resolveTimeDomain(series: readonly ProgressionPoint[]): Domain {
-  const first = series[0];
+function resolveMatchSlots(series: readonly ProgressionPoint[]): MatchSlots {
+  const instants = [...new Set(series.map((point) => point.completedAtMs))].sort(
+    (left, right) => (left < right ? -1 : left > right ? 1 : 0),
+  );
+  const slotOf = new Map(instants.map((instant, slot) => [instant, slot]));
 
-  if (first === undefined) {
-    return { floor: EMPTY_DOMAIN_CENTRE, ceiling: EMPTY_DOMAIN_CENTRE };
-  }
-
-  let floor = first.completedAtMs;
-  let ceiling = first.completedAtMs;
-
-  for (const point of series) {
-    if (point.completedAtMs < floor) {
-      floor = point.completedAtMs;
-    }
-
-    if (point.completedAtMs > ceiling) {
-      ceiling = point.completedAtMs;
-    }
-  }
-
-  return { floor, ceiling };
+  return {
+    slotOf,
+    domain: {
+      floor: EMPTY_DOMAIN_CENTRE,
+      ceiling: Math.max(EMPTY_DOMAIN_CENTRE, instants.length - 1),
+    },
+  };
 }
 
 /**
@@ -404,6 +410,67 @@ function printCoordinate(value: number): string {
 }
 
 /**
+ * The stretches of a plot's line that pass through provisional readings, as SVG
+ * `polyline` attribute values, so the chart can draw them dashed.
+ *
+ * Each maximal run of consecutive provisional points gives one line, reaching
+ * out to the settled reading on either side of the run where there is one: the
+ * step into or out of a provisional reading is itself uncertain. A run that
+ * reaches fewer than two points in all — a lone provisional reading with no
+ * neighbour — gives no line, as a single reading is never a trend.
+ *
+ * Pure and total: the empty plot and a plot with no provisional point both give
+ * none.
+ *
+ * @param points the plotted points, in series order
+ * @returns the provisional lines, left to right
+ */
+export function provisionalLines(
+  points: readonly PlottedPoint[],
+): readonly string[] {
+  const lines: string[] = [];
+  let index = 0;
+
+  while (index < points.length) {
+    if (points[index]?.point.provisional !== true) {
+      index += 1;
+      continue;
+    }
+
+    const start = Math.max(0, index - 1);
+
+    while (points[index + 1]?.point.provisional === true) {
+      index += 1;
+    }
+
+    const stretch = points.slice(start, index + 2);
+
+    if (stretch.length >= MINIMUM_LINE_POINTS) {
+      lines.push(printPolyline(stretch));
+    }
+
+    index += 1;
+  }
+
+  return lines;
+}
+
+/**
+ * Plotted points as an SVG `polyline` attribute value.
+ *
+ * @param points the points, in drawing order
+ * @returns `x,y` pairs separated by spaces
+ */
+function printPolyline(points: readonly PlottedPoint[]): string {
+  return points
+    .map(
+      (plotted) =>
+        `${printCoordinate(plotted.x)}${COORDINATE_SEPARATOR}${printCoordinate(plotted.y)}`,
+    )
+    .join(POINT_SEPARATOR);
+}
+
+/**
  * The plot of one Progression_Series on one drawing extent (Requirement 8.3).
  *
  * Pure and total: the same plot for the same arguments, no clock, no DOM, no
@@ -440,11 +507,12 @@ export function plotProgression(
   const horizontal = resolveBand(extent.width, extent.padding);
   const vertical = resolveBand(extent.height, extent.padding);
 
-  const timeDomain = resolveTimeDomain(series);
+  const slots = resolveMatchSlots(series);
   const ratingDomain = resolveRatingDomain(series);
 
   const points = series.map((point): PlottedPoint => {
-    const x = place(unitFraction(point.completedAtMs, timeDomain), horizontal);
+    const slot = slots.slotOf.get(point.completedAtMs) ?? EMPTY_DOMAIN_CENTRE;
+    const x = place(unitFraction(slot, slots.domain), horizontal);
 
     // The vertical axis runs downwards in SVG, so a higher rating is a smaller
     // `y`: the fraction is taken from the top of the band.
@@ -459,12 +527,7 @@ export function plotProgression(
   const polyline =
     points.length < MINIMUM_LINE_POINTS
       ? null
-      : points
-          .map(
-            (plotted) =>
-              `${printCoordinate(plotted.x)}${COORDINATE_SEPARATOR}${printCoordinate(plotted.y)}`,
-          )
-          .join(POINT_SEPARATOR);
+      : printPolyline(points);
 
   return {
     points,

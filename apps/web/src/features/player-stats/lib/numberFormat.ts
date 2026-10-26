@@ -139,3 +139,24 @@ export function formatWinPercentage(value: number): string | null {
 export function formatCount(value: number): string {
   return String(value);
 }
+
+/**
+ * A provisional rating as the rough band the design system shows in place of a
+ * number: the hundreds digits followed by `xx`, so `1324` reads `'13xx'` and the
+ * `Rating` component prefixes the "~". A value below one hundred has no
+ * hundreds to show and reads `'<100'`.
+ *
+ * Like {@link formatCount} it adds no grouping separator, so a band lines up
+ * with the settled figures in the same column. Pure and total; a value that is
+ * not a finite number renders through `String`, visibly wrong rather than
+ * quietly plausible.
+ */
+export function formatRatingBand(value: number): string {
+  if (!Number.isFinite(value)) {
+    return String(value);
+  }
+
+  const hundreds = Math.floor(value / 100);
+
+  return hundreds < 1 ? '<100' : `${String(hundreds)}xx`;
+}

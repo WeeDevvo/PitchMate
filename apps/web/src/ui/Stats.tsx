@@ -81,6 +81,8 @@ export interface ChartPoint {
   key: string;
   x: number;
   y: number;
+  /** A provisional reading: drawn as a dashed amber ring. */
+  provisional?: boolean;
 }
 
 export interface RatingChartProps extends SVGProps<SVGSVGElement> {
@@ -92,6 +94,8 @@ export interface RatingChartProps extends SVGProps<SVGSVGElement> {
   /** The line through the points as SVG `points`, or `null` for a single reading. */
   polyline: string | null;
   marks: readonly ChartPoint[];
+  /** Stretches of the line through provisional readings, as SVG `points`, drawn dashed amber over it. */
+  provisionalLines?: readonly string[];
   pointRadius?: number;
   /** Attributes for the line and for each point, such as test hooks. */
   lineProps?: SVGProps<SVGPolylineElement>;
@@ -100,9 +104,10 @@ export interface RatingChartProps extends SVGProps<SVGSVGElement> {
 
 /**
  * A rating line in the design system's chart style: frame lines, the line, and
- * a mark at each reading, the latest filled. It draws a plot it is given; the
- * geometry (scaling, degenerate series) is the caller's. Decorative: show the
- * readings as text beside it.
+ * a mark at each reading, the latest filled. Provisional readings get a dashed
+ * amber ring, and the line through them is dashed amber. It draws a plot it is given; the geometry
+ * (scaling, degenerate series) is the caller's. Decorative: show the readings as
+ * text beside it, provisional ones as the "~" band.
  */
 export function RatingChart({
   width,
@@ -110,6 +115,7 @@ export function RatingChart({
   gridLines = [],
   polyline,
   marks,
+  provisionalLines = [],
   pointRadius = 3.5,
   lineProps,
   pointProps,
@@ -129,11 +135,22 @@ export function RatingChart({
         <line key={line.y} className="pm-chart__grid" x1={line.x1} y1={line.y} x2={line.x2} y2={line.y} />
       ))}
       {polyline === null ? null : <polyline {...lineProps} className="pm-chart__line" points={polyline} />}
+      {provisionalLines.map((points) => (
+        <g key={points}>
+          {/* Covers the solid line beneath, so the dashes read on the card. */}
+          <polyline className="pm-chart__line pm-chart__line--prov-cover" points={points} />
+          <polyline className="pm-chart__line pm-chart__line--prov" points={points} />
+        </g>
+      ))}
       {marks.map((point, index) => (
         <circle
           key={point.key}
           {...pointProps?.(index)}
-          className={cx('pm-chart__dot', index === marks.length - 1 && 'pm-chart__dot--last')}
+          className={cx(
+            'pm-chart__dot',
+            index === marks.length - 1 && 'pm-chart__dot--last',
+            point.provisional === true && 'pm-chart__dot--prov',
+          )}
           cx={point.x}
           cy={point.y}
           r={pointRadius}
