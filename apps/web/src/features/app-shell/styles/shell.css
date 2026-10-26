@@ -1,40 +1,23 @@
 /*
- * Layout and presentation for the Shell_Frame.
+ * Layout and presentation for the Shell_Frame, on the PitchMate design system.
  *
- * This file owns layout, sizing, and the frame's use of the theme tokens. It
- * declares **no colour value of its own**: every colour is a `var(--token)`
- * reference resolved from the per-Theme token tables (Requirements 12.8, 13.4).
- * Those tables — `:root, [data-theme='dark']` and `[data-theme='light']` —
- * are declared in `styles/theme.css` (task 13.3) and follow the naming the auth
- * feature already established (`--bg`, `--surface`, `--text`, `--muted-text`,
- * `--control-bg`, `--control-text`, `--control-border`, `--accent-fill`,
- * `--accent-text`, `--focus-ring`), extended with the five shell tokens the
- * design names:
- *
- *   --shell-surface   the header/panel surface behind the frame's chrome
- *   --badge-bg        the Unread_Badge fill
- *   --badge-text      text on the Unread_Badge
- *   --unread-cue      the unread indication on a Notification_Record
- *   --nav-current     the active Primary_Navigation control's accent
- *
- * The three requirements jsdom cannot verify are declared here and asserted from
- * the declared styles by task 10.10, with manual browser verification noted:
+ * Colours, type, radii and shadows come from the design-system `--pm-*` tokens
+ * (`src/design/tokens.css`); this file writes no colour value of its own
+ * (Requirements 12.8, 13.4). The shell's components render the shared `src/ui`
+ * pieces (TopBar, Logo, NavItem, NotificationList, NotificationItem, Icon), which
+ * bring their own look; the rules here place them in the frame and hold the
+ * frame's guarantees:
  *
  *   1.8   No fixed width anywhere in the frame: every region is `width: 100%`
  *         with `max-width: 100%`, gutters are `clamp()`-based, and the frame
- *         clips residual overflow — so nothing exceeds the viewport and no
- *         horizontal scrolling is required at 360, 767, 768, 1024, or 1920px.
+ *         clips residual overflow, so nothing exceeds the viewport and no
+ *         horizontal scrolling is required at 360, 767, 768, 1024 or 1920px.
  *   13.11 The Skip_Link is clipped to nothing while unfocused yet stays in the
  *         Tab order (no `display: none`, no `visibility: hidden`), and while
  *         focused is a fixed-position control inset from the viewport's top-left
  *         corner with its outline inside the viewport at every width.
  *   13.13 In the Compact_Layout every interactive control of the frame is at
  *         least 44x44 CSS pixels with at least 8px between adjacent targets.
- *
- * The compact-layout target-size block names the class of every control the frame
- * will carry, including those whose components are still to come (tasks 10.5,
- * 11.x, 12.x, 13.2). Those class names are the contract: a control added under a
- * different class would not inherit the target size.
  *
  * Requirements: 1.2, 1.5, 1.8, 13.1, 13.3, 13.4, 13.8, 13.11, 13.13
  */
@@ -45,8 +28,8 @@
 
 .shell-frame {
   /* Layout tokens, declared once for the whole frame. */
-  --shell-gutter: clamp(0.75rem, 4vw, 2rem);
-  --shell-gap: clamp(0.5rem, 2vw, 1.5rem);
+  --shell-gutter: clamp(1rem, 4vw, 2.5rem);
+  --shell-gap: clamp(0.5rem, 2vw, 1rem);
   /* 13.13: the minimum pointer target and the minimum space between two
      adjacent targets in the Compact_Layout. */
   --shell-touch-target: 44px;
@@ -63,8 +46,8 @@
   /* Belt and braces: width constraints below are the defence, this clips any
      residual horizontal overflow without affecting vertical scrolling (1.8). */
   overflow-x: clip;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--pm-bg);
+  color: var(--pm-text-primary);
 }
 
 /* Padding and borders count inside declared widths, so `width: 100%` can never
@@ -91,7 +74,7 @@
   position: fixed;
   top: 0.5rem;
   left: 0.5rem;
-  z-index: 100;
+  z-index: var(--pm-z-toast);
   /* 13.13: a full pointer target once visible. */
   min-height: var(--shell-touch-target);
   min-width: var(--shell-touch-target);
@@ -99,13 +82,13 @@
   display: inline-flex;
   align-items: center;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  background: var(--shell-surface);
-  color: var(--text);
-  font: inherit;
+  border-radius: var(--pm-radius-pill);
+  background: var(--pm-surface-inverse);
+  color: var(--pm-text-inverse);
+  font: var(--pm-type-label);
   text-decoration: underline;
   white-space: nowrap;
-  /* 13.11: no visible presentation while unfocused — and still in the Tab order,
+  /* 13.11: no visible presentation while unfocused, and still in the Tab order,
      which `display: none` or `visibility: hidden` would forfeit. */
   clip-path: inset(50%);
 }
@@ -115,27 +98,27 @@
   /* 13.11: visible, with the label and the focus indicator wholly inside the
      viewport bounds. */
   clip-path: none;
-  outline: 3px solid var(--focus-ring);
+  outline: 3px solid var(--pm-focus-ring);
   /* Inset rather than offset outwards, so the indicator cannot land outside the
      viewport at the top-left corner (13.4, 13.11). */
   outline-offset: -1px;
 }
 
 /* ------------------------------------------------------------------ *
- * Shell_Header (1.2, 1.5, 13.3)
+ * Shell_Header: the design system's TopBar (1.2, 1.5, 13.3)
  * ------------------------------------------------------------------ */
 
 .shell-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--pm-z-sticky);
   width: 100%;
   max-width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--shell-gap);
-  padding: var(--shell-gutter);
-  background: var(--shell-surface);
-  color: var(--text);
-  border-bottom: 1px solid var(--control-border);
+  padding: 0.5rem var(--shell-gutter);
 }
 
 .shell-header__brand {
@@ -158,42 +141,34 @@
   display: flex;
   align-items: center;
   gap: var(--shell-touch-gap);
+  margin-inline-start: auto;
 }
 
 /* ------------------------------------------------------------------ *
- * BrandControl (1.4, 13.9)
+ * BrandControl: the Logo lockup (1.4, 13.9)
  * ------------------------------------------------------------------ */
 
 .shell-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
   min-height: var(--shell-touch-target);
-  padding: 0.25rem 0.25rem;
-  color: var(--text);
+  padding: 0.25rem;
+  border-radius: var(--pm-radius-md);
+  color: var(--pm-text-primary);
   text-decoration: none;
-  font-weight: 600;
 }
 
 .shell-brand:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 2px solid var(--pm-focus-ring);
   outline-offset: 2px;
 }
 
-.shell-brand__logo {
-  /* 1.8: images are constrained to their box rather than to their intrinsic
-     width. */
-  height: 1.75rem;
-  width: auto;
-  max-width: 100%;
-}
-
 /* ------------------------------------------------------------------ *
- * Primary_Navigation (1.6, 1.7, 1.11, 3.3, 3.5)
+ * Primary_Navigation: NavItems (1.6, 1.7, 1.11, 3.3, 3.5)
  *
  * The destination controls live in a list, so their number is conveyed
- * programmatically as well as visually. The list markers are removed, which is
- * why each control is a real link rather than list text.
+ * programmatically as well as visually. Each is a NavItem from `src/ui`, which
+ * brings the pill, the icon and the tinted current state.
  * ------------------------------------------------------------------ */
 
 .shell-nav__list {
@@ -209,8 +184,8 @@
   gap: var(--shell-touch-gap);
 }
 
-/* Inside the compact disclosure surface the destinations stack, so each one takes
-   the full surface width instead of competing for a narrow row (1.8, 13.13). */
+/* Inside the compact disclosure surface the destinations stack like the design
+   system's sidebar, each taking the full surface width (1.8, 13.13). */
 .shell-nav__list--collapsible {
   flex-direction: column;
   align-items: stretch;
@@ -225,27 +200,22 @@
 .shell-nav__link {
   flex: 1 1 auto;
   min-width: 0;
-  display: inline-flex;
-  align-items: center;
   /* Full target height at every width, not only in the Compact_Layout. */
   min-height: var(--shell-touch-target);
-  /* The inset bar the active state paints sits inside this left padding, so the
-     label does not shift when a control becomes current (3.5). */
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.5rem;
-  color: var(--text);
-  font: inherit;
+  /* Lighter than the current control's 700, so weight marks it too (3.5). */
   font-weight: 500;
-  text-decoration: none;
-}
-
-.shell-nav__link:hover {
-  text-decoration: underline;
 }
 
 .shell-nav__link:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 2px solid var(--pm-focus-ring);
   outline-offset: 2px;
+}
+
+/* The active control (3.5, 13.8): the NavItem tint, *and* a heavier weight,
+   *and* an underline bar, so the state survives without colour. */
+.shell-nav__link[aria-current='page'] {
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 0 var(--pm-accent-on-subtle);
 }
 
 /* The Compact_Layout disclosure control (1.6, 1.11). Absent from the
@@ -254,29 +224,34 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--pm-space-2);
   min-height: var(--shell-touch-target);
   min-width: var(--shell-touch-target);
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--control-border);
-  border-radius: 0.5rem;
-  background: var(--control-bg);
-  color: var(--control-text);
-  font: inherit;
+  padding: 0 var(--pm-space-4);
+  border: 1.5px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-pill);
+  background: transparent;
+  color: var(--pm-text-primary);
+  font: var(--pm-type-label);
   cursor: pointer;
 }
 
+.shell-nav__toggle:hover {
+  background: var(--pm-surface-hover);
+}
+
 .shell-nav__toggle:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 2px solid var(--pm-focus-ring);
   outline-offset: 2px;
 }
 
-/* The expanded list opens beneath the toggle at the header's leading edge, rather
-   than the trailing edge the notification and account surfaces use, and stays
-   bounded by the viewport (1.8). */
+/* The expanded list opens beneath the toggle at the header's leading edge,
+   rather than the trailing edge the notification and account surfaces use, and
+   stays bounded by the viewport (1.8). */
 .shell-nav__surface {
   right: auto;
   left: 0;
-  min-width: 12rem;
+  min-width: 15rem;
 }
 
 /* ------------------------------------------------------------------ *
@@ -287,7 +262,10 @@
   width: 100%;
   max-width: 100%;
   flex: 1 1 auto;
-  padding: var(--shell-gutter);
+  /* The design system's 1200px content column, centred by the padding so no
+     width is declared (1.8). */
+  padding-block: var(--shell-gutter);
+  padding-inline: max(var(--shell-gutter), calc((100% - var(--pm-content-max)) / 2));
 }
 
 /* The region itself is only ever focused programmatically by the Skip_Link, and
@@ -295,7 +273,7 @@
    so the landing point is perceivable (13.4). */
 .shell-content:focus-visible,
 .shell-content > [tabindex='-1']:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 2px solid var(--pm-focus-ring);
   outline-offset: 4px;
 }
 
@@ -317,46 +295,65 @@
 /* ------------------------------------------------------------------ *
  * Appearance_Preference_Control (12.4, 12.8, 13.13)
  *
- * A native fieldset + three radios. The options stack, each one a label wide
- * enough to be a pointer target in its own right; the Compact_Layout block below
- * gives `.shell-appearance__option` its 44x44 minimum. Colours are token
- * references only (12.8).
+ * A native fieldset and three radios. Each option is a label wide enough to be a
+ * pointer target in its own right, and the checked one takes the accent fill.
  * ------------------------------------------------------------------ */
 
 .shell-appearance {
   max-width: 100%;
   margin: 0;
-  padding: 0.75rem 1rem 1rem;
-  border: 1px solid var(--control-border);
-  border-radius: 0.5rem;
-  background: var(--shell-surface);
-  color: var(--text);
+  padding: var(--pm-space-4) var(--pm-space-5) var(--pm-space-5);
+  border: 1px solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-lg);
+  background: var(--pm-surface);
+  color: var(--pm-text-primary);
 }
 
 .shell-appearance__legend {
-  padding: 0 0.25rem;
-  font-weight: 600;
+  padding: 0 var(--pm-space-1);
+  font: var(--pm-type-title);
+  text-transform: uppercase;
 }
 
 .shell-appearance__option {
   display: flex;
   align-items: center;
   /* 13.13: at least 8px between the edges of two adjacent targets. */
-  gap: 0.5rem;
+  gap: var(--pm-space-3);
   margin-block-start: var(--shell-touch-gap);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.5rem;
+  min-height: var(--shell-touch-target);
+  padding: 0 var(--pm-space-4);
+  border: 1.5px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-pill);
+  font-weight: 600;
   cursor: pointer;
+}
+
+.shell-appearance__option:hover {
+  background: var(--pm-surface-hover);
+}
+
+.shell-appearance__option:has(.shell-appearance__radio:checked) {
+  background: var(--pm-accent-subtle);
+  border-color: var(--pm-accent-fill);
+  color: var(--pm-accent-on-subtle);
+}
+
+.shell-appearance__radio {
+  accent-color: var(--pm-accent-fill);
+  width: 18px;
+  height: 18px;
+  margin: 0;
 }
 
 /* The radio is the focusable control, so the indicator belongs on it (13.4). */
 .shell-appearance__radio:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 2px solid var(--pm-focus-ring);
   outline-offset: 2px;
 }
 
 /* ------------------------------------------------------------------ *
- * Disclosure surfaces (5.14, 8.7, 13.6)
+ * Disclosure surfaces: the design system's menu (5.14, 8.7, 13.6)
  * ------------------------------------------------------------------ */
 
 .shell-disclosure {
@@ -367,108 +364,111 @@
 
 .shell-disclosure__surface {
   position: absolute;
-  top: calc(100% + 0.25rem);
+  top: calc(100% + 0.5rem);
   right: 0;
-  z-index: 50;
+  z-index: var(--pm-z-menu);
   /* 1.8: a surface is bounded by the viewport, never by its content. */
   max-width: min(22rem, calc(100vw - 1rem));
-  padding: 0.5rem;
-  border: 1px solid var(--control-border);
-  border-radius: 0.5rem;
-  background: var(--shell-surface);
-  color: var(--text);
+  padding: var(--pm-space-2);
+  border: 1px solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-lg);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
+  box-shadow: var(--pm-shadow-2);
 }
 
 /* ------------------------------------------------------------------ *
- * Token-carrying state cues
+ * Notification_Indicator: the bell (4.2, 4.5, 13.4, 13.13)
  *
- * Declared here so the frame's semantic states resolve from the token table
- * rather than from a colour written into a component (12.8, 13.4). Each pairs
- * its colour with a non-colour cue — weight, an inset bar, a glyph — so the
- * state is distinguishable without perceiving colour (13.8, brand.md). The
- * components that render these classes land in tasks 10.5 and 11.x.
+ * The bell icon with its label beside it in the Wide_Layout, and the bell alone
+ * in the Compact_Layout. The count is in the accessible name, so the badge is
+ * never the only carrier (4.5).
  * ------------------------------------------------------------------ */
 
-/* The active Primary_Navigation control (3.5, 13.8): colour *and* an inset bar
-   *and* a heavier weight. */
-.shell-nav__link[aria-current='page'] {
-  color: var(--nav-current);
-  font-weight: 700;
-  box-shadow: inset 3px 0 0 0 var(--nav-current);
+.shell-notification-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pm-space-2);
+  /* 13.13: a full pointer target at every width, not only in the Compact_Layout. */
+  min-height: var(--shell-touch-target);
+  min-width: var(--shell-touch-target);
+  padding: 0 var(--pm-space-3);
+  border: 0;
+  border-radius: var(--pm-radius-pill);
+  background: transparent;
+  color: var(--pm-text-primary);
+  font: var(--pm-type-label);
+  cursor: pointer;
 }
 
-/* The Unread_Badge on the Notification_Indicator (4.2, 4.3). The count is also
-   in the indicator's accessible name, so the badge is never the only carrier. */
+.shell-notification-indicator:hover {
+  background: var(--pm-surface-hover);
+}
+
+.shell-notification-indicator:focus-visible {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The bell and the account icon alone below 1200px, so the header stays on one
+   line; the accessible names still carry the words (and the count). Shown beside
+   the icons from 1200px. */
+.shell-notification-indicator__label,
+.shell-account-menu__trigger-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The Unread_Badge (4.2, 4.3): the design system's count badge. */
 .shell-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.5rem;
-  min-height: 1.5rem;
-  padding: 0 0.25rem;
-  border-radius: 0.75rem;
-  background: var(--badge-bg);
-  color: var(--badge-text);
-  font-size: 0.75rem;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--pm-radius-pill);
+  background: var(--pm-danger);
+  color: var(--pm-on-result);
+  font-size: 11px;
   font-weight: 700;
+  box-shadow: 0 0 0 2px var(--pm-bg);
 }
 
-/* The unread indication on a Notification_Record (13.8). The dot is a shape as
-   well as a colour, and the row's accessible name carries the word "unread". */
-.shell-notification-row[data-unread='true']::before {
-  content: '';
-  display: inline-block;
-  width: 0.5rem;
-  height: 0.5rem;
-  margin-inline-end: 0.5rem;
-  border-radius: 50%;
-  background: var(--unread-cue);
+/* While the bell shows alone, the count sits over its corner, as the design
+   system draws it, so a count never widens the control. From 1200px, with the
+   label beside the bell, it follows the label inline. */
+.shell-frame .shell-badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
 }
 
-/* ------------------------------------------------------------------ *
- * Notification_Indicator (4.2, 4.5, 13.4, 13.13)
- *
- * The Shell_Header control that carries the Unread_Badge and discloses the
- * Notification_Panel. It shares the frame's neutral control presentation with the
- * navigation toggle and the account trigger — it is not a result, so it carries no
- * semantic colour (12.8) — and it needs its own `:focus-visible` rule: as a bare
- * `<button>` it would otherwise fall back to the user-agent focus ring, which is
- * not a token-based indicator and is not dependable against the dark Theme's
- * surface (12.10, 13.4). The `gap` separates the visible label from the badge
- * beside it, which is one control rather than two targets.
- * ------------------------------------------------------------------ */
-
-.shell-notification-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  /* 13.13: a full pointer target at every width, not only in the Compact_Layout. */
-  min-height: var(--shell-touch-target);
-  min-width: var(--shell-touch-target);
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--control-border);
-  border-radius: 0.5rem;
-  background: var(--control-bg);
-  color: var(--control-text);
-  font: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.shell-notification-indicator:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+@media (min-width: 1200px) {
+  .shell-frame .shell-badge {
+    position: static;
+  }
 }
 
 /* ------------------------------------------------------------------ *
  * Notification_Panel (5.1, 5.7, 5.8, 5.9, 5.12, 6.8, 6.9)
  *
- * The contents of the notification disclosure surface, which already supplies the
- * chrome and the `max-width` that keeps it inside the viewport (1.8). Everything
- * here is layout plus token references: the panel's states — loading, failure,
- * empty, mark-all in progress — are carried by text, never by colour alone
- * (13.8).
+ * The contents of the notification disclosure surface, which supplies the menu
+ * chrome and the `max-width` that keeps it inside the viewport (1.8). The
+ * panel's states (loading, failure, empty, mark-all in progress) are carried by
+ * text, never by colour alone (13.8).
  * ------------------------------------------------------------------ */
+
+.shell-notifications__surface {
+  width: min(22rem, calc(100vw - 1rem));
+  padding: 0;
+  overflow: hidden;
+}
 
 .shell-notification-panel {
   width: 100%;
@@ -476,14 +476,13 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
 /* The panel is the fallback focus target of 5.1, so its focus indicator has to
    be visible for the case where it holds no focusable control (13.4). */
 .shell-notification-panel:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: -2px;
 }
 
 .shell-notification-panel__header {
@@ -493,43 +492,57 @@
   justify-content: space-between;
   /* 13.13: at least 8px between two adjacent targets. */
   gap: var(--shell-touch-gap);
+  padding: var(--pm-space-2) var(--pm-space-2) var(--pm-space-2) var(--pm-space-4);
+  border-bottom: 1px solid var(--pm-border-subtle);
 }
 
 .shell-notification-panel__heading {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
+  font: var(--pm-type-title);
+  text-transform: uppercase;
 }
 
-/* The Mark_All_Read_Control (6.4, 6.8, 6.9) and the retry control (5.9) share
-   one presentation: both are neutral bordered controls, because neither is a
-   result and neither carries a semantic colour. */
+/* The Mark_All_Read_Control (6.4, 6.8, 6.9) and the retry control (5.9): the
+   design system's small accent-ghost and secondary buttons. */
 .shell-notification-panel__mark-all,
 .shell-notification-panel__retry {
   display: inline-flex;
   align-items: center;
   min-height: var(--shell-touch-target);
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--control-border);
-  border-radius: 0.5rem;
-  background: var(--control-bg);
-  color: var(--control-text);
-  font: inherit;
-  font-size: 0.875rem;
+  padding: 0 var(--pm-space-3);
+  border-radius: var(--pm-radius-pill);
+  font: var(--pm-type-label);
   cursor: pointer;
+}
+
+.shell-notification-panel__mark-all {
+  border: 0;
+  background: transparent;
+  color: var(--pm-accent-text);
+}
+
+.shell-notification-panel__mark-all:hover:not(:disabled) {
+  background: var(--pm-accent-subtle);
+  color: var(--pm-accent-on-subtle);
+}
+
+.shell-notification-panel__retry {
+  border: 1.5px solid var(--pm-border-control);
+  background: transparent;
+  color: var(--pm-text-primary);
 }
 
 .shell-notification-panel__mark-all:focus-visible,
 .shell-notification-panel__retry:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 2px solid var(--pm-focus-ring);
   outline-offset: 2px;
 }
 
 /* 6.9: the disabled state is reported by the `disabled` attribute; this only
-   makes it look unavailable, and the dimming is paired with the pointer cue so it
-   is not colour alone (13.8). */
+   makes it look unavailable, paired with the pointer cue so it is not colour
+   alone (13.8). */
 .shell-notification-panel__mark-all:disabled {
-  opacity: 0.55;
+  color: var(--pm-text-disabled);
   cursor: not-allowed;
 }
 
@@ -540,136 +553,114 @@
   cursor: progress;
 }
 
-/* 5.7, 5.8, 5.9: three statements in the frame's ordinary muted text. None of
-   them is an error state, so none carries a semantic colour (12.8). */
+/* 5.7, 5.8, 5.9: three plain statements. None of them is an error state, so
+   none carries a semantic colour (12.8). */
 .shell-notification-panel__empty,
 .shell-notification-panel__loading,
 .shell-notification-panel__failure-message {
   margin: 0;
-  color: var(--muted-text);
-  font-size: 0.875rem;
+  color: var(--pm-text-secondary);
+  font-size: 14px;
 }
 
-/* 5.8: the failure message and its retry control stack, so the message may wrap
-   to as many lines as it needs beside a full-size target. */
+.shell-notification-panel__empty,
+.shell-notification-panel__loading {
+  padding: var(--pm-space-6) var(--pm-space-4);
+  text-align: center;
+}
+
+/* 5.8: the failure message and its retry control stack, so the message may
+   wrap to as many lines as it needs beside a full-size target. */
 .shell-notification-panel__failure {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--shell-touch-gap);
+  padding: var(--pm-space-4);
 }
 
+/* The rows are divided rather than spaced in the Wide_Layout, as the design
+   system draws them; the Compact_Layout block restores the 8px target gap. */
 .shell-notification-panel__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  /* 13.13: adjacent row targets stay 8px apart. */
-  gap: var(--shell-touch-gap);
+  gap: 0;
+  max-height: min(28rem, 70vh);
+  overflow-y: auto;
 }
 
-/* 5.12: the control to the Notifications_Destination, set apart from the records
-   above it so it does not read as another record. */
+/* 5.12: the control to the Notifications_Destination, set apart from the
+   records above it so it does not read as another record. */
 .shell-notification-panel__see-all {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   min-height: var(--shell-touch-target);
-  padding: 0.25rem 0.5rem;
-  border-top: 1px solid var(--control-border);
-  border-radius: 0.25rem;
-  color: var(--text);
-  font-size: 0.875rem;
+  padding: 0 var(--pm-space-4);
+  border-top: 1px solid var(--pm-border-subtle);
+  color: var(--pm-accent-text);
+  font: var(--pm-type-label);
+  text-decoration: none;
+}
+
+.shell-notification-panel__see-all:hover {
+  background: var(--pm-surface-hover);
   text-decoration: underline;
 }
 
 .shell-notification-panel__see-all:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: -2px;
 }
 
 /* ------------------------------------------------------------------ *
- * Notification_Record row (5.5, 5.6, 6.11, 13.8)
+ * Notification_Record row: a NotificationItem (5.5, 5.6, 6.11, 13.8)
  *
- * One control per record, so the whole row is the activation target rather than a
- * small control inside it. The dot above is positioned by this rule's leading
- * padding, so the text does not shift when a record becomes read.
+ * One control per record, so the whole row is the activation target. The
+ * NotificationItem brings the type icon, the unread tint and dot; the word
+ * "Unread" is in the accessible name, so the state is never colour alone.
  * ------------------------------------------------------------------ */
 
 .shell-notification-row {
-  width: 100%;
   /* 1.8: bounded by its container, never by its text. */
   max-width: 100%;
   min-width: 0;
-  display: flex;
-  /* A row, so the unread dot sits in the leading gutter and the text stacks in the
-     column beside it. */
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 0;
   /* Full target height at every width, not only in the Compact_Layout (13.13). */
   min-height: var(--shell-touch-target);
-  padding: 0.5rem;
-  border: 0;
-  border-radius: 0.5rem;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-/* The dot is a flex item of the row, so it needs nudging down to sit on the first
-   line of the title rather than on the top edge of the text column. */
-.shell-notification-row::before {
-  flex: 0 0 auto;
-  margin-block-start: 0.4rem;
-}
-
-/* The text column: title, body, then the type and time metadata. */
-.shell-notification-row__content {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.125rem;
-}
-
-.shell-notification-row:hover {
-  background: var(--control-bg);
 }
 
 .shell-notification-row:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: -2px;
 }
 
 .shell-notification-row__title {
   font-weight: 600;
+  color: var(--pm-text-primary);
 }
 
-/* An unread record's title carries the extra weight the dot pairs with, so the
-   state survives both a colour override and a monochrome display (13.8). */
+/* An unread record's title carries extra weight beside the dot, so the state
+   survives both a colour override and a monochrome display (13.8). */
 .shell-notification-row[data-unread='true'] .shell-notification-row__title {
   font-weight: 700;
 }
 
-.shell-notification-row__body,
-.shell-notification-row__meta {
-  color: var(--muted-text);
-  font-size: 0.875rem;
+.shell-notification-row__body {
+  color: var(--pm-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
 }
 
 .shell-notification-row__meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--pm-space-2);
+  color: var(--pm-text-muted);
+  font-size: 12px;
+  line-height: 16px;
 }
 
 /* The word "Unread" (5.6, 13.8). Conveyed to assistive technology and not shown:
-   the dot already says it on screen. Clipped rather than removed, because
+   the dot and the tint say it on screen. Clipped rather than removed, because
    `display: none` would drop it from the accessible name too. */
 .shell-notification-row__state {
   position: absolute;
@@ -686,11 +677,8 @@
 /* ------------------------------------------------------------------ *
  * Notifications_Destination content (3.9, 5.4, 5.12)
  *
- * The whole ordered Notification_List, inside the Content_Region rather than
- * inside a disclosure surface — so it declares its own stacking and list reset and
- * borrows nothing from the panel. The rows themselves are the same
- * `.shell-notification-row` control, which keeps its target size and its unread
- * cue on both surfaces (13.8, 13.13). Colours are token references only (12.8).
+ * The whole ordered Notification_List inside the Content_Region, as a card.
+ * The rows are the same `.shell-notification-row` control as in the panel.
  * ------------------------------------------------------------------ */
 
 .shell-notification-list {
@@ -698,37 +686,40 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--shell-touch-gap);
+  gap: var(--pm-space-4);
 }
 
-/* 5.7, 7.7: two statements in the frame's ordinary muted text. Neither is an
-   error state, so neither carries a semantic colour (12.8). */
+.shell-notification-list h1 {
+  margin: 0;
+  font: var(--pm-type-display-m);
+  text-transform: uppercase;
+}
+
+/* 5.7, 7.7: two plain statements. Neither is an error state, so neither carries
+   a semantic colour (12.8). */
 .shell-notification-list__empty,
 .shell-notification-list__failure-message {
   margin: 0;
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
 }
 
 .shell-notification-list__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  /* 13.13: adjacent row targets stay 8px apart. */
-  gap: var(--shell-touch-gap);
+  border: 1px solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-lg);
+  background: var(--pm-surface);
+  overflow: hidden;
 }
 
 /* ------------------------------------------------------------------ *
- * Account_Menu (8.1, 8.2, 8.3, 8.10, 8.11)
+ * Account_Menu: the design system's menu (8.1, 8.2, 8.3, 8.10, 8.11)
  *
- * The contents of the account disclosure surface, which already supplies the
- * chrome and the `max-width` that keeps it inside the viewport (1.8). The three
- * controls are an ordinary list of links and a button — no widget role and no
- * arrow-key model (8.3) — so all this declares is layout, the neutral control
- * presentation the rest of the frame uses, and a visible focus indicator on each
- * one (13.4).
+ * An ordinary list of two links and a button, with no widget role and no
+ * arrow-key model (8.3).
  * ------------------------------------------------------------------ */
+
+.shell-account-menu__surface {
+  min-width: 15rem;
+}
 
 .shell-account-menu__list {
   width: 100%;
@@ -747,116 +738,144 @@
   display: flex;
 }
 
-/* The trigger and the three controls share the frame's neutral control
-   presentation: none of them is a result, so none carries a semantic colour
-   (12.8). */
-.shell-account-menu__trigger,
-.shell-account-menu__item {
+.shell-account-menu__trigger {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--pm-space-2);
+  justify-content: center;
   min-height: var(--shell-touch-target);
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--control-border);
-  border-radius: 0.5rem;
-  background: var(--control-bg);
-  color: var(--control-text);
-  font: inherit;
-  font-size: 0.875rem;
-  text-decoration: none;
+  min-width: var(--shell-touch-target);
+  padding: 0 var(--pm-space-3);
+  border: 1.5px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-pill);
+  background: transparent;
+  color: var(--pm-text-primary);
+  font: var(--pm-type-label);
   cursor: pointer;
 }
 
-/* Each control fills the surface width, so the whole row is the target rather
-   than the width of its label (13.13). */
+.shell-account-menu__trigger:hover {
+  background: var(--pm-surface-hover);
+}
+
 .shell-account-menu__item {
   flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pm-space-3);
+  min-height: var(--shell-touch-target);
+  padding: 0 var(--pm-space-3);
+  border: 0;
+  border-radius: var(--pm-radius-sm);
+  background: transparent;
+  color: var(--pm-text-primary);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shell-account-menu__item:hover {
+  background: var(--pm-surface-hover);
+}
+
+/* Signing out is set apart from the two destinations above it. */
+.shell-account-menu__entry:last-child {
+  border-top: 1px solid var(--pm-border-subtle);
+  padding-top: var(--shell-touch-gap);
 }
 
 .shell-account-menu__trigger:focus-visible,
 .shell-account-menu__item:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 2px solid var(--pm-focus-ring);
   outline-offset: 2px;
 }
 
-.shell-account-menu__item:hover {
-  border-color: var(--accent-text);
-}
-
-/* 8.10: the in-progress indication. Words in the frame's muted text, paired with
-   the pointer cue below, so the state is never carried by colour alone (13.8). */
+/* 8.10: the in-progress indication, in words, paired with the pointer cue below
+   so the state is never carried by colour alone (13.8). */
 .shell-account-menu__progress {
-  color: var(--muted-text);
-  font-size: 0.8125rem;
+  color: var(--pm-text-secondary);
+  font-size: 14px;
 }
 
-/* 8.10: `aria-disabled`, not `disabled` — the control keeps its focus — so the
+/* 8.10: `aria-disabled`, not `disabled`: the control keeps its focus, so the
    unavailable appearance is driven by the reported state. */
 .shell-account-menu__item[aria-disabled='true'] {
-  opacity: 0.6;
+  color: var(--pm-text-disabled);
   cursor: progress;
 }
 
-/* 8.11: the sign-out failure, in the frame's ordinary muted text. A sign-out that
-   did not complete is recoverable through the control above it, so it carries no
-   semantic colour of its own (12.8). */
+/* 8.11: the sign-out failure. A sign-out that did not complete is recoverable
+   through the control above it, so it carries no semantic colour (12.8). */
 .shell-account-menu__failure {
-  margin: 0.5rem 0 0;
-  color: var(--muted-text);
-  font-size: 0.875rem;
+  margin: var(--pm-space-2) 0 0;
+  padding: 0 var(--pm-space-3);
+  color: var(--pm-text-secondary);
+  font-size: 14px;
 }
 
 /* ------------------------------------------------------------------ *
  * Boundary states (3.8, 3.10, 9.7)
  *
- * The Unavailable_State, the `/app` not-found indication, and the session-ended
- * notice share one layout: a heading, a line of explanation, and — for the first
- * two — a control to the Home_Destination. None of them is an error state, so
- * none of them carries a semantic colour: text and control take the ordinary
- * frame tokens (12.8).
+ * The Unavailable_State, the `/app` not-found indication and the session-ended
+ * notice share the design system's empty-state layout: a heading, a line of
+ * explanation and, for the first two, a way home. None is an error state, so
+ * none carries a semantic colour (12.8).
  * ------------------------------------------------------------------ */
 
 .shell-boundary {
-  max-width: 40rem;
+  max-width: 32rem;
+  margin: var(--pm-space-12) auto;
+  padding: var(--pm-space-10) var(--pm-space-6);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.75rem;
+  align-items: center;
+  gap: var(--pm-space-3);
+  text-align: center;
+  border: 1.5px dashed var(--pm-border-control);
+  border-radius: var(--pm-radius-lg);
+}
+
+.shell-boundary h1 {
+  margin: 0;
+  font: var(--pm-type-display-m);
+  text-transform: uppercase;
 }
 
 .shell-boundary__body {
   margin: 0;
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
 }
 
-/* The control to Home. Bordered rather than coloured in, because the state it
-   sits in is neutral. */
+/* The way home: the design system's secondary button. */
 .shell-boundary__home {
   display: inline-flex;
   align-items: center;
-  padding: 0.5rem 0.875rem;
-  border: 1px solid var(--control-border);
-  border-radius: 0.5rem;
-  background: var(--control-bg);
-  color: var(--control-text);
+  min-height: var(--shell-touch-target);
+  padding: 0 var(--pm-space-5);
+  border: 1.5px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-pill);
+  color: var(--pm-text-primary);
+  font: var(--pm-type-label);
   text-decoration: none;
 }
 
 .shell-boundary__home:hover {
-  text-decoration: underline;
+  background: var(--pm-surface-hover);
 }
 
 .shell-boundary__home:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 2px solid var(--pm-focus-ring);
   outline-offset: 2px;
 }
 
 /* ------------------------------------------------------------------ *
- * Compact_Layout target sizes (13.13)
+ * Compact_Layout (13.13)
  *
  * Below the Wide_Layout breakpoint every interactive control of the frame is at
  * least 44x44 CSS pixels, and adjacent targets are at least 8px apart. The
- * breakpoint value matches `WIDE_LAYOUT_MIN_WIDTH_PX` in
+ * breakpoint matches `WIDE_LAYOUT_MIN_WIDTH_PX` in
  * `state/useViewportLayout.ts`: 768px is a *wide* width, so the compact rules
  * stop at 767.98px.
  * ------------------------------------------------------------------ */
@@ -864,14 +883,52 @@
 @media (max-width: 767.98px) {
   .shell-header {
     /* The header wraps onto as many lines as it needs rather than shrinking
-       controls below their target size (1.8, 13.13). */
+       controls below their target size (1.8, 13.13). A tighter gutter keeps
+       the brand and the three icon controls on one line from 360px. */
     row-gap: var(--shell-touch-gap);
+    padding-inline: 0.75rem;
+  }
+
+  .shell-frame .shell-brand {
+    padding-inline: 0;
   }
 
   .shell-header__nav,
   .shell-header__actions {
     flex-wrap: wrap;
     /* 13.13: at least 8px between the edges of any two adjacent targets. */
+    gap: var(--shell-touch-gap);
+  }
+
+  /* The menu toggle shows its icon alone, as the bell and account controls do;
+     "Menu" stays its accessible name. */
+  .shell-frame .shell-nav__toggle-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .shell-frame .shell-nav__toggle {
+    padding: 0;
+    border: 0;
+  }
+
+  /* The menu drops beneath the header across the viewport, like the design
+     system's drawer, rather than hanging from a toggle in mid-header where it
+     would run off the right-hand edge (1.8). */
+  .shell-frame .shell-nav__surface {
+    position: fixed;
+    top: calc(var(--pm-topbar-h) + 0.25rem);
+    left: 0.5rem;
+    right: 0.5rem;
+    max-width: calc(100vw - 1rem);
+  }
+
+  .shell-frame .shell-notification-panel__list {
+    /* 13.13: adjacent row targets stay 8px apart. */
     gap: var(--shell-touch-gap);
   }
 
@@ -902,6 +959,16 @@
     /* Every destination control directly reachable, laid out as one row. */
     flex-wrap: wrap;
     gap: 0.25rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .shell-notification-indicator__label,
+  .shell-account-menu__trigger-label {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
   }
 }
 

@@ -41,9 +41,15 @@
   display: inline-flex;
   align-items: baseline;
   gap: var(--player-stats-gap-tight);
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
+  box-sizing: border-box;
+  min-width: 6rem;
+  padding: var(--pm-space-3) var(--pm-space-4);
+  border: var(--player-stats-border-width) solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-lg);
+  background: var(--pm-surface);
 }
 
 /* ------------------------------------------------------------------ *
@@ -53,26 +59,27 @@
 /* The letter: the body text colour, at the text contrast floor. Never a
    semantic hue — see the module note. */
 .player-stats-result-breakdown__letter {
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-weight: var(--player-stats-font-weight-label);
 }
 
 /* The icon: the semantic hue, on a non-text mark. The weight is a second
    non-colour cue, so the glyph still reads as a mark in greyscale. */
 .player-stats-result-breakdown__icon {
+  font-family: var(--pm-font-display);
   font-weight: var(--player-stats-font-weight-heading);
 }
 
 .player-stats-result-breakdown__item--win .player-stats-result-breakdown__icon {
-  color: var(--player-stats-win-icon);
+  color: var(--pm-result-win-text);
 }
 
 .player-stats-result-breakdown__item--draw .player-stats-result-breakdown__icon {
-  color: var(--player-stats-draw-icon);
+  color: var(--pm-result-draw-text);
 }
 
 .player-stats-result-breakdown__item--loss .player-stats-result-breakdown__icon {
-  color: var(--player-stats-loss-icon);
+  color: var(--pm-result-loss-text);
 }
 
 /* ------------------------------------------------------------------ *
@@ -80,8 +87,9 @@
  * ------------------------------------------------------------------ */
 
 .player-stats-result-breakdown__count {
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-figure);
+  font-family: var(--pm-font-display);
   font-weight: var(--player-stats-font-weight-heading);
   line-height: var(--player-stats-line-height-heading);
 }

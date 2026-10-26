@@ -50,28 +50,24 @@
  *
  * jsdom resolves neither a custom property nor a `var()` reference from an
  * imported stylesheet, and `jest-axe` disables axe's colour-category rules for
- * exactly that reason. So `styles/playerStatsTokens.css` and every stylesheet of
- * the feature are read as **source text**, the declared values are parsed out of
- * the `:root, [data-theme='dark']` and `[data-theme='light']` tables, and WCAG 2.1
- * relative luminance and contrast ratios are computed here. This is the mechanism
- * the App_Shell's `styles/theme.contrast.property.test.ts` and the squads
- * `screens/keyboardAndContrast.property.test.tsx` already use; it is restated
- * rather than imported because Requirement 14.4 admits no import from another
- * feature's internals.
+ * exactly that reason. So every stylesheet of the feature is read as **source
+ * text**, the design-system tokens it paints with (`--pm-*`) are resolved for
+ * each Theme from `src/design/tokens.json`, the scale is read from
+ * `styles/playerStatsTokens.css`, and WCAG 2.1 relative luminance and contrast
+ * ratios are computed here, the same mechanism the squads
+ * `screens/keyboardAndContrast.property.test.tsx` uses.
  *
- * The **shared theme tables** are read too: `styles/playerStatsTokens.css`
- * restates the ten shared token names with the shared values, and a restated
- * value can drift. Each shared name is therefore compared against the App_Shell's,
- * the Auth_Feature's, and the marketing landing's own tables, so a control looks
- * the same inside the shell, on an auth screen, and on this screen — or this fails.
+ * Every colour the stylesheets paint is measured against the surfaces it lands
+ * on, greens included. The design system's text green clears the text floor in
+ * both Themes, so there is no separate green rule: a green the stylesheets paint
+ * is a pairing here like any other colour.
  *
  * ### What is not asserted here
  *
  * The accessible name of every control and every other automated WCAG check
  * belong to task 14.1's audits; the heading outline to Property 33; keyboard
- * reachability and the rendered focus indication to Property 34; the green
- * painting rule to Property 36. This file is about what the two tables declare
- * and what the stylesheets declare about width.
+ * reachability and the rendered focus indication to Property 34. This file is
+ * about what the tables declare and what the stylesheets declare about width.
  *
  * Feature: web-player-stats-screen, Property 35: Both theme tables are complete
  * and meet the contrast floors
@@ -81,6 +77,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { resolveColour } from '../../../design/contrast';
+import designTokens from '../../../design/tokens.json';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -116,23 +114,13 @@ function stylesheetsUnder(dir: string): string[] {
   return found;
 }
 
-/** The per-Theme token tables of the three features that declare the shared ten. */
-const SHARED_THEME_TABLES: readonly { readonly name: string; readonly path: string }[] =
-  [
-    {
-      name: 'app-shell',
-      path: join(FEATURE_ROOT, '..', 'app-shell', 'styles', 'theme.css'),
-    },
-    { name: 'auth', path: join(FEATURE_ROOT, '..', 'auth', 'styles', 'theme.css') },
-    {
-      name: 'landing',
-      path: join(FEATURE_ROOT, '..', 'landing', 'styles', 'theme.css'),
-    },
-  ];
 
 const TOKENS_NAME = 'player-stats/styles/playerStatsTokens.css';
 
 const TOKENS_PATH = join(FEATURE_ROOT, 'styles', 'playerStatsTokens.css');
+
+/** The design-system tokens the stylesheets read their colours from. */
+const DESIGN_TOKENS_PATH = join(FEATURE_ROOT, '..', '..', 'design', 'tokens.css');
 
 const tokensSource = readFileSync(TOKENS_PATH, 'utf8');
 
@@ -265,6 +253,11 @@ function contrastRatio(a: string, b: string): number {
 
 /* ------------------------------------------------------------------ *
  * The declared token tables
+ *
+ * Colours are the design system's: every stylesheet here paints with `--pm-*`
+ * tokens, whose values per Theme come from `src/design/tokens.json` (the same
+ * source `tokens.css` is generated from). The feature's own table holds its
+ * Theme-invariant scale only.
  * ------------------------------------------------------------------ */
 
 /** The custom properties declared inside the first block matching `selector`. */
@@ -285,19 +278,33 @@ function tokenTable(css: string, selector: RegExp): Record<string, string> {
 
 const strippedTokens = withoutComments(tokensSource);
 
+/** Every design-system colour token, resolved for one Theme: `--pm-<name>` to its value. */
+function designTable(theme: Theme): Record<string, string> {
+  return Object.fromEntries(
+    designTokens.color.tokens.map((token) => [
+      `--pm-${token.name}`,
+      resolveColour(token.name, theme).toLowerCase(),
+    ]),
+  );
+}
+
 const TABLES: Readonly<Record<Theme, Record<string, string>>> = {
-  // The dark table is shared by `:root` and `[data-theme='dark']`, so an absent or
-  // unresolved attribute renders dark.
-  dark: tokenTable(strippedTokens, /:root,\s*\[data-theme='dark'\]\s*\{([^}]*)\}/),
-  light: tokenTable(strippedTokens, /\[data-theme='light'\]\s*\{([^}]*)\}/),
+  dark: designTable('dark'),
+  light: designTable('light'),
 };
 
 /**
- * The Theme-invariant scale: spacing, radii, target sizes, chart geometry, and
- * type sizes, declared once on `:root` rather than duplicated into both colour
- * tables.
+ * The Theme-invariant scale: spacing, radii, target sizes, and type sizes,
+ * declared once on `:root` in `styles/playerStatsTokens.css`.
  */
 const SCALE: Record<string, string> = tokenTable(strippedTokens, /:root\s*\{([^}]*)\}/);
+
+/** Every design-system token, colour or not: the type, space and size scale too. */
+const DESIGN_TOKENS = new Set(
+  [...withoutComments(readFileSync(DESIGN_TOKENS_PATH, 'utf8')).matchAll(/(--pm-[\w-]+)\s*:/g)].map(
+    (match) => match[1],
+  ),
+);
 
 /** The declared value of `token` in `theme`, failing loudly if undeclared. */
 function declared(theme: Theme, token: string): string {
@@ -306,7 +313,7 @@ function declared(theme: Theme, token: string): string {
   return value;
 }
 
-/** The colour tokens of the tables — everything declared as a hex value. */
+/** The colour tokens of the tables: everything declared as a hex value. */
 const COLOUR_TOKENS: readonly string[] = Object.keys(TABLES.dark).filter((token) =>
   /^#[0-9a-f]{6}$/.test(TABLES.dark[token]),
 );
@@ -320,6 +327,11 @@ const PAINTED_TOKENS: readonly string[] = [
   ),
 ].sort();
 
+/** The painted tokens that are colours. */
+const PAINTED_COLOURS: readonly string[] = PAINTED_TOKENS.filter((token) =>
+  COLOUR_TOKENS.includes(token),
+);
+
 /* ------------------------------------------------------------------ *
  * The floors, the surfaces, and the declared pairings
  * ------------------------------------------------------------------ */
@@ -327,288 +339,105 @@ const PAINTED_TOKENS: readonly string[] = [
 /** Text and interactive control text (Requirement 15.4). */
 const TEXT_FLOOR = 4.5;
 
-/** Focus indications, borders, and graphical marks (Requirement 15.4). */
+/** Focus indications, borders, and graphical cues (Requirement 15.4). */
 const NON_TEXT_FLOOR = 3;
 
 /**
  * Every surface the feature paints or renders onto, and so every background a
  * colour can be read against.
- *
- * A label chip carries an outline and text and no fill of its own, deliberately,
- * so a chip introduces no further surface: its text is read against whichever of
- * these the region around it is painted with.
  */
 const SURFACE_TOKENS = [
-  // The App_Shell's Content_Region behind the screen: the identity header, the
-  // level-one heading, and the three boundary states render directly on it.
-  '--bg',
-  // Every `StatSection` panel — the record, rating, progression, streaks, bibs,
-  // the four Pairwise_Sections, and the rich stats.
-  '--player-stats-card-surface',
-  // The two controls the feature paints: the retry control and the way back to
-  // the squad.
-  '--control-bg',
+  // The App_Shell's Content_Region behind the screen.
+  '--pm-bg',
+  // The stat tiles, panels and cards, and the leaderboard list.
+  '--pm-surface',
+  // Controls: the failure notice's retry, the not-found way out.
+  '--pm-surface-raised',
+  // The chosen statistic in the leaderboard switcher.
+  '--pm-accent-fill',
 ] as const;
 
 interface Pairing {
-  /** The token carrying the text, indication, border, or mark. */
   readonly foreground: string;
-  /** The token painting the surface it is read against. */
   readonly background: string;
-  /** The floor this pairing owes, from what the stylesheets paint with it. */
   readonly floor: typeof TEXT_FLOOR | typeof NON_TEXT_FLOOR;
-  /** What the pairing is, so the floor is justified rather than asserted. */
   readonly usage: string;
 }
 
-/**
- * Every colour the feature paints, against every surface it can land on.
- *
- * Each semantic token is measured against **both** the region behind the screen
- * and the section-panel surface, which is what the token table documents: a
- * figure may be rendered directly on the screen background — the identity header
- * and the boundary states are — or inside a panel.
- */
+/** One foreground against each of the screen's neutral surfaces, at one floor. */
+function onNeutralSurfaces(foreground: string, floor: Pairing['floor'], usage: string): Pairing[] {
+  return ['--pm-bg', '--pm-surface', '--pm-surface-raised'].map((background) => ({
+    foreground,
+    background,
+    floor,
+    usage,
+  }));
+}
+
 const PAIRINGS: readonly Pairing[] = [
-  // ---- Text and interactive control text: 4.5:1 (Requirement 15.4) ----
+  // ---- Text: 4.5:1 (Requirement 15.4) ----
+  ...onNeutralSurfaces('--pm-text-primary', TEXT_FLOOR, 'headings, figures, names and values'),
+  ...onNeutralSurfaces('--pm-text-secondary', TEXT_FLOOR, 'labels, statements and secondary text'),
+  ...onNeutralSurfaces(
+    '--pm-result-win-text',
+    TEXT_FLOOR,
+    'the win glyph beside its letter and its word',
+  ),
+  ...onNeutralSurfaces(
+    '--pm-result-draw-text',
+    TEXT_FLOOR,
+    'the draw glyph beside its letter and its word',
+  ),
+  ...onNeutralSurfaces(
+    '--pm-result-loss-text',
+    TEXT_FLOOR,
+    'the loss glyph beside its letter and its word',
+  ),
+  ...onNeutralSurfaces(
+    '--pm-provisional-text',
+    TEXT_FLOOR,
+    'the provisional Rating_Condition, beside its "~" and its word',
+  ),
   {
-    foreground: '--text',
-    background: '--bg',
+    foreground: '--pm-on-accent',
+    background: '--pm-accent-fill',
     floor: TEXT_FLOOR,
-    usage:
-      "the Player_Display_Name level-one heading, the fallback heading of the loading and failed bodies, the Not_Found_Treatment heading, and the failure's own statement",
-  },
-  {
-    foreground: '--text',
-    background: '--player-stats-card-surface',
-    floor: TEXT_FLOOR,
-    usage:
-      "every section heading and figure inside a panel: the record values, the Display_Rating, both streak figures, the Bib_Appearances count, the Result_Breakdown's W/D/L letters and counts, each rich statistic, and every progression and pairwise table cell",
-  },
-  {
-    foreground: '--muted-text',
-    background: '--bg',
-    floor: TEXT_FLOOR,
-    usage:
-      'the loading statement, the Not_Found_Treatment statement, the squad-scope statement, and the Former_Player label in the identity header',
-  },
-  {
-    foreground: '--muted-text',
-    background: '--player-stats-card-surface',
-    floor: TEXT_FLOOR,
-    usage:
-      "every label and column heading inside a panel, the rating panel's scope statement, the never-played and absent rating text, the no-matches and no-run statements, the two tracking statements, the nothing-to-show-yet statements, and a Pairwise_Section's Former_Player label",
-  },
-  {
-    foreground: '--control-text',
-    background: '--control-bg',
-    floor: TEXT_FLOOR,
-    usage:
-      "the retry control's label and the back-to-squad control's label, both painted on the shared control fill",
-  },
-  {
-    foreground: '--control-text',
-    background: '--player-stats-card-surface',
-    floor: TEXT_FLOOR,
-    usage:
-      'the Pairwise_Link, which declares no fill of its own and so is read against the panel it sits in',
-  },
-  {
-    foreground: '--player-stats-provisional-text',
-    background: '--player-stats-card-surface',
-    floor: TEXT_FLOOR,
-    usage: 'the Provisional_Rating label in the rating panel',
-  },
-  {
-    foreground: '--player-stats-provisional-text',
-    background: '--bg',
-    floor: TEXT_FLOOR,
-    usage:
-      'the same label measured against the region behind the screen, which the token table documents for every token',
-  },
-  {
-    foreground: '--player-stats-guest-text',
-    background: '--bg',
-    floor: TEXT_FLOOR,
-    usage: 'the Guest_Flag label, which the identity header renders outside a panel',
-  },
-  {
-    foreground: '--player-stats-guest-text',
-    background: '--player-stats-card-surface',
-    floor: TEXT_FLOOR,
-    usage: 'the same label measured against the panel surface',
+    usage: 'the chosen statistic in the leaderboard switcher: Ink on Pitch Green',
   },
 
-  // ---- Focus indications, borders, and graphical marks: 3:1 (15.4) ----
+  // ---- Focus indications, borders and graphical cues: 3:1 (Requirement 15.4) ----
+  ...onNeutralSurfaces('--pm-focus-ring', NON_TEXT_FLOOR, 'every control’s focus indication'),
   {
-    foreground: '--focus-ring',
-    background: '--bg',
+    foreground: '--pm-on-accent',
+    background: '--pm-accent-fill',
     floor: NON_TEXT_FLOOR,
-    usage:
-      'the focus indication of the main content region and of a control drawn against the region behind the screen',
+    usage: 'the focus indication of the chosen statistic’s radio, drawn in Ink on its fill',
   },
-  {
-    foreground: '--focus-ring',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "the focus indication of a Pairwise_Link, drawn on its panel",
-  },
-  {
-    foreground: '--focus-ring',
-    background: '--control-bg',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "the focus indication offset from a bordered control, whose own fill is one of its adjacent colours",
-  },
-  {
-    foreground: '--control-border',
-    background: '--control-bg',
-    floor: NON_TEXT_FLOOR,
-    usage: "the retry control's and the squad link's edge against their own fill",
-  },
-  {
-    foreground: '--control-border',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "those same edges where the region behind the screen is what lies beyond them",
-  },
-  {
-    foreground: '--control-border',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: 'and where a panel lies beyond them',
-  },
-  {
-    foreground: '--player-stats-card-border',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "a `StatSection` panel's edge and the identity header's label chips against the region behind the screen",
-  },
-  {
-    foreground: '--player-stats-card-border',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "that same edge against the surface it encloses, plus every table's column rule and a Pairwise_Section's Former_Player chip",
-  },
-  {
-    foreground: '--player-stats-provisional-border',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "the Provisional_Rating badge's dashed ring",
-  },
-  {
-    foreground: '--player-stats-provisional-border',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage: 'that same ring measured against the region behind the screen',
-  },
-  {
-    foreground: '--player-stats-win-icon',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "the Result_Breakdown's win icon — a non-text mark beside a `W` in `--text`, never the sole carrier",
-  },
-  {
-    foreground: '--player-stats-win-icon',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage: 'the same mark measured against the region behind the screen',
-  },
-  {
-    foreground: '--player-stats-draw-icon',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "the Result_Breakdown's draw icon, beside a `D` in `--text`",
-  },
-  {
-    foreground: '--player-stats-draw-icon',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage: 'the same mark measured against the region behind the screen',
-  },
-  {
-    foreground: '--player-stats-loss-icon',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "the Result_Breakdown's loss icon, beside an `L` in `--text`",
-  },
-  {
-    foreground: '--player-stats-loss-icon',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage: 'the same mark measured against the region behind the screen',
-  },
-  {
-    foreground: '--player-stats-chart-line',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      "the Progression_Chart's plotted line, whose meaning is carried by position and restated by the Progression_Table",
-  },
-  {
-    foreground: '--player-stats-chart-line',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage: 'the same line measured against the region behind the screen',
-  },
-  {
-    foreground: '--player-stats-chart-point',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "the Progression_Chart's point marks — a shape per point, not a hue",
-  },
-  {
-    foreground: '--player-stats-chart-point',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage: 'the same marks measured against the region behind the screen',
-  },
-  {
-    foreground: '--player-stats-chart-grid',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: "the Progression_Chart's grid rules",
-  },
-  {
-    foreground: '--player-stats-chart-grid',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage: 'the same rules measured against the region behind the screen',
-  },
-  {
-    foreground: '--accent-text',
-    background: '--bg',
-    floor: NON_TEXT_FLOOR,
-    usage:
-      'the surface-keyed green accent, declared for parity with the other three tables and measured at the non-text floor because green never letters (Property 36 holds the stylesheets to that)',
-  },
-  {
-    foreground: '--accent-text',
-    background: '--player-stats-card-surface',
-    floor: NON_TEXT_FLOOR,
-    usage: 'the same accent on a panel surface',
-  },
+  ...onNeutralSurfaces(
+    '--pm-border-control',
+    NON_TEXT_FLOOR,
+    'the boundary of every control and the link underline',
+  ),
+  ...onNeutralSurfaces(
+    '--pm-provisional-text',
+    NON_TEXT_FLOOR,
+    'the provisional badge’s outline',
+  ),
+  ...onNeutralSurfaces(
+    '--pm-text-secondary',
+    NON_TEXT_FLOOR,
+    'the Rating_Condition shapes drawn in the secondary text colour',
+  ),
 ];
 
 /**
- * The tokens the tables declare and no pairing measures.
+ * Painted tokens no pairing measures, and why each needs none.
  *
- * Both are declared so that this feature's tables carry the **same ten shared
- * token names** the App_Shell's, the Auth_Feature's, and the squads tables do,
- * and the feature paints with neither — exactly as `playerStatsTokens.css` says:
- *
- * - `--surface` is the shell's own panel surface; a player-stats panel takes
- *   `--player-stats-card-surface`.
- * - `--accent-fill` is Pitch Green in **both** Themes, which reaches only 2.35:1
- *   on white. Nothing here fills with green, and a green line or mark takes the
- *   surface-keyed `--accent-text` instead, so it clears the 3:1 floor in the
- *   light Theme too.
+ * - `--pm-border-subtle` draws decorative separators and card edges only; every
+ *   control boundary is `--pm-border-control`, which is measured (the design
+ *   system's own rule).
  */
-const UNMEASURED_TOKENS = ['--accent-fill', '--surface'] as const;
+const UNMEASURED_TOKENS = ['--pm-border-subtle'] as const;
 
 /** A pairing named the way a failure should read. */
 function describePairing(theme: Theme, pairing: Pairing): string {
@@ -617,163 +446,91 @@ function describePairing(theme: Theme, pairing: Pairing): string {
 
 // Feature: web-player-stats-screen, Property 35: Both theme tables are complete and meet the contrast floors
 // Validates: Requirements 15.3
-describe('Property 35 — both Theme tables declare every token the feature paints', () => {
-  it('parses both tables and the Theme-invariant scale', () => {
+describe('Property 35 — the tables declare every token the feature paints', () => {
+  it('resolves both design tables and the Theme-invariant scale', () => {
     expect(Object.keys(TABLES.dark).sort()).toEqual(Object.keys(TABLES.light).sort());
     expect(COLOUR_TOKENS.length).toBeGreaterThan(15);
     expect(SCALE['--player-stats-touch-target']).toBe('44px');
-    expect(SCALE['--player-stats-focus-width']).toBe('3px');
-    // The scale block declares no colour, and the colour tables declare no scale.
-    expect(Object.keys(SCALE).some((token) => token in TABLES.dark)).toBe(false);
-  });
-
-  it('declares every colour token in both Themes, as a six-digit hex value', () => {
-    fc.assert(
-      fc.property(
-        fc.constantFrom(...THEMES),
-        fc.constantFrom(...COLOUR_TOKENS),
-        (theme, token) => {
-          expect(declared(theme, token), `${theme} ${token}`).toMatch(
-            /^#[0-9a-f]{6}$/,
-          );
-        },
-      ),
-      { numRuns: 300 },
-    );
+    // The scale declares no colour and restates no design token.
+    expect(Object.keys(SCALE).some((token) => DESIGN_TOKENS.has(token))).toBe(false);
+    expect(Object.values(SCALE).some((value) => /#[0-9a-f]{3,8}\b/i.test(value))).toBe(false);
   });
 
   it('declares every custom property the feature paints', () => {
-    // Requirement 15.3's first clause: a `var()` the stylesheets read and the
-    // table does not declare resolves to nothing in a browser, which is a colour
-    // no Theme chose and no assertion below measures.
+    // Requirement 15.3's first clause: a `var()` the stylesheets read and no table
+    // declares resolves to nothing in a browser, which is a colour no Theme chose
+    // and no assertion below measures.
     expect(PAINTED_TOKENS.length).toBeGreaterThan(25);
 
-    const undeclared = PAINTED_TOKENS.filter(
-      (token) => !(token in SCALE) && !(token in TABLES.dark),
-    );
+    const undeclared = PAINTED_TOKENS.filter((token) => !(token in SCALE) && !DESIGN_TOKENS.has(token));
 
     expect(undeclared).toEqual([]);
   });
 
-  it('declares every painted colour token in both tables', () => {
-    const missing = PAINTED_TOKENS.flatMap((token) =>
-      token in TABLES.dark
-        ? THEMES.filter((theme) => !(token in TABLES[theme])).map(
-            (theme) => `${token} is absent from the ${theme} table`,
-          )
-        : [],
+  it('declares every painted colour token in both Themes', () => {
+    const missing = PAINTED_COLOURS.flatMap((token) =>
+      THEMES.filter((theme) => !(token in TABLES[theme])).map(
+        (theme) => `${token} is absent from the ${theme} table`,
+      ),
     );
 
+    expect(PAINTED_COLOURS.length).toBeGreaterThan(5);
     expect(missing).toEqual([]);
   });
 
   it('detects a painted property no table declares (guards the scan)', () => {
-    // Non-vacuity: the scan above passes because the tables are complete, not
-    // because nothing is read. The same reading applied to a fabricated
-    // declaration finds the undeclared property.
     const fabricated = tokensIn('color: var(--player-stats-nothing-declares-this)');
 
     expect(fabricated).toEqual(['--player-stats-nothing-declares-this']);
     expect(
-      fabricated.filter((token) => !(token in SCALE) && !(token in TABLES.dark)),
+      fabricated.filter((token) => !(token in SCALE) && !DESIGN_TOKENS.has(token)),
     ).toEqual(['--player-stats-nothing-declares-this']);
   });
 
-  it('writes no colour literal outside the token table', () => {
+  it('writes no colour literal in any stylesheet', () => {
     // The precondition for every measurement below: a colour written into a
-    // component stylesheet would be a colour no table declares and no pairing
-    // measures.
-    const offenders = STYLESHEETS.filter((sheet) => sheet.name !== TOKENS_NAME).flatMap(
-      (sheet) => {
-        const source = withoutComments(sheet.source);
-        return [...source.matchAll(/#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(/gi)].map(
-          (match) => `${sheet.name}: ${match[0]}`,
-        );
-      },
-    );
+    // stylesheet would be a colour no table declares and no pairing measures.
+    const offenders = STYLESHEETS.flatMap((sheet) => {
+      const source = withoutComments(sheet.source);
+      return [...source.matchAll(/#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(/gi)].map(
+        (match) => `${sheet.name}: ${match[0]}`,
+      );
+    });
 
     expect(offenders).toEqual([]);
-  });
-
-  it('declares the shared token names with the shared values, in both Themes', () => {
-    // `playerStatsTokens.css` restates the shared ten for self-containment. A
-    // restated value can drift, so each is compared against the tables that also
-    // declare it.
-    let compared = 0;
-
-    for (const { name, path } of SHARED_THEME_TABLES) {
-      const source = withoutComments(readFileSync(path, 'utf8'));
-      const tables: Readonly<Record<Theme, Record<string, string>>> = {
-        dark: tokenTable(source, /:root,\s*\[data-theme='dark'\]\s*\{([^}]*)\}/),
-        light: tokenTable(source, /\[data-theme='light'\]\s*\{([^}]*)\}/),
-      };
-
-      for (const theme of THEMES) {
-        for (const [token, value] of Object.entries(tables[theme])) {
-          if (!(token in TABLES[theme])) {
-            continue;
-          }
-          compared += 1;
-          expect(
-            declared(theme, token),
-            `${theme} ${token} is ${declared(theme, token)} here and ${value} in features/${name}/styles/theme.css`,
-          ).toBe(value);
-        }
-      }
-    }
-
-    // Guards the comparison: a parse that found no shared name would pass vacuously.
-    expect(compared).toBeGreaterThan(30);
   });
 });
 
 // Feature: web-player-stats-screen, Property 35: Both theme tables are complete and meet the contrast floors
 // Validates: Requirements 15.4
-describe('Property 35 — the declared token tables meet the contrast floors in both Themes', () => {
+describe('Property 35 — the declared pairings meet the contrast floors in both Themes', () => {
   it('computes the canonical ratios, so the arithmetic itself is checked', () => {
     expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 1);
     expect(contrastRatio('#5bbf36', '#5bbf36')).toBeCloseTo(1, 5);
-    // The figure the token table cites for the brand amber on the light panel
-    // surface, which is why the light table substitutes a darker value.
-    expect(contrastRatio('#e0a82e', '#f4f4f4')).toBeCloseTo(1.95, 2);
   });
 
   it('meets each pairing’s floor in both Themes', () => {
     fc.assert(
-      fc.property(
-        fc.constantFrom(...THEMES),
-        fc.constantFrom(...PAIRINGS),
-        (theme, pairing) => {
-          const ratio = contrastRatio(
-            declared(theme, pairing.foreground),
-            declared(theme, pairing.background),
-          );
+      fc.property(fc.constantFrom(...THEMES), fc.constantFrom(...PAIRINGS), (theme, pairing) => {
+        const ratio = contrastRatio(declared(theme, pairing.foreground), declared(theme, pairing.background));
 
-          expect(
-            ratio,
-            `${describePairing(theme, pairing)} is ${ratio.toFixed(2)}:1, below ${pairing.floor}:1`,
-          ).toBeGreaterThanOrEqual(pairing.floor);
-        },
-      ),
+        expect(
+          ratio,
+          `${describePairing(theme, pairing)} is ${ratio.toFixed(2)}:1, below ${pairing.floor}:1`,
+        ).toBeGreaterThanOrEqual(pairing.floor);
+      }),
       { numRuns: 300 },
     );
   });
 
   it('holds for every pairing in both Themes exhaustively', () => {
-    // The pairing space is finite and small, so it is also checked whole: a
-    // generator that never happened to draw a pairing would prove nothing about it.
     const failures: string[] = [];
 
     for (const theme of THEMES) {
       for (const pairing of PAIRINGS) {
-        const ratio = contrastRatio(
-          declared(theme, pairing.foreground),
-          declared(theme, pairing.background),
-        );
+        const ratio = contrastRatio(declared(theme, pairing.foreground), declared(theme, pairing.background));
         if (ratio < pairing.floor) {
-          failures.push(
-            `${describePairing(theme, pairing)} = ${ratio.toFixed(2)}:1 < ${pairing.floor}:1`,
-          );
+          failures.push(`${describePairing(theme, pairing)} = ${ratio.toFixed(2)}:1 < ${pairing.floor}:1`);
         }
       }
     }
@@ -781,22 +538,17 @@ describe('Property 35 — the declared token tables meet the contrast floors in 
     expect(failures).toEqual([]);
   });
 
-  it('measures every colour token the tables declare', () => {
-    // Guards the pairing table itself: a token added to `playerStatsTokens.css`
-    // with no pairing here would otherwise pass by never being measured.
-    const unmeasured = COLOUR_TOKENS.filter(
-      (token) =>
-        !PAIRINGS.some(
-          (pairing) => pairing.foreground === token || pairing.background === token,
-        ),
+  it('measures every colour token the feature paints', () => {
+    // Guards the pairing table itself: a colour a stylesheet starts painting with
+    // and no pairing measures would otherwise pass by never being measured.
+    const unmeasured = PAINTED_COLOURS.filter(
+      (token) => !PAIRINGS.some((pairing) => pairing.foreground === token || pairing.background === token),
     );
 
-    expect(unmeasured.sort()).toEqual([...UNMEASURED_TOKENS].sort());
+    expect(unmeasured).toEqual([...UNMEASURED_TOKENS]);
   });
 
   it('measures every surface a colour can be read against', () => {
-    // The other half of the same guard: a surface no pairing uses as a background
-    // would leave the colours read on it unmeasured.
     for (const surface of SURFACE_TOKENS) {
       expect(
         PAIRINGS.some((pairing) => pairing.background === surface),
@@ -806,195 +558,13 @@ describe('Property 35 — the declared token tables meet the contrast floors in 
   });
 
   it('would report a pairing below its floor (guards the measurement)', () => {
-    // Non-vacuity: the amber the light table deliberately replaces is below even
-    // the non-text floor on either light surface, and the measurement says so.
-    expect(
-      contrastRatio('#e0a82e', declared('light', '--player-stats-card-surface')),
-    ).toBeLessThan(NON_TEXT_FLOOR);
-    expect(contrastRatio('#e0a82e', declared('light', '--bg'))).toBeLessThan(
+    // Non-vacuity: the fill amber is below even the non-text floor on the light
+    // surface, which is why the outline takes the text amber, and the
+    // measurement says so.
+    expect(contrastRatio(declared('light', '--pm-provisional'), declared('light', '--pm-surface'))).toBeLessThan(
       NON_TEXT_FLOOR,
     );
-    expect(declared('light', '--player-stats-draw-icon')).not.toBe('#e0a82e');
-  });
-});
-
-/* ------------------------------------------------------------------ *
- * The ratios the token table documents about itself
- * ------------------------------------------------------------------ */
-
-interface DocumentedRow {
-  readonly theme: Theme;
-  readonly foreground: string;
-  readonly foregroundValue: string;
-  /** The background tokens, in the order the row's ratios are written. */
-  readonly backgrounds: readonly string[];
-  readonly ratios: readonly number[];
-  readonly floor: number;
-}
-
-/**
- * The contrast rows written in `playerStatsTokens.css`'s header comment.
- *
- * Two shapes, e.g.
- *
- * ```text
- *   DARK  (--bg #141414, card #1e1e1e):
- *     --text                            #f5f5f5  16.90 / 15.29  (>= 4.5)
- *     --control-text  #f5f5f5 vs --control-bg #1e1e1e  = 15.29  (>= 4.5)
- * ```
- *
- * Parsed from the **raw** source, since they live inside the comment the token
- * parsing strips, and line by line, so a row can never borrow a number from its
- * neighbour.
- */
-function documentedRows(): readonly DocumentedRow[] {
-  const darkAt = tokensSource.indexOf('DARK  (');
-  const lightAt = tokensSource.indexOf('LIGHT (');
-  const endAt = tokensSource.indexOf('### Why', lightAt);
-  expect(darkAt).toBeGreaterThan(-1);
-  expect(lightAt).toBeGreaterThan(darkAt);
-  expect(endAt).toBeGreaterThan(lightAt);
-
-  const sections: readonly (readonly [Theme, string])[] = [
-    ['dark', tokensSource.slice(darkAt, lightAt)],
-    ['light', tokensSource.slice(lightAt, endAt)],
-  ];
-
-  const rows: DocumentedRow[] = [];
-
-  for (const [theme, section] of sections) {
-    const lines = section.split('\n');
-
-    // The section's own opening names the two surfaces its columns measure
-    // against, so the columns are read from the file rather than assumed here.
-    const heading = /\(--bg\s+(#[0-9a-f]{6}),\s*card\s+(#[0-9a-f]{6})\)/i.exec(lines[0]);
-    expect(heading, `the ${theme} section names no surfaces`).not.toBeNull();
-    const surfaces = ['--bg', '--player-stats-card-surface'];
-    if (heading !== null) {
-      for (const [index, surface] of surfaces.entries()) {
-        expect(declared(theme, surface), `${theme} ${surface}`).toBe(
-          heading[index + 1].toLowerCase(),
-        );
-      }
-    }
-
-    for (const line of lines.slice(1)) {
-      const against =
-        /--([\w-]+)\s+(#[0-9a-f]{6})\s+vs\s+--([\w-]+)\s+#[0-9a-f]{6}\s*=\s*([\d.]+)\s*\(>=\s*([\d.]+)\)/i.exec(
-          line,
-        );
-      if (against !== null) {
-        rows.push({
-          theme,
-          foreground: `--${against[1]}`,
-          foregroundValue: against[2].toLowerCase(),
-          backgrounds: [`--${against[3]}`],
-          ratios: [Number.parseFloat(against[4])],
-          floor: Number.parseFloat(against[5]),
-        });
-        continue;
-      }
-
-      const columns =
-        /--([\w-]+)\s+(#[0-9a-f]{6})\s+([\d.]+)\s*\/\s*([\d.]+)\s*\(>=\s*([\d.]+)\)/i.exec(
-          line,
-        );
-      if (columns !== null) {
-        rows.push({
-          theme,
-          foreground: `--${columns[1]}`,
-          foregroundValue: columns[2].toLowerCase(),
-          backgrounds: surfaces,
-          ratios: [3, 4].map((group) => Number.parseFloat(columns[group])),
-          floor: Number.parseFloat(columns[5]),
-        });
-      }
-    }
-  }
-
-  return rows;
-}
-
-const DOCUMENTED = documentedRows();
-
-// Feature: web-player-stats-screen, Property 35: Both theme tables are complete and meet the contrast floors
-// Validates: Requirements 15.3, 15.4
-describe('Property 35 — the token table’s own documented ratios', () => {
-  it('finds rows for both Themes (guards the parser itself)', () => {
-    expect(DOCUMENTED.filter((row) => row.theme === 'dark').length).toBeGreaterThan(14);
-    expect(DOCUMENTED.filter((row) => row.theme === 'light').length).toBeGreaterThan(14);
-  });
-
-  it('documents the declared value, the computed ratio, and a floor it clears', () => {
-    fc.assert(
-      fc.property(fc.constantFrom(...DOCUMENTED), (row) => {
-        const label = `${row.theme}: ${row.foreground} vs ${row.backgrounds.join(' / ')}`;
-
-        // The hex written in the comment is the hex in the table.
-        expect(declared(row.theme, row.foreground), label).toBe(row.foregroundValue);
-
-        // The documented floor is one of the two the requirement defines.
-        expect([NON_TEXT_FLOOR, TEXT_FLOOR], label).toContain(row.floor);
-
-        for (const [index, background] of row.backgrounds.entries()) {
-          const computed = contrastRatio(
-            declared(row.theme, row.foreground),
-            declared(row.theme, background),
-          );
-
-          // The documented ratio is the computed one, to the two decimal places it
-          // is written to…
-          expect(
-            Number.parseFloat(computed.toFixed(2)),
-            `${label} documents ${row.ratios[index]}:1 against ${background} but it computes to ${computed.toFixed(2)}:1`,
-          ).toBeCloseTo(row.ratios[index], 2);
-
-          // …and it clears the floor the row claims for itself.
-          expect(computed, `${label} against ${background}`).toBeGreaterThanOrEqual(
-            row.floor,
-          );
-        }
-      }),
-      { numRuns: 300 },
-    );
-  });
-
-  it('holds for every documented row exhaustively', () => {
-    const failures = DOCUMENTED.flatMap((row) =>
-      row.backgrounds.flatMap((background, index) => {
-        const value = declared(row.theme, row.foreground);
-        const computed = contrastRatio(value, declared(row.theme, background));
-        const label = `${row.theme}: ${row.foreground} vs ${background}`;
-
-        if (value !== row.foregroundValue) {
-          return [`${label} documents ${row.foregroundValue}, table declares ${value}`];
-        }
-        if (Number.parseFloat(computed.toFixed(2)) !== row.ratios[index]) {
-          return [
-            `${label} documents ${row.ratios[index]}:1, computes ${computed.toFixed(2)}:1`,
-          ];
-        }
-        if (computed < row.floor) {
-          return [`${label} is ${computed.toFixed(2)}:1, below its own ${row.floor}:1`];
-        }
-        return [];
-      }),
-    );
-
-    expect(failures).toEqual([]);
-  });
-
-  it('documents every colour token it declares', () => {
-    // A token added to the tables without a row in the header comment would be a
-    // token whose contrast nobody wrote down.
-    const undocumented = COLOUR_TOKENS.filter(
-      (token) =>
-        !UNMEASURED_TOKENS.includes(token as (typeof UNMEASURED_TOKENS)[number]) &&
-        !DOCUMENTED.some((row) => row.foreground === token) &&
-        !SURFACE_TOKENS.includes(token as (typeof SURFACE_TOKENS)[number]),
-    );
-
-    expect(undocumented.sort()).toEqual([]);
+    expect(PAIRINGS.some((pairing) => pairing.foreground === '--pm-provisional')).toBe(false);
   });
 });
 
@@ -1289,9 +859,9 @@ describe('Requirement 15.7 — the declared layout mode and the absence of fixed
     expect(offenders).toEqual([]);
 
     // The scale tokens a width reads are resolved rather than skipped, so the
-    // 9rem grid minimum is measured as the 144 pixels it is.
+    // 10rem grid minimum is measured as the 160 pixels it is.
     expect(absoluteLengthsPx('minmax(var(--player-stats-stat-min-width), 1fr)')).toEqual(
-      [144],
+      [160],
     );
     // And a fixed width above the narrowest viewport would be detected.
     expect(absoluteLengthsPx('420px').some((length) => length > narrowest)).toBe(true);

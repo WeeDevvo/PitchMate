@@ -6,6 +6,8 @@ import {
   CANDIDATE_DAY_MAX_COUNT,
   LOCATION_MAX_LENGTH,
   chronological,
+  dayParts,
+  formatDay,
   headlineDayMs,
   localInputToInstantMs,
   validateDraft,
@@ -154,5 +156,22 @@ describe('countsByDay', () => {
     expect([...mostAvailableDays([{ dayMs: 1, count: 2 }, { dayMs: 2, count: 2 }])]).toEqual([1, 2]);
     expect([...mostAvailableDays([{ dayMs: 1, count: 0 }, { dayMs: 2, count: 0 }])]).toEqual([]);
     expect([...mostAvailableDays([])]).toEqual([]);
+  });
+});
+
+describe('dayParts', () => {
+  it('splits a day into the pieces formatDay writes', () => {
+    const format = new Intl.DateTimeFormat('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'UTC',
+    });
+    const instant = Date.UTC(2026, 9, 24, 19, 0);
+
+    expect(dayParts(instant, format)).toEqual({ dow: 'Sat', num: '24', mon: 'Oct', time: '19:00' });
+    expect(formatDay(instant, format)).toBe('Sat 24 Oct, 19:00');
   });
 });

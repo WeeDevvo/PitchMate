@@ -1,69 +1,44 @@
 /*
- * A Squad_Card's presentation.
+ * The Squad_Card's additions to the design system's SquadCard: the role and
+ * state labels as outlined chips, and the card's own focus indication. The
+ * surface, crest, name and hover come from `src/ui`.
  *
- * Every value resolves from a custom property declared in
- * `../styles/squadsTokens.css`, so this file carries no colour literal and no
- * fixed pixel width (Requirements 18.9, 19.10).
+ * A squad name is free text, so the name wraps rather than widening the card
+ * past the viewport (Requirement 19.10); the chips wrap too.
  *
- * The card is one control, so the whole surface is the hit area: it takes the
- * minimum pointer target height and a visible focus ring in both Themes
- * (Requirements 19.4, 19.5). The two labels are outlined chips with no fill of
- * their own, so each sits on the card surface the contrast table measures
- * against, and each carries its value as a word rather than as a hue
- * (Requirement 19.3).
+ * Requirements: 1.5, 1.6, 1.7, 18.9, 19.3, 19.4, 19.10
  */
 
 .squads-card {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--squads-gap-tight);
-  width: 100%;
   max-width: 100%;
   min-height: var(--squads-touch-target);
   margin: 0;
-  padding: var(--squads-gutter);
-  border: var(--squads-border-width) solid var(--squads-card-border);
-  border-radius: var(--squads-radius);
-  background: var(--squads-card-surface);
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  color: var(--pm-text-primary);
 }
 
 .squads-card:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
-}
-
-.squads-card__name {
-  font-size: var(--squads-font-size-section-heading);
-  font-weight: var(--squads-font-weight-heading);
-  line-height: var(--squads-line-height-heading);
-  overflow-wrap: break-word;
-  /* A squad name is free text, so it must wrap rather than widen the card past
-     the viewport (Requirement 19.10). */
-  max-width: 100%;
 }
 
 .squads-card__labels {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--squads-touch-gap);
+  gap: var(--squads-gap-tight);
   max-width: 100%;
 }
 
 .squads-card__label {
   display: inline-flex;
   align-items: center;
+  min-height: 22px;
   padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--squads-chip-border);
   border-radius: var(--squads-radius-chip);
-  color: var(--muted-text);
+  box-shadow: inset 0 0 0 1px var(--pm-border-control);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-chip);
-  font-weight: var(--squads-font-weight-label);
+  font-weight: 700;
+  letter-spacing: 0.02em;
   line-height: var(--squads-line-height-body);
   overflow-wrap: break-word;
 }

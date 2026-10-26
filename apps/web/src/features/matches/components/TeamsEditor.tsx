@@ -9,6 +9,7 @@
  */
 import { useCallback, useId, useState, type FormEvent, type ReactElement } from 'react';
 
+import { FairnessMeter, TeamColumn } from '../../../ui';
 import type { AuthState } from '../../auth';
 import type { CallResult, MatchesApi } from '../api/matchesApi';
 import { formatProbability, lockProblems, predictionLines, TEAM_NAME_MAX_LENGTH } from '../lib/teams';
@@ -115,6 +116,18 @@ function Prediction({ teams }: { readonly teams: WorkingTeams }): ReactElement {
       </h3>
       {teams.prediction === null ? (
         <p className="matches-hint">{NO_PREDICTION_STATEMENT}</p>
+      ) : teams.teams.length === 2 ? (
+        // Two sides: the design system's fairness meter, with each side's win
+        // chance either side of the draw and a verdict on how even it is.
+        <FairnessMeter
+          teamA={teams.teams[0].teamName}
+          teamB={teams.teams[1].teamName}
+          winA={teams.prediction.winProbabilities[0] ?? 0}
+          winB={teams.prediction.winProbabilities[1] ?? 0}
+          draw={teams.prediction.drawProbability}
+          drawLabel={DRAW_LABEL}
+          sizes={[teams.teams[0].roster.length, teams.teams[1].roster.length]}
+        />
       ) : (
         <dl className="matches-prediction__lines">
           {predictionLines(teams.teams, teams.prediction, DRAW_LABEL).map((line) => (
@@ -203,16 +216,24 @@ export function TeamsEditor({
         <Prediction teams={view} />
 
         <div className="matches-teams">
-            {view.teams.map((team) => {
+            {view.teams.map((team, index) => {
               const others = view.teams.filter((other) => other.teamId !== team.teamId);
               const teamHeadingId = `${headingId}-${team.teamId}`;
               const bibId = `${bibName}-${team.teamId}`;
 
               return (
-                <section key={team.teamId} className="matches-team" aria-labelledby={teamHeadingId}>
-                  <h3 id={teamHeadingId} className="matches-minor-heading">
-                    {teamHeading(team.teamName, team.roster.length)}
-                  </h3>
+                <TeamColumn
+                  key={team.teamId}
+                  className="matches-team"
+                  side={index % 2 === 0 ? 'a' : 'b'}
+                  aria-labelledby={teamHeadingId}
+                  bibs={team.bibFlag}
+                  heading={
+                    <h3 id={teamHeadingId} className="matches-team__heading">
+                      {teamHeading(team.teamName, team.roster.length)}
+                    </h3>
+                  }
+                >
                   <TeamNameForm
                     key={team.teamName}
                     team={team}
@@ -256,7 +277,7 @@ export function TeamsEditor({
                       </li>
                     ))}
                   </ul>
-                </section>
+                </TeamColumn>
               );
             })}
         </div>

@@ -20,8 +20,8 @@
  *
  * Requirements: 14.2, 14.6
  */
-import { useId, type InputHTMLAttributes, type Ref } from 'react'
-import './FormField.css'
+import type { InputHTMLAttributes, Ref } from 'react'
+import { TextField } from '../../../ui'
 
 export interface FormFieldProps
   extends Omit<
@@ -60,32 +60,21 @@ export function FormField({
   className,
   ...inputProps
 }: FormFieldProps) {
-  const inputId = useId()
-  const errorId = useId()
   const hasError = typeof error === 'string' && error.trim().length > 0
-  const classes = ['auth-field', className].filter(Boolean).join(' ')
 
+  // The design system's field owns the label, the error and their association;
+  // this keeps only the auth contract on top (a whitespace-only message is no
+  // error).
   return (
-    <div className={classes}>
-      <label className="auth-field__label" htmlFor={inputId}>
-        {label}
-      </label>
-      <input
-        {...inputProps}
-        ref={inputRef}
-        id={inputId}
-        className="auth-field__input"
-        value={value}
-        onChange={(event) => onValueChange(event.target.value)}
-        aria-invalid={hasError || undefined}
-        aria-describedby={hasError ? errorId : undefined}
-      />
-      {hasError ? (
-        <p id={errorId} className="auth-field__error">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    <TextField
+      {...inputProps}
+      ref={inputRef}
+      className={className}
+      label={label}
+      value={value}
+      onChange={(event) => onValueChange(event.target.value)}
+      error={hasError ? error : null}
+    />
   )
 }
 

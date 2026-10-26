@@ -43,6 +43,7 @@ import {
   REJECTION_MESSAGES,
   SAVE_AVAILABILITY_LABEL,
   tallyCountLabel,
+  STATE_LABEL,
 } from '../lib/messages';
 import { MATCH_ROUTE, matchPath } from '../lib/routePaths';
 import {
@@ -445,7 +446,7 @@ describe('MatchScreen from kick-off to the final score', () => {
     await user.click(await screen.findByRole('button', { name: COMPLETE_MATCH_LABEL }));
     await user.click(screen.getByRole('button', { name: CONFIRM_COMPLETE_LABEL }));
     expect(await screen.findByText(FINAL_RESULT_LABEL)).toBeTruthy();
-    expect(screen.getByText(MATCH_STATE_LABELS.Completed, { selector: '.matches-chip' })).toBeTruthy();
+    expect(within(screen.getByText(STATE_LABEL).nextElementSibling as HTMLElement).getByText(MATCH_STATE_LABELS.Completed)).toBeTruthy();
     expect(screen.getByText(OUTCOME_LABELS.win)).toBeTruthy();
     expect(screen.getByText(OUTCOME_LABELS.loss)).toBeTruthy();
     expect(screen.queryByRole('button', { name: SAVE_RESULT_LABEL })).toBeNull();

@@ -17,7 +17,7 @@
  * Requirements: 14.3
  */
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
-import './SubmitButton.css'
+import { Button } from '../../../ui'
 
 export interface SubmitButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled' | 'type'> {
@@ -49,18 +49,20 @@ export function SubmitButton({
   className,
   ...buttonProps
 }: SubmitButtonProps) {
-  const classes = ['auth-submit', className].filter(Boolean).join(' ')
-
+  // The in-progress label stays readable rather than giving way to the
+  // design system's spinner, so the pending state is said in words.
   return (
-    <button
+    <Button
       {...buttonProps}
       type="submit"
-      className={classes}
+      variant="primary"
+      block
+      className={className}
       disabled={pending || disabled}
       aria-busy={pending || undefined}
     >
       {pending ? pendingLabel : children}
-    </button>
+    </Button>
   )
 }
 

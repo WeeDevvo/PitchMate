@@ -1,46 +1,61 @@
 /*
- * The Matches_Feature's styles.
+ * The Matches_Feature's styles, on the PitchMate design system.
  *
- * Colour comes only from the shell's semantic theme tokens (`--text`,
- * `--muted-text`, `--control-*`, `--accent-*`, `--focus-ring`), which carry
- * dark and light values and are contrast-tested in the app-shell, so this sheet
- * declares no colour of its own. Spacing and touch targets match the squads and
- * player-stats screens.
+ * Colour comes only from the design-system `--pm-*` tokens, which carry dark and
+ * light values and are contrast-tested in `src/design/tokens.contrast.test.ts`, so
+ * this sheet declares no colour of its own. The match card, day tiles, fairness
+ * meter, team columns and scoreboard come from `src/ui`; the rules here lay out
+ * the screens around them and style the feature's own controls the same way:
+ * pill buttons with a Pitch Green primary, fields like `TextField`, headings in
+ * Barlow Condensed. Spacing and touch targets match the squads screens.
  */
+
 :root {
-  --matches-gutter: clamp(0.75rem, 4vw, 2rem);
-  --matches-gap: clamp(0.5rem, 2vw, 1.5rem);
+  --matches-gutter: clamp(1rem, 4vw, 1.25rem);
+  --matches-gap: clamp(0.75rem, 2vw, 1.5rem);
   --matches-gap-tight: 0.5rem;
   --matches-touch-target: 44px;
-  --matches-radius: 0.5rem;
+  --matches-radius: 12px;
   --matches-border-width: 1px;
-  --matches-focus-width: 3px;
+  --matches-focus-width: 2px;
   --matches-focus-offset: 2px;
 }
+
+/* Screens and sections ----------------------------------------------- */
 
 .matches-screen {
   display: flex;
   flex-direction: column;
   gap: var(--matches-gap);
-  padding: var(--matches-gutter);
-  max-width: 48rem;
-  color: var(--text);
+  max-width: 56rem;
+  color: var(--pm-text-primary);
 }
 
 .matches-heading {
   margin: 0;
-  font-size: 1.75rem;
-  line-height: 1.2;
+  font: var(--pm-type-display-m);
   overflow-wrap: anywhere;
 }
 
 .matches-subheading {
   margin: 0 0 var(--matches-gap-tight);
-  font-size: 1.25rem;
+  font: var(--pm-type-headline);
+}
+
+.matches-minor-heading,
+.matches-team__heading {
+  margin: 0;
+  font: var(--pm-type-title);
+  overflow-wrap: anywhere;
+}
+
+.matches-team__heading {
+  font-size: 24px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .matches-section,
-.matches-panel,
 .matches-form,
 .matches-failure,
 .matches-not-found {
@@ -49,17 +64,37 @@
   gap: var(--matches-gap-tight);
 }
 
+/* A panel is a card, as the design system draws each step of the flow. */
+.matches-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
+  padding: var(--matches-gutter);
+  border: var(--matches-border-width) solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-lg);
+  background: var(--pm-surface);
+}
+
+/* A panel inside a panel (the unassigned players) sits flat. */
+.matches-panel .matches-panel {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
 .matches-notice,
 .matches-hint {
   margin: 0;
 }
 
 .matches-hint {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
+  font-size: 14px;
 }
 
 .matches-error {
   margin: 0;
+  color: var(--pm-danger-text);
   font-weight: 600;
 }
 
@@ -67,12 +102,22 @@
   content: '! ';
 }
 
+.matches-problems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-1);
+}
+
+/* Buttons and links -------------------------------------------------- */
+
 .matches-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--matches-gap-tight);
   align-items: center;
-  justify-content: center;
 }
 
 .matches-button,
@@ -83,27 +128,37 @@
   align-items: center;
 }
 
+/* The design system's secondary button. */
 .matches-button {
-  /* Sized to its label rather than stretched across a column, in keeping with
-     the app's centred layout. */
-  align-self: center;
   justify-content: center;
-  padding: 0 1rem;
-  border: var(--matches-border-width) solid var(--control-border);
-  border-radius: var(--matches-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  padding: 0 var(--pm-space-5);
+  border: 1.5px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-pill);
+  background: transparent;
+  color: var(--pm-text-primary);
   font: inherit;
+  font-size: 15px;
+  font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-/* An accent outline rather than an accent fill: no theme token gives text that
-   reaches AA on the green fill in both themes, and the outline keeps the text on
-   the control surface it is already tested against. */
+.matches-button:hover {
+  background: var(--pm-surface-hover);
+}
+
+/* The primary: Pitch Green with Ink text, which the design tokens verify at the
+   text floor in both themes. Which action is primary is also said by its label
+   and its place, never by colour alone. */
 .matches-button--primary {
-  border: 2px solid var(--accent-fill);
-  font-weight: 600;
+  border-color: var(--pm-accent-fill);
+  background: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+.matches-button--primary:hover {
+  background: var(--pm-accent-fill-hover);
 }
 
 .matches-button[aria-disabled='true'] {
@@ -111,9 +166,24 @@
   opacity: 0.7;
 }
 
-.matches-link,
+.matches-link {
+  color: var(--pm-text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--pm-border-control);
+  text-underline-offset: 4px;
+}
+
+.matches-link:hover {
+  text-decoration-color: currentColor;
+}
+
 .matches-entry__link {
-  color: var(--accent-text);
+  color: inherit;
+  text-decoration: none;
+}
+
+.matches-entry__link:hover {
+  text-decoration: underline;
 }
 
 .matches-button:focus-visible,
@@ -121,13 +191,14 @@
 .matches-entry__link:focus-visible,
 .matches-input:focus-visible,
 .matches-checkbox:focus-visible {
-  outline: var(--matches-focus-width) solid var(--focus-ring);
+  outline: var(--matches-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--matches-focus-offset);
 }
 
+/* Lists -------------------------------------------------------------- */
+
 .matches-list,
 .matches-people,
-.matches-checklist,
 .matches-tally,
 .matches-day-fields {
   list-style: none;
@@ -138,66 +209,103 @@
   gap: var(--matches-gap-tight);
 }
 
-.matches-entry,
-.matches-tally__day {
+/* The match list: a stack of MatchCards. */
+.matches-list {
+  gap: var(--pm-space-3);
+}
+
+.matches-entry__location {
+  overflow-wrap: anywhere;
+}
+
+/* The availability tally and a team's people: divided rows. */
+.matches-tally__day,
+.matches-person {
   display: flex;
   flex-wrap: wrap;
   gap: var(--matches-gap-tight);
   align-items: center;
   justify-content: space-between;
-  padding: var(--matches-gap-tight) 0;
-  border-bottom: var(--matches-border-width) solid var(--control-border);
+  min-height: var(--matches-touch-target);
+  padding: var(--pm-space-1) 0;
+  border-bottom: var(--matches-border-width) solid var(--pm-border-subtle);
 }
 
-.matches-entry__location {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.matches-entry__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--matches-gap-tight);
-  color: var(--muted-text);
+.matches-people .matches-person:last-child,
+.matches-tally .matches-tally__day:last-child {
+  border-bottom: 0;
 }
 
 .matches-chip {
-  display: inline-block;
-  margin-left: 0.25rem;
-  padding: 0 0.5rem;
-  border: var(--matches-border-width) solid var(--control-border);
-  border-radius: 0.75rem;
-  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 var(--pm-space-2);
+  border-radius: var(--pm-radius-pill);
+  box-shadow: inset 0 0 0 1px var(--pm-border-control);
+  color: var(--pm-text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
+/* A day with enough players: the accent chip, beside the count in words. */
 .matches-tally__day[data-enough='true'] .matches-chip {
-  border-color: var(--accent-fill);
+  background: var(--pm-accent-subtle);
+  box-shadow: none;
+  color: var(--pm-accent-on-subtle);
 }
+
+/* Fields ------------------------------------------------------------- */
 
 .matches-field,
 .matches-day-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 6px;
+}
+
+.matches-field label,
+.matches-day-field label {
+  font: var(--pm-type-label);
 }
 
 .matches-day-field {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
   gap: var(--matches-gap-tight);
 }
 
+/* The design system's text field. */
 .matches-input {
-  min-height: var(--matches-touch-target);
-  padding: 0 0.75rem;
-  border: var(--matches-border-width) solid var(--control-border);
-  border-radius: var(--matches-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
-  font: inherit;
+  min-height: var(--pm-control-h);
   max-width: 100%;
+  padding: 0 14px;
+  border: 1.5px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-sm);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
+  font: inherit;
+  font-size: 16px;
+}
+
+.matches-input:hover {
+  border-color: var(--pm-text-secondary);
+}
+
+.matches-input[aria-invalid='true'] {
+  border-width: 2px;
+  border-color: var(--pm-danger-text);
+}
+
+.matches-input--score {
+  width: 5rem;
+  height: 60px;
+  text-align: center;
+  font-family: var(--pm-font-display);
+  font-size: 32px;
+  font-weight: 800;
 }
 
 .matches-fieldset {
@@ -210,16 +318,8 @@
 }
 
 .matches-fieldset legend {
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.matches-checklist li {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--matches-gap-tight);
-  min-height: var(--matches-touch-target);
+  font: var(--pm-type-label);
+  margin-bottom: var(--pm-space-1);
 }
 
 /* A guest's days sit on one line where they fit, wrapping on a phone. */
@@ -245,23 +345,42 @@
 }
 
 .matches-checkbox {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--pm-accent-fill);
+}
+
+.matches-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap-tight);
+  align-items: flex-end;
+}
+
+.matches-inline-form .matches-hint {
+  flex-basis: 100%;
 }
 
 .matches-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--matches-gap);
+  gap: var(--pm-space-3) var(--pm-space-8);
   margin: 0;
 }
 
 .matches-facts dt {
-  color: var(--muted-text);
+  font-family: var(--pm-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
 }
 
 .matches-facts dd {
   margin: 0;
+  font-weight: 600;
 }
 
 .matches-visually-hidden {
@@ -273,33 +392,7 @@
   white-space: nowrap;
 }
 
-.matches-minor-heading {
-  margin: 0;
-  font-size: 1.05rem;
-  overflow-wrap: anywhere;
-}
-
-.matches-inline-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--matches-gap-tight);
-  align-items: center;
-  justify-content: center;
-}
-
-.matches-inline-form .matches-hint {
-  flex-basis: 100%;
-}
-
-.matches-person {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--matches-gap-tight);
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.25rem 0;
-  border-bottom: var(--matches-border-width) solid var(--control-border);
-}
+/* Teams -------------------------------------------------------------- */
 
 .matches-teams {
   display: grid;
@@ -308,27 +401,29 @@
 }
 
 .matches-team {
-  display: flex;
-  flex-direction: column;
-  gap: var(--matches-gap-tight);
-  padding: var(--matches-gap-tight);
-  border: var(--matches-border-width) solid var(--control-border);
-  border-radius: var(--matches-radius);
+  min-width: 0;
 }
 
 .matches-bib {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--matches-gap-tight);
   min-height: var(--matches-touch-target);
+}
+
+/* The prediction for more than two teams, as a list with bars. The bar repeats
+   the percentage beside it; it carries no information alone. */
+.matches-prediction {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
 }
 
 .matches-prediction__lines {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--pm-space-1);
 }
 
 .matches-prediction__line {
@@ -348,41 +443,19 @@
   display: flex;
   align-items: center;
   gap: var(--matches-gap-tight);
+  font-family: var(--pm-font-display);
+  font-weight: 700;
 }
 
-/* The bar repeats the percentage beside it; it carries no information alone. */
 .matches-prediction__bar {
   display: inline-block;
   block-size: 0.5rem;
   max-inline-size: 100%;
-  border-radius: 0.25rem;
-  background: var(--accent-fill);
+  border-radius: var(--pm-radius-pill);
+  background: var(--pm-accent-fill);
 }
 
-.matches-problems {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.matches-team[data-bibs='true'] {
-  border-width: 2px;
-  border-color: var(--accent-fill);
-}
-
-.matches-bib-badge {
-  margin: 0;
-  align-self: center;
-  padding: 0 0.75rem;
-  border: 2px solid var(--accent-fill);
-  border-radius: 0.75rem;
-  font-weight: 600;
-}
-
-/* Result entry, the recorded score, and confirmations ------------------------ */
+/* Results ------------------------------------------------------------ */
 
 .matches-score-fields {
   display: flex;
@@ -396,22 +469,11 @@
 .matches-score-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-}
-
-.matches-input--score {
-  width: 5rem;
-  text-align: center;
-  font-size: 1.25rem;
-}
-
-.matches-input[aria-invalid='true'] {
-  border-width: 2px;
+  gap: 6px;
 }
 
 .matches-result .matches-chip {
   align-self: flex-start;
-  margin-left: 0;
 }
 
 .matches-result__lines {
@@ -428,20 +490,53 @@
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--matches-gap);
+  min-height: var(--matches-touch-target);
+  border-bottom: var(--matches-border-width) solid var(--pm-border-subtle);
+}
+
+.matches-result__line:last-child {
+  border-bottom: 0;
 }
 
 .matches-result__team {
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .matches-result__score {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-family: var(--pm-font-display);
+  font-size: 28px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
+/* The outcome in words with its icon, on the result tones, so it is never
+   colour alone. */
 .matches-result__outcome {
   min-width: 4.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pm-space-1);
+  min-height: 26px;
+  padding: 0 var(--pm-space-2);
+  border-radius: var(--pm-radius-xs);
+  font-family: var(--pm-font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--pm-on-result);
+}
+
+.matches-result__outcome--win {
+  background: var(--pm-result-win);
+}
+
+.matches-result__outcome--loss {
+  background: var(--pm-result-loss);
+}
+
+.matches-result__outcome--draw {
+  background: var(--pm-result-draw);
 }
 
 .matches-confirm {

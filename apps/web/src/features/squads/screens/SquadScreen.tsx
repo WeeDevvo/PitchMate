@@ -99,6 +99,7 @@ import { LeaveSquadControl } from '../components/LeaveSquadControl';
 import { LoadingIndication } from '../components/LoadingIndication';
 import { NotFoundTreatment } from '../components/NotFoundTreatment';
 import { PlaceholderSection } from '../components/PlaceholderSection';
+import { SquadSectionNav, type SquadSectionKey } from '../components/SquadSectionNav';
 import { PlayerList } from '../components/PlayerList';
 import type { ViewerContext } from '../components/PlayerRow';
 import type { SquadRole } from '../lib/wireEnums';
@@ -365,6 +366,7 @@ export function SquadScreen({
   // Each section is named by its own heading, so assistive technology announces
   // the region by the same words that are on screen.
   const detailHeadingId = `${idPrefix}-detail`;
+  const anchorId = (key: SquadSectionKey): string => `${idPrefix}-section-${key}`;
   const playersHeadingId = `${idPrefix}-players`;
 
   /**
@@ -428,7 +430,14 @@ export function SquadScreen({
         {detail === null ? SQUAD_SCREEN_HEADING : detail.name}
       </h1>
 
+      <div className="squad-screen__layout">
+      {/* The section sidebar, once there are sections to jump to. */}
+      {detail !== null && (
+        <SquadSectionNav anchorId={anchorId} adminAuthority={machine.adminAuthority} />
+      )}
+      <div className="squad-screen__content">
       {/* 6.8 §1: the Squad_Detail region. */}
+      <div className="squad-screen__anchor" id={anchorId('detail')}>
       <section
         className="squad-screen__section"
         data-squads-detail-section="true"
@@ -439,10 +448,12 @@ export function SquadScreen({
         </h2>
         {detailBody}
       </section>
+      </div>
 
       {/* 6.8 §2: the Player_List — only where a Squad_Detail is held, because
           Requirement 6.9 renders no Player_List while none is. */}
       {detail !== null && (
+        <div className="squad-screen__anchor" id={anchorId('players')}>
         <section
           className="squad-screen__section"
           data-squads-players-section="true"
@@ -465,28 +476,34 @@ export function SquadScreen({
             onEditGuest={editGuest}
           />
         </section>
+        </div>
       )}
 
       {/* 6.8 §3, 15.1: the matches Placeholder_Section, heading always, injected
           body in place of the statement where one is supplied. */}
+      <div className="squad-screen__anchor" id={anchorId('matches')}>
       <PlaceholderSection
         heading={MATCHES_SECTION_HEADING}
         emptyStatement={MATCHES_PLACEHOLDER_STATEMENT}
         content={matchesContent}
       />
+      </div>
 
       {/* 6.8 §4, 15.1: the stats Placeholder_Section. */}
+      <div className="squad-screen__anchor" id={anchorId('stats')}>
       <PlaceholderSection
         heading={STATS_SECTION_HEADING}
         emptyStatement={STATS_PLACEHOLDER_STATEMENT}
         content={statsContent}
       />
+      </div>
 
       {/* 6.8 §5, 10.2, 10.3: administration. Rendered only where a Squad_Detail is
           held, and within that only where `resolveAdminAuthority` holds — which
           the section asks itself, so there is no subtree here from which an admin
           call could be issued without authority (Requirement 10.4). */}
       {detail !== null && (
+        <div className="squad-screen__anchor" id={anchorId('admin')}>
         <AdminSection
           squadId={detail.squadId}
           squadName={detail.name}
@@ -502,7 +519,10 @@ export function SquadScreen({
           editOpenerRef={editOpenerRef}
           authState={authState}
         />
+        </div>
       )}
+      </div>
+      </div>
     </div>
   );
 }

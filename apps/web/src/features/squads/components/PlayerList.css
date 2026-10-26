@@ -21,12 +21,15 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: var(--squads-gap-tight);
   width: 100%;
   max-width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
+  /* One card, its rows divided, as the design system draws a list. */
+  border: var(--squads-border-width) solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-lg);
+  overflow: hidden;
 }
 
 .squads-player-list__item {
@@ -34,10 +37,14 @@
   min-width: 0;
 }
 
+.squads-player-list__item + .squads-player-list__item {
+  border-top: var(--squads-border-width) solid var(--pm-border-subtle);
+}
+
 .squads-player-list__empty {
   margin: 0;
   max-width: var(--squads-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-body);
   font-weight: var(--squads-font-weight-body);
   line-height: var(--squads-line-height-body);

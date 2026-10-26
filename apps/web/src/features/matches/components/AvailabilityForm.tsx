@@ -8,7 +8,8 @@
 import { useId, useState, type FormEvent, type ReactElement } from 'react';
 
 import type { CallResult } from '../api/matchesApi';
-import { chronological, formatDay } from '../lib/matchDays';
+import { DayPicker } from '../../../ui';
+import { chronological, dayParts, formatDay } from '../lib/matchDays';
 import {
   AVAILABILITY_CLEARED_STATEMENT,
   AVAILABILITY_DAYS_LEGEND,
@@ -102,25 +103,17 @@ export function AvailabilityForm({
           {availability.hasStoredResponse ? null : (
             <p className="matches-hint">{AVAILABILITY_NOT_RESPONDED}</p>
           )}
-          <ul className="matches-checklist">
-            {chronological(candidateDaysMs).map((dayMs) => {
-              const fieldId = `${idPrefix}-${dayMs}`;
-              return (
-                <li key={dayMs}>
-                  <input
-                    id={fieldId}
-                    type="checkbox"
-                    className="matches-checkbox"
-                    checked={marked.has(dayMs)}
-                    onChange={(event) => toggle(dayMs, event.target.checked)}
-                  />
-                  <label htmlFor={fieldId}>
-                    <time dateTime={new Date(dayMs).toISOString()}>{formatDay(dayMs)}</time>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
+          {/* Each day is a checkbox named by the day in words; the tile is its look. */}
+          <DayPicker
+            className="matches-checklist"
+            days={chronological(candidateDaysMs).map((dayMs) => ({
+              id: String(dayMs),
+              label: formatDay(dayMs),
+              ...dayParts(dayMs),
+            }))}
+            selected={[...marked].map(String)}
+            onToggle={(id, checked) => toggle(Number(id), checked)}
+          />
         </fieldset>
         <div className="matches-actions">
           <button

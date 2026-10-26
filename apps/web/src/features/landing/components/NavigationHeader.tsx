@@ -5,10 +5,10 @@
  * the two account entry points so a visitor can act the moment they arrive,
  * without scrolling:
  *
- *   - The `Brand_Logo` (`PitchMate_Logo.png`) is rendered as an informative
- *     `<img>` with the non-empty alt text `"PitchMate"`, so the brand identity
- *     survives even if the image fails to load and is announced to assistive
- *     technology (Requirements 1.6, 6.6).
+ *   - The `Brand_Logo` is the design system's `Logo`: the mark for the active
+ *     theme and the wordmark, exposed as one image named `"PitchMate"` (its
+ *     marks carry empty alternatives), so the brand is announced once and
+ *     survives an image failing to load (Requirements 1.6, 6.6).
  *   - A primary call to action (Sign Up) begins account creation and a *distinct*
  *     secondary call to action (Log In) begins logging in. Both render through
  *     the shared {@link Cta} control, so activation, accessibility, and
@@ -26,7 +26,7 @@
  */
 import { Cta, type NavigationErrorHandler } from './Cta'
 import { landingContent, type LandingContent } from '../content/landingContent'
-import brandLogoUrl from '../../../assets/PitchMate_Logo.png'
+import { Logo } from '../../../ui'
 
 export interface NavigationHeaderProps {
   /**
@@ -53,13 +53,7 @@ export function NavigationHeader({
 
   return (
     <header className="landing-header">
-      <img
-        className="landing-header__logo"
-        src={brandLogoUrl}
-        alt="PitchMate"
-        width={160}
-        height={40}
-      />
+      <Logo size={36} className="landing-header__logo" />
       <nav className="landing-header__actions" aria-label="Account">
         <Cta cta={secondary} onNavigationError={onNavigationError} />
         <Cta cta={primary} onNavigationError={onNavigationError} />

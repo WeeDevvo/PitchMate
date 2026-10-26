@@ -224,14 +224,19 @@ describe('StreakPanel structure', () => {
     ).toHaveLength(0);
   });
 
-  it('renders the pairs as the list’s only children', () => {
+  it('renders each pair as one of the list’s groups, a term then its description', () => {
+    // A `div` grouping a name and its value is one of the content models HTML
+    // gives a `dl`; each stat tile is one such group.
     const { container } = render(
       <StreakPanel winStreak={4} unbeatenStreak={0} />,
     );
 
     const panel = container.querySelector(STREAK_PANEL_SELECTOR);
-    const childTags = Array.from(panel?.children ?? []).map((child) => child.tagName);
+    const groups = Array.from(panel?.children ?? []);
 
-    expect(childTags).toEqual(['DT', 'DD', 'DT', 'DD']);
+    expect(groups.map((group) => group.tagName)).toEqual(['DIV', 'DIV']);
+    for (const group of groups) {
+      expect(Array.from(group.children).map((child) => child.tagName)).toEqual(['DT', 'DD']);
+    }
   });
 });

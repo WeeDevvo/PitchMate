@@ -16,7 +16,7 @@
  * | --- | --- |
  * | reachable by sequential keyboard navigation in render order | a real Tab and Shift+Tab walk of every rendered condition, compared against the tabbable elements in document order, with no positive `tabindex` anywhere (16.4) |
  * | operable by keyboard | every reachable control is a natively operable element that takes focus and is not hidden from assistive technology (16.4), **and** each of the three control kinds the feature ships is driven by a real Enter or Space press and its effect observed (16.4) |
- * | a focus indication distinguishable from the unfocused state | every reachable control resolves a declared `:focus-visible` rule painting an outline in `var(--focus-ring)` at a width a person can see, where the same element's unfocused state declares no outline at all (16.4) |
+ * | a focus indication distinguishable from the unfocused state | every reachable control resolves a declared `:focus-visible` rule painting an outline in `var(--pm-focus-ring)` at a width a person can see, where the same element's unfocused state declares no outline at all (16.4) |
  * | a change of condition leaves focus in the main content region | the real screen driven from `loading` to each of `loaded`, `not-found`, and `failed` through its Player_Stats_Api, and from `failed` back to `loading` by activating the retry control from the keyboard (16.5) |
  *
  * ### Why the focus indication is read from source text rather than measured
@@ -30,12 +30,12 @@
  * rules are parsed out, matched against each rendered control with the
  * pseudo-class removed — which is what "this rule would style this element while
  * it holds focus" means — and the outline they declare is checked for the
- * `--focus-ring` token and for an absolute width of at least 2 pixels once the
+ * `--pm-focus-ring` token and for an absolute width of at least 2 pixels once the
  * Theme-invariant scale is substituted in. This is the approach the
  * Squads_Feature's `screens/keyboardAndContrast.property.test.tsx` already
  * takes.
  *
- * The **contrast** of that indication — `--focus-ring` at 3:1 against every
+ * The **contrast** of that indication — `--pm-focus-ring` at 3:1 against every
  * surface it can be drawn on, in both Themes — is Property 35's (task 14.4,
  * `declaredStyles.property.test.ts`), computed there from the declared token
  * tables. It is deliberately not restated here: this file's business is that
@@ -249,7 +249,7 @@ function tokenTable(css: string, selector: RegExp): Record<string, string> {
  * The Theme-invariant scale — spacing, radii, target sizes, and the focus ring's
  * own width and offset — declared once on `:root` in the feature's token table.
  *
- * Read so that `outline: var(--player-stats-focus-width) solid var(--focus-ring)`
+ * Read so that `outline: var(--player-stats-focus-width) solid var(--pm-focus-ring)`
  * can be measured as a length rather than taken on trust.
  */
 const SCALE: Record<string, string> = tokenTable(
@@ -636,7 +636,7 @@ function keyboardOperabilityOffences(focus: FocusOrder, label: string): string[]
 
 /**
  * Requirement 16.4: every reachable control carries a declared focus indication
- * — an outline in `var(--focus-ring)`, at least 2 pixels wide, that the same
+ * — an outline in `var(--pm-focus-ring)`, at least 2 pixels wide, that the same
  * element does not already carry while unfocused.
  *
  * The indication's **contrast** against the surfaces it can be drawn on is
@@ -658,7 +658,7 @@ function focusIndicationOffences(focus: FocusOrder, label: string): string[] {
     }
 
     for (const { outline } of indications) {
-      if (!outline.includes('var(--focus-ring)')) {
+      if (!outline.includes('var(--pm-focus-ring)')) {
         offenders.push(`${where} paints its indication with ${outline}`);
       }
       // A hairline ring is not a visible indication at every zoom level.
@@ -1245,10 +1245,10 @@ describe('the rendered checks are not vacuous', () => {
       const indications = declaredFocusIndications(control);
 
       expect(indications, className).toHaveLength(1);
-      expect(indications[0].outline, className).toContain('var(--focus-ring)');
+      expect(indications[0].outline, className).toContain('var(--pm-focus-ring)');
       // The declared width, read through the Theme-invariant scale rather than
       // assumed: `var(--player-stats-focus-width)` resolves to 3px.
-      expect(absoluteLengthsPx(indications[0].outline), className).toContain(3);
+      expect(absoluteLengthsPx(indications[0].outline), className).toContain(2);
       expect(unfocusedOutlines(control), className).toEqual([]);
     }
 
@@ -1260,9 +1260,9 @@ describe('the rendered checks are not vacuous', () => {
   });
 
   it('resolves the focus width from the feature’s own scale', () => {
-    expect(SCALE['--player-stats-focus-width']).toBe('3px');
-    expect(resolveScale('var(--player-stats-focus-width) solid var(--focus-ring)')).toBe(
-      '3px solid var(--focus-ring)',
+    expect(SCALE['--player-stats-focus-width']).toBe('2px');
+    expect(resolveScale('var(--player-stats-focus-width) solid var(--pm-focus-ring)')).toBe(
+      '2px solid var(--pm-focus-ring)',
     );
   });
 
@@ -1330,7 +1330,7 @@ describe('the rendered checks are not vacuous', () => {
         name: 'the guard',
         source: `
           .player-stats-failure__retry { outline: none; }
-          .player-stats-failure__retry:focus-visible { outline: 3px solid var(--focus-ring); }
+          .player-stats-failure__retry:focus-visible { outline: 3px solid var(--pm-focus-ring); }
         `,
       },
     ]);
@@ -1352,7 +1352,7 @@ describe('the rendered checks are not vacuous', () => {
     const [indication] = declaredFocusIndications(control, wrong);
 
     expect(indication.outline).toBe('1px solid red');
-    expect(indication.outline.includes('var(--focus-ring)')).toBe(false);
+    expect(indication.outline.includes('var(--pm-focus-ring)')).toBe(false);
     expect(Math.max(...absoluteLengthsPx(indication.outline), 0)).toBeLessThan(2);
   });
 });

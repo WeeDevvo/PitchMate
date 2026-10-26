@@ -1,0 +1,202 @@
+.pm-btn {
+  --h: var(--pm-control-h);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--h);
+  min-width: var(--h);
+  padding: 0 20px;
+  border-radius: var(--pm-radius-pill);
+  border: 1.5px solid transparent;
+  font-family: var(--pm-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background var(--pm-duration-fast) var(--pm-ease-standard),
+    transform var(--pm-duration-fast) var(--pm-ease-standard),
+    border-color var(--pm-duration-fast);
+  position: relative;
+  user-select: none;
+}
+
+.pm-btn--sm {
+  --h: var(--pm-control-h-sm);
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.pm-btn--lg {
+  --h: 56px;
+  padding: 0 28px;
+  font-size: 17px;
+}
+
+.pm-btn--pitch {
+  --h: var(--pm-target-pitch);
+  padding: 0 28px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.pm-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+.pm-btn--primary {
+  background: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+.pm-btn--primary:hover {
+  background: var(--pm-accent-fill-hover);
+}
+
+.pm-btn--primary:active {
+  background: var(--pm-accent-fill-pressed);
+  transform: scale(0.98);
+}
+
+.pm-btn--secondary {
+  background: transparent;
+  color: var(--pm-text-primary);
+  border-color: var(--pm-border-control);
+}
+
+.pm-btn--secondary:hover {
+  background: var(--pm-surface-hover);
+  border-color: var(--pm-text-secondary);
+}
+
+.pm-btn--secondary:active {
+  background: var(--pm-surface-pressed);
+  transform: scale(0.98);
+}
+
+.pm-btn--destructive {
+  background: var(--pm-danger);
+  color: var(--pm-on-result);
+}
+
+.pm-btn--destructive:hover {
+  background: var(--pm-danger-hover);
+}
+
+.pm-btn--destructive:active {
+  transform: scale(0.98);
+  filter: brightness(0.92);
+}
+
+.pm-btn--ghost {
+  background: transparent;
+  color: var(--pm-text-primary);
+}
+
+.pm-btn--ghost:hover {
+  background: var(--pm-surface-hover);
+}
+
+.pm-btn--ghost:active {
+  background: var(--pm-surface-pressed);
+}
+
+.pm-btn--accent-ghost {
+  background: transparent;
+  color: var(--pm-accent-text);
+}
+
+.pm-btn--accent-ghost:hover {
+  background: var(--pm-accent-subtle);
+  color: var(--pm-accent-on-subtle);
+}
+
+.pm-btn:disabled {
+  background: var(--pm-surface-sunken);
+  color: var(--pm-text-disabled);
+  border-color: transparent;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pm-btn--ghost:disabled {
+  background: transparent;
+}
+
+/* Busy, not unavailable: a button disabled while its action is in flight keeps
+   its own colours, so "Signing you in…" reads as working rather than broken. */
+.pm-btn--primary:disabled[aria-busy='true'] {
+  background: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+.pm-btn--secondary:disabled[aria-busy='true'] {
+  background: transparent;
+  color: var(--pm-text-primary);
+  border-color: var(--pm-border-control);
+}
+
+.pm-btn--destructive:disabled[aria-busy='true'] {
+  background: var(--pm-danger);
+  color: var(--pm-on-result);
+}
+
+.pm-btn:disabled[aria-busy='true'] {
+  cursor: progress;
+}
+
+.pm-btn.is-loading {
+  color: transparent;
+  cursor: progress;
+}
+
+.pm-btn.is-loading .pm-spinner {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  color: var(--pm-on-accent);
+}
+
+.pm-btn--secondary.is-loading .pm-spinner,
+.pm-btn--ghost.is-loading .pm-spinner {
+  color: var(--pm-text-primary);
+}
+
+.pm-btn--glow {
+  box-shadow: var(--pm-shadow-glow);
+}
+
+.pm-iconbtn {
+  display: inline-grid;
+  place-items: center;
+  width: var(--pm-target-touch);
+  height: var(--pm-target-touch);
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--pm-text-primary);
+  cursor: pointer;
+  position: relative;
+}
+
+.pm-iconbtn:hover {
+  background: var(--pm-surface-hover);
+}
+
+.pm-iconbtn--filled {
+  background: var(--pm-surface-raised);
+}
+
+.pm-iconbtn--accent {
+  background: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+.pm-iconbtn:disabled {
+  color: var(--pm-text-disabled);
+  cursor: not-allowed;
+}

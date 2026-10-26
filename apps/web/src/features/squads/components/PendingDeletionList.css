@@ -12,8 +12,9 @@
 
 .squads-pending-deletion__heading {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-section-heading);
+  font-family: var(--pm-font-display);
   font-weight: var(--squads-font-weight-heading);
   line-height: var(--squads-line-height-heading);
 }
@@ -33,18 +34,18 @@
   align-items: center;
   gap: var(--squads-gap-tight);
   padding: var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--control-border);
+  border: var(--squads-border-width) solid var(--pm-border-control);
   border-radius: var(--squads-radius);
   overflow-wrap: anywhere;
 }
 
 .squads-pending-deletion__name {
   flex: 1 1 auto;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-weight: var(--squads-font-weight-label);
 }
 
 .squads-pending-deletion__purge {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-meta);
 }

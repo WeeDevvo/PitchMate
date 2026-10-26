@@ -86,6 +86,7 @@
  */
 import { useCallback, useId, useRef, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
+import { Icon } from '../../../ui';
 
 import {
   PROFILE_ROUTE,
@@ -179,7 +180,10 @@ export function AccountMenu({
         >
           {/* 8.1, 8.4: fixed text naming the menu, and no value from the Session.
               Name-from-content, so the visible label *is* the accessible name. */}
-          {ACCOUNT_MENU_LABEL}
+          <Icon name="user" size={20} />
+          {/* Shown from 1200px; narrower, the icon shows alone and this stays the
+              accessible name. */}
+          <span className="shell-account-menu__trigger-label">{ACCOUNT_MENU_LABEL}</span>
         </button>
       )}
     >
@@ -199,6 +203,7 @@ export function AccountMenu({
           >
             {/* Read from the registry, so this label and the Profile_Destination's
                 Primary_Navigation control can never disagree. */}
+            <Icon name="user" size={20} />
             {destinationLabel('profile')}
           </Link>
         </li>
@@ -209,6 +214,7 @@ export function AccountMenu({
             data-account-control="settings"
             onClick={handleNavigate}
           >
+            <Icon name="settings" size={20} />
             {destinationLabel('settings')}
           </Link>
         </li>
@@ -229,6 +235,7 @@ export function AccountMenu({
           >
             {/* 8.2: the visible label, unchanged in every state, so the control a
                 person names by speech stays the same control. */}
+            <Icon name="logout" size={20} />
             <span className="shell-account-menu__item-label">{SIGN_OUT_LABEL}</span>
             {/* 8.10, 8.12: progress as words beside the label, and no element at
                 all while nothing is in progress. */}

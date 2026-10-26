@@ -18,7 +18,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--player-stats-gap);
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
 }
@@ -47,76 +47,76 @@
   align-items: center;
   gap: var(--player-stats-gap-tight);
   min-height: var(--player-stats-touch-target);
-  padding: 0 var(--player-stats-gap-tight);
-  border: var(--player-stats-border-width) solid var(--control-border);
-  border-radius: var(--player-stats-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  padding: 0 var(--pm-space-4);
+  font-weight: 600;
+  border: var(--player-stats-border-width) solid var(--pm-border-control);
+  border-radius: var(--player-stats-radius-chip);
+  background: transparent;
+  color: var(--pm-text-primary);
   cursor: pointer;
 }
 
 .player-stats-leaderboard__radio {
   margin: 0;
+  accent-color: var(--pm-accent-fill);
+}
+
+/* The chosen statistic: the segmented control's filled segment, beside its
+   checked radio, so the choice is not colour alone. */
+.player-stats-leaderboard__option:has(.player-stats-leaderboard__radio:checked) {
+  border-color: var(--pm-accent-fill);
+  background: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+/* The chosen option's radio sits on Pitch Green, where the focus-ring green is
+   below 3:1, so its ring is Ink there instead (9:1 on the fill). */
+.player-stats-leaderboard__option:has(.player-stats-leaderboard__radio:checked)
+  .player-stats-leaderboard__radio:focus-visible {
+  outline-color: var(--pm-on-accent);
 }
 
 .player-stats-leaderboard__radio:focus-visible {
-  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline: var(--player-stats-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--player-stats-focus-offset);
 }
 
 .player-stats-leaderboard__list {
   display: flex;
   flex-direction: column;
-  gap: var(--player-stats-gap-hairline);
   margin: 0;
   padding: 0;
   list-style: none;
+  /* One card, its rows divided by the design system's LeaderboardRow. */
+  border: var(--player-stats-border-width) solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-lg);
+  background: var(--pm-surface);
+  overflow: hidden;
 }
 
-.player-stats-leaderboard__entry {
-  display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--player-stats-gap-tight);
-  min-height: var(--player-stats-touch-target);
-  border-bottom: var(--player-stats-border-width) solid var(--player-stats-card-border);
-}
 
-.player-stats-leaderboard__position {
-  color: var(--muted-text);
-  font-weight: var(--player-stats-font-weight-label);
-}
 
-.player-stats-leaderboard__name {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--player-stats-gap-tight);
-  overflow-wrap: anywhere;
-}
 
 .player-stats-leaderboard__link {
-  color: var(--text);
+  color: var(--pm-text-primary);
   text-decoration: underline;
+  text-decoration-color: var(--pm-border-control);
+  text-underline-offset: 4px;
 }
 
 .player-stats-leaderboard__link:focus-visible {
-  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline: var(--player-stats-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--player-stats-focus-offset);
 }
 
 .player-stats-leaderboard__former-player {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-meta);
 }
 
-.player-stats-leaderboard__value {
-  font-weight: var(--player-stats-font-weight-heading);
-  font-variant-numeric: tabular-nums;
-}
 
 .player-stats-leaderboard__statement {
   margin: 0;
   max-width: var(--player-stats-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
 }

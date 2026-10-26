@@ -54,7 +54,8 @@
  *
  * Requirements: 9.1, 9.2, 9.3
  */
-import { Fragment, type ReactElement } from 'react';
+import { type ReactElement } from 'react';
+import { StatTile } from '../../../ui';
 
 import {
   NO_RUN_RECORDED_STATEMENT,
@@ -118,9 +119,9 @@ function streakEntries(
  * the statement that no such run has been recorded.
  *
  * A description list, so each figure is associated with its term in the markup
- * rather than only by proximity. The terms and descriptions are the list's only
- * children: each pair is grouped by a `Fragment`, which contributes no element,
- * so nothing sits between the `dl` and its `dt`/`dd` pairs.
+ * rather than only by proximity. Each pair is a design-system stat tile: a `div`
+ * grouping one `dt` and its `dd`, which is one of the content models HTML gives
+ * a `dl`.
  *
  * Requirements: 9.1, 9.2, 9.3
  */
@@ -133,26 +134,25 @@ export function StreakPanel({
   return (
     <dl className="player-stats-streaks" data-player-stats-streaks="true">
       {entries.map((entry) => (
-        <Fragment key={entry.kind}>
-          {/* 9.1, 9.2: the words naming which streak this is, each figure's
-              own, so neither can be read as the other. */}
-          <dt className="player-stats-streaks__label">{entry.label}</dt>
-          <dd
-            className="player-stats-streaks__value"
-            data-player-stats-streak={entry.kind}
-          >
-            {/* 9.1: the whole number exactly as parsed. */}
-            <span className="player-stats-streaks__figure">
-              {formatCount(entry.value)}
-            </span>
-            {/* 9.3: a zero is explained, never omitted. */}
-            {entry.value === NO_RUN ? (
-              <span className="player-stats-streaks__no-run">
-                {NO_RUN_RECORDED_STATEMENT}
-              </span>
-            ) : null}
-          </dd>
-        </Fragment>
+        // 9.1, 9.2: the words naming which streak this is, each figure's own,
+        // so neither can be read as the other; 9.1: the whole number exactly as
+        // parsed; 9.3: a zero is explained, never omitted.
+        <StatTile
+          key={entry.kind}
+          icon="flame"
+          label={entry.label}
+          value={formatCount(entry.value)}
+          sub={
+            entry.value === NO_RUN ? (
+              <span className="player-stats-streaks__no-run">{NO_RUN_RECORDED_STATEMENT}</span>
+            ) : undefined
+          }
+          labelProps={{ className: 'player-stats-streaks__label' }}
+          valueProps={{
+            className: 'player-stats-streaks__value',
+            'data-player-stats-streak': entry.kind,
+          }}
+        />
       ))}
     </dl>
   );

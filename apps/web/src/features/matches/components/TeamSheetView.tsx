@@ -5,6 +5,7 @@
  */
 import { useId, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
+import { TeamColumn } from '../../../ui';
 
 import { playerStatsPath } from '../../squads';
 import { formatDay } from '../lib/matchDays';
@@ -46,22 +47,23 @@ export function TeamSheetView({ squadId, sheet }: TeamSheetViewProps): ReactElem
         {sheet.teams.map((team, index) => {
           const teamHeadingId = `${headingId}-${index}`;
           return (
-            <section
+            <TeamColumn
               key={`${index}-${team.teamName}`}
               className="matches-team"
+              side={index % 2 === 0 ? 'a' : 'b'}
               data-bibs={team.bibFlag}
               aria-labelledby={teamHeadingId}
+              // The bib team carries the flag, named in the sheet's own words; the
+              // other carries nothing.
+              bibs={team.bibFlag}
+              bibsLabel={WEARS_BIBS_BADGE}
+              heading={
+                <h3 id={teamHeadingId} className="matches-team__heading">
+                  {team.teamName}
+                </h3>
+              }
+              meta={playerCountStatement(team.roster.length)}
             >
-              <h3 id={teamHeadingId} className="matches-minor-heading">
-                {team.teamName}
-              </h3>
-              {team.bibFlag ? (
-                <p className="matches-bib-badge">
-                  <span aria-hidden="true">▲ </span>
-                  {WEARS_BIBS_BADGE}
-                </p>
-              ) : null}
-              <p className="matches-hint">{playerCountStatement(team.roster.length)}</p>
               <ul className="matches-people">
                 {team.roster.map((player) => (
                   <li key={player.membershipId}>
@@ -74,7 +76,7 @@ export function TeamSheetView({ squadId, sheet }: TeamSheetViewProps): ReactElem
                   </li>
                 ))}
               </ul>
-            </section>
+            </TeamColumn>
           );
         })}
       </div>

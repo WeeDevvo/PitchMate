@@ -58,6 +58,7 @@ export function LiveRegion({
       aria-live={politeness}
       aria-atomic="true"
       data-testid="auth-live-region"
+      className="auth-live"
     >
       {hasMessage ? message : null}
     </div>
