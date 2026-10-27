@@ -21,10 +21,11 @@ public sealed record RatingEngineConfig
 
     /// <summary>
     /// σ threshold above which a rating is Provisional and at/below which it is Established. A
-    /// player's σ falls only about 0.06 per small-sided match from σ₀ ≈ 8.33, so 7.75 settles a
-    /// rating after roughly 10 matches at 5v5 and 15 at 8v8. The previous 25/6 took 100 or more.
+    /// player's σ falls only about 0.03-0.07 per small-sided match from σ₀ ≈ 8.33, so 8.19 settles a
+    /// newcomer within 5 matches at every size from 5v5 to 8v8 (3 at 5v5, 4-5 at 8v8, depending on
+    /// results). The previous 7.75 took 10 to 15 matches, too long for casual weekly games.
     /// </summary>
-    public double ProvisionalThreshold { get; init; } = 7.75;
+    public double ProvisionalThreshold { get; init; } = 8.19;
 
     /// <summary>Number of inactive days that elapse before uncertainty decay begins (~6 weeks).</summary>
     public int DecayFreePeriodDays { get; init; } = 42;
