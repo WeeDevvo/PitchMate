@@ -12,7 +12,7 @@
  * Requirements: 7.5, 7.6, 7.7, 7.8, 9.1, 9.4, 9.5, 9.8, 19.3
  */
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import {
@@ -35,6 +35,15 @@ import {
   RATING_UNAVAILABLE_LABEL,
 } from '../lib/messages';
 import { playerStatsPath } from '../lib/routePaths';
+
+/** Open the row's "…" menu, where its admin controls are. */
+function openActions(container: HTMLElement): void {
+  const trigger = container.querySelector('.pm-actions__trigger');
+  if (!(trigger instanceof HTMLElement)) {
+    throw new Error('the row rendered no actions menu');
+  }
+  fireEvent.click(trigger);
+}
 
 const SQUAD_ID = '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f01';
 const MEMBERSHIP_ID = '0198e2a7-1c8e-7a5e-9c2f-6b1d4a5e7f02';
@@ -112,11 +121,28 @@ describe('PlayerRow', () => {
     const open = positionOf(container, PLAYER_ROW_OPEN_SELECTOR);
     const labels = positionOf(container, MEMBERSHIP_LABEL_SELECTOR);
     const rating = positionOf(container, RATING_BADGE_SELECTOR);
+    const menu = positionOf(container, '.pm-actions__trigger');
+    openActions(container);
     const editGuest = positionOf(container, PLAYER_ROW_EDIT_GUEST_SELECTOR);
 
     expect(open).toBeLessThan(labels);
     expect(labels).toBeLessThan(rating);
-    expect(rating).toBeLessThan(editGuest);
+    expect(rating).toBeLessThan(menu);
+    expect(menu).toBeLessThan(editGuest);
+  });
+
+  it('keeps the admin controls behind one menu, named for the player, and offers none to a member', () => {
+    const admin = renderRow(rowOf(), viewerOf({ isAdmin: true }));
+
+    expect(screen.getByRole('button', { name: 'Actions for Dave' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(admin.container.querySelector(PLAYER_ROW_PROMOTE_SELECTOR)).toBeNull();
+    admin.unmount();
+
+    const member = renderRow(rowOf(), viewerOf({ isAdmin: false }));
+    expect(member.container.querySelector('.pm-actions__trigger')).toBeNull();
   });
 
   // Requirements: 9.1, 9.5
@@ -227,6 +253,7 @@ describe('PlayerRow', () => {
   // Requirements: 13.1, 13.4
   it('offers promotion on an eligible row, naming the player, and hands the activation on', async () => {
     const rendered = renderRow(rowOf(), viewerOf({ isAdmin: true }));
+    openActions(rendered.container);
 
     const promote = screen.getByRole('button', {
       name: `${PROMOTE_TO_ADMIN_LABEL}: Dave`,
@@ -268,6 +295,7 @@ describe('PlayerRow', () => {
       rowOf({ role: null, isGuest: true }),
       viewerOf({ isAdmin: true }),
     );
+    openActions(rendered.container);
 
     await userEvent.click(
       screen.getByRole('button', { name: `${EDIT_GUEST_LABEL}: Dave` }),

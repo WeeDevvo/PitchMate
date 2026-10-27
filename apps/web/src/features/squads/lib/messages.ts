@@ -1385,3 +1385,49 @@ export const SQUAD_CARD_NO_NEXT_MATCH = 'Nothing planned yet';
 
 /** The title of a next match still gathering availability: it has no day yet. */
 export const SQUAD_CARD_PICK_A_DAY = 'Pick a day';
+
+/* --- The Squad_Screen's tabs ---------------------------------------------- */
+
+/** The accessible name of the Squad_Screen's tab bar. */
+export const SQUAD_TABS_LABEL = 'Squad sections';
+
+/** The Players tab, and the visually hidden heading of its page. */
+export const PLAYERS_TAB_LABEL = 'Players';
+
+/** The Matches tab. */
+export const MATCHES_TAB_LABEL = 'Matches';
+
+/** The Leaderboards tab. */
+export const LEADERBOARDS_TAB_LABEL = 'Leaderboards';
+
+/** The Admin tab, offered to an admin only. */
+export const ADMIN_TAB_LABEL = 'Admin';
+
+/** The word before the player count over the squad's name: "Squad · 11 players". */
+export const SQUAD_OVERLINE = 'Squad';
+
+/* --- The Players tab's filter --------------------------------------------- */
+
+/** The chip showing everyone. */
+export const ALL_PLAYERS_CHIP = 'All';
+
+/** The chip showing registered members only. */
+export const MEMBERS_CHIP = 'Members';
+
+/** The chip showing guests only. */
+export const GUESTS_CHIP = 'Guests';
+
+/** The accessible name of the chip group. */
+export const PLAYER_FILTER_LABEL = 'Show';
+
+/** The label of the search field. */
+export const FIND_PLAYER_LABEL = 'Find a player';
+
+/** Shown when the chip and the search leave no player to list. */
+export const NO_MATCHING_PLAYERS = 'No players match.';
+
+/** The start of a row menu's accessible name, followed by the player's name. */
+export const PLAYER_ACTIONS_LABEL = 'Actions for';
+
+/** The word after a player's appearance count on their row: "12 played". */
+export const PLAYED_LABEL = 'played';

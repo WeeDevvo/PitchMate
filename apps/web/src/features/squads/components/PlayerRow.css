@@ -99,3 +99,26 @@
   outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }
+
+/* Inside the row's "…" menu the controls read as the design system's menu
+   items: full width, left-aligned, a wash on hover, and the removal in the
+   danger colour (it also says what it does, so colour is never the only cue). */
+.pm-actions__panel .squads-promotion,
+.pm-actions__panel .squads-membership-action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-hairline);
+  min-width: 0;
+}
+
+.pm-actions__panel .squads-player-row__action {
+  width: 100%;
+  border-color: transparent;
+  border-radius: var(--pm-radius-sm);
+  text-align: start;
+  font-size: var(--squads-font-size-body);
+}
+
+.pm-actions__panel .squads-player-row__action[data-squads-player-action='remove'] {
+  color: var(--pm-danger-text);
+}

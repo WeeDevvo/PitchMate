@@ -4,6 +4,7 @@
  * `src/design`, know nothing of any feature or the API, and hold no domain logic:
  * a feature maps its data (wire enums, ratings) onto their props.
  */
+export { ActionsMenu, type ActionsMenuProps } from './ActionsMenu';
 export { Avatar, AvatarStack, type AvatarProps } from './Avatar';
 export { Badge, FormerBadge, GuestBadge, ProvisionalBadge, RoleBadge, type BadgeProps, type BadgeTone } from './Badge';
 export { BibFlag } from './BibFlag';
@@ -72,6 +73,7 @@ export {
   type NavItemRenderProps,
   type SidebarProps,
 } from './Sidebar';
+export { TabNav, type TabNavItem, type TabNavLinkProps, type TabNavProps } from './TabNav';
 export {
   SegmentedControl,
   Tabs,

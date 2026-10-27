@@ -78,6 +78,7 @@ import {
   INVITE_LANDING_ROUTE,
   PLAYER_STATS_ROUTE,
   SQUAD_ROUTE,
+  SQUAD_TAB_ROUTES,
 } from '../features/squads';
 import { MATCH_ROUTE, NEW_MATCH_ROUTE } from '../features/matches';
 import { APP_CATCH_ALL_ROUTE, LANDING_ROUTE } from './appRoutePaths';
@@ -130,6 +131,8 @@ function matchShape(pattern: string): string {
  */
 const FEATURE_PATHS: readonly string[] = [
   SQUAD_ROUTE,
+  // The Squad_Screen's other tabs, each its own address.
+  ...SQUAD_TAB_ROUTES,
   INVITE_LANDING_ROUTE,
   CLAIM_LANDING_ROUTE,
 ];

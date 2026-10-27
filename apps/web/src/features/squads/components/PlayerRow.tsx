@@ -87,13 +87,18 @@
  * Requirements: 7.5, 7.6, 7.7, 7.8, 9.1, 9.4, 9.5, 9.8, 19.3
  */
 import { useId, type ReactElement } from 'react';
-import { PlayerRow as UiPlayerRow } from '../../../ui';
+import { ActionsMenu, PlayerRow as UiPlayerRow } from '../../../ui';
 
 import { MembershipActionControl } from './MembershipActionControl';
 import { MembershipLabels } from './MembershipLabels';
 import { PromotionControl } from './PromotionControl';
 import { RatingBadge } from './RatingBadge';
-import { EDIT_GUEST_LABEL, PROMOTE_TO_ADMIN_LABEL } from '../lib/messages';
+import {
+  EDIT_GUEST_LABEL,
+  PLAYED_LABEL,
+  PLAYER_ACTIONS_LABEL,
+  PROMOTE_TO_ADMIN_LABEL,
+} from '../lib/messages';
 import { DEMOTION_COPY, REMOVAL_COPY } from '../lib/membershipActionCopy';
 import { isDemotable, isRemovable } from '../lib/membershipActions';
 import { isGuestEditable, type PlayerListRow } from '../lib/playerList';
@@ -261,6 +266,22 @@ export function PlayerRow({
   // 13.1, 13.2, 12.7: both decisions are the predicates', never this component's.
   const promotable = isPromotable(row, viewer.membershipId, viewer.isAdmin);
   const guestEditable = isGuestEditable(row, viewer.isAdmin);
+  const demotable = isDemotable(row, viewer.membershipId, viewer.isAdmin);
+  const removable = isRemovable(row, viewer.membershipId, viewer.isAdmin);
+
+  // The "…" menu holds this row's admin controls. It is there while any control
+  // is offered — and while any of them still has an outcome for this membership
+  // to say, since a control keeps its outcome message after the action has made
+  // it ineligible (a promoted member can no longer be promoted).
+  const offersAction =
+    (promotion !== undefined ? promotable : promotable && onPromote !== undefined) ||
+    (demotion !== undefined && demotable) ||
+    guestEditable ||
+    (removal !== undefined && removable);
+  const hasOutcome =
+    promotion?.outcome?.membershipId === row.membershipId ||
+    demotion?.outcome?.targetId === row.membershipId ||
+    removal?.outcome?.targetId === row.membershipId;
 
   return (
     <UiPlayerRow
@@ -302,10 +323,14 @@ export function PlayerRow({
           isFormerPlayer={row.isFormerPlayer}
         />
       }
+      meta={`${row.appearances} ${PLAYED_LABEL}`}
       end={
         <>
       {/* 8.5, 8.8: exactly one Rating_Presentation, named for this player. */}
       <RatingBadge playerName={row.displayName} presentation={presentationOf(row)} />
+
+      {(offersAction || hasOutcome) && (
+      <ActionsMenu label={`${PLAYER_ACTIONS_LABEL} ${row.displayName}`}>
 
       {/* 10.2, 13.1, 13.4: the promotion affordance, in exactly one of its two
           forms. With a machine to hand it is the confirming `PromotionControl`,
@@ -339,7 +364,7 @@ export function PlayerRow({
         <MembershipActionControl
           kind="demote"
           member={row}
-          eligible={isDemotable(row, viewer.membershipId, viewer.isAdmin)}
+          eligible={demotable}
           machine={demotion}
           copy={DEMOTION_COPY}
         />
@@ -363,10 +388,12 @@ export function PlayerRow({
         <MembershipActionControl
           kind="remove"
           member={row}
-          eligible={isRemovable(row, viewer.membershipId, viewer.isAdmin)}
+          eligible={removable}
           machine={removal}
           copy={REMOVAL_COPY}
         />
+      )}
+      </ActionsMenu>
       )}
         </>
       }

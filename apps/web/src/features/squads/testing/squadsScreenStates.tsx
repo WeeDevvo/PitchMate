@@ -153,7 +153,6 @@ import {
   PLAYER_STATS_ROUTE,
   SQUAD_ROUTE,
   inviteLandingPath,
-  squadPath,
 } from '../lib/routePaths';
 import {
   INVITE_HANDOVER_SELECTOR,
@@ -161,6 +160,7 @@ import {
   InviteLandingScreen,
 } from '../screens/InviteLandingScreen';
 import { SquadScreen } from '../screens/SquadScreen';
+import { SQUAD_TABS, squadTabChildPath, squadTabPath, type SquadTab } from '../lib/squadTabs';
 import { SquadsHome } from '../screens/SquadsHome';
 
 // --- The two Themes ---------------------------------------------------------
@@ -757,6 +757,12 @@ export interface SquadScreenStateOverrides {
 
   /** The squad's members, in place of {@link PLAYER_LIST_MEMBERS}. */
   readonly members?: readonly SquadMember[];
+
+  /**
+   * The tab the screen opens on. Defaults to Admin for the `admin` state — the
+   * Admin_Section lives there — and to Players for every other state.
+   */
+  readonly tab?: SquadTab;
 }
 
 /**
@@ -819,6 +825,7 @@ export async function renderSquadScreenState(
   });
 
   const requested = state === 'not-found' ? MALFORMED_SQUAD_ID : SQUAD_ID;
+  const tab: SquadTab = overrides.tab ?? (state === 'admin' ? 'admin' : 'players');
 
   // 15.3: an omitted body is passed as an omitted prop rather than as an explicit
   // `undefined`, so an absent slot is absent in the way the application's own
@@ -835,12 +842,20 @@ export async function renderSquadScreenState(
   const rendered = mount(
     theme,
     <AuthProvider manager={sessionManagerReporting('authenticated')}>
-      <MemoryRouter initialEntries={[squadPath(requested)]}>
+      <MemoryRouter initialEntries={[squadTabPath(requested, tab)]}>
         <Routes>
-          <Route
-            path={SQUAD_ROUTE}
-            element={<SquadScreen api={api} {...content} />}
-          />
+          {/* Every tab's route, as the feature's route factory registers them. */}
+          {SQUAD_TABS.map((routeTab) => (
+            <Route
+              key={routeTab}
+              path={
+                routeTab === 'players'
+                  ? SQUAD_ROUTE
+                  : `${SQUAD_ROUTE}/${squadTabChildPath(routeTab)}`
+              }
+              element={<SquadScreen api={api} {...content} />}
+            />
+          ))}
           <Route path={PLAYER_STATS_ROUTE} element={<p>player stats</p>} />
           <Route path={HOME_ROUTE} element={<p>your squads</p>} />
         </Routes>
@@ -859,18 +874,22 @@ export async function renderSquadScreenState(
     requireAbsent(NOT_FOUND_TREATMENT_SELECTOR, name);
   } else if (state === 'not-found') {
     requireRendered(NOT_FOUND_TREATMENT_SELECTOR, name);
-  } else {
+  } else if (tab === 'players') {
     await waitFor(() => {
       requireRendered(PLAYER_ROW_SELECTOR, name);
       requireAbsent(PLAYER_LIST_EMPTY_SELECTOR, name);
     });
-
+    // The Admin_Section lives on its own tab, never beside the players.
+    requireAbsent(ADMIN_SECTION_SELECTOR, name);
+  } else if (tab === 'admin') {
     if (authority) {
       await waitFor(() => {
         requireRendered(ADMIN_SECTION_SELECTOR, name);
         requireRendered(INVITE_ENTRY_SELECTOR, name);
       });
     } else {
+      // The Admin tab is absent for a member, so its address shows them Players.
+      await waitFor(() => requireRendered(PLAYER_ROW_SELECTOR, name));
       requireAbsent(ADMIN_SECTION_SELECTOR, name);
     }
   }
@@ -893,6 +912,46 @@ async function activate(
   await rendered.user.click(control);
 }
 
+/** Move the Squad_Screen to `tab` through its own tab bar, as a person would. */
+export async function showSquadTab(rendered: RenderedScreen, tab: SquadTab): Promise<void> {
+  const link = rendered.container.querySelector(`a[href="${squadTabPath(SQUAD_ID, tab)}"]`);
+
+  if (!(link instanceof HTMLElement)) {
+    throw new Error(`no link to the ${tab} tab was rendered`);
+  }
+
+  await rendered.user.click(link);
+  await settle();
+}
+
+/**
+ * Activate a row control that lives in a row's "…" menu: open each row's menu in
+ * turn until one holds a control matching `selector`, then activate it — the
+ * first such row in document order, as the inline controls used to be found.
+ */
+async function activateInRowMenu(
+  rendered: RenderedScreen,
+  selector: string,
+  what: string,
+): Promise<void> {
+  if (rendered.container.querySelector(PLAYER_ROW_SELECTOR) === null) {
+    await showSquadTab(rendered, 'players');
+  }
+
+  for (const trigger of Array.from(
+    rendered.container.querySelectorAll<HTMLElement>('.pm-actions__trigger'),
+  )) {
+    await rendered.user.click(trigger);
+    if (rendered.container.querySelector(selector) !== null) {
+      await activate(rendered, selector, what);
+      return;
+    }
+    await rendered.user.click(trigger);
+  }
+
+  throw new Error(`no row menu held a ${what} control (${selector})`);
+}
+
 /** Open the Guest_Form in `create` mode (Requirement 12.1). */
 export async function openGuestCreateForm(
   rendered: RenderedScreen,
@@ -905,7 +964,9 @@ export async function openGuestCreateForm(
 export async function openGuestEditForm(
   rendered: RenderedScreen,
 ): Promise<void> {
-  await activate(rendered, PLAYER_ROW_EDIT_GUEST_SELECTOR, 'guest edit');
+  // The edit control is in a Players row's menu; the form opens on the Admin tab.
+  await activateInRowMenu(rendered, PLAYER_ROW_EDIT_GUEST_SELECTOR, 'guest edit');
+  await settle();
   requireRendered(`#${GUEST_EDIT_FORM_ID}`, 'Guest_Form for an edit');
 }
 
@@ -933,7 +994,7 @@ export async function openRevokeConfirmation(
 export async function openPromotionConfirmation(
   rendered: RenderedScreen,
 ): Promise<void> {
-  await activate(rendered, PLAYER_ROW_PROMOTE_SELECTOR, 'promotion');
+  await activateInRowMenu(rendered, PLAYER_ROW_PROMOTE_SELECTOR, 'promotion');
   requireSurfaceHeaded(
     CONFIRM_DIALOG_SELECTOR,
     PROMOTION_CONFIRM_HEADING,
@@ -951,7 +1012,7 @@ export async function openLeaveConfirmation(rendered: RenderedScreen): Promise<v
 export async function openRemovalConfirmation(
   rendered: RenderedScreen,
 ): Promise<void> {
-  await activate(rendered, REMOVE_TRIGGER_SELECTOR, 'removal');
+  await activateInRowMenu(rendered, REMOVE_TRIGGER_SELECTOR, 'removal');
   requireSurfaceHeaded(
     CONFIRM_DIALOG_SELECTOR,
     REMOVAL_CONFIRM_HEADING,
@@ -963,7 +1024,7 @@ export async function openRemovalConfirmation(
 export async function openDemotionConfirmation(
   rendered: RenderedScreen,
 ): Promise<void> {
-  await activate(rendered, DEMOTE_TRIGGER_SELECTOR, 'demotion');
+  await activateInRowMenu(rendered, DEMOTE_TRIGGER_SELECTOR, 'demotion');
   requireSurfaceHeaded(
     CONFIRM_DIALOG_SELECTOR,
     DEMOTION_CONFIRM_HEADING,

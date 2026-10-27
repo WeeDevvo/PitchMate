@@ -248,10 +248,11 @@ describe('the Squad_Route entered directly', () => {
     });
 
     // The two concurrent calls of the screen's own machine, each issued once.
-    // The leaderboard is read twice: once by the screen for its rating badges,
-    // and once by the player-stats leaderboards injected as the stats section.
+    // The leaderboard is read once, by the screen for its rating badges: the
+    // player-stats leaderboards injected as the stats section live on their own
+    // tab, so they read nothing until it is opened.
     await waitFor(() => {
-      expect(issued(requests, SQUADS_REQUESTS.leaderboard)).toBe(2);
+      expect(issued(requests, SQUADS_REQUESTS.leaderboard)).toBe(1);
     });
     expect(issued(requests, SQUADS_REQUESTS.getSquad)).toBe(1);
 

@@ -125,6 +125,12 @@ export interface PlayerListProps {
 
   /** The demotion machine, handed to every row. See `PlayerRowProps.demotion`. */
   readonly demotion?: MembershipActionMachine;
+
+  /**
+   * What an empty list says. Defaults to the squad having no players; the
+   * Players tab passes its own statement when its filter left nobody to show.
+   */
+  readonly emptyStatement?: string;
 }
 
 /**
@@ -143,6 +149,7 @@ export function PlayerList({
   onEditGuest,
   removal,
   demotion,
+  emptyStatement = NO_PLAYERS_STATEMENT,
 }: PlayerListProps): ReactElement {
   // 7.4: the rendered order is the comparator's, so it is determined by the row
   // set alone and never by the order the caller supplied. The copy keeps the
@@ -154,7 +161,7 @@ export function PlayerList({
   if (ordered.length === 0) {
     return (
       <p className="squads-player-list__empty" data-squads-player-list-empty="true">
-        {NO_PLAYERS_STATEMENT}
+        {emptyStatement}
       </p>
     );
   }
