@@ -57,14 +57,23 @@ export interface LeaderboardRowProps extends HTMLAttributes<HTMLLIElement> {
   value: ReactNode;
   /** A small line under the value, such as the unit. */
   unit?: ReactNode;
+  /** A line under the name, such as the player's record: "17W · 5D · 9L". */
+  sub?: ReactNode;
 }
 
 /** One place in a leaderboard `ol`: position, player, value. */
-export function LeaderboardRow({ rank, first, me, name, value, unit, className, ...rest }: LeaderboardRowProps) {
+export function LeaderboardRow({ rank, first, me, name, value, unit, sub, className, ...rest }: LeaderboardRowProps) {
   return (
     <li {...rest} className={cx('pm-lb', first && 'pm-lb--top1', me && 'pm-lb--me', className)}>
       <span className="pm-lb__rank pm-num">{rank}</span>
-      <span className="pm-lb__who">{name}</span>
+      {sub === undefined ? (
+        <span className="pm-lb__who">{name}</span>
+      ) : (
+        <span className="pm-lb__main">
+          <span className="pm-lb__who">{name}</span>
+          <span className="pm-lb__sub">{sub}</span>
+        </span>
+      )}
       <span className="pm-lb__value pm-num">
         {value}
         {unit !== undefined && <small>{unit}</small>}

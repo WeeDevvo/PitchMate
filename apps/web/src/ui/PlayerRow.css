@@ -18,8 +18,10 @@
   color: var(--pm-text-secondary);
 }
 
+/* A short trailing column (a number) stays on the row in a narrow team column;
+   a long one (several actions) still wraps under the name. */
 .pm-player__main {
-  flex: 1 1 12rem;
+  flex: 1 1 6rem;
   min-width: 0;
   display: flex;
   flex-direction: column;

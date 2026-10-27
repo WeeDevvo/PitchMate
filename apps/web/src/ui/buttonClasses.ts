@@ -2,7 +2,7 @@ import { cx } from './cx';
 import './Button.css';
 
 export interface ButtonClassOptions {
-  variant?: 'primary' | 'secondary' | 'destructive' | 'ghost' | 'accent-ghost';
+  variant?: 'primary' | 'secondary' | 'destructive' | 'ghost' | 'accent-ghost' | 'ink';
   size?: 'sm' | 'md' | 'lg' | 'pitch';
   block?: boolean;
 }

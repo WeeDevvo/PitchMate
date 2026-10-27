@@ -111,6 +111,19 @@
   overflow-wrap: anywhere;
 }
 
+.pm-lb__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pm-lb__sub {
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--pm-text-muted);
+}
+
 .pm-lb__value {
   font-family: var(--pm-font-display);
   font-weight: 800;

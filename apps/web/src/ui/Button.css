@@ -115,6 +115,26 @@
   color: var(--pm-accent-on-subtle);
 }
 
+/* On an accent-fill ground (a green band): Ink with green text, the reverse of
+   primary in both themes. The usual ring is green too, so its ring is Ink. */
+.pm-btn--ink {
+  background: var(--pm-on-accent);
+  color: var(--pm-accent-fill);
+}
+
+.pm-btn--ink:hover {
+  filter: brightness(1.6);
+}
+
+.pm-btn--ink:active {
+  transform: scale(0.98);
+}
+
+.pm-btn.pm-btn--ink:focus-visible {
+  outline: 2px solid var(--pm-on-accent);
+  outline-offset: 2px;
+}
+
 .pm-btn:disabled {
   background: var(--pm-surface-sunken);
   color: var(--pm-text-disabled);
