@@ -7,7 +7,9 @@ paths:
 
 # Brand
 
-The source of truth is the **PitchMate design system** (a Design System artifact on claude.ai: tokens, components, screen mockups for web, mobile and watch, and a README of rules). Its token export is committed at `apps/web/src/design/tokens.json`. When the design system changes, replace that file, run `npm run tokens --workspace @pitchmate/web`, and update this summary if a rule changed.
+The source of truth is the **PitchMate design system** (a Design System artifact on claude.ai: tokens, components, screen mockups for web, mobile and watch, and a README of rules): https://claude.ai/artifact/5Av9GdUNy7LkZLQtFMdqJZ. Its token export is committed at `apps/web/src/design/tokens.json`. When the design system changes, replace that file, run `npm run tokens --workspace @pitchmate/web`, and update this summary if a rule changed.
+
+Before building or reworking a screen or component, read the matching file from the artifact (Artifact tool, `action: "read"` with `path`): the screen mockup at `project/components/Screen<Platform><Name>/preview.html` (e.g. `ScreenWebCreateMatch`, `ScreenWebTeamSheet`, `ScreenWebStats`), or the component's `project/components/<Name>/README.md`. List them with `scope: "files"`. To check token drift, compare its `project/tokens.json` with the committed export.
 
 **Dark mode is the primary design target.** Design dark first, then verify light. Every token has both values.
 
