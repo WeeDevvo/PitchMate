@@ -53,6 +53,7 @@ public static class StatsInfrastructureRegistration
         // the placeholder the squads registration used to seed, so exactly one implementation is
         // registered whichever composition root runs first.
         services.TryAddScoped<IMembershipStandingSource, EfMembershipStandingSource>();
+        services.TryAddScoped<ISquadCardSource, EfSquadCardSource>();
 
         return services;
     }

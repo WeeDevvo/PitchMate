@@ -1445,12 +1445,26 @@ export interface components {
             /** Format: uuid */
             toTeamId: string;
         };
+        MySquadNextMatch: {
+            /** Format: uuid */
+            matchId: string;
+            state: components["schemas"]["MatchState"];
+            /** Format: date-time */
+            scheduledAt: null | string;
+            location: string;
+            /** Format: int32 */
+            candidateDayCount: number | string;
+        };
         MySquadSummary: {
             /** Format: uuid */
             squadId: string;
             name: string;
             role: null | components["schemas"]["SquadRole"];
             state: null | components["schemas"]["MembershipState"];
+            /** Format: int32 */
+            playerCount: number | string;
+            nextMatch: null | components["schemas"]["MySquadNextMatch"];
+            recentForm: components["schemas"]["PlayerResult"][];
         };
         NotificationSummary: {
             /** Format: uuid */
@@ -1523,6 +1537,8 @@ export interface components {
             /** Format: int32 */
             losses: number | string;
         };
+        /** @enum {unknown} */
+        PlayerResult: "Win" | "Draw" | "Loss";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;

@@ -8665,12 +8665,52 @@
           }
         }
       },
+      "MySquadNextMatch": {
+        "required": [
+          "matchId",
+          "state",
+          "scheduledAt",
+          "location",
+          "candidateDayCount"
+        ],
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "$ref": "#/components/schemas/MatchState"
+          },
+          "scheduledAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "location": {
+            "type": "string"
+          },
+          "candidateDayCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "MySquadSummary": {
         "required": [
           "squadId",
           "name",
           "role",
-          "state"
+          "state",
+          "playerCount",
+          "nextMatch",
+          "recentForm"
         ],
         "type": "object",
         "properties": {
@@ -8700,6 +8740,30 @@
                 "$ref": "#/components/schemas/MembershipState"
               }
             ]
+          },
+          "playerCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nextMatch": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MySquadNextMatch"
+              }
+            ]
+          },
+          "recentForm": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayerResult"
+            }
           }
         }
       },
@@ -8994,6 +9058,13 @@
             "format": "int32"
           }
         }
+      },
+      "PlayerResult": {
+        "enum": [
+          "Win",
+          "Draw",
+          "Loss"
+        ]
       },
       "ProblemDetails": {
         "type": "object",
