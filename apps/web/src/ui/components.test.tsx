@@ -10,11 +10,13 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   Avatar,
   AvatarStack,
+  Banner,
   BibFlag,
   Button,
   Chip,
   ErrorState,
   FormGuide,
+  GoogleMark,
   GuestBadge,
   IconButton,
   Logo,
@@ -58,6 +60,34 @@ describe('Button', () => {
     render(<Button onClick={onClick}>Complete match</Button>);
     await userEvent.click(screen.getByRole('button', { name: 'Complete match' }));
     expect(onClick).toHaveBeenCalledOnce();
+  });
+});
+
+describe('Banner', () => {
+  it('announces itself by tone unless the caller owns the live region', () => {
+    const { rerender } = render(<Banner tone="error">That email and password don't match.</Banner>);
+    expect(screen.getByRole('alert')).toHaveTextContent("That email and password don't match.");
+
+    rerender(
+      <Banner tone="error" announce={false}>
+        That email and password don't match.
+      </Banner>,
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText("That email and password don't match.")).toBeInTheDocument();
+  });
+});
+
+describe('GoogleMark', () => {
+  it('is decorative, so the button label alone names the provider', () => {
+    render(
+      <button type="button">
+        <GoogleMark />
+        Continue with Google
+      </button>,
+    );
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+    expect(screen.queryByRole('img')).toBeNull();
   });
 });
 

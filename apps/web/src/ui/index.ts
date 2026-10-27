@@ -28,6 +28,7 @@ export {
   type ToastProps,
   type ToastTone,
 } from './Feedback';
+export { GoogleMark, type GoogleMarkProps } from './GoogleMark';
 export { Icon, type IconName, type IconProps } from './Icon';
 export { Logo, type LogoProps } from './Logo';
 export {

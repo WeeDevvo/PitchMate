@@ -23,6 +23,7 @@
  */
 import { useNavigate } from 'react-router-dom'
 import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from 'react'
+import { buttonClasses, type ButtonClassOptions } from '../../../ui'
 import './LinkButton.css'
 
 export interface LinkButtonProps
@@ -36,6 +37,11 @@ export interface LinkButtonProps
    * Injectable so tests can drive navigation without a real router transition.
    */
   navigate?: (to: string) => void
+  /**
+   * Render as the design system's button, for a link that is the screen's main
+   * way on ("Continue to PitchMate"). Otherwise it is a text link.
+   */
+  button?: ButtonClassOptions
 }
 
 /**
@@ -63,6 +69,7 @@ export function LinkButton({
   to,
   children,
   navigate,
+  button,
   className,
   ...anchorProps
 }: LinkButtonProps) {
@@ -79,7 +86,7 @@ export function LinkButton({
     go(to)
   }
 
-  const classes = ['auth-link', className].filter(Boolean).join(' ')
+  const classes = [button ? buttonClasses(button) : 'auth-link', className].filter(Boolean).join(' ')
 
   return (
     <a {...anchorProps} href={to} className={classes} onClick={handleClick}>

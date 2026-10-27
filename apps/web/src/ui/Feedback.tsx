@@ -53,12 +53,19 @@ export interface BannerProps {
   title?: string;
   action?: ReactNode;
   children?: ReactNode;
+  /**
+   * Announce the banner as an alert or status (the default). Turn it off when
+   * the banner sits inside a live region the caller already keeps in the page,
+   * so the message is announced once.
+   */
+  announce?: boolean;
 }
 
 /** The inline equivalent of a toast. An error banner is announced as an alert. */
-export function Banner({ tone = 'info', icon, title, action, children }: BannerProps) {
+export function Banner({ tone = 'info', icon, title, action, children, announce = true }: BannerProps) {
+  const role = !announce ? undefined : tone === 'error' ? 'alert' : 'status';
   return (
-    <div className={`pm-banner pm-banner--${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
+    <div className={`pm-banner pm-banner--${tone}`} role={role}>
       <Icon name={icon ?? BANNER_ICONS[tone]} size={20} />
       <div className="pm-banner__body">
         {title && <b className="pm-banner__title">{title}</b>}

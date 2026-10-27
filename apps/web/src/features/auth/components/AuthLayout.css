@@ -1,11 +1,13 @@
 /*
- * Presentational shell for every auth screen.
+ * Presentational shell for every auth screen, after the design system's auth
+ * screens (ScreenWebAuth).
  *
  * Colours come from the design system's `--pm-*` tokens, so this file owns
- * layout only and never writes a colour (Requirement 13.4). The layout is the
- * PitchMate mark over a single centred form column on a card, so each screen
- * reads top to bottom in one order (Requirements 13.4, 14.1, 14.3). The fields
- * and buttons are the design system's own.
+ * layout only and never writes a colour of its own (Requirement 13.4). The
+ * layout is the PitchMate logo over one centred card, with the link to the
+ * neighbouring screen below it, so each screen reads top to bottom in one
+ * order (Requirements 13.4, 14.1, 14.3). The card, fields and buttons are the
+ * design system's own.
  */
 
 .auth-layout {
@@ -15,8 +17,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: var(--pm-space-6);
-  padding: clamp(1.5rem, 6vw, 4rem) clamp(1rem, 5vw, 3rem);
+  padding: clamp(1.5rem, 6vw, 4rem) var(--pm-space-4);
   background: var(--pm-bg);
   color: var(--pm-text-primary);
   font-family: var(--pm-font-sans);
@@ -33,33 +36,66 @@
   flex: none;
 }
 
-/* The centred, width-constrained form column. */
+/* The centred, width-constrained card. */
 .auth-layout__surface {
   width: 100%;
-  max-width: 26rem;
+  max-width: 26.25rem;
   display: flex;
   flex-direction: column;
-  gap: var(--pm-space-6);
-  padding: clamp(1.5rem, 5vw, 2.5rem);
-  border: 1px solid var(--pm-border-subtle);
-  border-radius: var(--pm-radius-lg);
-  background: var(--pm-surface);
+  gap: var(--pm-space-4);
+  padding: clamp(1.25rem, 5vw, 1.75rem);
 }
 
 .auth-layout__heading {
   margin: 0;
-  font: var(--pm-type-headline);
-  font-size: clamp(1.5rem, 4vw, 2rem);
+  font: var(--pm-type-display-m);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
   text-transform: uppercase;
   overflow-wrap: break-word;
-  word-break: break-word;
 }
 
-/* The form/content region below the single h1. */
+.auth-layout__subheading {
+  margin-block-start: var(--pm-space-2);
+  color: var(--pm-text-secondary);
+}
+
+/* The form/content region below the heading. */
 .auth-layout__body {
   display: flex;
   flex-direction: column;
-  gap: var(--pm-space-5);
+  gap: var(--pm-space-4);
+}
+
+.auth-layout__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--pm-space-2) var(--pm-space-5);
+  font-size: 15px;
+  color: var(--pm-text-secondary);
+  text-align: center;
+}
+
+/* Icon art for a confirmation: the mail of "Check your inbox", the tick of
+   "You're verified". */
+.auth-art {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  margin: var(--pm-space-2) auto;
+  border-radius: 50%;
+  background: var(--pm-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--pm-border-subtle);
+  color: var(--pm-accent-icon);
+}
+
+.auth-art--accent {
+  background: var(--pm-accent-fill);
+  box-shadow: none;
+  color: var(--pm-on-accent);
 }
 
 .auth-form,
@@ -69,12 +105,28 @@
   gap: var(--pm-space-4);
 }
 
-.auth-links {
+/* "Forgot password?" sits right-aligned between the fields and the button. */
+.auth-form__aside {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--pm-space-2) var(--pm-space-5);
-  padding-top: var(--pm-space-4);
-  border-top: 1px solid var(--pm-border-subtle);
+  justify-content: flex-end;
+  margin-block-start: calc(-1 * var(--pm-space-2));
+}
+
+/* The rule between Google and the email form. */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-3);
+  font-size: 13px;
+  color: var(--pm-text-muted);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--pm-border-subtle);
 }
 
 .auth-message {
@@ -82,16 +134,14 @@
   color: var(--pm-text-secondary);
 }
 
-/* A live region is always in the tree so it can announce; it only takes room
-   once it has something to say. Out of flow while empty, it adds no gap. */
-.auth-live:empty {
-  position: absolute;
+.auth-fine-print {
+  font-size: 13px;
+  color: var(--pm-text-muted);
 }
 
-.auth-live:not(:empty) {
-  padding: var(--pm-space-3) var(--pm-space-4);
-  border: 1px solid var(--pm-border-subtle);
-  border-radius: var(--pm-radius-md);
-  background: var(--pm-surface-raised);
-  color: var(--pm-text-primary);
+/* A live region is always in the tree so it can announce; it only takes room
+   once it has something to say. Out of flow while empty, it adds no gap. The
+   message itself is the design system's banner. */
+.auth-live:empty {
+  position: absolute;
 }

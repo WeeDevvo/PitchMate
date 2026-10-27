@@ -42,7 +42,7 @@ import type {
   AuthSessionPayload,
   FailureOutcome,
 } from '../api/authApi'
-import { Button } from '../../../ui'
+import { Button, GoogleMark } from '../../../ui'
 import { messageForOutcome } from '../lib/errorMapping'
 import { LiveRegion } from './LiveRegion'
 import './GoogleSignInControl.css'
@@ -183,12 +183,14 @@ export function GoogleSignInControl({
     <div className="auth-google__wrap">
       <Button
         variant="secondary"
+        size="lg"
         block
         className={className}
         onClick={handleActivate}
         disabled={pending}
         aria-busy={pending || undefined}
       >
+        <GoogleMark />
         {pending ? pendingLabel : children}
       </Button>
       <LiveRegion message={message} politeness="assertive" />

@@ -56,6 +56,7 @@ export function SubmitButton({
       {...buttonProps}
       type="submit"
       variant="primary"
+      size="lg"
       block
       className={className}
       disabled={pending || disabled}

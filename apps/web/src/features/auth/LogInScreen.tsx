@@ -63,7 +63,7 @@ import type {
 } from './api/authApi'
 
 /** The screen heading (the single `h1`, rendered by AuthLayout). */
-export const LOG_IN_HEADING = 'Log in to PitchMate'
+export const LOG_IN_HEADING = 'Welcome back'
 
 // --- In-app destinations linked from the Log_In_Screen ----------------------
 
@@ -215,7 +215,24 @@ export function LogInScreen({
   }
 
   return (
-    <AuthLayout heading={LOG_IN_HEADING}>
+    <AuthLayout
+      heading={LOG_IN_HEADING}
+      footer={
+        // Requirement 3.9: the link to the Sign_Up_Screen.
+        <span>
+          New here? <LinkButton to={SIGN_UP_PATH}>Create an account</LinkButton>
+        </span>
+      }
+    >
+      <GoogleSignInControl
+        requestGoogleAssertion={requestGoogleAssertion}
+        authApi={authApi}
+        onSession={onSession}
+        onFailure={onGoogleFailure}
+      />
+
+      <p className="auth-divider">or</p>
+
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         <EmailField
           value={email}
@@ -233,6 +250,10 @@ export function LogInScreen({
           autoComplete="current-password"
           required
         />
+        {/* Requirement 3.9: the link to the Reset_Request_Screen. */}
+        <div className="auth-form__aside">
+          <LinkButton to={RESET_REQUEST_PATH}>Forgot password?</LinkButton>
+        </div>
         <SubmitButton pending={pending} pendingLabel="Signing you in…">
           Log in
         </SubmitButton>
@@ -250,18 +271,6 @@ export function LogInScreen({
         </LinkButton>
       )}
 
-      <GoogleSignInControl
-        requestGoogleAssertion={requestGoogleAssertion}
-        authApi={authApi}
-        onSession={onSession}
-        onFailure={onGoogleFailure}
-      />
-
-      {/* Requirement 3.9: links to the Sign_Up_Screen and Reset_Request_Screen. */}
-      <nav className="auth-links" aria-label="Other options">
-        <LinkButton to={SIGN_UP_PATH}>Create an account</LinkButton>
-        <LinkButton to={RESET_REQUEST_PATH}>Forgot your password?</LinkButton>
-      </nav>
     </AuthLayout>
   )
 }

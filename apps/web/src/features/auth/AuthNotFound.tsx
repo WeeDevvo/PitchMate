@@ -44,14 +44,15 @@ export const BACK_TO_LOG_IN_LABEL = 'Go to log in'
  */
 export function AuthNotFound() {
   return (
-    <AuthLayout heading={AUTH_NOT_FOUND_HEADING}>
-      <p className="auth-message">{AUTH_NOT_FOUND_MESSAGE}</p>
-
-      {/* Requirement 1.7: a control that navigates to the Log_In_Screen,
-          client-side and without a full-document reload (Requirement 1.4). */}
-      <nav className="auth-links" aria-label="Other options">
+    <AuthLayout
+      heading={AUTH_NOT_FOUND_HEADING}
+      footer={
+        // Requirement 1.7: a control that navigates to the Log_In_Screen,
+        // client-side and without a full-document reload (Requirement 1.4).
         <LinkButton to={LOG_IN_PATH}>{BACK_TO_LOG_IN_LABEL}</LinkButton>
-      </nav>
+      }
+    >
+      <p className="auth-message">{AUTH_NOT_FOUND_MESSAGE}</p>
     </AuthLayout>
   )
 }

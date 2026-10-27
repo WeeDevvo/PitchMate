@@ -43,6 +43,8 @@ export interface FormFieldProps
    * and `aria-describedby` (Requirement 14.6).
    */
   error?: string | null
+  /** A standing hint under the field, such as the password rule. */
+  hint?: string
   /** Optional ref to the underlying input (used for focus-on-error). */
   inputRef?: Ref<HTMLInputElement>
 }

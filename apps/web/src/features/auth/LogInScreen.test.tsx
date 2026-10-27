@@ -119,7 +119,7 @@ describe('LogInScreen — field & link presence (Req 3.1, 3.9)', () => {
 
     // Requirement 3.9 / 3.1: links to the Sign_Up_Screen and Reset_Request_Screen.
     const signUpLink = screen.getByRole('link', { name: /create an account/i })
-    const resetLink = screen.getByRole('link', { name: /forgot your password/i })
+    const resetLink = screen.getByRole('link', { name: /forgot password/i })
     expect(signUpLink).toHaveAttribute('href', SIGN_UP_PATH)
     expect(resetLink).toHaveAttribute('href', RESET_REQUEST_PATH)
   })
