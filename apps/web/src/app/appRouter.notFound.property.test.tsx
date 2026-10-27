@@ -82,6 +82,7 @@ import {
 import { HOME_ROUTE, SHELL_DESTINATIONS } from '../features/app-shell';
 import { INVITE_LANDING_ROUTE } from '../features/squads';
 import { landingContent } from '../features/landing/content/landingContent';
+import { LEGAL_ROUTES } from '../features/legal';
 import {
   APP_NOT_FOUND_BODY,
   APP_NOT_FOUND_CONTROL_LABEL,
@@ -107,6 +108,7 @@ import {
  */
 const REGISTERED_PATHS: readonly string[] = [
   LANDING_ROUTE,
+  ...LEGAL_ROUTES,
   ...AUTH_ROUTE_PATHS,
   ...SHELL_DESTINATIONS.map((destination) => destination.path),
 ];

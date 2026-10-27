@@ -50,5 +50,8 @@ public enum AuthErrorCode
     Unauthenticated,
 
     /// <summary>The referenced user does not exist.</summary>
-    UserNotFound
+    UserNotFound,
+
+    /// <summary>The operation would violate a squad ownership constraint (e.g. erasing a user who is the sole owner of a live squad).</summary>
+    OwnerConstraint
 }
