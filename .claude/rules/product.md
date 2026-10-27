@@ -42,7 +42,7 @@ States: `GatheringAvailability → Confirmed → TeamsRolled → InProgress → 
 ## Ratings
 
 - **Squad-scoped**, attached to the `SquadMembership`. Any cross-squad number is a vanity stat that never feeds balancing.
-- Each player has **μ (skill)** and **σ (uncertainty)**. New players start with high σ and are **provisional** until σ ≤ 7.75 (`RatingEngineConfig.ProvisionalThreshold`), which takes about 10 matches at 5v5 and 15 at 8v8. σ decays back up after about 4–6 weeks inactive (**today** the engine supports decay but no scheduled job runs it).
+- Each player has **μ (skill)** and **σ (uncertainty)**. New players start with high σ and are **provisional** until σ ≤ 8.19 (`RatingEngineConfig.ProvisionalThreshold`), which takes **at most 5 matches** (3 at 5v5, 4–5 at 8v8). The badge drops while σ is still high, so balancing keeps treating the player as uncertain. σ decays back up after about 4–6 weeks inactive, and with the threshold this close to σ₀ a short lay-off can make a player provisional again (**today** the engine supports decay but no scheduled job runs it).
 - **Cold start:** an admin may seed a starting **skill tier** (Beginner / Average / Strong), which sets the initial μ while σ stays high. The tier is an input only.
 - Ratings move on **outcome rank** (win/loss/draw, draws first-class). The score is always stored, but margin doesn't count by default: a capped margin-of-victory weight and a participation weight exist as switchable levers, both **off**.
 - **One match = one kickoff lineup = one outcome = one rating update.** Late arrivals, early leavers and substitutions count for stats only. Re-mixing teams mid-session makes a new match.
