@@ -1336,7 +1336,7 @@ describe('the rendered checks are not vacuous', () => {
 
   it('finds the declared focus indication of a real control, and none for an unstyled one', () => {
     const tree = fragment(`
-      <button class="squads-home__entry-point">Create squad</button>
+      <button class="squads-card">Thursday Ballers</button>
       <button class="squads-not-a-real-control">Unstyled</button>
     `);
     const [styled, unstyled] = Array.from(tree.querySelectorAll('button'));

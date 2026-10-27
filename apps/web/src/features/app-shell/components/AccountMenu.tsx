@@ -46,8 +46,7 @@
  *
  * Activating Profile or Settings closes the menu and navigates. `Disclosure`
  * moves no focus for an `'activate'` close, because the caller knows what is
- * about to happen to the element holding focus — so, exactly as
- * {@link PrimaryNavigation} does, focus is returned to the trigger *before* the
+ * about to happen to the element holding focus — so focus is returned to the trigger *before* the
  * close is requested: the activated `Link` unmounts with the surface, and moving
  * focus first means it never lands on `<body>` in between. The navigation itself
  * is the `Link`'s own business and happens either way, client-side and without a
@@ -181,8 +180,8 @@ export function AccountMenu({
           {/* 8.1, 8.4: fixed text naming the menu, and no value from the Session.
               Name-from-content, so the visible label *is* the accessible name. */}
           <Icon name="user" size={20} />
-          {/* Shown from 1200px; narrower, the icon shows alone and this stays the
-              accessible name. */}
+          {/* Visually hidden: the design system's top bar shows the icon alone,
+              and this stays the accessible name. */}
           <span className="shell-account-menu__trigger-label">{ACCOUNT_MENU_LABEL}</span>
         </button>
       )}

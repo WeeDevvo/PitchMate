@@ -3,7 +3,9 @@ import fc from 'fast-check';
 
 import {
   INVITE_STATE_NAMES,
+  MATCH_STATE_NAMES,
   MEMBERSHIP_STATE_NAMES,
+  PLAYER_RESULT_NAMES,
   RATING_STATE_NAMES,
   REDEEM_OUTCOME_NAMES,
   SQUAD_FEATURE_NAMES,
@@ -103,20 +105,53 @@ const WELL_FORMED_INSTANT = printInstant(0);
 /** A squad summary carrying `candidate` as its Member_Role. */
 function squadSummaryWithRole(candidate: unknown): unknown {
   return {
+    ...squadSummaryFiller(),
+    role: candidate,
+  };
+}
+
+/**
+ * A well-formed squad summary: fillers read from the generated vocabulary, not
+ * typed out as literals, with no next match and no form.
+ */
+function squadSummaryFiller(): Record<string, unknown> {
+  return {
     squadId: WELL_FORMED_IDENTITY,
     name: 'Thursday Nights',
-    role: candidate,
-    // A filler read from the generated vocabulary, not typed out as a literal.
+    role: SQUAD_ROLE_NAMES[0],
     state: MEMBERSHIP_STATE_NAMES[0],
+    playerCount: 12,
+    nextMatch: null,
+    recentForm: [],
+  };
+}
+
+/** A squad summary whose next match carries `candidate` as its Match_State. */
+function squadSummaryWithNextMatchState(candidate: unknown): unknown {
+  return {
+    ...squadSummaryFiller(),
+    nextMatch: {
+      matchId: WELL_FORMED_IDENTITY,
+      state: candidate,
+      scheduledAt: null,
+      location: 'Hackney Marshes',
+      candidateDayCount: 3,
+    },
+  };
+}
+
+/** A squad summary whose recent form is the one result `candidate`. */
+function squadSummaryWithFormResult(candidate: unknown): unknown {
+  return {
+    ...squadSummaryFiller(),
+    recentForm: [candidate],
   };
 }
 
 /** A squad summary carrying `candidate` as its Membership_State. */
 function squadSummaryWithState(candidate: unknown): unknown {
   return {
-    squadId: WELL_FORMED_IDENTITY,
-    name: 'Thursday Nights',
-    role: SQUAD_ROLE_NAMES[0],
+    ...squadSummaryFiller(),
     state: candidate,
   };
 }
@@ -295,6 +330,31 @@ const ENUM_FIELD_CASES: readonly EnumFieldCase[] = [
       // and must not lend it a third.
       'Revoked',
     ],
+  }),
+  enumFieldCase({
+    label: 'squadSummary — next match state',
+    names: MATCH_STATE_NAMES,
+    fieldLabel: 'squad summary nextMatch state',
+    buildBody: squadSummaryWithNextMatchState,
+    parse: parseSquadSummary,
+    project: (summary) => summary.nextMatch?.state ?? null,
+    nearMisses: [
+      ...RETIRED_CODES,
+      'gathering',
+      'Gathering',
+      'GATHERING_AVAILABILITY',
+      'Rolled',
+      'Live',
+    ],
+  }),
+  enumFieldCase({
+    label: 'squadSummary — form result',
+    names: PLAYER_RESULT_NAMES,
+    fieldLabel: 'squad summary recentForm result',
+    buildBody: squadSummaryWithFormResult,
+    parse: parseSquadSummary,
+    project: (summary) => summary.recentForm[0] ?? null,
+    nearMisses: [...RETIRED_CODES, 'W', 'D', 'L', 'win', 'Lost', 'Won'],
   }),
   enumFieldCase({
     label: 'squadDetail — member role',
@@ -551,8 +611,9 @@ for (const fieldCase of ENUM_FIELD_CASES) {
 // Validates: Requirements 12.8
 describe('the accepted enum vocabulary — the table is the quantifier', () => {
   it('covers every enum-valued field of the squads response bodies', () => {
-    // The squads parsers carry eight enum-valued fields across five bodies:
-    // `squadSummary` role and state, `squadDetail` member role, state, and
+    // The squads parsers carry ten enum-valued fields across five bodies:
+    // `squadSummary` role, state, next match state, and form result,
+    // `squadDetail` member role, state, and
     // ratingState, `featureFlags` feature, `inviteSummary` state, and
     // `redemption` outcome. `leaderboard`, `generatedInvite`, `invitePreview`,
     // `createdSquad`, and `createdGuest` carry none.
@@ -564,6 +625,8 @@ describe('the accepted enum vocabulary — the table is the quantifier', () => {
     expect(labels).toStrictEqual([
       'squadSummary — role',
       'squadSummary — state',
+      'squadSummary — next match state',
+      'squadSummary — form result',
       'squadDetail — member role',
       'squadDetail — member state',
       'squadDetail — member ratingState',
@@ -573,16 +636,16 @@ describe('the accepted enum vocabulary — the table is the quantifier', () => {
     ]);
   });
 
-  it('reaches all six unions the squads parsers read', () => {
-    // Field count alone would be satisfied by eight entries over one union. The
-    // six unions below are the ones reachable from a squads response body;
+  it('reaches all eight unions the squads parsers read', () => {
+    // Field count alone would be satisfied by ten entries over one union. The
+    // eight unions below are the ones reachable from a squads response body;
     // `SkillTier` is a *request* enum and `LeaderboardStatistic` is echoed and
     // disregarded, so neither appears in a parsed body.
     const unions = new Set(
       ENUM_FIELD_CASES.map((fieldCase) => fieldCase.names.join('|')),
     );
 
-    expect(unions.size).toBe(6);
+    expect(unions.size).toBe(8);
   });
 
   it('asserts acceptance over a non-trivial number of member names', () => {
@@ -599,7 +662,7 @@ describe('the accepted enum vocabulary — the table is the quantifier', () => {
       expect(fieldCase.names.length).toBeGreaterThan(0);
     }
 
-    expect(covered).toBeGreaterThanOrEqual(19);
+    expect(covered).toBeGreaterThanOrEqual(28);
   });
 
   it('states a near-miss for every field, and generates an outside string for every union', () => {

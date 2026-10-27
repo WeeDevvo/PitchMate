@@ -28,6 +28,13 @@
   max-width: 100%;
 }
 
+.squads-card__players {
+  display: inline-flex;
+  align-items: center;
+  color: var(--pm-text-secondary);
+  font-size: var(--squads-font-size-body);
+}
+
 .squads-card__label {
   display: inline-flex;
   align-items: center;

@@ -3,7 +3,9 @@ import fc from 'fast-check';
 
 import {
   INVITE_STATE_NAMES,
+  MATCH_STATE_NAMES,
   MEMBERSHIP_STATE_NAMES,
+  PLAYER_RESULT_NAMES,
   RATING_STATE_NAMES,
   SQUAD_FEATURE_NAMES,
   SQUAD_ROLE_NAMES,
@@ -665,8 +667,33 @@ function shapeOf<TValue, TElement>(
 /* -------------------------------------------------------------------------- */
 
 const squadSummaryElementArb: fc.Arbitrary<Record<string, unknown>> = fc
-  .tuple(identityArb, displayNameArb, roleOrAbsenceArb, membershipStateArb)
-  .map(([squadId, name, role, state]) => ({ squadId, name, role, state }));
+  .tuple(
+    identityArb,
+    displayNameArb,
+    roleOrAbsenceArb,
+    membershipStateArb,
+    appearanceCountArb,
+    fc.option(
+      fc.record({
+        matchId: identityArb,
+        state: fc.constantFrom(...MATCH_STATE_NAMES),
+        scheduledAt: fc.option(isoInstantArb, { nil: null }),
+        location: displayNameArb,
+        candidateDayCount: fc.nat({ max: 14 }),
+      }),
+      { nil: null },
+    ),
+    fc.array(fc.constantFrom(...PLAYER_RESULT_NAMES), { maxLength: 5 }),
+  )
+  .map(([squadId, name, role, state, playerCount, nextMatch, recentForm]) => ({
+    squadId,
+    name,
+    role,
+    state,
+    playerCount,
+    nextMatch,
+    recentForm,
+  }));
 
 const squadMemberElementArb: fc.Arbitrary<Record<string, unknown>> = fc
   .tuple(
@@ -732,11 +759,15 @@ const leaderboardEntryElementArb: fc.Arbitrary<Record<string, unknown>> = fc
 
 function isPopulatedSummary(summary: SquadSummary): boolean {
   return (
-    keySignature(summary) === 'name,role,squadId,state' &&
+    keySignature(summary) === 'name,nextMatch,playerCount,recentForm,role,squadId,state' &&
     typeof summary.squadId === 'string' &&
     typeof summary.name === 'string' &&
     (summary.role === null || SQUAD_ROLE_NAMES.includes(summary.role)) &&
-    (summary.state === null || MEMBERSHIP_STATE_NAMES.includes(summary.state))
+    (summary.state === null || MEMBERSHIP_STATE_NAMES.includes(summary.state)) &&
+    Number.isInteger(summary.playerCount) &&
+    (summary.nextMatch === null ||
+      keySignature(summary.nextMatch) === 'candidateDayCount,matchId,place,scheduledAtMs,state') &&
+    summary.recentForm.every((result) => PLAYER_RESULT_NAMES.includes(result))
   );
 }
 
@@ -811,10 +842,16 @@ const SHAPES: readonly CollectionShape[] = [
     stamp: (element, index) => ({ ...element, name: `#${index}` }),
     corruptionArb: corruptionsOf({
       elementArb: squadSummaryElementArb,
-      requiredKeys: ['squadId', 'name'],
+      requiredKeys: ['squadId', 'name', 'playerCount', 'recentForm'],
       mistypedArb: fc.oneof(
         fc.tuple(fc.constant('squadId'), notAnIdentityArb),
         fc.tuple(fc.constant('name'), notAStringArb),
+        fc.tuple(fc.constant('playerCount'), notACountArb),
+        // A form naming a result outside the generated union.
+        fc.tuple(
+          fc.constant('recentForm'),
+          outsideUnionArb(PLAYER_RESULT_NAMES).map((name) => [name]),
+        ),
         // `role` and `state` are *valid absences* here, so only a present value
         // outside the generated union is a corruption (16.8, 12.8).
         fc.tuple(fc.constant('role'), outsideUnionArb(SQUAD_ROLE_NAMES)),

@@ -43,7 +43,7 @@
 
   /* Bounds. A card grid tracks from this minimum, and prose is bounded to a
      readable measure rather than to the viewport. */
-  --squads-card-min-width: 17rem;
+  --squads-card-min-width: 20rem;
   --squads-measure: 40rem;
 
   /* Typography. Sizes are relative, so a browser text-size preference scales

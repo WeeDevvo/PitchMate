@@ -31,11 +31,11 @@
  *
  * This is the one property in the shell that is genuinely about the *whole* frame
  * rather than about a component: the claim is a statement about one focus order
- * spanning the skip link, the header's brand, navigation, notification, and
- * account controls, an open surface's own controls, and the Content_Region. A
+ * spanning the skip link, the header's brand, notification, and account
+ * controls, an open surface's own controls, and the Content_Region. A
  * stand-in anywhere in that chain would move the very thing under test, so every
  * participant here is the production component — `ShellFrame`, `SkipLink`,
- * `ContentRegion`, `ShellHeader`, `PrimaryNavigation`, `NotificationIndicator`,
+ * `ContentRegion`, `ShellHeader`, `NotificationIndicator`,
  * `NotificationPanel`, `AccountMenu`, and `Disclosure` — wired exactly as the
  * route table will wire them (task 14.5), over the real notification state machine
  * and a stub transport.
@@ -47,14 +47,11 @@
  *
  * ### What is generated
  *
- * - **The layout**, since the Compact_Layout collapses the Primary_Navigation
- *   behind a disclosure control and the Wide_Layout renders its four controls
- *   directly (Requirements 1.6, 1.7) — two different focus orders.
- * - **Which surface is open**: none, the compact Primary_Navigation, the
- *   Notification_Panel, or the Account_Menu. The navigation surface is generated
- *   only for the Compact_Layout, where it exists.
- * - **The requested path**, which decides which navigation control is marked
- *   current and which must change nothing about the focus order.
+ * - **The layout**, compact or wide, which must change nothing about the focus
+ *   order: the header is the same top bar at every width.
+ * - **Which surface is open**: none, the Notification_Panel, or the Account_Menu.
+ * - **The requested path**, registered or not, which must change nothing about
+ *   the focus order.
  * - **How many Notification_Records the panel displays**, so the panel's control
  *   count varies — including 0, where the Mark_All_Read_Control is `disabled` and
  *   therefore *not* in the focus order, which is the case most likely to break a
@@ -98,10 +95,9 @@ import { AccountMenu } from './components/AccountMenu';
 import { Disclosure } from './components/Disclosure';
 import { NotificationIndicator } from './components/NotificationIndicator';
 import { NotificationPanel } from './components/NotificationPanel';
-import { PrimaryNavigation } from './components/PrimaryNavigation';
 import { SKIP_LINK_LABEL } from './components/SkipLink';
 import { HOME_ROUTE, SHELL_DESTINATIONS } from './lib/destinations';
-import { ACCOUNT_MENU_LABEL, PRIMARY_NAVIGATION_TOGGLE } from './lib/messages';
+import { ACCOUNT_MENU_LABEL } from './lib/messages';
 import type { NotificationRecord } from './lib/notificationParsing';
 import { NotificationCentreProvider } from './state/NotificationCentreContext';
 import { SquadScopeProvider } from './state/SquadScopeContext';
@@ -111,7 +107,7 @@ import { ShellFrame } from './ShellFrame';
 // --- The generated axes ------------------------------------------------------
 
 /** The header surface a person has opened, if any. */
-type OpenSurface = 'navigation' | 'notifications' | 'account';
+type OpenSurface = 'notifications' | 'account';
 
 /** One generated shell rendering. */
 interface FrameCase {
@@ -130,9 +126,8 @@ const layoutArb: fc.Arbitrary<ShellLayout> = fc.constantFrom('compact', 'wide');
 /**
  * Registered Destination paths, plus one under `/app` that resolves to nothing.
  *
- * Resolution decides which navigation control is marked current (Property 4's
- * subject); it must change nothing about the focus order, which is what including
- * the non-resolving path checks.
+ * Resolution decides the content; it must change nothing about the header's
+ * focus order, which is what including the non-resolving path checks.
  */
 const pathArb: fc.Arbitrary<string> = fc.constantFrom(
   ...SHELL_DESTINATIONS.map((destination) => destination.path),
@@ -151,18 +146,16 @@ const recordCountArb: fc.Arbitrary<number> = fc.constantFrom(0, 1, 3);
 /** At least one, so the Tab after a skip has somewhere inside `<main>` to land. */
 const contentControlsArb: fc.Arbitrary<number> = fc.constantFrom(1, 2);
 
-/** The surfaces that exist in a given layout — the compact navigation, or not. */
-function openableSurfaces(layout: ShellLayout): readonly OpenSurface[] {
-  return layout === 'compact'
-    ? ['navigation', 'notifications', 'account']
-    : ['notifications', 'account'];
+/** The header surfaces, the same in every layout. */
+function openableSurfaces(): readonly OpenSurface[] {
+  return ['notifications', 'account'];
 }
 
 /** Any rendering, with any surface open or none. */
 const frameCaseArb: fc.Arbitrary<FrameCase> = layoutArb.chain((layout) =>
   fc.record({
     layout: fc.constant(layout),
-    surface: fc.constantFrom<OpenSurface | null>(null, ...openableSurfaces(layout)),
+    surface: fc.constantFrom<OpenSurface | null>(null, ...openableSurfaces()),
     path: pathArb,
     recordCount: recordCountArb,
     contentControls: contentControlsArb,
@@ -174,7 +167,7 @@ const openFrameCaseArb: fc.Arbitrary<FrameCase & { readonly surface: OpenSurface
   layoutArb.chain((layout) =>
     fc.record({
       layout: fc.constant(layout),
-      surface: fc.constantFrom(...openableSurfaces(layout)),
+      surface: fc.constantFrom(...openableSurfaces()),
       path: pathArb,
       recordCount: recordCountArb,
       contentControls: contentControlsArb,
@@ -197,8 +190,8 @@ const originalMatchMedia = window.matchMedia;
  * Report the generated layout to `useViewportLayout`.
  *
  * jsdom answers every media query non-matching, which would pin the frame to the
- * Compact_Layout; the Wide_Layout's four directly-rendered navigation controls are
- * a different focus order, so both need to be reachable.
+ * Compact_Layout; both layouts need to be reachable to show neither changes the
+ * focus order.
  */
 function installLayout(layout: ShellLayout): void {
   window.matchMedia = ((query: string) =>
@@ -325,7 +318,6 @@ async function renderShellRoute(frameCase: FrameCase): Promise<HTMLElement> {
             now={() => NOW_MS}
           >
             <ShellFrame
-              navigation={(props) => <PrimaryNavigation {...props} />}
               notifications={({ disclosure }) => (
                 <Disclosure
                   id={disclosure.surfaceId}
@@ -359,7 +351,6 @@ async function renderShellRoute(frameCase: FrameCase): Promise<HTMLElement> {
 
 /** How each surface's trigger is found, by the accessible name it carries. */
 const TRIGGER_NAME: Readonly<Record<OpenSurface, RegExp>> = {
-  navigation: new RegExp(`^${PRIMARY_NAVIGATION_TOGGLE}$`),
   // The Notification_Indicator's name carries the Unread_Count, so it is matched
   // on its fixed opening rather than on the whole string.
   notifications: /^Notifications, /,
@@ -458,12 +449,9 @@ function describeAll(elements: readonly (Element | null)[]): string[] {
  * The frame's focus order, with a label per element that stays unique even where
  * two controls carry the same element type and the same accessible name.
  *
- * That case is real and it matters: the Account_Menu's Profile and Settings
- * controls are `<a>` elements named "Profile" and "Settings", and so are two of the
- * Primary_Navigation's. Comparing a traversal against an expected order by
- * description alone would let a swap between those two pairs pass. Labelling each
- * element with its document-order position as well makes every comparison below an
- * identity comparison that still reads as a diff rather than as a wall of HTML.
+ * Labelling each element with its document-order position as well as its
+ * description makes every comparison below an identity comparison that still
+ * reads as a diff rather than as a wall of HTML.
  */
 interface FocusOrder {
   /** Every tabbable control of the frame, in document order. */

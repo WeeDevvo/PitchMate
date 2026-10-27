@@ -283,6 +283,9 @@ export function squadSummary(overrides: Partial<SquadSummary> = {}): SquadSummar
     name: SQUAD_NAME,
     role: 'Member',
     state: 'Active',
+    playerCount: 12,
+    nextMatch: null,
+    recentForm: [],
     ...overrides,
   };
 }

@@ -165,7 +165,7 @@ function renderHome(api: SquadsApi, { strict = false } = {}): void {
 }
 
 function summary(squadId: string, name: string): SquadSummary {
-  return { squadId, name, role: 'Owner', state: 'Active' };
+  return { squadId, name, role: 'Owner', state: 'Active', playerCount: 0, nextMatch: null, recentForm: [] };
 }
 
 function cardIdentities(): readonly (string | null)[] {

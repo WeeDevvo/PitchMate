@@ -1371,3 +1371,17 @@ export const CLAIM_UNUSABLE =
 /** Shown for a link whose secret can't be read from the address. */
 export const CLAIM_LINK_INCOMPLETE =
   'This claim link is incomplete. Ask an admin for the full link.';
+
+/* --- The squad card's facts ----------------------------------------------- */
+
+/** The footer label over the viewer's recent results on a squad card. */
+export const SQUAD_CARD_FORM_LABEL = 'Form';
+
+/** A squad card's footer before the viewer has a result in the squad. */
+export const SQUAD_CARD_NO_FORM = 'No games yet';
+
+/** A squad card's next-match well when the squad has no open match. */
+export const SQUAD_CARD_NO_NEXT_MATCH = 'Nothing planned yet';
+
+/** The title of a next match still gathering availability: it has no day yet. */
+export const SQUAD_CARD_PICK_A_DAY = 'Pick a day';

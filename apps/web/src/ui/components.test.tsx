@@ -346,6 +346,43 @@ describe('SquadCard and SquadCrest', () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it('reads the next match and the form as part of the one control', () => {
+    render(
+      <SquadCard
+        name="Thursday Ballers"
+        meta={<span>14 players</span>}
+        next={{ state: 'rolled', title: 'Sun 9 Nov · 10:00', sub: 'Hackney Marshes' }}
+        form={['W', 'D', 'L']}
+        render={(props) => <button type="button" {...props} />}
+      />,
+    );
+    const card = screen.getByRole('button', {
+      name: 'Thursday Ballers 14 players Teams rolled Sun 9 Nov · 10:00 Hackney Marshes Form Last 3: Win, Draw, Loss',
+    });
+    expect(card.querySelector('.pm-squadcard__next')).not.toHaveClass('pm-squadcard__next--none');
+  });
+
+  it('says so when there is no next match and no form, and leaves out what is not supplied', () => {
+    const { rerender } = render(
+      <SquadCard
+        name="Uni Old Boys"
+        next={null}
+        noNextMatch="Nothing planned yet"
+        form={[]}
+        noForm="No games yet"
+        render={(props) => <button type="button" {...props} />}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Uni Old Boys Nothing planned yet Form No games yet' }),
+    ).toBeInTheDocument();
+
+    rerender(<SquadCard name="Uni Old Boys" render={(props) => <button type="button" {...props} />} />);
+    const card = screen.getByRole('button', { name: 'Uni Old Boys' });
+    expect(card.querySelector('.pm-squadcard__next')).toBeNull();
+    expect(card.querySelector('.pm-squadcard__foot')).toBeNull();
+  });
+
   it('uses a chosen crest over the initials', () => {
     const { container } = render(<SquadCrest name="Thursday Ballers" crest="⚽" size="sm" />);
     expect(container.firstElementChild).toHaveTextContent('⚽');

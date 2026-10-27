@@ -373,7 +373,7 @@ const redemptionBodyArb: fc.Arbitrary<unknown> = fc.oneof(
 
 /** A Squad_Summary for the collection a re-listing answers with. */
 function summaryOf(squadId: string, name: string): SquadSummary {
-  return { squadId, name, role: 'Owner', state: 'Active' };
+  return { squadId, name, role: 'Owner', state: 'Active', playerCount: 0, nextMatch: null, recentForm: [] };
 }
 
 // --- What the property expects of a run -------------------------------------

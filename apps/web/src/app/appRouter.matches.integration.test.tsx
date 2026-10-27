@@ -80,7 +80,7 @@ describe('the Matches_Feature in the assembled router', () => {
     const { routes } = assemble();
     await renderAt(routes, MATCH_ADDRESS);
 
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(
       await within(screen.getByRole('main')).findByText('3 can play'),
     ).toBeInTheDocument();

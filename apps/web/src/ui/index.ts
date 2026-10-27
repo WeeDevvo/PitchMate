@@ -50,6 +50,7 @@ export { PlayerRow, type PlayerRowProps } from './PlayerRow';
 export {
   SquadCard,
   SquadCrest,
+  type SquadCardNextMatch,
   type SquadCardProps,
   type SquadCardRenderProps,
   type SquadCrestProps,

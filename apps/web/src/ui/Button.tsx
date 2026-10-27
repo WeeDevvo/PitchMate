@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import { Icon, type IconName } from './Icon';
 import { buttonClasses } from './buttonClasses';
 import { cx } from './cx';
@@ -18,6 +18,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   iconRight?: IconName;
   /** Marks the moment teams are ready to lock. */
   glow?: boolean;
+  /** The native button, for a caller that returns focus to it. */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({

@@ -4,11 +4,8 @@
  *
  * Requirement 3.7 makes the Home, Settings, and Profile bodies injected, so the
  * MVP ships with Home and Profile empty. Requirement 3.8 is explicit that this
- * absence is **not an error**: the frame stays exactly as it is, the
- * destination's Primary_Navigation control stays marked as the current page
- * (which it does by itself — the route still resolves to this Destination, so
- * {@link PrimaryNavigation} marks it), and the region carries an explanation plus
- * a way onward. Nothing here is a failure state, so nothing here is announced as
+ * absence is **not an error**: the frame stays exactly as it is, and the region
+ * carries an explanation plus a way onward. Nothing here is a failure state, so nothing here is announced as
  * one: no `role="alert"`, no live region, no error wording.
  *
  * ### The heading is read, not written

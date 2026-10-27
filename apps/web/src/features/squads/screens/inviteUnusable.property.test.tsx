@@ -364,6 +364,9 @@ async function observeFormOutcome(options: {
     name: disclosure.squadName,
     role: 'Owner',
     state: 'Active',
+    playerCount: 0,
+    nextMatch: null,
+    recentForm: [],
   };
 
   const api: SquadsApi = {

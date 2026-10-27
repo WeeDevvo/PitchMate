@@ -360,7 +360,6 @@ describe('App_Shell containment and public entry point (Requirements 1.10, 15.4)
       'SettingsDestination.tsx',
       'api/notificationsApi.ts',
       'components/ShellHeader.tsx',
-      'components/PrimaryNavigation.tsx',
       'components/ContentRegion.tsx',
       'components/NotificationPanel.tsx',
       'components/AccountMenu.tsx',
