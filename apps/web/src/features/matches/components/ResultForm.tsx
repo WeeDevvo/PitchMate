@@ -8,6 +8,8 @@
  */
 import { useId, useState, type FormEvent, type ReactElement } from 'react';
 
+import { Button } from '../../../ui';
+
 import type { CallResult, TeamScoreCommand } from '../api/matchesApi';
 import { parseScoreInput } from '../lib/lifecycle';
 import {
@@ -111,13 +113,12 @@ export function ResultForm({ sheet, recordedResult, record, onSettled }: ResultF
           })}
         </ul>
         <div className="matches-actions">
-          <button
+          <Button
             type="submit"
-            className="matches-button matches-button--primary"
             aria-disabled={action.busy ? true : undefined}
           >
             {action.busy ? SAVING_RESULT_LABEL : SAVE_RESULT_LABEL}
-          </button>
+          </Button>
         </div>
       </form>
       {invalid.length > 0 ? (

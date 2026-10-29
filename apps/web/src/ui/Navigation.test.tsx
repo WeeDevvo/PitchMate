@@ -14,7 +14,7 @@ import userEvent from '@testing-library/user-event';
 import type { KeyboardEvent } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import { ActionsMenu, TabNav } from '.';
+import { ActionsMenu, Steps, TabNav } from '.';
 
 describe('TabNav', () => {
   it('renders each tab as the caller link, marking only the active one current', () => {
@@ -97,5 +97,20 @@ describe('ActionsMenu', () => {
 
     fireEvent.pointerDown(screen.getByText('Elsewhere'));
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
+describe('Steps', () => {
+  it('marks the current step, says which are done, and numbers the rest', () => {
+    render(<Steps label="Create match steps" steps={['Where & when', 'Availability', 'Confirm day']} current={1} />);
+
+    const list = screen.getByRole('list', { name: 'Create match steps' });
+    const items = Array.from(list.querySelectorAll('li'));
+    expect(items.map((item) => item.textContent)).toEqual([
+      'Done: Where & when',
+      '2. Availability',
+      '3. Confirm day',
+    ]);
+    expect(items.map((item) => item.getAttribute('aria-current'))).toEqual([null, 'step', null]);
   });
 });

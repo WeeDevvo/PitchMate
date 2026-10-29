@@ -120,50 +120,11 @@
   align-items: center;
 }
 
-.matches-button,
 .matches-link,
 .matches-entry__link {
   min-height: var(--matches-touch-target);
   display: inline-flex;
   align-items: center;
-}
-
-/* The design system's secondary button. */
-.matches-button {
-  justify-content: center;
-  padding: 0 var(--pm-space-5);
-  border: 1.5px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-pill);
-  background: transparent;
-  color: var(--pm-text-primary);
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.matches-button:hover {
-  background: var(--pm-surface-hover);
-}
-
-/* The primary: Pitch Green with Ink text, which the design tokens verify at the
-   text floor in both themes. Which action is primary is also said by its label
-   and its place, never by colour alone. */
-.matches-button--primary {
-  border-color: var(--pm-accent-fill);
-  background: var(--pm-accent-fill);
-  color: var(--pm-on-accent);
-}
-
-.matches-button--primary:hover {
-  background: var(--pm-accent-fill-hover);
-}
-
-.matches-button[aria-disabled='true'] {
-  cursor: progress;
-  opacity: 0.7;
 }
 
 .matches-link {
@@ -186,7 +147,6 @@
   text-decoration: underline;
 }
 
-.matches-button:focus-visible,
 .matches-link:focus-visible,
 .matches-entry__link:focus-visible,
 .matches-input:focus-visible,
@@ -556,4 +516,157 @@
 
 .matches-confirm p {
   margin: 0;
+}
+
+/* The create-match screen (step 1) ------------------------------------ */
+
+.matches-overline {
+  margin: 0;
+  font: var(--pm-type-overline);
+  letter-spacing: var(--pm-type-overline-tracking);
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.matches-titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-1);
+}
+
+.create-match {
+  gap: var(--matches-gap);
+}
+
+.create-match__location {
+  max-width: 28rem;
+}
+
+.create-match__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.create-match__legend {
+  padding: 0;
+  margin-bottom: var(--matches-gap-tight);
+  font: var(--pm-type-overline);
+  letter-spacing: var(--pm-type-overline-tracking);
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
+}
+
+.create-match__hint {
+  margin: 0;
+  font: var(--pm-type-small);
+  color: var(--pm-text-muted);
+}
+
+.create-match__days {
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+  max-width: 45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.create-match__day {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: var(--pm-space-3);
+  align-items: start;
+  padding: var(--pm-space-3);
+  border: var(--matches-border-width) solid var(--pm-border-subtle);
+  border-radius: var(--matches-radius);
+  background: var(--pm-surface);
+}
+
+.create-match__day-name {
+  padding-top: var(--pm-space-2);
+  font: var(--pm-type-title);
+}
+
+.create-match__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap-tight) var(--pm-space-4);
+  align-items: flex-end;
+}
+
+.create-match__time {
+  display: flex;
+  gap: var(--pm-space-1);
+  align-items: flex-end;
+}
+
+.create-match__time .pm-field {
+  width: 11rem;
+}
+
+.create-match__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--matches-gap-tight);
+  padding-top: var(--pm-space-4);
+  border-top: var(--matches-border-width) solid var(--pm-border-subtle);
+}
+
+@media (max-width: 559.98px) {
+  .create-match__day {
+    grid-template-columns: 1fr;
+  }
+
+  .create-match__day-name {
+    padding-top: 0;
+  }
+}
+
+/* Who can play: the availability grid and its save -------------------- */
+
+.matches-availability {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
+}
+
+.matches-grid-name {
+  display: inline-flex;
+  flex-direction: column;
+  color: var(--pm-text-primary);
+}
+
+.matches-grid-name small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pm-text-muted);
+}
+
+/* Confirm: the candidate days as radio cards ------------------------- */
+
+.matches-day-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  gap: var(--pm-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matches-day-options .pm-datebox {
+  color: var(--pm-text-primary);
+}
+
+.matches-legend {
+  padding: 0;
+  font-weight: 600;
+  color: var(--pm-text-primary);
 }

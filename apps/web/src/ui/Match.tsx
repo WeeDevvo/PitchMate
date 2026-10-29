@@ -73,6 +73,11 @@ export interface DayPickerProps {
   days: readonly DayOption[];
   selected: ReadonlySet<string> | readonly string[];
   onToggle: (id: string, checked: boolean) => void;
+  /**
+   * Keep a time line on every tile, blank until the day has a time, so tiles
+   * stay one height as times are set (the create-match picker).
+   */
+  reserveTime?: boolean;
   className?: string;
 }
 
@@ -81,7 +86,7 @@ export interface DayPickerProps {
  * it works as a form field; the large tile lettering is decorative. Put the
  * picker in a fieldset with a legend.
  */
-export function DayPicker({ days, selected, onToggle, className }: DayPickerProps) {
+export function DayPicker({ days, selected, onToggle, reserveTime, className }: DayPickerProps) {
   const isSelected = (id: string) =>
     Array.isArray(selected) ? selected.includes(id) : (selected as ReadonlySet<string>).has(id);
 
@@ -107,7 +112,7 @@ export function DayPicker({ days, selected, onToggle, className }: DayPickerProp
             <span className="pm-day__mon" aria-hidden="true">
               {day.mon}
             </span>
-            {day.time && (
+            {(day.time || reserveTime) && (
               <span className="pm-day__time pm-num" aria-hidden="true">
                 {day.time}
               </span>

@@ -141,6 +141,12 @@
   color: var(--pm-text-muted);
 }
 
+/* A reserved time line holds its height while blank. */
+.pm-day__time {
+  min-height: 16px;
+  line-height: 16px;
+}
+
 /* Selected: the fill, and a tick in the corner, so it is not colour alone. */
 .pm-day.is-selected {
   background: var(--pm-accent-fill);

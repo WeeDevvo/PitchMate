@@ -75,6 +75,21 @@ describe('DayPicker', () => {
     await userEvent.click(saturday);
     expect(saturday).not.toBeChecked();
   });
+
+  it('keeps a time line on every tile when asked, blank until the day has a time', () => {
+    const days = [
+      { id: 'sat', label: 'Sat 24 Oct, 19:00', dow: 'Sat', num: '24', mon: 'Oct', time: '19:00' },
+      { id: 'sun', label: 'Sun 25 Oct', dow: 'Sun', num: '25', mon: 'Oct' },
+    ];
+    const { container, rerender } = render(<DayPicker days={days} selected={[]} onToggle={() => {}} />);
+    expect(Array.from(container.querySelectorAll('.pm-day__time'), (line) => line.textContent)).toEqual(['19:00']);
+
+    rerender(<DayPicker days={days} selected={[]} onToggle={() => {}} reserveTime />);
+    expect(Array.from(container.querySelectorAll('.pm-day__time'), (line) => line.textContent)).toEqual([
+      '19:00',
+      '',
+    ]);
+  });
 });
 
 describe('TeamColumn', () => {

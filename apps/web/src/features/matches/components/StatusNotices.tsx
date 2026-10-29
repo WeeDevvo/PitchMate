@@ -4,6 +4,8 @@
  * leaves keyboard focus alone.
  */
 import { type ReactElement, type ReactNode } from 'react';
+
+import { Button } from '../../../ui';
 import { Link } from 'react-router-dom';
 
 import { squadPath } from '../../squads';
@@ -38,9 +40,9 @@ export function FailureNotice({ onRetry, children }: FailureNoticeProps): ReactE
         {GENERIC_MATCHES_FAILURE}
       </p>
       <div className="matches-actions">
-        <button type="button" className="matches-button" onClick={onRetry}>
+        <Button type="button" variant="secondary" onClick={onRetry}>
           {RETRY_LABEL}
-        </button>
+        </Button>
         {children}
       </div>
     </div>

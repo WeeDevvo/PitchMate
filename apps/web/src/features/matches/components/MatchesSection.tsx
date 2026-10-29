@@ -11,7 +11,7 @@ import { Link, useParams } from 'react-router-dom';
 import { SQUAD_SCOPE_ROUTE_PARAMETER } from '../../app-shell';
 import { useAuth } from '../../auth';
 import type { MatchesApi } from '../api/matchesApi';
-import { MatchCard } from '../../../ui';
+import { MatchCard, buttonClasses } from '../../../ui';
 import { dayParts, formatDay, headlineDayMs } from '../lib/matchDays';
 import { MATCH_STATE_LABELS, isOrganiser } from '../lib/matchState';
 import {
@@ -98,7 +98,7 @@ export function MatchesSection({ api }: MatchesSectionProps): ReactElement | nul
 
   const organiser = isOrganiser(standing.value);
   const createLink = organiser ? (
-    <Link className="matches-button matches-button--primary" to={newMatchPath(squadId)}>
+    <Link className={buttonClasses()} to={newMatchPath(squadId)}>
       {CREATE_MATCH_LABEL}
     </Link>
   ) : null;

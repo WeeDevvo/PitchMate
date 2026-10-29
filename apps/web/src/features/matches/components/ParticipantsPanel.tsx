@@ -5,6 +5,8 @@
  */
 import { useId, useState, type FormEvent, type ReactElement } from 'react';
 
+import { Button } from '../../../ui';
+
 import type { CallResult } from '../api/matchesApi';
 import {
   ADD_PLAYER_LABEL,
@@ -97,14 +99,14 @@ export function ParticipantsPanel({ participants, self, editing }: ParticipantsP
       {self === undefined ? null : (
         <div className="matches-actions" data-matches-self-participation="true">
           <p className="matches-hint">{self.isParticipant ? PLAYING_STATEMENT : NOT_PLAYING_STATEMENT}</p>
-          <button
+          <Button
             type="button"
-            className={self.isParticipant ? 'matches-button' : 'matches-button matches-button--primary'}
+            variant={self.isParticipant ? 'secondary' : 'primary'}
             aria-disabled={action.busy ? true : undefined}
             onClick={() => void toggleSelf()}
           >
             {self.isParticipant ? LEAVE_MATCH_LABEL : JOIN_MATCH_LABEL}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -116,14 +118,15 @@ export function ParticipantsPanel({ participants, self, editing }: ParticipantsP
               {participant.isGuest ? <span className="matches-chip">{GUEST_LABEL}</span> : null}
             </span>
             {editing === undefined ? null : (
-              <button
+              <Button
                 type="button"
-                className="matches-button"
+                variant="secondary"
+                size="sm"
                 aria-disabled={action.busy ? true : undefined}
                 onClick={() => void remove(participant.membershipId)}
               >
                 {removeParticipantLabel(participant.displayName)}
-              </button>
+              </Button>
             )}
           </li>
         ))}
@@ -152,13 +155,13 @@ export function ParticipantsPanel({ participants, self, editing }: ParticipantsP
               </option>
             ))}
           </select>
-          <button
+          <Button
             type="submit"
-            className="matches-button"
+            variant="secondary"
             aria-disabled={action.busy ? true : undefined}
           >
             {ADD_PLAYER_SUBMIT_LABEL}
-          </button>
+          </Button>
         </form>
       )}
 

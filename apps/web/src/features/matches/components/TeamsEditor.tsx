@@ -9,7 +9,7 @@
  */
 import { useCallback, useId, useState, type FormEvent, type ReactElement } from 'react';
 
-import { FairnessMeter, TeamColumn } from '../../../ui';
+import { Button, FairnessMeter, TeamColumn } from '../../../ui';
 import type { AuthState } from '../../auth';
 import type { CallResult, MatchesApi } from '../api/matchesApi';
 import { formatProbability, lockProblems, predictionLines, rollGap, TEAM_NAME_MAX_LENGTH } from '../lib/teams';
@@ -100,9 +100,9 @@ function TeamNameForm({
         aria-describedby={hintId}
         onChange={(event) => setName(event.target.value)}
       />
-      <button type="submit" className="matches-button" aria-disabled={busy ? true : undefined}>
+      <Button type="submit" variant="secondary" aria-disabled={busy ? true : undefined}>
         {SAVE_TEAM_NAME_LABEL}
-      </button>
+      </Button>
       <p id={hintId} className="matches-hint">
         {TEAM_NAME_HINT}
       </p>
@@ -202,14 +202,13 @@ export function TeamsEditor({
         <p className="matches-hint">{ROLL_HINT}</p>
         {gap === null ? (
           <div className="matches-actions">
-            <button
+            <Button
               type="button"
-              className="matches-button matches-button--primary"
               aria-disabled={action.busy ? true : undefined}
               onClick={() => void write('roll', (signal) => api.rerollTeams(matchId, signal))}
             >
               {action.busy && lastWrite === 'roll' ? ROLLING_LABEL : ROLL_TEAMS_LABEL}
-            </button>
+            </Button>
           </div>
         ) : (
           <p className="matches-notice" data-matches-roll-gap={gap.kind}>
@@ -273,10 +272,11 @@ export function TeamsEditor({
                       <li key={player.membershipId} className="matches-person">
                         <span>{player.displayName}</span>
                         {others.map((other) => (
-                          <button
+                          <Button
                             key={other.teamId}
                             type="button"
-                            className="matches-button"
+                            variant="secondary"
+                            size="sm"
                             aria-disabled={action.busy ? true : undefined}
                             onClick={() =>
                               void write('edit', (signal) =>
@@ -285,7 +285,7 @@ export function TeamsEditor({
                             }
                           >
                             {moveToLabel(player.displayName, other.teamName)}
-                          </button>
+                          </Button>
                         ))}
                       </li>
                     ))}
@@ -307,10 +307,11 @@ export function TeamsEditor({
                   <li key={membershipId} className="matches-person">
                     <span>{name}</span>
                     {view.teams.map((team) => (
-                      <button
+                      <Button
                         key={team.teamId}
                         type="button"
-                        className="matches-button"
+                        variant="secondary"
+                        size="sm"
                         aria-disabled={action.busy ? true : undefined}
                         onClick={() =>
                           void write('edit', (signal) =>
@@ -319,7 +320,7 @@ export function TeamsEditor({
                         }
                       >
                         {moveToLabel(name, team.teamName)}
-                      </button>
+                      </Button>
                     ))}
                   </li>
                 );
@@ -340,17 +341,16 @@ export function TeamsEditor({
 
         <p className="matches-hint">{LOCK_HINT}</p>
         <div className="matches-actions">
-          <button
+          <Button
             type="button"
-            className="matches-button"
+            variant="secondary"
             aria-disabled={action.busy ? true : undefined}
             onClick={() => void write('roll', (signal) => api.rerollTeams(matchId, signal))}
           >
             {action.busy && lastWrite === 'roll' ? ROLLING_LABEL : REROLL_TEAMS_LABEL}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="matches-button matches-button--primary"
             aria-disabled={action.busy ? true : undefined}
             onClick={() => void write('lock', (signal) => api.lockTeams(matchId, signal))}
           >
@@ -359,16 +359,16 @@ export function TeamsEditor({
               : locked
                 ? RELOCK_TEAMS_LABEL
                 : LOCK_TEAMS_LABEL}
-          </button>
+          </Button>
           {locked ? (
-            <button
+            <Button
               type="button"
-              className="matches-button"
+              variant="secondary"
               aria-disabled={action.busy ? true : undefined}
               onClick={() => void write('unlock', (signal) => api.unlockTeams(matchId, signal))}
             >
               {action.busy && lastWrite === 'unlock' ? UNLOCKING_LABEL : UNLOCK_TEAMS_LABEL}
-            </button>
+            </Button>
           ) : null}
         </div>
         {locked ? <p className="matches-hint">{UNLOCK_HINT}</p> : null}

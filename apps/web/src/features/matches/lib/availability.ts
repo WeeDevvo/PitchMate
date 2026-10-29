@@ -32,3 +32,24 @@ export function mostAvailableDays(counts: readonly DayCount[]): ReadonlySet<numb
   const highest = counts.reduce((best, { count }) => Math.max(best, count), 0);
   return new Set(highest === 0 ? [] : counts.filter(({ count }) => count === highest).map(({ dayMs }) => dayMs));
 }
+
+/** What a person said about one candidate day; `unknown` before they answer at all. */
+export type DayAnswer = 'yes' | 'no' | 'unknown';
+
+/**
+ * Each candidate day's answer, in the order given: a marked day is a yes; once
+ * someone has answered, every day they left unmarked is a no; before then, it is
+ * unknown.
+ */
+export function answersFor(
+  daysMs: readonly number[],
+  marked: ReadonlySet<number>,
+  answered: boolean,
+): readonly DayAnswer[] {
+  return daysMs.map((dayMs) => (marked.has(dayMs) ? 'yes' : answered ? 'no' : 'unknown'));
+}
+
+/** True when the marked days are exactly the stored ones. */
+export function sameDays(marked: ReadonlySet<number>, stored: readonly number[]): boolean {
+  return marked.size === new Set(stored).size && stored.every((dayMs) => marked.has(dayMs));
+}

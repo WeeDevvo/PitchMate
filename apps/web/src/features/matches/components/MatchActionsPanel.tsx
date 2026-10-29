@@ -9,6 +9,8 @@
  */
 import { useId, useState, type ReactElement } from 'react';
 
+import { Button } from '../../../ui';
+
 import type { CallResult } from '../api/matchesApi';
 import { canCancel, canStart, workingTeamsAreLocked } from '../lib/lifecycle';
 import {
@@ -106,44 +108,43 @@ export function MatchActionsPanel({
       {startable ? <p className="matches-hint">{START_HINT}</p> : null}
       <div className="matches-actions">
         {startable ? (
-          <button
+          <Button
             type="button"
-            className="matches-button matches-button--primary"
             aria-disabled={starting.busy ? true : undefined}
             onClick={() => void handleStart()}
           >
             {starting.busy ? STARTING_LABEL : START_MATCH_LABEL}
-          </button>
+          </Button>
         ) : null}
         {cancellable && !confirmingCancel ? (
-          <button
+          <Button
             type="button"
-            className="matches-button"
+            variant="secondary"
             onClick={() => setConfirmingCancel(true)}
           >
             {CANCEL_MATCH_LABEL}
-          </button>
+          </Button>
         ) : null}
       </div>
       {cancellable && confirmingCancel ? (
         <div className="matches-confirm" role="group" aria-label={CANCEL_MATCH_LABEL}>
           <p>{CANCEL_CONFIRM_STATEMENT}</p>
           <div className="matches-actions">
-            <button
+            <Button
               type="button"
-              className="matches-button matches-button--primary"
+              variant="destructive"
               aria-disabled={cancelling.busy ? true : undefined}
               onClick={() => void handleCancel()}
             >
               {cancelling.busy ? CANCELLING_LABEL : CONFIRM_CANCEL_LABEL}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="matches-button"
+              variant="secondary"
               onClick={() => setConfirmingCancel(false)}
             >
               {KEEP_MATCH_LABEL}
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}

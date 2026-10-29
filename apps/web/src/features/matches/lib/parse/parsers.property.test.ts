@@ -272,7 +272,7 @@ describe('parseCreatedDraft and parseSquadStandings', () => {
     expect(parseCreatedDraft({ matchId: 'nope' }).ok).toBe(false);
   });
 
-  it('reads each squad standing, with role and state optional', () => {
+  it('reads each squad standing and its name, with role and state optional', () => {
     expect(
       parseSquadStandings([
         { squadId: SQUAD_ID, name: 'Tuesday 5s', role: 'Admin', state: 'Active' },
@@ -281,11 +281,11 @@ describe('parseCreatedDraft and parseSquadStandings', () => {
     ).toEqual({
       ok: true,
       value: [
-        { squadId: SQUAD_ID, role: 'Admin', state: 'Active' },
-        { squadId: MATCH_ID, role: null, state: null },
+        { squadId: SQUAD_ID, squadName: 'Tuesday 5s', role: 'Admin', state: 'Active' },
+        { squadId: MATCH_ID, squadName: 'Other', role: null, state: null },
       ],
     });
-    expect(parseSquadStandings([{ squadId: SQUAD_ID, role: 'Captain', state: 'Active' }]).ok).toBe(
+    expect(parseSquadStandings([{ squadId: SQUAD_ID, name: 'Tuesday 5s', role: 'Captain', state: 'Active' }]).ok).toBe(
       false,
     );
   });

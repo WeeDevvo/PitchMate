@@ -6,6 +6,8 @@
  */
 import { useId, useState, type ReactElement } from 'react';
 
+import { Button } from '../../../ui';
+
 import type { CallResult } from '../api/matchesApi';
 import { canComplete } from '../lib/lifecycle';
 import {
@@ -64,28 +66,26 @@ export function CompletePanel({
       <p className="matches-hint">{ready ? COMPLETE_HINT : COMPLETE_NEEDS_RESULT_STATEMENT}</p>
       {ready && !confirming ? (
         <div className="matches-actions">
-          <button
+          <Button
             type="button"
-            className="matches-button matches-button--primary"
             onClick={() => setConfirming(true)}
           >
             {COMPLETE_MATCH_LABEL}
-          </button>
+          </Button>
         </div>
       ) : null}
       {ready && confirming ? (
         <div className="matches-actions" role="group" aria-label={COMPLETE_MATCH_LABEL}>
-          <button
+          <Button
             type="button"
-            className="matches-button matches-button--primary"
             aria-disabled={action.busy ? true : undefined}
             onClick={() => void handleComplete()}
           >
             {action.busy ? COMPLETING_LABEL : CONFIRM_COMPLETE_LABEL}
-          </button>
-          <button type="button" className="matches-button" onClick={() => setConfirming(false)}>
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setConfirming(false)}>
             {NOT_YET_LABEL}
-          </button>
+          </Button>
         </div>
       ) : null}
       {failure === null ? null : (

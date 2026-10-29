@@ -57,6 +57,7 @@ export type DraftProblem =
   | 'location-required'
   | 'location-too-long'
   | 'day-required'
+  | 'time-required'
   | 'too-many-days'
   | 'day-invalid'
   | 'day-in-past'

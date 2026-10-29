@@ -169,6 +169,13 @@
   cursor: progress;
 }
 
+/* Kept focusable while its action is in flight (`aria-disabled`, as the match
+   panels use so focus stays put): it keeps its colours and says it is busy. */
+.pm-btn[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.7;
+}
+
 .pm-btn.is-loading {
   color: transparent;
   cursor: progress;

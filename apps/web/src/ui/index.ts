@@ -5,6 +5,16 @@
  * a feature maps its data (wire enums, ratings) onto their props.
  */
 export { ActionsMenu, type ActionsMenuProps } from './ActionsMenu';
+export {
+  AvailabilityGrid,
+  AvailabilityKey,
+  type AvailabilityAnswer,
+  type AvailabilityGridCell,
+  type AvailabilityGridDay,
+  type AvailabilityGridProps,
+  type AvailabilityGridRow,
+  type AvailabilityGridTotal,
+} from './AvailabilityGrid';
 export { Avatar, AvatarStack, type AvatarProps } from './Avatar';
 export { Badge, FormerBadge, GuestBadge, ProvisionalBadge, RoleBadge, type BadgeProps, type BadgeTone } from './Badge';
 export { BibFlag } from './BibFlag';
@@ -47,6 +57,7 @@ export {
   type TeamColumnProps,
 } from './Match';
 export { MatchProgress, MatchStateChip, type MatchStateName } from './MatchState';
+export { OptionCard, type OptionCardProps } from './OptionCard';
 export { PlayerRow, type PlayerRowProps } from './PlayerRow';
 export {
   SquadCard,
@@ -73,6 +84,7 @@ export {
   type NavItemRenderProps,
   type SidebarProps,
 } from './Sidebar';
+export { Steps, type StepsProps } from './Steps';
 export { TabNav, type TabNavItem, type TabNavLinkProps, type TabNavProps } from './TabNav';
 export {
   SegmentedControl,

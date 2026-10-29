@@ -99,7 +99,7 @@ describe('reads', () => {
 
     expect(await api.getSquadStanding(SQUAD_ID)).toEqual({
       kind: 'success',
-      value: { squadId: SQUAD_ID.toUpperCase(), role: 'Owner', state: 'Active' },
+      value: { squadId: SQUAD_ID.toUpperCase(), squadName: 'Tuesday 5s', role: 'Owner', state: 'Active' },
     });
   });
 

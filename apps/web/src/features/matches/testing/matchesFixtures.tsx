@@ -240,8 +240,11 @@ export const PLAYERS: readonly SquadPlayer[] = [
   { membershipId: '0198e2a7-6666-7a5e-9c2f-6b1d4a5e7f09', displayName: 'Member Mo', isGuest: false },
 ];
 
-export const ORGANISER: SquadStanding = { squadId: SQUAD_ID, role: 'Admin', state: 'Active' };
-export const MEMBER: SquadStanding = { squadId: SQUAD_ID, role: 'Member', state: 'Active' };
+/** The fixture squad's name, as `ListMySquads` carries it. */
+export const SQUAD_NAME = 'Thursday Ballers';
+
+export const ORGANISER: SquadStanding = { squadId: SQUAD_ID, squadName: SQUAD_NAME, role: 'Admin', state: 'Active' };
+export const MEMBER: SquadStanding = { squadId: SQUAD_ID, squadName: SQUAD_NAME, role: 'Member', state: 'Active' };
 
 /* A fake Matches_Api -------------------------------------------------------- */
 
