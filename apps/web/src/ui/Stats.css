@@ -193,3 +193,66 @@
   fill: var(--pm-provisional);
   stroke-dasharray: none;
 }
+
+.pm-chart__area {
+  fill: color-mix(in srgb, var(--pm-chart-line) 14%, transparent);
+  stroke: none;
+}
+
+.pm-chart__band {
+  fill: var(--pm-result-draw-subtle);
+}
+
+/* The chart with its axis labels: ratings up the left, labels along the bottom. */
+.pm-chart-frame {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 6px;
+}
+
+.pm-chart-frame__y {
+  position: relative;
+  min-width: 2.75rem;
+}
+
+.pm-chart-frame__plot {
+  position: relative;
+  min-width: 0;
+}
+
+.pm-chart-frame__x {
+  grid-column: 2;
+  position: relative;
+  height: 20px;
+}
+
+.pm-chart-frame__tick {
+  position: absolute;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--pm-text-muted);
+  white-space: nowrap;
+}
+
+.pm-chart-frame__y .pm-chart-frame__tick {
+  right: 0;
+  transform: translateY(-50%);
+}
+
+.pm-chart-frame__x .pm-chart-frame__tick {
+  top: 4px;
+  transform: translateX(-50%);
+}
+
+.pm-chart-frame__band-label {
+  position: absolute;
+  top: 6px;
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--pm-provisional-text);
+  white-space: nowrap;
+}

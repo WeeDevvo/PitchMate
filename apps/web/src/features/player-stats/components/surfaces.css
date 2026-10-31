@@ -45,11 +45,11 @@
  * The element `useConditionFocus` focuses when a change of rendered condition
  * would otherwise have dropped focus to the document body.
  *
- * It carries `tabIndex="-1"`, so it is never a tab stop and a programmatic focus
- * move does not match `:focus-visible` — which is why only the keyboard-visible
- * state is styled below. Painting a ring on the repair itself would put a box
- * around the whole screen every time a response arrived, which says nothing a
- * keyboard user needs and distracts everyone else.
+ * It carries `tabIndex="-1"`, so it is never a tab stop. It draws no ring: a
+ * browser treats a programmatic focus move after a key press as keyboard
+ * focus, so a `:focus-visible` ring here put a box around the whole screen
+ * every time a response arrived, which says nothing a keyboard user needs and
+ * distracts everyone else. The next Tab lands on a control, which has its own.
  */
 .player-stats-main {
   display: flex;
@@ -58,9 +58,22 @@
   width: 100%;
 }
 
-.player-stats-main:focus-visible {
-  outline: var(--player-stats-focus-width) solid var(--pm-focus-ring);
-  outline-offset: var(--player-stats-focus-offset);
+.player-stats-main:focus {
+  outline: none;
+}
+
+/* Sections read in pairs where there is room: streaks beside bibs, and the four
+   pairwise standings two by two. Document order is unchanged. */
+.player-stats-pair {
+  display: grid;
+  /* Fluid, with no breakpoint: never narrower than half the column less the
+     gap, so never more than two across, and one across on a phone. */
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, max(22rem, calc(50% - var(--player-stats-gap)))), 1fr)
+  );
+  gap: var(--player-stats-gap);
+  align-items: start;
 }
 
 /* ------------------------------------------------------------------ *

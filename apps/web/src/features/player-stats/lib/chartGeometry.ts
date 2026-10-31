@@ -456,6 +456,140 @@ export function provisionalLines(
 }
 
 /**
+ * The horizontal spans of a plot's provisional readings, so the chart can shade
+ * a band behind them.
+ *
+ * Each maximal run of consecutive provisional points gives one span, from its
+ * first point to the settled reading after it, which is where the dashed line
+ * ends; a run that closes the series ends at its own last point. A span with no
+ * width — a lone provisional reading at the end — gives none.
+ *
+ * Pure and total: the empty plot and a plot with no provisional point both give
+ * none.
+ *
+ * @param points the plotted points, in series order
+ * @returns the spans, left to right
+ */
+export function provisionalBands(
+  points: readonly PlottedPoint[],
+): readonly { readonly x1: number; readonly x2: number }[] {
+  const bands: { x1: number; x2: number }[] = [];
+  let index = 0;
+
+  while (index < points.length) {
+    const first = points[index];
+    if (first?.point.provisional !== true) {
+      index += 1;
+      continue;
+    }
+
+    while (points[index + 1]?.point.provisional === true) {
+      index += 1;
+    }
+
+    const end = points[index + 1] ?? points[index];
+    if (end !== undefined && end.x > first.x) {
+      bands.push({ x1: first.x, x2: end.x });
+    }
+
+    index += 1;
+  }
+
+  return bands;
+}
+
+/** The steps a rating axis counts in within each power of ten: 1, 2.5 and 5 of it. */
+const RATING_TICK_MULTIPLES = [1, 2.5, 5] as const;
+
+/** The smallest step a rating axis counts in. */
+const MIN_RATING_TICK_STEP = 10;
+
+/** The most labels a rating axis shows. */
+const MAX_RATING_TICKS = 4;
+
+/**
+ * The smallest round step (10, 25, 50, 100, 250, …) at least a third of the
+ * range, so the axis shows two to four labels however wide the range is.
+ */
+function ratingTickStep(range: number): number {
+  let power = MIN_RATING_TICK_STEP;
+  for (;;) {
+    for (const multiple of RATING_TICK_MULTIPLES) {
+      const step = multiple * power;
+      if (step >= range / 3) return step;
+    }
+    power *= 10;
+  }
+}
+
+/**
+ * Round ratings for a chart's side, each at its height in the drawing box: the
+ * multiples of one step that fall inside the domain, top to bottom, with the
+ * step chosen so two to four labels show.
+ *
+ * Round values rather than the domain's own ends, which are readings: a
+ * provisional reading at the bottom would otherwise be stated exactly beside a
+ * line that shows it only as an estimate. A domain with no multiple of the
+ * smallest step inside it gives none.
+ *
+ * @param floor the rating at `bottom`
+ * @param ceiling the rating at `top`
+ * @param top the drawing box's top `y`
+ * @param bottom the drawing box's bottom `y`
+ * @returns the ratings and their `y`, highest first
+ */
+export function ratingTicks(
+  floor: number,
+  ceiling: number,
+  top: number,
+  bottom: number,
+): readonly { readonly rating: number; readonly y: number }[] {
+  const range = ceiling - floor;
+  if (!Number.isFinite(range) || range < 0) return [];
+
+  const yOf = (rating: number): number =>
+    range > 0 ? bottom - ((rating - floor) / range) * (bottom - top) : (top + bottom) / 2;
+
+  const step = ratingTickStep(range);
+  const ticks: { rating: number; y: number }[] = [];
+  for (
+    let rating = Math.floor(ceiling / step) * step;
+    rating >= floor && ticks.length < MAX_RATING_TICKS;
+    rating -= step
+  ) {
+    ticks.push({ rating, y: yOf(rating) });
+  }
+
+  return ticks;
+}
+
+/**
+ * The area under a plot's line, down to `baseline`, as an SVG `polygon`
+ * attribute value, or `null` where there is no line (fewer than two points).
+ *
+ * @param points the plotted points, in series order
+ * @param baseline the `y` the area closes along: the bottom of the drawing box
+ * @returns the polygon's points
+ */
+export function areaUnderLine(
+  points: readonly PlottedPoint[],
+  baseline: number,
+): string | null {
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (points.length < MINIMUM_LINE_POINTS || first === undefined || last === undefined) {
+    return null;
+  }
+
+  const bottom = printCoordinate(baseline);
+  return [
+    `${printCoordinate(first.x)}${COORDINATE_SEPARATOR}${bottom}`,
+    printPolyline(points),
+    `${printCoordinate(last.x)}${COORDINATE_SEPARATOR}${bottom}`,
+  ].join(POINT_SEPARATOR);
+}
+
+/**
  * Plotted points as an SVG `polyline` attribute value.
  *
  * @param points the points, in drawing order

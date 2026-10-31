@@ -109,6 +109,7 @@ export {
   StatTile,
   type ChartPoint,
   type LeaderboardRowProps,
+  type ChartTick,
   type RatingChartProps,
   type StatTileProps,
 } from './Stats';
