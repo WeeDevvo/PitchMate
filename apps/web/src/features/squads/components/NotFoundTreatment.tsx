@@ -40,6 +40,7 @@
  */
 import { type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
+import { EmptyState, Icon, buttonClasses } from '../../../ui';
 
 import { HOME_ROUTE } from '../../app-shell';
 import {
@@ -60,16 +61,27 @@ export const NOT_FOUND_TREATMENT_SELECTOR = '[data-squads-not-found="true"]';
  */
 export function NotFoundTreatment(): ReactElement {
   return (
-    <div className="squads-not-found" data-squads-not-found="true">
-      {/* 6.4, 19.1: the route's single level-one heading, carrying no squad name. */}
-      <h1>{NOT_FOUND_TREATMENT_HEADING}</h1>
+    // The design system's not-found state: one look whether the squad is
+    // missing or private.
+    <EmptyState
+      className="squads-not-found"
+      data-squads-not-found="true"
+      icon="search"
+      // 6.4, 19.1: the route's single level-one heading, carrying no squad name.
+      headingLevel={1}
+      title={NOT_FOUND_TREATMENT_HEADING}
+      bodyProps={{ className: 'squads-not-found__body' }}
+      action={
+        // 6.4: the way onward, client-side, to where the Squads_Home is registered.
+        <Link className={`squads-not-found__home ${buttonClasses({ variant: 'secondary' })}`} to={HOME_ROUTE}>
+          <Icon name="home" size={18} />
+          {NOT_FOUND_TREATMENT_HOME_LABEL}
+        </Link>
+      }
+    >
       {/* 6.5, 17.7: both possibilities in one sentence, so neither is disclosed. */}
-      <p className="squads-not-found__body">{NOT_FOUND_TREATMENT_BODY}</p>
-      {/* 6.4: the way onward, client-side, to where the Squads_Home is registered. */}
-      <Link className="squads-not-found__home" to={HOME_ROUTE}>
-        {NOT_FOUND_TREATMENT_HOME_LABEL}
-      </Link>
-    </div>
+      {NOT_FOUND_TREATMENT_BODY}
+    </EmptyState>
   );
 }
 

@@ -16,6 +16,7 @@ import {
   Button,
   Checkbox,
   Chip,
+  EmptyState,
   ErrorState,
   FormGuide,
   GoogleMark,
@@ -62,6 +63,30 @@ describe('Button', () => {
     render(<Button onClick={onClick}>Complete match</Button>);
     await userEvent.click(screen.getByRole('button', { name: 'Complete match' }));
     expect(onClick).toHaveBeenCalledOnce();
+  });
+});
+
+describe('EmptyState', () => {
+  it('can be the page heading, carry attributes, and announce its message', () => {
+    render(
+      <EmptyState
+        headingLevel={1}
+        title="Squad not found"
+        data-testid="state"
+        bodyProps={{ role: 'status' }}
+      >
+        It may have been removed.
+      </EmptyState>,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: 'Squad not found' })).toBeInTheDocument();
+    expect(screen.getByTestId('state')).toHaveClass('pm-empty');
+    expect(screen.getByRole('status')).toHaveTextContent('It may have been removed.');
+  });
+
+  it('has no heading when it sits under one of its own', () => {
+    render(<EmptyState tone="error">That did not load.</EmptyState>);
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getByText('That did not load.')).toBeInTheDocument();
   });
 });
 

@@ -32,6 +32,7 @@
  */
 import { type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
+import { EmptyState } from '../../ui';
 import { HOME_ROUTE, destinationLabel, type DestinationId } from './lib/destinations';
 import { HOME_CONTROL_LABEL, UNAVAILABLE_BODY } from './lib/messages';
 
@@ -54,17 +55,26 @@ export function DestinationUnavailable({
   destinationId,
 }: DestinationUnavailableProps): ReactElement {
   return (
-    <div className="shell-boundary" data-destination={destinationId}>
-      {/* 3.8, 13.2: the route's single level-one heading, carrying the
-          Destination's registered visible label. */}
-      <h1>{destinationLabel(destinationId)}</h1>
-      {/* 3.8: an explanation, not an error indication. */}
-      <p className="shell-boundary__body">{UNAVAILABLE_BODY}</p>
-      {/* 3.8, 3.4: a way onward, client-side. */}
-      <Link className="shell-boundary__home" to={HOME_ROUTE}>
-        {HOME_CONTROL_LABEL}
-      </Link>
-    </div>
+    // 3.8: an explanation, not an error indication, in the design system's
+    // empty state.
+    <EmptyState
+      className="shell-boundary"
+      data-destination={destinationId}
+      icon="clock"
+      // 3.8, 13.2: the route's single level-one heading, carrying the
+      // Destination's registered visible label.
+      headingLevel={1}
+      title={destinationLabel(destinationId)}
+      bodyProps={{ className: 'shell-boundary__body' }}
+      action={
+        // 3.8, 3.4: a way onward, client-side.
+        <Link className="shell-boundary__home" to={HOME_ROUTE}>
+          {HOME_CONTROL_LABEL}
+        </Link>
+      }
+    >
+      {UNAVAILABLE_BODY}
+    </EmptyState>
   );
 }
 

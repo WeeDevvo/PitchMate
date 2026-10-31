@@ -125,32 +125,24 @@
 
 /* ------------------------------------------------------------------ *
  * The failure notice (Requirements 4.1, 4.4, 4.5)
+ *
+ * Laid out as the design system's error state (`EmptyState` in `src/ui`);
+ * this adds the actions row and the retry control.
  * ------------------------------------------------------------------ */
-
-.player-stats-failure {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--player-stats-gap-tight);
-  max-width: var(--player-stats-measure);
-}
-
-.player-stats-failure__message {
-  margin: 0;
-  color: var(--pm-text-primary);
-  font-size: var(--player-stats-font-size-body);
-  line-height: var(--player-stats-line-height-body);
-}
 
 /* Wrapping rather than shrinking, so the retry and any control beside it stack
    on a narrow viewport instead of overflowing it (Requirement 15.7). */
 .player-stats-failure__actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--player-stats-touch-gap);
 }
 
 .player-stats-failure__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--player-stats-gap-tight);
   min-height: var(--player-stats-touch-target);
   padding: 0 var(--player-stats-gap-tight);
   border: var(--player-stats-border-width) solid var(--pm-border-control);
@@ -173,33 +165,8 @@
   cursor: default;
 }
 
-/* ------------------------------------------------------------------ *
- * The not-found treatment (Requirements 3.5, 3.6)
- * ------------------------------------------------------------------ */
-
-.player-stats-not-found {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--player-stats-gap-tight);
-  max-width: var(--player-stats-measure);
-}
-
-.player-stats-not-found__heading {
-  margin: 0;
-  color: var(--pm-text-primary);
-  font-size: var(--player-stats-font-size-screen-heading);
-  font-family: var(--pm-font-display);
-  font-weight: var(--player-stats-font-weight-heading);
-  line-height: var(--player-stats-line-height-heading);
-}
-
-.player-stats-not-found__statement {
-  margin: 0;
-  color: var(--pm-text-secondary);
-  font-size: var(--player-stats-font-size-body);
-  line-height: var(--player-stats-line-height-body);
-}
+/* The not-found treatment (Requirements 3.5, 3.6) is the design system's
+   not-found state (`EmptyState` in `src/ui`), and needs nothing here. */
 
 /* The way back to the squad, shaped as the same control the failure notice
    renders so the two boundary states offer one recognisable affordance. */

@@ -56,9 +56,7 @@
 }
 
 .matches-section,
-.matches-form,
-.matches-failure,
-.matches-not-found {
+.matches-form {
   display: flex;
   flex-direction: column;
   gap: var(--matches-gap-tight);
@@ -813,4 +811,8 @@
   padding: 0;
   font-weight: 600;
   color: var(--pm-text-primary);
+}
+
+.matches-actions--center {
+  justify-content: center;
 }

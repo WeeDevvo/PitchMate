@@ -739,28 +739,10 @@
  * none carries a semantic colour (12.8).
  * ------------------------------------------------------------------ */
 
+/* The boundary pages are the design system's empty state (`EmptyState` in
+   `src/ui`); this only sets them down the page, clear of the header. */
 .shell-boundary {
-  max-width: 32rem;
-  margin: var(--pm-space-12) auto;
-  padding: var(--pm-space-10) var(--pm-space-6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--pm-space-3);
-  text-align: center;
-  border: 1.5px dashed var(--pm-border-control);
-  border-radius: var(--pm-radius-lg);
-}
-
-.shell-boundary h1 {
-  margin: 0;
-  font: var(--pm-type-display-m);
-  text-transform: uppercase;
-}
-
-.shell-boundary__body {
-  margin: 0;
-  color: var(--pm-text-secondary);
+  margin-top: var(--pm-space-12);
 }
 
 /* The way home: the design system's secondary button. */

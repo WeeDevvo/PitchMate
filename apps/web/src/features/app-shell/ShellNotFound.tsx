@@ -21,6 +21,7 @@
  */
 import { type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
+import { EmptyState } from '../../ui';
 import { HOME_ROUTE } from './lib/destinations';
 import {
   HOME_CONTROL_LABEL,
@@ -37,15 +38,23 @@ import {
  */
 export function ShellNotFound(): ReactElement {
   return (
-    <div className="shell-boundary">
-      {/* 3.10, 13.2: the route's single level-one heading. */}
-      <h1>{SHELL_NOT_FOUND_HEADING}</h1>
-      <p className="shell-boundary__body">{SHELL_NOT_FOUND_BODY}</p>
-      {/* 3.10, 3.4: a way onward, client-side. */}
-      <Link className="shell-boundary__home" to={HOME_ROUTE}>
-        {HOME_CONTROL_LABEL}
-      </Link>
-    </div>
+    // The design system's not-found state, the same page every screen shows.
+    <EmptyState
+      className="shell-boundary"
+      icon="search"
+      // 3.10, 13.2: the route's single level-one heading.
+      headingLevel={1}
+      title={SHELL_NOT_FOUND_HEADING}
+      bodyProps={{ className: 'shell-boundary__body' }}
+      action={
+        // 3.10, 3.4: a way onward, client-side.
+        <Link className="shell-boundary__home" to={HOME_ROUTE}>
+          {HOME_CONTROL_LABEL}
+        </Link>
+      }
+    >
+      {SHELL_NOT_FOUND_BODY}
+    </EmptyState>
   );
 }
 
