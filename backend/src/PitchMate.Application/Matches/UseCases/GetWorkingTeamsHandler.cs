@@ -146,6 +146,6 @@ public sealed class GetWorkingTeamsHandler
         }
 
         MatchPrediction prediction = predicted.Value!;
-        return Result<SplitPrediction>.Ok(new SplitPrediction([.. prediction.WinProbabilities], prediction.DrawProbability));
+        return Result<SplitPrediction>.Ok(SplitPrediction.FromEngine(prediction.WinProbabilities, prediction.DrawProbability));
     }
 }

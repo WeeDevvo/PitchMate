@@ -131,7 +131,7 @@ export function DayPicker({ days, selected, onToggle, reserveTime, className }: 
 export interface FairnessMeterProps {
   teamA: string;
   teamB: string;
-  /** Probabilities from 0 to 1. */
+  /** Shares of the whole outcome, from 0 to 1, that together make 1. */
   winA: number;
   winB: number;
   draw: number;
@@ -141,7 +141,25 @@ export interface FairnessMeterProps {
   sizes?: readonly [number, number];
 }
 
-const percent = (probability: number) => Math.round(probability * 100);
+/**
+ * Whole percentages for shares of one outcome that add up to exactly 100: each is rounded down, then
+ * the points left over go to the largest remainders, so 47.6 / 4.8 / 47.6 shows as 48 / 5 / 47
+ * rather than 48 / 5 / 48. Shares that don't sum to 1 are taken in proportion.
+ */
+function wholePercents(shares: readonly number[]): number[] {
+  const total = shares.reduce((sum, share) => sum + Math.max(share, 0), 0);
+  if (total <= 0) return shares.map(() => 0);
+  const exact = shares.map((share) => (Math.max(share, 0) / total) * 100);
+  const floors = exact.map(Math.floor);
+  let left = 100 - floors.reduce((sum, value) => sum + value, 0);
+  const byRemainder = exact.map((value, index) => ({ index, rest: value - floors[index] })).sort((x, y) => y.rest - x.rest);
+  for (const { index } of byRemainder) {
+    if (left <= 0) break;
+    floors[index] += 1;
+    left -= 1;
+  }
+  return floors;
+}
 
 const VERDICTS: readonly { within: number; tone: string; icon: IconName; word: string }[] = [
   { within: 4, tone: 'sweet', icon: 'sparkle', word: 'Dead even' },
@@ -155,7 +173,7 @@ const VERDICTS: readonly { within: number; tone: string; icon: IconName; word: s
  * definition list, so they read as text; the bar is decorative.
  */
 export function FairnessMeter({ teamA, teamB, winA, winB, draw, drawLabel = 'Draw', sizes }: FairnessMeterProps) {
-  const [a, b, d] = [percent(winA), percent(winB), percent(draw)];
+  const [a, d, b] = wholePercents([winA, draw, winB]);
   const verdict = VERDICTS.find((candidate) => Math.abs(a - b) <= candidate.within) ?? VERDICTS[2];
   const uneven = sizes !== undefined && sizes[0] !== sizes[1];
 
