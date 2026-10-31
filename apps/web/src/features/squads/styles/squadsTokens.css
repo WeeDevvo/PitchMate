@@ -45,6 +45,8 @@
      readable measure rather than to the viewport. */
   --squads-card-min-width: 20rem;
   --squads-measure: 40rem;
+  /* The invite and claim pages' card. */
+  --squads-landing-card-width: 26.25rem;
 
   /* Typography. Sizes are relative, so a browser text-size preference scales
      them; weights are the non-colour cue that pairs with a semantic hue. */

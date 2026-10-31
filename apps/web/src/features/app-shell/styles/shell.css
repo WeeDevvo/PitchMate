@@ -191,6 +191,26 @@
 }
 
 /* ------------------------------------------------------------------ *
+ * Settings destination: the page's heading and its cards
+ * ------------------------------------------------------------------ */
+
+.shell-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-5);
+  max-width: 42.5rem;
+}
+
+.shell-settings > h1 {
+  margin: 0;
+  font-family: var(--pm-font-display);
+  font-size: clamp(32px, 6vw, 44px);
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ *
  * Appearance_Preference_Control (12.4, 12.8, 13.13)
  *
  * A native fieldset and three radios. Each option is a label wide enough to be a
@@ -200,7 +220,7 @@
 .shell-appearance {
   max-width: 100%;
   margin: 0;
-  padding: var(--pm-space-4) var(--pm-space-5) var(--pm-space-5);
+  padding: var(--pm-space-5);
   border: 1px solid var(--pm-border-subtle);
   border-radius: var(--pm-radius-lg);
   background: var(--pm-surface);
@@ -208,9 +228,18 @@
 }
 
 .shell-appearance__legend {
-  padding: 0 var(--pm-space-1);
-  font: var(--pm-type-title);
-  text-transform: uppercase;
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-family: var(--pm-font-display);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* The legend is floated into the card, so the options clear it. */
+.shell-appearance__legend + * {
+  clear: both;
 }
 
 .shell-appearance__option {
@@ -219,10 +248,10 @@
   /* 13.13: at least 8px between the edges of two adjacent targets. */
   gap: var(--pm-space-3);
   margin-block-start: var(--shell-touch-gap);
-  min-height: var(--shell-touch-target);
+  min-height: 52px;
   padding: 0 var(--pm-space-4);
   border: 1.5px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-pill);
+  border-radius: var(--pm-radius-md);
   font-weight: 600;
   cursor: pointer;
 }
