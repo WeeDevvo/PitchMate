@@ -110,8 +110,8 @@ export function NotificationIndicator(
       {...triggerProps}
     >
       <Icon name="bell" size={22} />
-      {/* Visible from 1200px, and the opening words of the accessible name
-          (WCAG 2.5.3). Narrower, the bell shows alone. */}
+      {/* Visually hidden: the design system's top bar shows the bell alone.
+          These are still the opening words of the accessible name. */}
       <span className="shell-notification-indicator__label">
         {NOTIFICATIONS_SUBJECT}
       </span>

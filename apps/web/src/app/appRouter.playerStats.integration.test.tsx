@@ -155,7 +155,7 @@ function levelOneHeadings(): string[] {
 
 /** Assert the Shell_Frame's landmarks are rendered, and hand back its banner. */
 function expectShellFrame(): HTMLElement {
-  expect(screen.getByRole('navigation')).toBeInTheDocument();
+  expect(document.querySelector('.shell-frame')).not.toBeNull();
   expect(screen.getByRole('main')).toBeInTheDocument();
   return screen.getByRole('banner');
 }

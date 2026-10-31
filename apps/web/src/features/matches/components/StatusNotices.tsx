@@ -4,6 +4,8 @@
  * leaves keyboard focus alone.
  */
 import { type ReactElement, type ReactNode } from 'react';
+
+import { Button, EmptyState, buttonClasses } from '../../../ui';
 import { Link } from 'react-router-dom';
 
 import { squadPath } from '../../squads';
@@ -30,20 +32,29 @@ export interface FailureNoticeProps {
   readonly children?: ReactNode;
 }
 
-/** The one fixed failure statement, carrying nothing of the response. */
+/**
+ * The one fixed failure statement, carrying nothing of the response: the design
+ * system's error state, with no heading of its own as it sits under the
+ * screen's.
+ */
 export function FailureNotice({ onRetry, children }: FailureNoticeProps): ReactElement {
   return (
-    <div className="matches-failure">
-      <p className="matches-notice" role="status" aria-live="polite">
-        {GENERIC_MATCHES_FAILURE}
-      </p>
-      <div className="matches-actions">
-        <button type="button" className="matches-button" onClick={onRetry}>
-          {RETRY_LABEL}
-        </button>
-        {children}
-      </div>
-    </div>
+    <EmptyState
+      className="matches-failure"
+      tone="error"
+      icon="cloudOff"
+      bodyProps={{ role: 'status', 'aria-live': 'polite' }}
+      action={
+        <div className="matches-actions matches-actions--center">
+          <Button type="button" variant="secondary" icon="sync" onClick={onRetry}>
+            {RETRY_LABEL}
+          </Button>
+          {children}
+        </div>
+      }
+    >
+      {GENERIC_MATCHES_FAILURE}
+    </EmptyState>
   );
 }
 
@@ -62,12 +73,19 @@ export function BackToSquadLink({ squadId }: { readonly squadId: string }): Reac
  */
 export function MatchNotFound({ squadId }: { readonly squadId: string }): ReactElement {
   return (
-    <div className="matches-not-found">
-      <h1 className="matches-heading">{MATCH_NOT_FOUND_HEADING}</h1>
-      <p className="matches-notice" role="status" aria-live="polite">
-        {MATCH_NOT_FOUND_STATEMENT}
-      </p>
-      <BackToSquadLink squadId={squadId} />
-    </div>
+    <EmptyState
+      className="matches-not-found"
+      icon="search"
+      headingLevel={1}
+      title={MATCH_NOT_FOUND_HEADING}
+      bodyProps={{ role: 'status', 'aria-live': 'polite' }}
+      action={
+        <Link className={buttonClasses({ variant: 'secondary' })} to={squadPath(squadId)}>
+          {BACK_TO_SQUAD_LABEL}
+        </Link>
+      }
+    >
+      {MATCH_NOT_FOUND_STATEMENT}
+    </EmptyState>
   );
 }

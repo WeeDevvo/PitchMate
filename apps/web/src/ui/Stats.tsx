@@ -57,14 +57,23 @@ export interface LeaderboardRowProps extends HTMLAttributes<HTMLLIElement> {
   value: ReactNode;
   /** A small line under the value, such as the unit. */
   unit?: ReactNode;
+  /** A line under the name, such as the player's record: "17W · 5D · 9L". */
+  sub?: ReactNode;
 }
 
 /** One place in a leaderboard `ol`: position, player, value. */
-export function LeaderboardRow({ rank, first, me, name, value, unit, className, ...rest }: LeaderboardRowProps) {
+export function LeaderboardRow({ rank, first, me, name, value, unit, sub, className, ...rest }: LeaderboardRowProps) {
   return (
     <li {...rest} className={cx('pm-lb', first && 'pm-lb--top1', me && 'pm-lb--me', className)}>
       <span className="pm-lb__rank pm-num">{rank}</span>
-      <span className="pm-lb__who">{name}</span>
+      {sub === undefined ? (
+        <span className="pm-lb__who">{name}</span>
+      ) : (
+        <span className="pm-lb__main">
+          <span className="pm-lb__who">{name}</span>
+          <span className="pm-lb__sub">{sub}</span>
+        </span>
+      )}
       <span className="pm-lb__value pm-num">
         {value}
         {unit !== undefined && <small>{unit}</small>}
@@ -100,7 +109,25 @@ export interface RatingChartProps extends SVGProps<SVGSVGElement> {
   /** Attributes for the line and for each point, such as test hooks. */
   lineProps?: SVGProps<SVGPolylineElement>;
   pointProps?: (index: number) => SVGProps<SVGCircleElement>;
+  /** The area under the line as SVG `points`, shaded faintly. */
+  area?: string | null;
+  /** Horizontal spans of provisional readings, in plot coordinates: an amber band behind them. */
+  provisionalBands?: readonly { x1: number; x2: number }[];
+  /** The words on the first band, such as "~ Provisional". */
+  provisionalLabel?: string;
+  /** Rating labels up the side, at plot heights. */
+  yTicks?: readonly ChartTick[];
+  /** Labels along the bottom, such as months, at plot positions. */
+  xTicks?: readonly ChartTick[];
 }
+
+/** An axis label at a position in plot coordinates (`y` for the side, `x` for the bottom). */
+export interface ChartTick {
+  at: number;
+  label: string;
+}
+
+const percentOf = (value: number, whole: number) => `${(value / whole) * 100}%`;
 
 /**
  * A rating line in the design system's chart style: frame lines, the line, and
@@ -119,10 +146,15 @@ export function RatingChart({
   pointRadius = 3.5,
   lineProps,
   pointProps,
+  area,
+  provisionalBands = [],
+  provisionalLabel,
+  yTicks = [],
+  xTicks = [],
   className,
   ...rest
 }: RatingChartProps) {
-  return (
+  const svg = (
     <svg
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
@@ -131,6 +163,17 @@ export function RatingChart({
       {...rest}
       className={cx('pm-chart', className)}
     >
+      {area ? <polygon className="pm-chart__area" points={area} /> : null}
+      {provisionalBands.map((band) => (
+        <rect
+          key={`${band.x1}:${band.x2}`}
+          className="pm-chart__band"
+          x={band.x1}
+          y={0}
+          width={Math.max(0, band.x2 - band.x1)}
+          height={height}
+        />
+      ))}
       {gridLines.map((line) => (
         <line key={line.y} className="pm-chart__grid" x1={line.x1} y1={line.y} x2={line.x2} y2={line.y} />
       ))}
@@ -153,9 +196,42 @@ export function RatingChart({
           )}
           cx={point.x}
           cy={point.y}
-          r={pointRadius}
+          r={index === marks.length - 1 ? pointRadius * 1.5 : pointRadius}
         />
       ))}
     </svg>
+  );
+
+  const firstBand = provisionalBands[0];
+  if (yTicks.length === 0 && xTicks.length === 0 && (firstBand === undefined || !provisionalLabel)) return svg;
+
+  // The labels are HTML laid over the drawing, so they keep their size however
+  // the plot is stretched. Decorative like the plot: the readings are stated in
+  // words beside the chart.
+  return (
+    <div className="pm-chart-frame" aria-hidden="true">
+      <div className="pm-chart-frame__y">
+        {yTicks.map((tick) => (
+          <span key={tick.at} className="pm-chart-frame__tick pm-num" style={{ top: percentOf(tick.at, height) }}>
+            {tick.label}
+          </span>
+        ))}
+      </div>
+      <div className="pm-chart-frame__plot">
+        {svg}
+        {firstBand !== undefined && provisionalLabel ? (
+          <span className="pm-chart-frame__band-label" style={{ left: percentOf(firstBand.x1, width) }}>
+            {provisionalLabel}
+          </span>
+        ) : null}
+      </div>
+      <div className="pm-chart-frame__x">
+        {xTicks.map((tick) => (
+          <span key={`${tick.at}:${tick.label}`} className="pm-chart-frame__tick" style={{ left: percentOf(tick.at, width) }}>
+            {tick.label}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }

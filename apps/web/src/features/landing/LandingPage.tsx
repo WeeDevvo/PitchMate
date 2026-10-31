@@ -9,17 +9,22 @@
  *   <ThemeProvider>            — applies/tracks the dark-first theme (task 7)
  *     <PageHead>               — discovery + social-sharing metadata (task 9)
  *     <NavigationErrorRegion>  — accessible live region for nav failures
- *     <header> NavigationHeader — brand + Sign Up / Log In entry points
+ *     <header> NavigationHeader — brand, section links, Log in / Start a squad
  *     <main>
  *       HeroSection            — the single <h1> value proposition + primary CTA
- *       BenefitSection × 3–8   — one per benefit, in content-model order
- *       ClosingCta             — a final primary CTA after the last benefit
+ *       BenefitSection × 3–8   — one card per benefit, in content-model order
+ *       HowItWorks             — numbered steps beside an example team sheet
+ *       StatsShowcase          — example leaderboard and stat tiles
+ *       ClosingCta             — a final primary CTA band after the last section
  *     <footer> SiteFooter      — brand + privacy / terms links
  *
- * The benefit sections are rendered straight from `landingContent.benefits`
- * (already constrained to 3–8 entries and validated for order/vocabulary in the
- * content model and its tests), guaranteeing they sit below the hero in a single
- * top-to-bottom order with none above it (Requirement 2.7).
+ * The layout follows the design system's "Landing page" screen
+ * (ScreenWebLanding): two-column bands on desktop that collapse to one column
+ * below 960px. The benefit cards are rendered straight from
+ * `landingContent.benefits` (already constrained to 3–8 entries and validated
+ * for order/vocabulary in the content model and its tests), guaranteeing they
+ * sit below the hero in content-model order with none above it
+ * (Requirement 2.7).
  *
  * Navigation is defensive: the sign up, log in, privacy, and terms surfaces are
  * owned by other features and may not yet be reachable. Every CTA and footer
@@ -37,6 +42,8 @@ import PageHead from './components/PageHead'
 import NavigationHeader from './components/NavigationHeader'
 import HeroSection from './components/HeroSection'
 import BenefitSection from './components/BenefitSection'
+import HowItWorks from './components/HowItWorks'
+import StatsShowcase from './components/StatsShowcase'
 import ClosingCta from './components/ClosingCta'
 import SiteFooter from './components/SiteFooter'
 import NavigationErrorRegion, {
@@ -66,7 +73,7 @@ export interface LandingPageProps {
 export function LandingPage({ content = landingContent }: LandingPageProps) {
   const [navError, setNavError] = useState<NavError | null>(null)
 
-  // A Sign Up / Log In CTA failed or timed out (Requirement 3.7): keep the
+  // A Start a squad / Log in CTA failed or timed out (Requirement 3.7): keep the
   // visitor here and prompt a retry on the same control.
   const handleCtaError: NavigationErrorHandler = (_href, label) => {
     setNavError({
@@ -86,21 +93,27 @@ export function LandingPage({ content = landingContent }: LandingPageProps) {
 
   return (
     <ThemeProvider>
-      <PageHead />
-      <NavigationErrorRegion
-        id="landing-nav-error"
-        message={navError?.message}
-        kind={navError?.kind}
-      />
-      <NavigationHeader content={content} onNavigationError={handleCtaError} />
-      <main className="landing-main">
-        <HeroSection content={content} onNavigationError={handleCtaError} />
-        {content.benefits.map((benefit) => (
-          <BenefitSection key={benefit.id} benefit={benefit} />
-        ))}
-        <ClosingCta content={content} onNavigationError={handleCtaError} />
-      </main>
-      <SiteFooter content={content} onNavigationError={handleFooterError} />
+      <div className="landing-page">
+        <PageHead />
+        <NavigationErrorRegion
+          id="landing-nav-error"
+          message={navError?.message}
+          kind={navError?.kind}
+        />
+        <NavigationHeader content={content} onNavigationError={handleCtaError} />
+        <main className="landing-main">
+          <HeroSection content={content} onNavigationError={handleCtaError} />
+          <div className="landing-benefits">
+            {content.benefits.map((benefit) => (
+              <BenefitSection key={benefit.id} benefit={benefit} />
+            ))}
+          </div>
+          <HowItWorks content={content} />
+          <StatsShowcase content={content} />
+          <ClosingCta content={content} onNavigationError={handleCtaError} />
+        </main>
+        <SiteFooter content={content} onNavigationError={handleFooterError} />
+      </div>
     </ThemeProvider>
   )
 }

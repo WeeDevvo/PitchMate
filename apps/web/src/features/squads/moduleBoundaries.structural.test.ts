@@ -423,11 +423,14 @@ const PERMITTED_LIB_AND_API_EXPORTS: readonly string[] = [
   'INVITE_LANDING_ROUTE',
   'PLAYER_STATS_ROUTE',
   'SQUAD_ROUTE',
+  'SQUAD_TAB_ROUTES',
+  'SquadTab',
   'SquadsApi',
   'createSquadsApi',
   'inviteLandingPath',
   'playerStatsPath',
   'squadPath',
+  'squadTabPath',
 ];
 
 /** The two internal directories whose surface Requirement 18.7 constrains. */
@@ -468,11 +471,12 @@ function declaredExportNames(file: string): string[] {
 }
 
 describe('nothing surplus is exported from lib/ or api/ (Requirement 18.7)', () => {
-  it('names exactly the six modules the design admits into the barrel', () => {
+  it('names exactly the seven modules the design admits into the barrel', () => {
     expect([...new Set(barrelReExports.map(({ specifier }) => specifier))].sort()).toEqual(
       [
         './api/squadsApi',
         './lib/routePaths',
+        './lib/squadTabs',
         './screens/InviteLandingScreen',
         './screens/SquadScreen',
         './screens/SquadsHome',
@@ -538,8 +542,10 @@ describe('nothing surplus is exported from lib/ or api/ (Requirement 18.7)', () 
         'InviteLandingScreen',
         'PLAYER_STATS_ROUTE',
         'SQUAD_ROUTE',
+        'SQUAD_TAB_ROUTES',
         'SquadScreen',
         'SquadScreenProps',
+        'SquadTab',
         'SquadsApi',
         'SquadsHome',
         'SquadsHomeProps',
@@ -550,6 +556,7 @@ describe('nothing surplus is exported from lib/ or api/ (Requirement 18.7)', () 
         'inviteLandingPath',
         'playerStatsPath',
         'squadPath',
+        'squadTabPath',
       ].sort(),
     );
   });

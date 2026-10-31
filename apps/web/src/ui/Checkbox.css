@@ -1,0 +1,76 @@
+.pm-check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: var(--pm-target-touch);
+  min-height: var(--pm-target-touch);
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+.pm-check.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pm-check__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.pm-check__box {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--pm-border-control);
+  color: var(--pm-on-accent);
+}
+
+.pm-check--lg .pm-check__box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.pm-check.is-checked .pm-check__box {
+  background: var(--pm-accent-fill);
+  border-color: var(--pm-accent-fill);
+}
+
+.pm-check:not(.is-disabled):hover .pm-check__box {
+  background-color: var(--pm-surface-hover);
+}
+
+.pm-check.is-checked:not(.is-disabled):hover .pm-check__box {
+  background-color: var(--pm-accent-fill);
+}
+
+.pm-check__input:focus-visible + .pm-check__box {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+}
+
+.pm-check__text {
+  display: flex;
+  flex-direction: column;
+}
+
+.pm-check__label {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.pm-check__desc {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--pm-text-secondary);
+}

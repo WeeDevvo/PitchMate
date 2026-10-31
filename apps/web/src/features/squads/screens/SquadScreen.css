@@ -7,10 +7,11 @@
  *
  * The screen renders inside the App_Shell's content region, so it declares no
  * frame and no gutter of its own beyond the gaps between its parts — the region
- * around it owns those. The five sections are stacked in the document order
- * Requirement 6.8 fixes, and nothing here reorders them: the order is a fact of
- * the markup rather than of a layout property, so it holds for a screen reader
- * and for a keyboard alike.
+ * around it owns those. It follows the design system's squad screen: the header
+ * (overline, name, the caller's role), the tab bar, and the page of the tab the
+ * address names. Nothing here reorders them: the order is a fact of the markup
+ * rather than of a layout property, so it holds for a screen reader and for a
+ * keyboard alike.
  */
 
 .squad-screen {
@@ -22,21 +23,53 @@
   max-width: 100%;
 }
 
+/* The squad header: the overline, the name in the design system's display
+   style, and the caller's role beneath it. */
+.squad-screen__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-hairline);
+  min-width: 0;
+}
+
+.squad-screen__overline {
+  margin: 0;
+  font: var(--pm-type-overline);
+  letter-spacing: var(--pm-type-overline-tracking);
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
+}
+
 .squad-screen__heading {
   margin: 0;
   color: var(--pm-text-primary);
-  font-size: var(--squads-font-size-screen-heading);
-  font-family: var(--pm-font-display);
-  font-weight: var(--squads-font-weight-heading);
-  line-height: var(--squads-line-height-heading);
+  font: var(--pm-type-display-l);
+  font-size: clamp(2.25rem, 6vw, 3rem);
+  text-transform: uppercase;
   /* A squad name is a person's own words, so it may be one long token. */
   overflow-wrap: break-word;
+}
+
+.squad-screen__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap-tight);
+  margin-block-start: var(--squads-gap-tight);
+  min-width: 0;
+}
+
+/* The page under the tab bar. */
+.squad-screen__tab-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap);
+  min-width: 0;
 }
 
 .squad-screen__section {
   display: flex;
   flex-direction: column;
-  gap: var(--squads-gap-tight);
+  gap: var(--squads-gap);
   min-width: 0;
 }
 
@@ -67,62 +100,4 @@
 .squad-screen__caller-role-value {
   color: var(--pm-text-primary);
   font-weight: var(--squads-font-weight-label);
-}
-
-/* ------------------------------------------------------------------ *
- * The section sidebar and the content beside it
- *
- * One fluid layout with no breakpoint (Requirement 19.10): the sidebar and the
- * content are flex items that sit side by side while the row has room for
- * both, and wrap so the sidebar sits above the content when it does not. The
- * content asks for 36rem before it will sit beside the sidebar, so at tablet
- * width the sidebar goes on top rather than squeezing the player rows until
- * their actions stack. The sidebar's links do the same inside it: one per line
- * in the narrow column, several abreast once the sidebar spans the screen. The document order
- * (sidebar, then the five sections) is the same either way.
- * ------------------------------------------------------------------ */
-
-.squad-screen__layout {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--squads-gap);
-  min-width: 0;
-}
-
-.squad-screen__nav {
-  flex: 1 1 14rem;
-  width: auto;
-  max-width: 100%;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: var(--squads-gap-hairline);
-  padding: var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--pm-border-subtle);
-  border-radius: var(--pm-radius-lg);
-  background: var(--pm-surface);
-}
-
-.squad-screen__nav-link {
-  flex: 1 1 9rem;
-  min-width: 0;
-}
-
-.squad-screen__nav-link:focus-visible {
-  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
-  outline-offset: var(--squads-focus-offset);
-}
-
-.squad-screen__content {
-  flex: 999 1 36rem;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--squads-gap);
-}
-
-/* A section followed from the sidebar lands clear of the sticky top bar. */
-.squad-screen__anchor {
-  min-width: 0;
-  scroll-margin-top: calc(var(--pm-topbar-h) + var(--squads-gap));
 }

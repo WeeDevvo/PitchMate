@@ -21,6 +21,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
 import { axe } from 'jest-axe'
+import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider } from './components/ThemeProvider'
 import { SignUpScreen } from './SignUpScreen'
 import type { AuthAckResult, AuthSessionResult } from './api/authApi'
@@ -61,13 +62,15 @@ const authApi = {
 
 function renderScreen() {
   return render(
-    <ThemeProvider>
-      <SignUpScreen
-        authApi={authApi}
-        requestGoogleAssertion={vi.fn(async () => null)}
-        onGoogleSession={vi.fn()}
-      />
-    </ThemeProvider>,
+    <MemoryRouter>
+      <ThemeProvider>
+        <SignUpScreen
+          authApi={authApi}
+          requestGoogleAssertion={vi.fn(async () => null)}
+          onGoogleSession={vi.fn()}
+        />
+      </ThemeProvider>
+    </MemoryRouter>,
   )
 }
 

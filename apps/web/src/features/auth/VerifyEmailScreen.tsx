@@ -291,7 +291,10 @@ export function VerifyEmailScreen({
   const showRequestNew = !succeeded
 
   return (
-    <AuthLayout heading={VERIFY_EMAIL_HEADING}>
+    <AuthLayout
+      heading={VERIFY_EMAIL_HEADING}
+      art={succeeded ? { icon: 'check', tone: 'accent' } : { icon: 'mail' }}
+    >
       <LiveRegion message={shownMessage} politeness={politeness} />
 
       <div className="auth-actions">
@@ -309,7 +312,9 @@ export function VerifyEmailScreen({
 
         {/* Requirement 7.3: proceed to Log_In or, with a Session, the Redirect_Target. */}
         {succeeded && (
-          <LinkButton to={successTarget}>{successLabel}</LinkButton>
+          <LinkButton to={successTarget} button={{ size: 'lg', block: true }}>
+            {successLabel}
+          </LinkButton>
         )}
 
         {/* Requirements 7.4, 7.5, 7.6, 7.7: session-gated request-new-verification. */}

@@ -1,0 +1,73 @@
+.pm-steps {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pm-steps__step {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pm-steps__bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--pm-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--pm-border-subtle);
+}
+
+.pm-steps__step.is-done .pm-steps__bar,
+.pm-steps__step.is-current .pm-steps__bar {
+  background: var(--pm-accent-fill);
+  box-shadow: none;
+}
+
+.pm-steps__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--pm-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.pm-steps__step.is-current .pm-steps__label {
+  color: var(--pm-text-primary);
+}
+
+.pm-steps__step.is-done .pm-steps__label {
+  color: var(--pm-text-secondary);
+}
+
+/* On a narrow screen only the current step's name is shown; every bar stays. */
+@media (max-width: 559.98px) {
+  .pm-steps__step:not(.is-current) .pm-steps__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* The one visible name sits under the bars from the left edge, whichever step
+     it is, since the others' names are hidden. */
+  .pm-steps {
+    position: relative;
+    padding-bottom: 22px;
+  }
+
+  .pm-steps__step.is-current .pm-steps__label {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+}

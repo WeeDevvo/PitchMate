@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { LOG_IN_ROUTE } from '../features/auth';
 import { type ShellDestinationContent } from '../features/app-shell';
 import { matchPath, newMatchPath } from '../features/matches';
-import { squadPath } from '../features/squads';
+import { squadTabPath } from '../features/squads';
 import {
   MATCHES_FIXTURE,
   SQUADS_FIXTURE,
@@ -54,9 +54,9 @@ afterEach(() => {
 });
 
 describe('the Matches_Feature in the assembled router', () => {
-  it('fills the squad screen’s matches section and opens a match from it', async () => {
+  it('fills the squad screen’s Matches tab and opens a match from it', async () => {
     const { routes, requests } = assemble();
-    const router = await renderAt(routes, squadPath(SQUADS_FIXTURE.squadId));
+    const router = await renderAt(routes, squadTabPath(SQUADS_FIXTURE.squadId, 'matches'));
 
     const entry = await screen.findByRole('link', { name: MATCHES_FIXTURE.location });
     expect(requests).toContain('GET /squads/{squadId}/matches');
@@ -80,9 +80,9 @@ describe('the Matches_Feature in the assembled router', () => {
     const { routes } = assemble();
     await renderAt(routes, MATCH_ADDRESS);
 
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(
-      await within(screen.getByRole('main')).findByText('3 can play'),
+      await within(screen.getByRole('main')).findByText(/^3 can play/),
     ).toBeInTheDocument();
   });
 

@@ -56,9 +56,7 @@
 }
 
 .matches-section,
-.matches-form,
-.matches-failure,
-.matches-not-found {
+.matches-form {
   display: flex;
   flex-direction: column;
   gap: var(--matches-gap-tight);
@@ -75,11 +73,52 @@
   background: var(--pm-surface);
 }
 
-/* A panel inside a panel (the unassigned players) sits flat. */
-.matches-panel .matches-panel {
+/* A panel's heading with a count on the right ("10 playing"). */
+.matches-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--pm-space-2);
+}
+
+.matches-panel__head .matches-subheading {
+  margin: 0;
+}
+
+.matches-count {
+  font-weight: 700;
+  color: var(--pm-text-secondary);
+}
+
+/* The caller's own place in the match, with join or leave beside it. */
+.matches-self {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--pm-space-3);
+  padding: var(--pm-space-3) var(--pm-space-4);
+  border-radius: var(--pm-radius-md);
+  background: var(--pm-surface-raised);
+}
+
+.matches-self p {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* A list of PlayerRows, divided. */
+.matches-roster {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
   padding: 0;
-  border: 0;
-  background: none;
+  list-style: none;
+}
+
+.matches-roster > li + li {
+  border-top: var(--matches-border-width) solid var(--pm-border-subtle);
 }
 
 .matches-notice,
@@ -120,50 +159,11 @@
   align-items: center;
 }
 
-.matches-button,
 .matches-link,
 .matches-entry__link {
   min-height: var(--matches-touch-target);
   display: inline-flex;
   align-items: center;
-}
-
-/* The design system's secondary button. */
-.matches-button {
-  justify-content: center;
-  padding: 0 var(--pm-space-5);
-  border: 1.5px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-pill);
-  background: transparent;
-  color: var(--pm-text-primary);
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.matches-button:hover {
-  background: var(--pm-surface-hover);
-}
-
-/* The primary: Pitch Green with Ink text, which the design tokens verify at the
-   text floor in both themes. Which action is primary is also said by its label
-   and its place, never by colour alone. */
-.matches-button--primary {
-  border-color: var(--pm-accent-fill);
-  background: var(--pm-accent-fill);
-  color: var(--pm-on-accent);
-}
-
-.matches-button--primary:hover {
-  background: var(--pm-accent-fill-hover);
-}
-
-.matches-button[aria-disabled='true'] {
-  cursor: progress;
-  opacity: 0.7;
 }
 
 .matches-link {
@@ -186,7 +186,6 @@
   text-decoration: underline;
 }
 
-.matches-button:focus-visible,
 .matches-link:focus-visible,
 .matches-entry__link:focus-visible,
 .matches-input:focus-visible,
@@ -300,12 +299,13 @@
 }
 
 .matches-input--score {
-  width: 5rem;
-  height: 60px;
+  width: 5.5rem;
+  height: 88px;
   text-align: center;
   font-family: var(--pm-font-display);
-  font-size: 32px;
+  font-size: 64px;
   font-weight: 800;
+  line-height: 1;
 }
 
 .matches-fieldset {
@@ -413,11 +413,87 @@
   min-width: 0;
 }
 
-.matches-bib {
+.matches-team .pm-team__body {
+  padding: var(--pm-space-1);
+}
+
+/* The roll before there are teams. */
+.matches-roll {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--pm-space-3);
+}
+
+.matches-roll__title {
+  margin: 0;
+  font: var(--pm-type-title);
+}
+
+.matches-unassigned {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-2);
+}
+
+/* Names & bibs: a card per team, side by side where there is room. */
+.matches-identities {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
+}
+
+.matches-identities__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--matches-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matches-identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
+}
+
+.matches-identity__name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-2);
+}
+
+.matches-identity__actions {
+  display: flex;
+  gap: var(--pm-space-2);
   align-items: center;
-  gap: var(--matches-gap-tight);
-  min-height: var(--matches-touch-target);
+}
+
+/* The step's footer: re-roll on the left, lock on the right. */
+.matches-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--pm-space-3);
+  padding-top: var(--pm-space-4);
+  border-top: var(--matches-border-width) solid var(--pm-border-subtle);
+}
+
+.matches-footer--plain {
+  padding-top: 0;
+  border-top: 0;
+  align-items: center;
+}
+
+.matches-actions--end {
+  justify-content: flex-end;
+}
+
+.matches-footer__end {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pm-space-2);
 }
 
 /* The prediction for more than two teams, as a list with bars. The bar repeats
@@ -466,11 +542,19 @@
 
 /* Results ------------------------------------------------------------ */
 
+.matches-result-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-4);
+}
+
+/* Score entry: a counter per team, spread across the card. */
 .matches-score-fields {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--matches-gap);
-  margin: 0 0 var(--matches-gap-tight);
+  justify-content: space-around;
+  gap: var(--pm-space-6);
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -478,7 +562,25 @@
 .matches-score-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 10px;
+}
+
+.matches-score-field__name {
+  font-family: var(--pm-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.matches-stepper {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .matches-result .matches-chip {
@@ -556,4 +658,161 @@
 
 .matches-confirm p {
   margin: 0;
+}
+
+/* The create-match screen (step 1) ------------------------------------ */
+
+.matches-overline {
+  margin: 0;
+  font: var(--pm-type-overline);
+  letter-spacing: var(--pm-type-overline-tracking);
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.matches-titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-1);
+}
+
+.create-match {
+  gap: var(--matches-gap);
+}
+
+.create-match__location {
+  max-width: 28rem;
+}
+
+.create-match__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.create-match__legend {
+  padding: 0;
+  margin-bottom: var(--matches-gap-tight);
+  font: var(--pm-type-overline);
+  letter-spacing: var(--pm-type-overline-tracking);
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
+}
+
+.create-match__hint {
+  margin: 0;
+  font: var(--pm-type-small);
+  color: var(--pm-text-muted);
+}
+
+.create-match__days {
+  display: flex;
+  flex-direction: column;
+  gap: var(--matches-gap-tight);
+  max-width: 45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.create-match__day {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: var(--pm-space-3);
+  align-items: start;
+  padding: var(--pm-space-3);
+  border: var(--matches-border-width) solid var(--pm-border-subtle);
+  border-radius: var(--matches-radius);
+  background: var(--pm-surface);
+}
+
+.create-match__day-name {
+  padding-top: var(--pm-space-2);
+  font: var(--pm-type-title);
+}
+
+.create-match__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--matches-gap-tight) var(--pm-space-4);
+  align-items: flex-end;
+}
+
+.create-match__time {
+  display: flex;
+  gap: var(--pm-space-1);
+  align-items: flex-end;
+}
+
+.create-match__time .pm-field {
+  width: 11rem;
+}
+
+.create-match__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--matches-gap-tight);
+  padding-top: var(--pm-space-4);
+  border-top: var(--matches-border-width) solid var(--pm-border-subtle);
+}
+
+@media (max-width: 559.98px) {
+  .create-match__day {
+    grid-template-columns: 1fr;
+  }
+
+  .create-match__day-name {
+    padding-top: 0;
+  }
+}
+
+/* Who can play: the availability grid and its save -------------------- */
+
+.matches-availability {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
+}
+
+.matches-grid-name {
+  display: inline-flex;
+  flex-direction: column;
+  color: var(--pm-text-primary);
+}
+
+.matches-grid-name small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pm-text-muted);
+}
+
+/* Confirm: the candidate days as radio cards ------------------------- */
+
+.matches-day-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  gap: var(--pm-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matches-day-options .pm-datebox {
+  color: var(--pm-text-primary);
+}
+
+.matches-legend {
+  padding: 0;
+  font-weight: 600;
+  color: var(--pm-text-primary);
+}
+
+.matches-actions--center {
+  justify-content: center;
 }

@@ -24,17 +24,21 @@ import {
   UNLOCKED_CHANGES_STATEMENT,
   scoreLabel,
   AVAILABILITY_CLEARED_STATEMENT,
-  AVAILABILITY_HEADING,
   AVAILABILITY_SAVED_STATEMENT,
   CLEAR_AVAILABILITY_LABEL,
   GUEST_LABEL,
-  GUEST_AVAILABILITY_HEADING,
-  SAVE_GUEST_AVAILABILITY_LABEL,
+  YOU_LABEL,
+  availabilityCellLabel,
+  bestDayStatement,
   CONFIRM_HEADING,
   JOIN_MATCH_LABEL,
   LEAVE_MATCH_LABEL,
   MOST_PLAYERS_LABEL,
   CONFIRM_LABEL,
+  CONFIRM_DAY_BUTTON_LABEL,
+  CONFIRM_FEW_PLAYERS_WARNING,
+  confirmDialogBody,
+  confirmDialogTitle,
   MATCH_NOT_FOUND_STATEMENT,
   PARTICIPANTS_HEADING,
   RELOCK_TEAMS_LABEL,
@@ -44,6 +48,7 @@ import {
   SAVE_AVAILABILITY_LABEL,
   tallyCountLabel,
   STATE_LABEL,
+  MATCH_FLOW_STEPS_LABEL,
 } from '../lib/messages';
 import { MATCH_ROUTE, matchPath } from '../lib/routePaths';
 import {
@@ -54,6 +59,7 @@ import {
   MEMBER,
   OTHER_SQUAD_ID,
   SQUAD_ID,
+  SQUAD_NAME,
   fakeMatchesApi,
   matchDetail,
   renderAtRoute,
@@ -74,9 +80,14 @@ function renderScreen(api = fakeMatchesApi(), path = matchPath(SQUAD_ID, MATCH_I
   return api;
 }
 
-/** The caller's own availability form. */
-async function ownAvailability(): Promise<HTMLElement> {
-  return (await screen.findByRole('heading', { name: AVAILABILITY_HEADING })).closest('section') as HTMLElement;
+/** The caller's own grid cell for a candidate day. */
+async function ownDay(dayIndex: number): Promise<HTMLInputElement> {
+  return screen.findByRole('checkbox', { name: availabilityCellLabel(YOU_LABEL, formatDay(DAY_MS[dayIndex])) });
+}
+
+/** The day totals under the grid, in day order. */
+async function dayTotals(): Promise<HTMLElement[]> {
+  return within(await screen.findByRole('table')).findAllByText(/^\d+ can play(, .*)?$/);
 }
 
 describe('MatchScreen while gathering availability', () => {
@@ -87,20 +98,33 @@ describe('MatchScreen while gathering availability', () => {
     expect(screen.getByText(MATCH_STATE_LABELS.GatheringAvailability)).toBeTruthy();
   });
 
+  it('shows an organiser the flow at step 2 under the squad name', async () => {
+    renderScreen();
+
+    const steps = await screen.findByRole('list', { name: MATCH_FLOW_STEPS_LABEL });
+    expect(steps.querySelector('[aria-current="step"]')?.textContent).toBe('2. Availability');
+    expect(screen.getByText(SQUAD_NAME)).toBeTruthy();
+  });
+
+  it('shows a member no flow steps', async () => {
+    renderScreen(fakeMatchesApi({ getSquadStanding: async () => success(MEMBER) }));
+
+    await dayTotals();
+    expect(screen.queryByRole('list', { name: MATCH_FLOW_STEPS_LABEL })).toBeNull();
+  });
+
   it('ticks the days the caller already marked', async () => {
     renderScreen();
 
-    // The caller's own form; an organiser also has a guest-availability panel.
-    const own = await ownAvailability();
-    const boxes = within(own).getAllByRole('checkbox');
-    expect(boxes.map((box) => (box as HTMLInputElement).checked)).toEqual([false, true, false]);
-    expect(within(own).getByLabelText(formatDay(DAY_MS[1]))).toBeTruthy();
+    // The caller's own row; an organiser also has a row per guest.
+    const own = await Promise.all([0, 1, 2].map(ownDay));
+    expect(own.map((box) => box.checked)).toEqual([false, true, false]);
   });
 
   it('saves the ticked days as the exact candidate instants, then re-reads', async () => {
     const api = renderScreen();
 
-    await userEvent.click(within(await ownAvailability()).getByLabelText(formatDay(DAY_MS[2])));
+    await userEvent.click(await ownDay(2));
     await userEvent.click(screen.getByRole('button', { name: SAVE_AVAILABILITY_LABEL }));
 
     expect(api.submitAvailability).toHaveBeenCalledWith(
@@ -121,9 +145,8 @@ describe('MatchScreen while gathering availability', () => {
 
     expect(api.clearAvailability).toHaveBeenCalledWith(SQUAD_ID, MATCH_ID, expect.any(AbortSignal));
     expect(await screen.findByText(AVAILABILITY_CLEARED_STATEMENT)).toBeTruthy();
-    expect(
-      screen.getAllByRole('checkbox').every((box) => !(box as HTMLInputElement).checked),
-    ).toBe(true);
+    const own = await Promise.all([0, 1, 2].map(ownDay));
+    expect(own.every((box) => !box.checked)).toBe(true);
   });
 
   it('offers no clear control before the caller has responded', async () => {
@@ -145,23 +168,21 @@ describe('MatchScreen while gathering availability', () => {
       }),
     );
 
-    await userEvent.click(await screen.findByRole('button', { name: SAVE_AVAILABILITY_LABEL }));
+    await userEvent.click(await ownDay(0));
+    await userEvent.click(screen.getByRole('button', { name: SAVE_AVAILABILITY_LABEL }));
     expect(await screen.findByText(REJECTION_MESSAGES['invalid-state'])).toBeTruthy();
   });
 
   it('shows how many can make each day, in words, marking the best-attended day', async () => {
     renderScreen();
 
-    const days = await screen.findAllByText(/^\d+ can play$/);
-    const tallied = days;
+    const tallied = await dayTotals();
     expect(tallied.map((day) => day.textContent)).toEqual([
       tallyCountLabel(4),
-      tallyCountLabel(10),
+      `${tallyCountLabel(10)}, ${MOST_PLAYERS_LABEL}`,
       tallyCountLabel(0),
     ]);
-
-    expect(within(tallied[1].closest('li') as HTMLElement).getByText(MOST_PLAYERS_LABEL)).toBeTruthy();
-    expect(within(tallied[0].closest('li') as HTMLElement).queryByText(MOST_PLAYERS_LABEL)).toBeNull();
+    expect(screen.getByText(bestDayStatement([formatDay(DAY_MS[1])]))).toBeTruthy();
   });
 
   it('offers an organiser every day, defaulting to the best-attended, and confirms the one chosen', async () => {
@@ -174,9 +195,13 @@ describe('MatchScreen while gathering availability', () => {
     expect(choices).toHaveLength(3);
     expect(choices.map((choice) => choice.checked)).toEqual([false, true, false]);
 
-    // A day with fewer players can still be chosen.
+    // A day with fewer players can still be chosen; the dialog names it and warns it is short.
     await userEvent.click(choices[0]!);
-    await userEvent.click(within(panel).getByRole('button', { name: CONFIRM_LABEL }));
+    await userEvent.click(within(panel).getByRole('button', { name: CONFIRM_DAY_BUTTON_LABEL }));
+    const dialog = screen.getByRole('dialog', { name: confirmDialogTitle(formatDay(DAY_MS[0])) });
+    expect(within(dialog).getByText(confirmDialogBody(4))).toBeTruthy();
+    expect(within(dialog).getByText(CONFIRM_FEW_PLAYERS_WARNING)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole('button', { name: CONFIRM_LABEL }));
 
     expect(api.confirmMatch).toHaveBeenCalledWith(
       SQUAD_ID,
@@ -190,14 +215,16 @@ describe('MatchScreen while gathering availability', () => {
   it('offers a member no confirm step', async () => {
     renderScreen(fakeMatchesApi({ getSquadStanding: async () => success(MEMBER) }));
 
-    await screen.findAllByText(/^\d+ can play$/);
+    await dayTotals();
     expect(screen.queryByRole('heading', { name: CONFIRM_HEADING })).toBeNull();
   });
 
   it('lets an organiser confirm even when nobody has marked any day', async () => {
     renderScreen(fakeMatchesApi({ getAvailabilityTally: async () => success(tally([0, 0, 0])) }));
 
-    expect(await screen.findByRole('button', { name: CONFIRM_LABEL })).toBeTruthy();
+    await userEvent.click(await screen.findByRole('button', { name: CONFIRM_DAY_BUTTON_LABEL }));
+    expect(screen.getByRole('dialog').querySelector('button')).toBeTruthy();
+    expect(screen.getByRole('button', { name: CONFIRM_LABEL })).toBeTruthy();
     expect(screen.queryByText(MOST_PLAYERS_LABEL)).toBeNull();
   });
 
@@ -208,16 +235,19 @@ describe('MatchScreen while gathering availability', () => {
       }),
     );
 
-    await userEvent.click(await screen.findByRole('button', { name: CONFIRM_LABEL }));
+    await userEvent.click(await screen.findByRole('button', { name: CONFIRM_DAY_BUTTON_LABEL }));
+    await userEvent.click(screen.getByRole('button', { name: CONFIRM_LABEL }));
     expect(await screen.findByText(REJECTION_MESSAGES['invalid-state'])).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it("lets an organiser mark a guest's days, then re-reads the match and the tally", async () => {
     const api = renderScreen();
 
-    const gary = (await screen.findByRole('group', { name: 'Guest Gary' })).closest('li') as HTMLElement;
-    await userEvent.click(within(gary).getByRole('checkbox', { name: formatDay(DAY_MS[0]) }));
-    await userEvent.click(within(gary).getByRole('button', { name: `${SAVE_GUEST_AVAILABILITY_LABEL}, Guest Gary` }));
+    await userEvent.click(
+      await screen.findByRole('checkbox', { name: availabilityCellLabel('Guest Gary', formatDay(DAY_MS[0])) }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: SAVE_AVAILABILITY_LABEL }));
 
     expect(api.setGuestAvailability).toHaveBeenCalledWith(
       SQUAD_ID,
@@ -233,8 +263,8 @@ describe('MatchScreen while gathering availability', () => {
   it("shows a member no guests' availability, and reads no guest list", async () => {
     const api = renderScreen(fakeMatchesApi({ getSquadStanding: async () => success(MEMBER) }));
 
-    await screen.findAllByText(/^\d+ can play$/);
-    expect(screen.queryByRole('heading', { name: GUEST_AVAILABILITY_HEADING })).toBeNull();
+    await dayTotals();
+    expect(screen.queryByText('Guest Gary')).toBeNull();
     expect(api.getSquadPlayers).not.toHaveBeenCalled();
   });
 });
@@ -260,10 +290,11 @@ describe('MatchScreen once confirmed', () => {
     );
 
     const players = await screen.findByRole('list');
-    expect(within(players).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Alex',
-      `Robin${GUEST_LABEL}`,
-    ]);
+    expect(
+      within(players)
+        .getAllByRole('listitem')
+        .map((item) => item.querySelector('.pm-player__name')?.textContent),
+    ).toEqual(['Alex', `Robin${GUEST_LABEL}`]);
     expect(screen.getByText(formatDay(DAY_MS[1]))).toBeTruthy();
     expect(screen.queryByRole('checkbox')).toBeNull();
     expect(screen.queryByRole('heading', { name: TEAMS_HEADING })).toBeNull();
@@ -305,7 +336,7 @@ describe('MatchScreen once confirmed', () => {
     const api = renderScreen(fakeMatchesApi({ getMatch: async () => success(confirmedMatch()) }));
 
     expect(await screen.findByRole('heading', { name: TEAMS_HEADING })).toBeTruthy();
-    expect(await screen.findByRole('button', { name: 'Remove Player 1' })).toBeTruthy();
+    expect(await screen.findByRole('checkbox', { name: 'Player 1' })).toBeChecked();
     await expect.poll(() => api.getWorkingTeams.mock.calls[0]?.[0]).toBe(MATCH_ID);
     await expect.poll(() => api.getSquadPlayers.mock.calls[0]?.[0]).toBe(SQUAD_ID);
   });
@@ -318,7 +349,7 @@ describe('MatchScreen once confirmed', () => {
       }),
     );
 
-    expect(await screen.findByRole('heading', { name: TEAM_SHEET_HEADING })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: new RegExp(`^${TEAM_SHEET_HEADING}`) })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: PARTICIPANTS_HEADING })).toBeNull();
     expect(screen.queryByRole('heading', { name: TEAMS_HEADING })).toBeNull();
     await expect.poll(() => api.getTeamSheet.mock.calls[0]?.[0]).toBe(MATCH_ID);
@@ -333,7 +364,7 @@ describe('MatchScreen once confirmed', () => {
         MATCH_ROUTE,
         matchPath(SQUAD_ID, MATCH_ID),
       );
-      expect(await screen.findByRole('heading', { name: TEAM_SHEET_HEADING })).toBeTruthy();
+      expect(await screen.findByRole('heading', { name: new RegExp(`^${TEAM_SHEET_HEADING}`) })).toBeTruthy();
       expect(screen.queryByRole('heading', { name: TEAMS_HEADING })).toBeNull();
       unmount();
     }
@@ -344,7 +375,7 @@ describe('MatchScreen once confirmed', () => {
       fakeMatchesApi({ getMatch: async () => success(confirmedMatch(10, { state: 'TeamsRolled' })) }),
     );
 
-    await screen.findByRole('heading', { name: TEAM_SHEET_HEADING });
+    await screen.findByRole('heading', { name: new RegExp(`^${TEAM_SHEET_HEADING}`) });
     await userEvent.click(await screen.findByRole('button', { name: RELOCK_TEAMS_LABEL }));
 
     await expect.poll(() => api.getTeamSheet.mock.calls.length).toBe(2);
@@ -356,7 +387,7 @@ describe('MatchScreen once confirmed', () => {
     );
 
     expect(await screen.findByRole('heading', { name: TEAMS_HEADING })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Remove Player 1' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Player 1' })).toBeNull();
     expect(api.getSquadPlayers).not.toHaveBeenCalled();
   });
 });
@@ -481,7 +512,7 @@ describe('MatchScreen from kick-off to the final score', () => {
 
     expect(await screen.findByText(MATCH_CANCELLED_STATEMENT)).toBeTruthy();
     expect(screen.queryByRole('button', { name: CANCEL_MATCH_LABEL })).toBeNull();
-    expect(screen.queryByRole('heading', { name: TEAM_SHEET_HEADING })).toBeNull();
+    expect(screen.queryByRole('heading', { name: new RegExp(`^${TEAM_SHEET_HEADING}`) })).toBeNull();
   });
 
   it('shows a member the score, not yet final while in play, and no controls', async () => {

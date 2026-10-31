@@ -16,4 +16,8 @@ describe('buttonClasses', () => {
       'pm-btn pm-btn--secondary pm-btn--lg pm-btn--block',
     );
   });
+
+  it('names the ink variant for a call to action on a green band', () => {
+    expect(buttonClasses({ variant: 'ink', size: 'lg' })).toBe('pm-btn pm-btn--ink pm-btn--lg');
+  });
 });

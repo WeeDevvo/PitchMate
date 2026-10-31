@@ -2,12 +2,13 @@
  * Property test for the Shell_Frame's landmark set, heading structure, and
  * graphics (task 10.6).
  *
- * **Property 3: Every rendered shell route has one banner, one navigation, one
- * main, one `h1`, and described graphics.** *For any* rendered shell route and any
- * content kind in the region (supplied destination content, the unavailable state,
- * the `/app` not-found indication, the session-ended indication), the rendering
- * contains exactly one banner landmark, exactly one navigation landmark within the
- * frame, exactly one main landmark, and exactly one level-one heading, that
+ * **Property 3: Every rendered shell route has one banner, one main, one `h1`,
+ * and described graphics.** *For any* rendered shell route and any content kind in
+ * the region (supplied destination content, the unavailable state, the `/app`
+ * not-found indication, the session-ended indication), the rendering contains
+ * exactly one banner landmark with no navigation landmark inside it (the design
+ * system's top bar has no row of destination links), exactly one main landmark,
+ * and exactly one level-one heading, that
  * heading is outside the header, every subordinate heading is at most one level
  * below the nearest preceding heading, and every image or icon carries a text
  * alternative or is hidden from assistive technology with its meaning carried by
@@ -17,7 +18,7 @@
  *
  * | Criterion | What it asks | Where it is asserted |
  * | --- | --- | --- |
- * | 1.5 | exactly one banner, one navigation within the frame, one main, per rendered shell route | {@link expectLandmarkSet} |
+ * | 1.5 | exactly one banner, no navigation within it, one main, per rendered shell route | {@link expectLandmarkSet} |
  * | 1.9 | no level-one heading within the Shell_Frame, so the route's one `h1` belongs to the content | {@link expectSingleLevelOneHeading} |
  * | 13.2 | exactly one `h1` per route, contributed by the content or by a boundary state, none in the header, and every subordinate heading no more than one level below the nearest preceding heading | {@link expectSingleLevelOneHeading} + {@link expectHeadingOutlineIsWellFormed} |
  * | 13.9 | a text alternative for every image and icon, empty where adjacent text already carries the meaning | {@link expectEveryGraphicIsDescribedOrDecorative} |
@@ -30,16 +31,14 @@
  *    beneath the nested Destinations, and paths under `/app` that resolve to
  *    nothing — each optionally case-folded, trailing-slashed, or carrying a query
  *    string or fragment, since Requirement 3.13 calls those equivalent. Resolution
- *    changes which navigation control is marked current (Property 4's subject, task
- *    10.7); it must change nothing about the landmark or heading counts.
+ *    must change nothing about the landmark or heading counts.
  * 2. **The content kind.** The four kinds the property names — arbitrary supplied
  *    Destination_Content, the real {@link SettingsDestination}, the real
  *    {@link DestinationUnavailable} for any of the four registered Destinations,
  *    the real {@link ShellNotFound}, and the real {@link SessionEndedNotice}.
  *
- * Plus which header surface is open, so an expanded compact Primary_Navigation —
- * real markup, mounted inside the frame's one `<nav>` — is covered rather than
- * only the collapsed case.
+ * Plus which header surface is open, so the open Notification_Panel and
+ * Account_Menu are covered rather than only the closed header.
  *
  * ### The synthetic content, and what it is really testing
  *
@@ -48,7 +47,7 @@
  * that a well-formed outline is well-formed would prove nothing on its own — so
  * the assertion is stronger than the property's minimum: the rendered document's
  * heading outline must equal the *generated* outline exactly. Any heading the
- * frame, the header, the navigation, or the Content_Region's announcer contributed
+ * frame, the header, or the Content_Region's announcer contributed
  * would show up as an extra level and fail. That is Requirement 1.9 stated as an
  * equality rather than as a count.
  *
@@ -76,12 +75,12 @@
  * the generator-driven property at the 100-iteration floor Requirement 14.2 sets.
  *
  * Feature: app-shell, Property 3: Every rendered shell route has one banner, one
- * navigation, one main, one `h1`, and described graphics
+ * main, one `h1`, and described graphics
  * Validates: Requirements 1.5, 1.9, 13.2, 13.9
  */
 import { type ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import fc from 'fast-check';
 
@@ -91,7 +90,6 @@ import { SettingsDestination } from './SettingsDestination';
 import { ShellFrame } from './ShellFrame';
 import { ShellNotFound } from './ShellNotFound';
 import { Disclosure } from './components/Disclosure';
-import { PrimaryNavigation } from './components/PrimaryNavigation';
 import { ShellThemeProvider } from './components/ShellThemeProvider';
 import {
   HOME_ROUTE,
@@ -219,11 +217,10 @@ const contentArb: fc.Arbitrary<GeneratedContent> = fc.oneof(
 );
 
 /** Which header surface a person has opened, if any. */
-type OpenSurface = 'navigation' | 'notifications' | 'account' | null;
+type OpenSurface = 'notifications' | 'account' | null;
 
 const openSurfaceArb: fc.Arbitrary<OpenSurface> = fc.constantFrom(
   null,
-  'navigation',
   'notifications',
   'account',
 );
@@ -237,7 +234,6 @@ function outlineOf(content: GeneratedContent): readonly number[] | null {
 
 const NOTIFICATIONS_TRIGGER = 'Notifications';
 const ACCOUNT_TRIGGER = 'Account menu';
-const NAVIGATION_TRIGGER = 'Menu';
 
 /**
  * Render the generated content kind.
@@ -315,7 +311,6 @@ function renderShellRoute(path: string, content: GeneratedContent): HTMLElement 
     <ShellThemeProvider storage={createInMemoryAppearanceStorage()}>
       <MemoryRouter initialEntries={[path]}>
         <ShellFrame
-          navigation={(props) => <PrimaryNavigation {...props} />}
           notifications={({ disclosure }) => (
             <SurfaceStandIn
               label={NOTIFICATIONS_TRIGGER}
@@ -346,7 +341,6 @@ function renderShellRoute(path: string, content: GeneratedContent): HTMLElement 
 
 /** The accessible name of the trigger that opens each generated surface. */
 const TRIGGER_LABEL: Record<Exclude<OpenSurface, null>, string> = {
-  navigation: NAVIGATION_TRIGGER,
   notifications: NOTIFICATIONS_TRIGGER,
   account: ACCOUNT_TRIGGER,
 };
@@ -364,27 +358,22 @@ function openSurface(surface: Exclude<OpenSurface, null>): void {
 // --- The assertions ----------------------------------------------------------
 
 /**
- * Requirement 1.5: exactly one banner, exactly one navigation *within the frame*,
+ * Requirement 1.5: exactly one banner, with no navigation landmark inside it, and
  * exactly one main.
  *
- * Counted from the roles assistive technology resolves and, for the navigation,
- * confirmed to be inside the banner — which is where {@link ShellHeader} owns it,
- * and so where "within the Shell_Frame" is satisfied.
+ * Counted from the roles assistive technology resolves.
  */
 function expectLandmarkSet(): void {
   const banners = screen.getAllByRole('banner');
-  const navigations = screen.getAllByRole('navigation');
   const mains = screen.getAllByRole('main');
 
   expect(banners).toHaveLength(1);
-  expect(navigations).toHaveLength(1);
   expect(mains).toHaveLength(1);
 
   const [banner] = banners;
-  const [navigation] = navigations;
   const [main] = mains;
 
-  expect(banner).toContainElement(navigation);
+  expect(within(banner).queryAllByRole('navigation')).toHaveLength(0);
   // 1.2: the header sits outside the content region, so neither contains the other.
   expect(banner).not.toContainElement(main);
   expect(main).not.toContainElement(banner);
@@ -519,8 +508,8 @@ afterEach(() => {
   document.documentElement.removeAttribute('data-theme');
 });
 
-describe('ShellFrame — Property 3 (one banner, one navigation, one main, one h1, described graphics)', () => {
-  // Feature: app-shell, Property 3: Every rendered shell route has one banner, one navigation, one main, one `h1`, and described graphics
+describe('ShellFrame — Property 3 (one banner, one main, one h1, described graphics)', () => {
+  // Feature: app-shell, Property 3: Every rendered shell route has one banner, one main, one `h1`, and described graphics
   // Validates: Requirements 1.5, 1.9, 13.2, 13.9
   it('holds for any shell path, any content kind, and any open header surface', () => {
     fc.assert(
@@ -556,7 +545,7 @@ describe('ShellFrame — Property 3 (one banner, one navigation, one main, one h
     );
   }, 120_000);
 
-  // Feature: app-shell, Property 3: Every rendered shell route has one banner, one navigation, one main, one `h1`, and described graphics
+  // Feature: app-shell, Property 3: Every rendered shell route has one banner, one main, one `h1`, and described graphics
   // Validates: Requirements 1.9, 13.2
   it('contributes no heading of its own to supplied destination content', () => {
     fc.assert(
@@ -565,8 +554,8 @@ describe('ShellFrame — Property 3 (one banner, one navigation, one main, one h
         const container = renderShellRoute(path, content);
         try {
           // Stronger than the property's minimum: the rendered outline equals the
-          // one the content declared, so the frame, the header, the navigation, and
-          // the Content_Region's announcer added no heading at any level.
+          // one the content declared, so the frame, the header, and the
+          // Content_Region's announcer added no heading at any level.
           expect(headingLevels(container)).toEqual(outlineOf(content));
         } finally {
           cleanup();

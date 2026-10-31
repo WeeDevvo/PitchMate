@@ -30,6 +30,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { GOOGLE_SIGN_IN_DEFAULT_LABEL } from './components/GoogleSignInControl'
 import { messageForOutcome } from './lib/errorMapping'
 import type {
@@ -40,6 +41,7 @@ import type {
 } from './api/authApi'
 import {
   SignUpScreen,
+  SIGN_UP_HEADING,
   EMAIL_MALFORMED_MESSAGE,
   EMAIL_REQUIRED_MESSAGE,
   PASSWORD_TOO_SHORT_MESSAGE,
@@ -74,13 +76,16 @@ function renderScreen(
   const requestGoogleAssertion =
     overrides.requestGoogleAssertion ?? vi.fn(async () => null)
   const onGoogleSession = overrides.onGoogleSession ?? vi.fn()
+  // A router, for the screen's links to log in and the legal pages.
   render(
-    <SignUpScreen
-      authApi={authApi}
-      requestGoogleAssertion={requestGoogleAssertion}
-      onGoogleSession={onGoogleSession}
-      onGoogleFailure={overrides.onGoogleFailure}
-    />,
+    <MemoryRouter>
+      <SignUpScreen
+        authApi={authApi}
+        requestGoogleAssertion={requestGoogleAssertion}
+        onGoogleSession={onGoogleSession}
+        onGoogleFailure={overrides.onGoogleFailure}
+      />
+    </MemoryRouter>,
   )
   return { authApi, requestGoogleAssertion, onGoogleSession }
 }
@@ -208,7 +213,7 @@ describe('SignUpScreen — backend validation (Req 2.7)', () => {
     expect(await screen.findByText(outcome.message)).toBeInTheDocument()
     // Still on the sign-up screen (its heading is present).
     expect(
-      screen.getByRole('heading', { level: 1, name: /create your account/i }),
+      screen.getByRole('heading', { level: 1, name: SIGN_UP_HEADING }),
     ).toBeInTheDocument()
   })
 })

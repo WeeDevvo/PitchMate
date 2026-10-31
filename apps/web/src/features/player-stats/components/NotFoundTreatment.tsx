@@ -56,6 +56,7 @@
  */
 import { type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
+import { EmptyState } from '../../../ui';
 
 import { squadPath } from '../../squads';
 import {
@@ -94,31 +95,36 @@ export interface NotFoundTreatmentProps {
  */
 export function NotFoundTreatment({ squadId }: NotFoundTreatmentProps): ReactElement {
   return (
-    <div className="player-stats-not-found" data-player-stats-not-found="true">
-      {/* 3.6, 16.1: the route's single level-one heading, naming no squad, no
-          player, and no identity. */}
-      <h1 className="player-stats-not-found__heading">
-        {NOT_FOUND_TREATMENT_HEADING}
-      </h1>
-
+    // The design system's not-found state, the same page as every other
+    // screen's whether the player is missing or private.
+    <EmptyState
+      className="player-stats-not-found"
+      data-player-stats-not-found="true"
+      icon="search"
+      // 3.6, 16.1: the route's single level-one heading, naming no squad, no
+      // player, and no identity.
+      headingLevel={1}
+      title={NOT_FOUND_TREATMENT_HEADING}
+      headingProps={{ className: 'player-stats-not-found__heading' }}
+      // 4.6: announced where it appears, with keyboard focus left alone.
+      bodyProps={{
+        className: 'player-stats-not-found__statement',
+        role: 'status',
+        'aria-live': 'polite',
+        'aria-atomic': true,
+      }}
+      action={
+        // 1.6, 3.5: the way back, client-side, to the squad the route names —
+        // built by the squads barrel's own path builder.
+        <Link className="player-stats-squad-link" to={squadPath(squadId)}>
+          {BACK_TO_SQUAD_LABEL}
+        </Link>
+      }
+    >
       {/* 3.1, 3.2, 3.5: both possibilities in one fixed sentence, so none of the
           concealed causes is disclosed. */}
-      {/* 4.6: announced where it appears, with keyboard focus left alone. */}
-      <p
-        className="player-stats-not-found__statement"
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        {NOT_FOUND_TREATMENT_STATEMENT}
-      </p>
-
-      {/* 1.6, 3.5: the way back, client-side, to the squad the route names —
-          built by the squads barrel's own path builder. */}
-      <Link className="player-stats-squad-link" to={squadPath(squadId)}>
-        {BACK_TO_SQUAD_LABEL}
-      </Link>
-    </div>
+      {NOT_FOUND_TREATMENT_STATEMENT}
+    </EmptyState>
   );
 }
 

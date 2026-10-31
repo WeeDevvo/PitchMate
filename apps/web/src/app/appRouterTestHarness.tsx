@@ -249,6 +249,9 @@ const SQUAD_SUMMARIES_BODY: unknown = [
     name: SQUADS_FIXTURE.squadName,
     role: 'Member',
     state: 'Active',
+    playerCount: 1,
+    nextMatch: null,
+    recentForm: [],
   },
 ];
 

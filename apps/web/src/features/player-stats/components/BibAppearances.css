@@ -26,7 +26,6 @@
   grid-template-columns: minmax(0, 1fr);
   gap: var(--player-stats-gap-hairline);
   margin: 0;
-  max-width: var(--player-stats-measure);
 }
 
 .player-stats-bibs__label {

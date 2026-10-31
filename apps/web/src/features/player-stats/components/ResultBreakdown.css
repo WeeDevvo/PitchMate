@@ -27,71 +27,62 @@
  * Requirements: 6.2, 15.2, 15.5, 15.7, 16.6
  */
 
+/* One bar, as the design system draws a record: a segment per outcome, each as
+   wide as its share of the matches, Ink on the outcome's fill. A zero still
+   shows its segment at its content's width, so "0 D" is said rather than
+   dropped. */
 .player-stats-result-breakdown {
   display: flex;
+  /* At a very narrow width a segment drops to the next line rather than
+     squeezing its words. */
   flex-wrap: wrap;
-  gap: var(--player-stats-gap);
+  width: 100%;
+  min-height: 40px;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  border-radius: var(--pm-radius-sm);
   /* A row of figures, not prose. See the module note. */
   list-style: none;
 }
 
 .player-stats-result-breakdown__item {
   display: inline-flex;
-  align-items: baseline;
-  gap: var(--player-stats-gap-tight);
-  color: var(--pm-text-primary);
-  font-size: var(--player-stats-font-size-body);
-  line-height: var(--player-stats-line-height-body);
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 4px;
   box-sizing: border-box;
-  min-width: 6rem;
-  padding: var(--pm-space-3) var(--pm-space-4);
-  border: var(--player-stats-border-width) solid var(--pm-border-subtle);
-  border-radius: var(--pm-radius-lg);
-  background: var(--pm-surface);
-}
-
-/* ------------------------------------------------------------------ *
- * The two visible carriers (Requirements 6.2, 15.5, 16.6)
- * ------------------------------------------------------------------ */
-
-/* The letter: the body text colour, at the text contrast floor. Never a
-   semantic hue — see the module note. */
-.player-stats-result-breakdown__letter {
-  color: var(--pm-text-primary);
-  font-weight: var(--player-stats-font-weight-label);
-}
-
-/* The icon: the semantic hue, on a non-text mark. The weight is a second
-   non-colour cue, so the glyph still reads as a mark in greyscale. */
-.player-stats-result-breakdown__icon {
+  min-width: max-content;
+  padding: 0 10px;
+  color: var(--pm-on-result);
   font-family: var(--pm-font-display);
-  font-weight: var(--player-stats-font-weight-heading);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
 }
 
-.player-stats-result-breakdown__item--win .player-stats-result-breakdown__icon {
-  color: var(--pm-result-win-text);
+.player-stats-result-breakdown__item--win {
+  background: var(--pm-result-win);
 }
 
-.player-stats-result-breakdown__item--draw .player-stats-result-breakdown__icon {
-  color: var(--pm-result-draw-text);
+.player-stats-result-breakdown__item--draw {
+  background: var(--pm-result-draw);
 }
 
-.player-stats-result-breakdown__item--loss .player-stats-result-breakdown__icon {
-  color: var(--pm-result-loss-text);
+.player-stats-result-breakdown__item--loss {
+  background: var(--pm-result-loss);
 }
 
 /* ------------------------------------------------------------------ *
- * The count (Requirement 6.1)
+ * The visible carriers (Requirements 6.2, 15.5, 16.6)
  * ------------------------------------------------------------------ */
 
+/* The icon, the count and the letter all say the outcome in Ink on its fill,
+   so the segment reads in greyscale: ✓ 7 W, – 2 D, ✗ 3 L. */
+.player-stats-result-breakdown__icon,
+.player-stats-result-breakdown__letter,
 .player-stats-result-breakdown__count {
-  color: var(--pm-text-primary);
-  font-size: var(--player-stats-font-size-figure);
-  font-family: var(--pm-font-display);
-  font-weight: var(--player-stats-font-weight-heading);
-  line-height: var(--player-stats-line-height-heading);
+  color: var(--pm-on-result);
 }
 
 /* ------------------------------------------------------------------ *

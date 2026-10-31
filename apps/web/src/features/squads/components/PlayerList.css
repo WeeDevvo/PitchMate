@@ -29,7 +29,7 @@
   /* One card, its rows divided, as the design system draws a list. */
   border: var(--squads-border-width) solid var(--pm-border-subtle);
   border-radius: var(--pm-radius-lg);
-  overflow: hidden;
+  /* No overflow clip: a row's actions menu hangs over the rows below. */
 }
 
 .squads-player-list__item {

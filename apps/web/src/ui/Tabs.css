@@ -43,6 +43,15 @@
   background: var(--pm-accent-fill);
 }
 
+/* TabNav: each tab is a link, so it drops the link underline. */
+.pm-tabnav__item {
+  display: inline-flex;
+}
+
+.pm-tabnav__item > .pm-tab {
+  text-decoration: none;
+}
+
 .pm-tab:disabled {
   color: var(--pm-text-disabled);
   cursor: not-allowed;

@@ -84,7 +84,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import {
   HOME_ROUTE,
@@ -92,6 +92,7 @@ import {
   usePublishSquadScopeFromRoute,
 } from '../../app-shell';
 import { useAuth } from '../../auth';
+import { TabNav } from '../../../ui';
 import type { SquadsApi } from '../api/squadsApi';
 import { AdminSection } from '../components/AdminSection';
 import { FailureNotice } from '../components/FailureNotice';
@@ -99,18 +100,23 @@ import { LeaveSquadControl } from '../components/LeaveSquadControl';
 import { LoadingIndication } from '../components/LoadingIndication';
 import { NotFoundTreatment } from '../components/NotFoundTreatment';
 import { PlaceholderSection } from '../components/PlaceholderSection';
-import { SquadSectionNav, type SquadSectionKey } from '../components/SquadSectionNav';
-import { PlayerList } from '../components/PlayerList';
+import { PlayersPanel } from '../components/PlayersPanel';
 import type { ViewerContext } from '../components/PlayerRow';
 import type { SquadRole } from '../lib/wireEnums';
 import {
   ADMIN_ROLE_LABEL,
+  ADMIN_TAB_LABEL,
+  LEADERBOARDS_TAB_LABEL,
   MATCHES_PLACEHOLDER_STATEMENT,
   MATCHES_SECTION_HEADING,
+  MATCHES_TAB_LABEL,
   MEMBER_ROLE_LABEL,
   NO_ROLE_RECORDED_LABEL,
   OWNER_ROLE_LABEL,
   PLAYERS_SECTION_HEADING,
+  PLAYERS_TAB_LABEL,
+  SQUAD_OVERLINE,
+  SQUAD_TABS_LABEL,
   SQUAD_DETAIL_SECTION_HEADING,
   SQUAD_LOADING_LABEL,
   SQUAD_SCREEN_HEADING,
@@ -120,6 +126,8 @@ import {
   YOUR_ROLE_LABEL,
 } from '../lib/messages';
 import { playerStatsPath } from '../lib/routePaths';
+import { playerCountLabel } from '../lib/squadCardView';
+import { squadTabOf, squadTabPath, squadTabsFor, type SquadTab } from '../lib/squadTabs';
 import { usePromotion } from '../state/usePromotion';
 import {
   DEMOTE_CALL,
@@ -175,6 +183,13 @@ function roleLabelOf(role: SquadRole | null): string {
   return role === null ? NO_ROLE_RECORDED_LABEL : ROLE_LABELS[role];
 }
 
+const TAB_LABELS: Readonly<Record<SquadTab, string>> = {
+  players: PLAYERS_TAB_LABEL,
+  matches: MATCHES_TAB_LABEL,
+  leaderboards: LEADERBOARDS_TAB_LABEL,
+  admin: ADMIN_TAB_LABEL,
+};
+
 export interface SquadScreenProps {
   /**
    * The Squads_Api facade — the feature's only transport seam, constructed by
@@ -213,6 +228,8 @@ export function SquadScreen({
   // parameter name comes from the App_Shell rather than being spelled here, which
   // is what keeps the route's scope publishing below correct by construction.
   const squadId = useParams()[SQUAD_SCOPE_ROUTE_PARAMETER];
+  // Each tab is its own address; the screen reads which one it is showing.
+  const tab = squadTabOf(useLocation().pathname);
 
   // Called once, and needing no argument, because the route's parameter is named
   // `squadId` — so the shell's notification surfaces scope themselves to this
@@ -327,16 +344,22 @@ export function SquadScreen({
     [detailSquadId, navigate],
   );
 
+  /** The Admin tab's link, which the guest edit form returns focus to. */
+  const adminTabRef = useRef<HTMLAnchorElement | null>(null);
+
   const editGuest = useCallback((membershipId: string): void => {
-    // The activated control is the focused element at the moment of activation,
-    // for a pointer activation as much as for a keyboard one — so the opener is
-    // captured rather than searched for by shape, and focus returns to the row
-    // control the person actually used (Requirement 19.7).
-    const active = document.activeElement;
-    editOpenerRef.current = active instanceof HTMLElement ? active : null;
+    // The Guest_Form lives in the Admin_Section, on the Admin tab, while the
+    // edit control is on a Players row. So editing switches to the Admin tab —
+    // the screen stays mounted across tabs, so the edit target carries over —
+    // and the form, on closing, returns focus to the Admin tab's link: the row
+    // control that opened it is no longer on the page (Requirement 19.7).
+    editOpenerRef.current = adminTabRef.current;
 
     setEditingMembershipId(membershipId);
-  }, []);
+    if (detailSquadId !== '') {
+      navigate(squadTabPath(detailSquadId, 'admin'));
+    }
+  }, [detailSquadId, navigate]);
 
   const finishEditing = useCallback((): void => {
     setEditingMembershipId(null);
@@ -366,7 +389,6 @@ export function SquadScreen({
   // Each section is named by its own heading, so assistive technology announces
   // the region by the same words that are on screen.
   const detailHeadingId = `${idPrefix}-detail`;
-  const anchorId = (key: SquadSectionKey): string => `${idPrefix}-section-${key}`;
   const playersHeadingId = `${idPrefix}-players`;
 
   /**
@@ -408,13 +430,6 @@ export function SquadScreen({
             {roleLabelOf(machine.caller.role)}
           </span>
         </p>
-        {/* The caller's own way out — or, for the owner, why there is none yet. */}
-        <LeaveSquadControl
-          squadId={detail.squadId}
-          callerRole={machine.caller.role}
-          callerState={machine.caller.state}
-          machine={leaving}
-        />
         {/* 6.9, 1.15: a re-read keeps the whole squad rendered and states that it
             is refreshing beside it, rather than replacing it with a busy state. */}
         {machine.busy ? <LoadingIndication label={SQUAD_LOADING_LABEL} /> : null}
@@ -422,50 +437,28 @@ export function SquadScreen({
     );
   }
 
-  return (
-    <div className="squad-screen" data-squads-squad-screen="true">
-      {/* 6.3, 19.1: the screen's one level-one heading — the parsed Squad_Name
-          once one is held, and a fixed noun while none is. */}
-      <h1 className="squad-screen__heading">
-        {detail === null ? SQUAD_SCREEN_HEADING : detail.name}
-      </h1>
+  const activePlayers = machine.players.filter((row) => row.state === 'Active').length;
+  const offeredTabs = squadTabsFor(machine.adminAuthority);
 
-      <div className="squad-screen__layout">
-      {/* The section sidebar, once there are sections to jump to. */}
-      {detail !== null && (
-        <SquadSectionNav anchorId={anchorId} adminAuthority={machine.adminAuthority} />
-      )}
-      <div className="squad-screen__content">
-      {/* 6.8 §1: the Squad_Detail region. */}
-      <div className="squad-screen__anchor" id={anchorId('detail')}>
-      <section
-        className="squad-screen__section"
-        data-squads-detail-section="true"
-        aria-labelledby={detailHeadingId}
-      >
-        <h2 className="squad-screen__section-heading" id={detailHeadingId}>
-          {SQUAD_DETAIL_SECTION_HEADING}
-        </h2>
-        {detailBody}
-      </section>
-      </div>
+  /** The page under the tab bar, for the tab the address names. */
+  let tabPage: ReactNode = null;
 
-      {/* 6.8 §2: the Player_List — only where a Squad_Detail is held, because
-          Requirement 6.9 renders no Player_List while none is. */}
-      {detail !== null && (
-        <div className="squad-screen__anchor" id={anchorId('players')}>
+  if (detail !== null) {
+    if (tab === 'players') {
+      tabPage = (
         <section
           className="squad-screen__section"
           data-squads-players-section="true"
           aria-labelledby={playersHeadingId}
         >
-          <h2 className="squad-screen__section-heading" id={playersHeadingId}>
+          {/* Named by the tab already, so the heading is for the outline only. */}
+          <h2 className="pm-sr" id={playersHeadingId}>
             {PLAYERS_SECTION_HEADING}
           </h2>
           {/* 7.10, 7.13: every row renders its membership facts immediately, with
               Rating_Unavailable in the rating column until — or unless — the
               leaderboard settles. The rows carry that fact already. */}
-          <PlayerList
+          <PlayersPanel
             squadId={detail.squadId}
             rows={machine.players}
             viewer={viewer}
@@ -475,35 +468,39 @@ export function SquadScreen({
             demotion={demotion}
             onEditGuest={editGuest}
           />
+          {/* The caller's own way out — or, for the owner, why there is none yet. */}
+          <LeaveSquadControl
+            squadId={detail.squadId}
+            callerRole={machine.caller.role}
+            callerState={machine.caller.state}
+            machine={leaving}
+          />
         </section>
-        </div>
-      )}
-
-      {/* 6.8 §3, 15.1: the matches Placeholder_Section, heading always, injected
-          body in place of the statement where one is supplied. */}
-      <div className="squad-screen__anchor" id={anchorId('matches')}>
-      <PlaceholderSection
-        heading={MATCHES_SECTION_HEADING}
-        emptyStatement={MATCHES_PLACEHOLDER_STATEMENT}
-        content={matchesContent}
-      />
-      </div>
-
-      {/* 6.8 §4, 15.1: the stats Placeholder_Section. */}
-      <div className="squad-screen__anchor" id={anchorId('stats')}>
-      <PlaceholderSection
-        heading={STATS_SECTION_HEADING}
-        emptyStatement={STATS_PLACEHOLDER_STATEMENT}
-        content={statsContent}
-      />
-      </div>
-
-      {/* 6.8 §5, 10.2, 10.3: administration. Rendered only where a Squad_Detail is
-          held, and within that only where `resolveAdminAuthority` holds — which
-          the section asks itself, so there is no subtree here from which an admin
-          call could be issued without authority (Requirement 10.4). */}
-      {detail !== null && (
-        <div className="squad-screen__anchor" id={anchorId('admin')}>
+      );
+    } else if (tab === 'matches') {
+      // 6.8 §3, 15.1: the matches Placeholder_Section, heading always, injected
+      // body in place of the statement where one is supplied.
+      tabPage = (
+        <PlaceholderSection
+          heading={MATCHES_SECTION_HEADING}
+          emptyStatement={MATCHES_PLACEHOLDER_STATEMENT}
+          content={matchesContent}
+        />
+      );
+    } else if (tab === 'leaderboards') {
+      // 6.8 §4, 15.1: the stats Placeholder_Section.
+      tabPage = (
+        <PlaceholderSection
+          heading={STATS_SECTION_HEADING}
+          emptyStatement={STATS_PLACEHOLDER_STATEMENT}
+          content={statsContent}
+        />
+      );
+    } else if (machine.adminAuthority) {
+      // 6.8 §5, 10.2, 10.3: administration, only where `resolveAdminAuthority`
+      // holds — which the section asks itself, so there is no subtree here from
+      // which an admin call could be issued without authority (Requirement 10.4).
+      tabPage = (
         <AdminSection
           squadId={detail.squadId}
           squadName={detail.name}
@@ -519,10 +516,75 @@ export function SquadScreen({
           editOpenerRef={editOpenerRef}
           authState={authState}
         />
-        </div>
+      );
+    } else {
+      // The Admin tab's address, for someone without admin authority: the tab is
+      // absent for them, so they are shown the squad's Players tab instead —
+      // replacing the address, so the back button does not return them here.
+      // They are a member, so there is nothing about the squad to conceal.
+      tabPage = <Navigate to={squadTabPath(detail.squadId, 'players')} replace />;
+    }
+  }
+
+  return (
+    <div className="squad-screen" data-squads-squad-screen="true">
+      {/* The design system's squad header: the overline with the player count,
+          the squad's name, and the caller's role. A plain element, not a
+          `<header>`: outside a sectioning element that would be a second banner
+          landmark beside the shell's. */}
+      <div className="squad-screen__header">
+        {detail !== null && (
+          <p className="squad-screen__overline">
+            {SQUAD_OVERLINE} · {playerCountLabel(activePlayers)}
+          </p>
+        )}
+        {/* 6.3, 19.1: the screen's one level-one heading — the parsed Squad_Name
+            once one is held, and a fixed noun while none is. */}
+        <h1 className="squad-screen__heading">
+          {detail === null ? SQUAD_SCREEN_HEADING : detail.name}
+        </h1>
+
+        {/* 6.8 §1: the Squad_Detail region — the caller's role once read, or the
+            loading or failure state while it is not. */}
+        <section
+          className="squad-screen__detail"
+          data-squads-detail-section="true"
+          aria-labelledby={detailHeadingId}
+        >
+          <h2 className="pm-sr" id={detailHeadingId}>
+            {SQUAD_DETAIL_SECTION_HEADING}
+          </h2>
+          {detailBody}
+        </section>
+      </div>
+
+      {detail !== null && (
+        <>
+          {/* Each tab is an address. Admin is offered to an admin only — absent,
+              not disabled, for a member. */}
+          <TabNav
+            label={SQUAD_TABS_LABEL}
+            active={tab}
+            tabs={offeredTabs.map((offered) => ({
+              id: offered,
+              label: TAB_LABELS[offered],
+              ...(offered === 'players' ? { count: activePlayers } : {}),
+              ...(offered === 'admin' ? { icon: 'shield' as const } : {}),
+            }))}
+            renderLink={({ tab: linked, className, current, children }) => (
+              <Link
+                ref={linked.id === 'admin' ? adminTabRef : undefined}
+                to={squadTabPath(detail.squadId, linked.id as SquadTab)}
+                className={className}
+                aria-current={current}
+              >
+                {children}
+              </Link>
+            )}
+          />
+          <div className="squad-screen__tab-page">{tabPage}</div>
+        </>
       )}
-      </div>
-      </div>
     </div>
   );
 }

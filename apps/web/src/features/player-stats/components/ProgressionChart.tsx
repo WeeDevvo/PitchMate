@@ -69,10 +69,17 @@ import { type ReactElement, type SVGProps } from 'react';
 import { RatingChart } from '../../../ui';
 
 import {
+  areaUnderLine,
   plotProgression,
+  provisionalBands,
   provisionalLines,
+  ratingTicks,
   type ChartExtent,
+  type PlottedPoint,
 } from '../lib/chartGeometry';
+import { formatInstantMonth } from '../lib/instantFormat';
+import { PROVISIONAL_BAND_LABEL } from '../lib/messages';
+import { formatCount } from '../lib/numberFormat';
 import type { ProgressionPoint } from '../lib/parse/playerProfile';
 import '../styles/playerStatsTokens.css';
 import './ProgressionChart.css';
@@ -134,6 +141,16 @@ function pointHook(index: number): SVGProps<SVGCircleElement> {
   return { 'data-player-stats-progression-point': index } as SVGProps<SVGCircleElement>;
 }
 
+/** A month label at the first reading of each month, left to right. */
+function monthTicks(points: readonly PlottedPoint[]): { at: number; label: string }[] {
+  const ticks: { at: number; label: string }[] = [];
+  for (const plotted of points) {
+    const label = formatInstantMonth(plotted.point.completedAtMs);
+    if (label !== '' && ticks[ticks.length - 1]?.label !== label) ticks.push({ at: plotted.x, label });
+  }
+  return ticks;
+}
+
 export interface ProgressionChartProps {
   /**
    * The Progression_Series, in `toProgressionSeries` order (Requirement 8.1).
@@ -167,6 +184,12 @@ export function ProgressionChart({
   // where every reading is the same and the line runs through its centre.
   const gridTop = PROGRESSION_CHART_PADDING;
   const gridBottom = PROGRESSION_CHART_HEIGHT - PROGRESSION_CHART_PADDING;
+  const gridX1 = PROGRESSION_CHART_PADDING;
+  const gridX2 = PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING;
+
+  // Round ratings up the side, each with a rule across the plot, placed on the
+  // same scale the line was drawn against.
+  const ticks = ratingTicks(plot.ratingFloor, plot.ratingCeiling, gridTop, gridBottom);
 
   return (
     <RatingChart
@@ -178,9 +201,19 @@ export function ProgressionChart({
       // the data, drawn only because there is data — never on its own
       // (Requirement 8.6).
       gridLines={[
-        { x1: PROGRESSION_CHART_PADDING, x2: PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING, y: gridTop },
-        { x1: PROGRESSION_CHART_PADDING, x2: PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING, y: gridBottom },
+        // The baseline, then a rule at each tick that isn't on it.
+        { x1: gridX1, x2: gridX2, y: gridBottom },
+        ...ticks
+          .filter((tick) => tick.y !== gridBottom)
+          .map((tick) => ({ x1: gridX1, x2: gridX2, y: tick.y })),
       ]}
+      yTicks={ticks.map((tick) => ({ at: tick.y, label: formatCount(tick.rating) }))}
+      xTicks={monthTicks(plot.points)}
+      area={areaUnderLine(plot.points, gridBottom)}
+      // The band behind provisional readings, labelled once, as the design
+      // system draws a player's first matches.
+      provisionalBands={provisionalBands(plot.points)}
+      provisionalLabel={PROVISIONAL_BAND_LABEL}
       // 8.7: `polyline` is null for the one-point series, so a single reading
       // cannot be drawn as a trend.
       polyline={plot.polyline}

@@ -134,10 +134,18 @@ public sealed class ProposeTeamsHandler
             return Result<TeamProposal>.Fail(request.Error!);
         }
 
-        // Return the balancer's proposal as produced; no match state is changed and nothing is persisted
-        // (Requirement 8.1).
-        return await _balancer.ProposeAsync(request.Value!, cancellationToken);
+        // Return the balancer's proposal with its wins as outcome shares; no match state is changed and
+        // nothing is persisted (Requirement 8.1).
+        Result<TeamProposal> proposal = await _balancer.ProposeAsync(request.Value!, cancellationToken);
+        return proposal.IsSuccess ? Result<TeamProposal>.Ok(AsOutcomeShares(proposal.Value!)) : proposal;
     }
+
+    /// <summary>The proposal with each team's win as its share of the whole outcome (<see cref="OutcomeShares"/>).</summary>
+    internal static TeamProposal AsOutcomeShares(TeamProposal proposal) =>
+        proposal with
+        {
+            Teams = [.. proposal.Teams.Select(team => team with { WinProbability = OutcomeShares.Win(team.WinProbability, proposal.DrawProbability) })],
+        };
 
     private static Result<TeamProposal> Unauthorized() =>
         Result<TeamProposal>.Fail(new MatchError(

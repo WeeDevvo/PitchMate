@@ -8,7 +8,9 @@ import { webRoot } from '../structural/sourceScan';
 import {
   GUEST_CLAIM_STATUS_NAMES,
   INVITE_STATE_NAMES,
+  MATCH_STATE_NAMES,
   MEMBERSHIP_STATE_NAMES,
+  PLAYER_RESULT_NAMES,
   RATING_STATE_NAMES,
   REDEEM_OUTCOME_NAMES,
   SKILL_TIER_NAMES,
@@ -17,7 +19,9 @@ import {
   WIRE_ENUM_COVERAGE,
   isGuestClaimStatus,
   isInviteState,
+  isMatchState,
   isMembershipState,
+  isPlayerResult,
   isRatingState,
   isRedeemOutcome,
   isSkillTier,
@@ -135,11 +139,13 @@ const UNIONS: readonly WireEnumUnderTest[] = [
     is: isGuestClaimStatus,
   },
   { schemaName: 'InviteState', names: INVITE_STATE_NAMES, is: isInviteState },
+  { schemaName: 'MatchState', names: MATCH_STATE_NAMES, is: isMatchState },
   {
     schemaName: 'MembershipState',
     names: MEMBERSHIP_STATE_NAMES,
     is: isMembershipState,
   },
+  { schemaName: 'PlayerResult', names: PLAYER_RESULT_NAMES, is: isPlayerResult },
   { schemaName: 'RatingState', names: RATING_STATE_NAMES, is: isRatingState },
   {
     schemaName: 'RedeemOutcome',
@@ -319,11 +325,11 @@ describe('the wire enum suite covers every union the module declares', () => {
     );
   });
 
-  it('carries eight unions and twenty-one names in total', () => {
+  it('carries ten unions and thirty names in total', () => {
     // A vacuous suite would pass every property below. Both floors are stated,
     // because an empty tuple would satisfy "every name is accepted" trivially.
-    expect(UNIONS).toHaveLength(8);
-    expect(ALL_NAMES).toHaveLength(21);
+    expect(UNIONS).toHaveLength(10);
+    expect(ALL_NAMES).toHaveLength(30);
 
     for (const { schemaName, names } of UNIONS) {
       expect(names.length, schemaName).toBeGreaterThan(0);
@@ -448,7 +454,7 @@ describe('every wire enum predicate is bound to its own union', () => {
     fc.assert(
       fc.property(fc.constantFrom(...ALL_NAMES), (name) => {
         // Read side by side, because a predicate bound to the wrong tuple — a
-        // real possibility with seven near-identical one-line bindings — answers
+        // real possibility with ten near-identical one-line bindings — answers
         // plausibly on its own. `Active` belongs to two of these unions, so the
         // answers, not merely the presence of an answer, are what separate them.
         const answers = UNIONS.map(({ schemaName, is }) => [schemaName, is(name)]);

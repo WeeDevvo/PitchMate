@@ -1,10 +1,10 @@
 /**
  * Responsive layout tests for the marketing landing page (Requirement 4).
  *
- * These tests exercise the page across the six representative viewport widths
- * called out by the design's responsive strategy — 360, 767, 768, 1023, 1024
- * and 1920px — covering the Mobile (360–767), Tablet (768–1023) and Desktop
- * (1024–1920) ranges.
+ * These tests exercise the page across six representative viewport widths —
+ * 360, 767, 768, 959, 960 and 1920px — covering the Mobile (360–767), Tablet
+ * (768–959) and Desktop (960–1920) ranges. The design system's landing screen
+ * collapses to one column below 960px.
  *
  * jsdom deliberately does NOT perform real layout: `offsetWidth`,
  * `getBoundingClientRect()` and friends return 0, and CSS media queries are not
@@ -49,9 +49,10 @@ const here = dirname(fileURLToPath(import.meta.url))
 const landingCss = readFileSync(join(here, 'styles', 'landing.css'), 'utf8')
 
 /** The representative widths from the design's responsive strategy. */
+// The design collapses to one column below 960px (ScreenWebLanding).
 const MOBILE_WIDTHS = [360, 767] as const
-const TABLET_WIDTHS = [768, 1023] as const
-const DESKTOP_WIDTHS = [1024, 1920] as const
+const TABLET_WIDTHS = [768, 959] as const
+const DESKTOP_WIDTHS = [960, 1920] as const
 const ALL_WIDTHS = [
   ...MOBILE_WIDTHS,
   ...TABLET_WIDTHS,
@@ -142,9 +143,17 @@ describe('Landing page responsive layout — structural DOM contract', () => {
       const h1s = screen.getAllByRole('heading', { level: 1 })
       expect(h1s).toHaveLength(1)
       expect(h1s[0]).toHaveTextContent(landingContent.hero.headline)
-      // Every benefit section renders (h2 per benefit).
-      const benefitHeadings = screen.getAllByRole('heading', { level: 2 })
-      expect(benefitHeadings).toHaveLength(landingContent.benefits.length)
+      // Every benefit card renders (an h2 each), as do the how-it-works and
+      // stats sections and the closing band.
+      for (const heading of [
+        ...landingContent.benefits.map((benefit) => benefit.heading),
+        landingContent.howItWorks.heading,
+        landingContent.closing.heading,
+      ]) {
+        expect(screen.getByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
+      }
+      expect(screen.getByRole('heading', { level: 2, name: /actually argue about/i })).toBeInTheDocument()
+      expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(landingContent.howItWorks.steps.length)
       // Closing CTA region after the benefits.
       expect(screen.getByTestId('closing-cta')).toBeInTheDocument()
       // Footer (contentinfo).
@@ -158,9 +167,10 @@ describe('Landing page responsive layout — structural DOM contract', () => {
     it('exposes all CTAs as reachable, focusable anchors with destinations', () => {
       renderPage()
       const links = screen.getAllByRole('link')
-      // header: Log In + Sign Up, hero: Sign Up, closing: Sign Up,
-      // footer: Privacy + Terms.
-      expect(links.length).toBeGreaterThanOrEqual(6)
+      // header: Log in + Start a squad (its section links show from 960px,
+      // which jsdom never evaluates), hero: Start a squad + See how it works,
+      // closing: Start a squad, footer: Privacy + Terms.
+      expect(links.length).toBeGreaterThanOrEqual(7)
 
       for (const link of links) {
         expect(link.tagName).toBe('A')
@@ -172,21 +182,21 @@ describe('Landing page responsive layout — structural DOM contract', () => {
       }
 
       // The primary sign-up path is reachable within the initial viewport
-      // region (header) and again after the last benefit (closing CTA).
+      // region (header) and again after the last section (closing CTA).
       expect(
-        within(screen.getByRole('banner')).getByRole('link', { name: /sign up/i }),
+        within(screen.getByRole('banner')).getByRole('link', { name: /start a squad/i }),
       ).toBeInTheDocument()
       expect(
         within(screen.getByTestId('closing-cta')).getByRole('link', {
-          name: /sign up/i,
+          name: /start a squad/i,
         }),
       ).toBeInTheDocument()
     })
 
-    // Req 4.6 — the only media element (the brand logo) is covered by the
-    // `max-width: 100%` containment rule via its class, so it can never exceed
-    // the viewport width. Also verify no image declares an intrinsic width that
-    // would overflow the narrowest tested viewport.
+    // Req 4.6 — the only media elements (the header and footer logos) are
+    // covered by the `max-width: 100%` containment rule via their class, so
+    // they can never exceed the viewport width. Also verify no image declares
+    // an intrinsic width that would overflow the narrowest tested viewport.
     it('constrains images to the viewport width', () => {
       renderPage()
       const images = document.querySelectorAll('img')
@@ -194,7 +204,7 @@ describe('Landing page responsive layout — structural DOM contract', () => {
 
       for (const img of images) {
         // Each image must sit where the containment CSS targets it.
-        expect(img.closest('.landing-header__logo')).not.toBeNull()
+        expect(img.closest('.landing-header__logo, .landing-footer__logo')).not.toBeNull()
         // Intrinsic width attribute (used for CLS) must fit even 360px.
         const declaredWidth = Number(img.getAttribute('width') ?? '0')
         expect(declaredWidth).toBeLessThanOrEqual(360)
@@ -208,22 +218,22 @@ describe('Landing page responsive layout — active breakpoints per range', () =
     window.matchMedia = originalMatchMedia
   })
 
-  // Req 4.1 / 4.5 — Mobile (360–767) and Tablet (768–1023) are below the
+  // Req 4.1 / 4.5 — Mobile (360–767) and Tablet (768–959) are below the
   // desktop breakpoint, so the single-column base layout is in force.
   it.each([...MOBILE_WIDTHS, ...TABLET_WIDTHS])(
     'treats %ipx as below the desktop breakpoint (single-column base layout)',
     (width) => {
       setViewportWidth(width)
-      expect(window.matchMedia('(min-width: 1024px)').matches).toBe(false)
+      expect(window.matchMedia('(min-width: 960px)').matches).toBe(false)
     },
   )
 
-  // Req 4.2 — Desktop (1024–1920) is at/above the width-constrained breakpoint.
+  // Req 4.2 — Desktop (960–1920) is at/above the width-constrained breakpoint.
   it.each(DESKTOP_WIDTHS)(
     'treats %ipx as the width-constrained desktop range',
     (width) => {
       setViewportWidth(width)
-      expect(window.matchMedia('(min-width: 1024px)').matches).toBe(true)
+      expect(window.matchMedia('(min-width: 960px)').matches).toBe(true)
     },
   )
 })
@@ -259,10 +269,11 @@ describe('Landing page responsive layout — stylesheet contract', () => {
     expect(landingCss).toMatch(/--landing-content-max:/)
     expect(landingCss).toMatch(/max-width:\s*var\(--landing-content-max\)/)
     // A desktop refinement breakpoint exists for the constrained range.
-    expect(landingCss).toMatch(/@media\s*\(min-width:\s*1024px\)/)
+    expect(landingCss).toMatch(/@media\s*\(min-width:\s*960px\)/)
   })
 
-  // Req 4.1 — hero and benefit bands stack as a single column.
+  // Req 4.1 — below the desktop breakpoint the hero and benefit bands stack as
+  // a single column (the base rules; the grids are desktop-only).
   it('stacks the hero and benefit bands in a single column', () => {
     expect(landingCss).toMatch(/\.hero\s*\{[^}]*flex-direction:\s*column/)
     expect(landingCss).toMatch(/\.benefit\s*\{[^}]*flex-direction:\s*column/)

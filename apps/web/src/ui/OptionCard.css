@@ -1,0 +1,139 @@
+.pm-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18px;
+  border-radius: var(--pm-radius-lg);
+  border: 1.5px solid var(--pm-border-control);
+  background: var(--pm-surface);
+  color: var(--pm-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pm-option:hover {
+  background: var(--pm-surface-hover);
+}
+
+/* The radio covers the card, so a press anywhere picks it; the drawn radio is its look. */
+.pm-option__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pm-option:has(.pm-option__input:focus-visible) {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+}
+
+.pm-option.is-selected {
+  padding: 17.5px;
+  border: 2px solid var(--pm-accent-fill);
+  background: var(--pm-accent-subtle);
+  /* The only text pairing the tokens verify on accent-subtle. */
+  color: var(--pm-accent-on-subtle);
+}
+
+.pm-option__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.pm-option__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--pm-surface-sunken);
+  color: var(--pm-accent-icon);
+}
+
+.pm-option.is-selected .pm-option__icon {
+  background: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+.pm-option__radio {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--pm-border-control);
+  display: grid;
+  place-items: center;
+  color: var(--pm-on-accent);
+}
+
+.pm-option.is-selected .pm-option__radio {
+  background: var(--pm-accent-fill);
+  border-color: var(--pm-accent-fill);
+}
+
+.pm-option__title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--pm-font-display);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.pm-option__desc {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--pm-text-secondary);
+}
+
+.pm-option.is-selected .pm-option__desc {
+  color: var(--pm-accent-on-subtle);
+}
+
+.pm-option--compact {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: start;
+  padding: 12px;
+}
+
+.pm-option--compact.is-selected {
+  padding: 11.5px;
+}
+
+/* Compact: the leading box on the left across every line, the radio top right. */
+.pm-option--compact .pm-option__top {
+  display: contents;
+}
+
+.pm-option--compact .pm-option__top > :first-child:not(.pm-option__radio) {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+}
+
+.pm-option--compact .pm-option__radio {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.pm-option--compact > :not(.pm-option__top):not(.pm-option__input) {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.pm-option--compact .pm-option__title {
+  font-size: 20px;
+}

@@ -74,3 +74,49 @@
   color: var(--pm-text-secondary);
   font-size: 14px;
 }
+
+/* The next match: a sunken well under the head. */
+.pm-squadcard__next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pm-space-3);
+  padding: var(--pm-space-3);
+  border-radius: var(--pm-radius-md);
+  background: var(--pm-surface-sunken);
+}
+
+.pm-squadcard__next-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pm-squadcard__next-title {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.pm-squadcard__next-sub {
+  color: var(--pm-text-secondary);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+/* The viewer's form, set off by a rule. */
+.pm-squadcard__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-3);
+  padding-top: var(--pm-space-4);
+  border-top: 1px solid var(--pm-border-subtle);
+}
+
+.pm-squadcard__foot-label {
+  font: var(--pm-type-overline);
+  letter-spacing: var(--pm-type-overline-tracking);
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
+}

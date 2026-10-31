@@ -84,6 +84,7 @@
  */
 import { type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Avatar } from '../../../ui';
 
 import { StatSection } from './StatSection';
 import { playerStatsPath } from '../../squads';
@@ -409,6 +410,10 @@ export function PairwiseSection(props: PairwiseSectionProps): ReactElement {
                         on every entry including a Former_Player's — and carrying
                         the path `playerStatsPath` built, so the target is
                         recoverable from the row. */}
+                    {/* Decorative: the control beside it carries the name. */}
+                    <span className="player-stats-pairwise__avatar">
+                      <Avatar name={row.displayName} size={32} />
+                    </span>
                     <button
                       type="button"
                       className="player-stats-pairwise__link"

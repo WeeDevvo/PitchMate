@@ -110,6 +110,7 @@ import {
   type CallerStanding,
   type SquadScreenStateName,
 } from '../testing/squadsScreenStates';
+import { SQUAD_TABS, type SquadTab } from '../lib/squadTabs';
 import { SQUAD_SCREEN_SELECTOR } from './SquadScreen';
 
 /**
@@ -456,29 +457,33 @@ function detailHeld(state: SquadScreenStateName): boolean {
  * (Requirement 15.1). Administration joins the four only where authority holds
  * (Requirements 10.2, 10.3).
  */
+/**
+ * The level-two headings a state shows on a tab: the Squad_Detail's, then the
+ * tab's own section once a Squad_Detail is held. No tab bar and no tab page
+ * render while none is (Requirement 6.9). The Admin tab shows administration
+ * while authority holds and sends anyone else to Players.
+ */
 function expectedSquadSections(
   state: SquadScreenStateName,
   authority: boolean,
+  tab: SquadTab,
 ): readonly string[] {
   if (state === 'not-found') {
     return [];
   }
 
-  if (state === 'loading' || state === 'failed') {
-    return [
-      SQUAD_DETAIL_SECTION_HEADING,
-      MATCHES_SECTION_HEADING,
-      STATS_SECTION_HEADING,
-    ];
+  if (!detailHeld(state)) {
+    return [SQUAD_DETAIL_SECTION_HEADING];
   }
 
-  return [
-    SQUAD_DETAIL_SECTION_HEADING,
-    PLAYERS_SECTION_HEADING,
-    MATCHES_SECTION_HEADING,
-    STATS_SECTION_HEADING,
-    ...(authority ? [ADMIN_SECTION_HEADING] : []),
-  ];
+  const section: Readonly<Record<SquadTab, string>> = {
+    players: PLAYERS_SECTION_HEADING,
+    matches: MATCHES_SECTION_HEADING,
+    leaderboards: STATS_SECTION_HEADING,
+    admin: authority ? ADMIN_SECTION_HEADING : PLAYERS_SECTION_HEADING,
+  };
+
+  return [SQUAD_DETAIL_SECTION_HEADING, section[tab]];
 }
 
 /**
@@ -487,27 +492,33 @@ function expectedSquadSections(
  * each of the sixteen content combinations. Thirty-three examples inside a hundred
  * runs, so the dimensions are exhausted individually and re-sampled jointly.
  */
-const SQUAD_SCREEN_EXAMPLES: readonly [SquadScreenStateName, number, number, number][] =
+const SQUAD_SCREEN_EXAMPLES: readonly [SquadScreenStateName, number, number, number, SquadTab][] =
   [
+    // Every caller standing on the Admin tab, the one page authority changes.
     ...CALLER_STANDINGS.map(
-      (_standing, index): [SquadScreenStateName, number, number, number] => [
+      (_standing, index): [SquadScreenStateName, number, number, number, SquadTab] => [
         'players',
         index,
         0,
         0,
+        'admin',
       ],
     ),
     ...SQUAD_SCREEN_STATES.map(
-      (state): [SquadScreenStateName, number, number, number] => [state, 0, 0, 0],
+      (state): [SquadScreenStateName, number, number, number, SquadTab] => [state, 0, 0, 0, 'players'],
     ),
+    // Every injected body on the two tabs that show them.
     ...CONTENT_INDICES.flatMap((matches) =>
-      CONTENT_INDICES.map(
-        (stats): [SquadScreenStateName, number, number, number] => [
-          'players',
-          0,
-          matches,
-          stats,
-        ],
+      CONTENT_INDICES.flatMap((stats) =>
+        (['matches', 'leaderboards'] as const).map(
+          (tab): [SquadScreenStateName, number, number, number, SquadTab] => [
+            'players',
+            0,
+            matches,
+            stats,
+            tab,
+          ],
+        ),
       ),
     ),
   ];
@@ -515,14 +526,15 @@ const SQUAD_SCREEN_EXAMPLES: readonly [SquadScreenStateName, number, number, num
 describe('Property 43 — the Squad_Screen section order over every authority value and injected body', () => {
   // Feature: web-squads-screens, Property 43: Each screen holds one level-one heading and skips no level
   // Validates: Requirements 6.8, 10.7, 15.1, 19.1
-  it('keeps the five sections in order with one h2 each and administration under three h3s', async () => {
+  it('gives each tab the Squad_Detail and its own section, one h2 each, and administration three h3s', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.constantFrom(...SQUAD_SCREEN_STATES),
         fc.nat({ max: CALLER_STANDINGS.length - 1 }),
         fc.constantFrom(...CONTENT_INDICES),
         fc.constantFrom(...CONTENT_INDICES),
-        async (state, standingIndex, matchesIndex, statsIndex) => {
+        fc.constantFrom(...SQUAD_TABS),
+        async (state, standingIndex, matchesIndex, statsIndex, tab) => {
           const caller = CALLER_STANDINGS[standingIndex];
           const matches = PLACEHOLDER_CONTENT_CASES[matchesIndex];
           const stats = PLACEHOLDER_CONTENT_CASES[statsIndex];
@@ -533,14 +545,15 @@ describe('Property 43 — the Squad_Screen section order over every authority va
 
           const description =
             `the Squad_Screen ${state} for a ${caller.role ?? 'role-less'} ` +
-            `${caller.state ?? 'state-less'} caller, with ${matches.name} injected ` +
-            `into matches and ${stats.name} into stats`;
+            `${caller.state ?? 'state-less'} caller on the ${tab} tab, with ${matches.name} ` +
+            `injected into matches and ${stats.name} into stats`;
 
           try {
             const { container } = await renderSquadScreenState(state, 'dark', {
               caller,
               matchesContent: matches.node,
               statsContent: stats.node,
+              tab,
             });
 
             // 19.1: one level-one heading and no skipped level, whatever a later
@@ -550,7 +563,7 @@ describe('Property 43 — the Squad_Screen section order over every authority va
             // 6.8: exactly the sections this state renders, in the fixed order.
             expect({ description, sections: squadSectionHeadings(container) }).toEqual({
               description,
-              sections: expectedSquadSections(state, authority),
+              sections: expectedSquadSections(state, authority, tab),
             });
 
             // 10.7: administration's own outline, or its absence. A state holding
@@ -558,7 +571,7 @@ describe('Property 43 — the Squad_Screen section order over every authority va
             // not put administration on screen (Requirement 6.9).
             expectAdminOutline(
               container,
-              authority && detailHeld(state),
+              authority && detailHeld(state) && tab === 'admin',
               resolveOwnerAuthority(caller.role, caller.state),
             );
           } finally {

@@ -31,7 +31,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ShellFrame, type ShellFrameProps } from './ShellFrame';
 import { SKIP_LINK_LABEL } from './components/SkipLink';
 import { BRAND_NAME } from './components/BrandControl';
-import { PRIMARY_NAVIGATION_LABEL } from './components/ShellHeader';
 import { HOME_ROUTE, SETTINGS_ROUTE } from './lib/destinations';
 
 /** Render the frame standalone with supplied content, as a screen would host it. */
@@ -76,14 +75,14 @@ function skipLink(): HTMLElement {
 }
 
 describe('ShellFrame landmarks', () => {
-  // Requirement 1.5 — exactly one of each landmark on a rendered shell route.
-  it('renders exactly one banner, one navigation, and one main landmark', () => {
+  // One banner and one main; the design system's top bar has no row of
+  // destination links, so the frame contributes no navigation landmark.
+  it('renders exactly one banner and one main landmark, and no navigation', () => {
     renderFrame({ children: <h1>Settings</h1> });
 
     expect(screen.getAllByRole('banner')).toHaveLength(1);
-    expect(screen.getAllByRole('navigation')).toHaveLength(1);
     expect(screen.getAllByRole('main')).toHaveLength(1);
-    expect(screen.getByRole('navigation')).toHaveAccessibleName(PRIMARY_NAVIGATION_LABEL);
+    expect(screen.queryByRole('navigation')).toBeNull();
   });
 
   // Requirement 1.2 — the header is outside the content region and before it.
@@ -252,36 +251,20 @@ describe('ShellFrame header slots', () => {
     );
   }
 
-  it('renders the navigation slot inside the one navigation landmark', () => {
+  it('passes each slot a closed disclosure on first render', () => {
     renderFrame({
       children: <h1>Settings</h1>,
-      navigation: () => control('Squads'),
-    });
-
-    expect(screen.getAllByRole('navigation')).toHaveLength(1);
-    expect(screen.getByRole('navigation')).toContainElement(
-      screen.getByRole('button', { name: 'Squads' }),
-    );
-  });
-
-  it('passes the current layout and a closed disclosure to the navigation slot', () => {
-    renderFrame({
-      children: <h1>Settings</h1>,
-      navigation: ({ layout, disclosure }) => (
-        <button type="button" data-layout={layout} data-open={String(disclosure.open)}>
-          Menu
+      account: ({ disclosure }) => (
+        <button type="button" data-open={String(disclosure.open)}>
+          Account menu
         </button>
       ),
     });
 
-    const trigger = screen.getByRole('button', { name: 'Menu' });
-    // jsdom reports every media query as non-matching, so the frame renders the
-    // Compact_Layout there (see state/useViewportLayout.ts).
-    expect(trigger).toHaveAttribute('data-layout', 'compact');
-    expect(trigger).toHaveAttribute('data-open', 'false');
+    expect(screen.getByRole('button', { name: 'Account menu' })).toHaveAttribute('data-open', 'false');
   });
 
-  it('renders the notification and account slots in the header, after the navigation', () => {
+  it('renders the notification and account slots in the header, after the brand', () => {
     renderFrame({
       children: <h1>Settings</h1>,
       notifications: () => control('Notifications'),
@@ -289,15 +272,14 @@ describe('ShellFrame header slots', () => {
     });
 
     const header = screen.getByRole('banner');
-    const navigation = screen.getByRole('navigation');
+    const brand = screen.getByRole('link', { name: BRAND_NAME });
     const indicator = screen.getByRole('button', { name: 'Notifications' });
     const account = screen.getByRole('button', { name: 'Account menu' });
 
     expect(header).toContainElement(indicator);
     expect(header).toContainElement(account);
-    expect(navigation).not.toContainElement(indicator);
     expect(
-      navigation.compareDocumentPosition(indicator) & Node.DOCUMENT_POSITION_FOLLOWING,
+      brand.compareDocumentPosition(indicator) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
       indicator.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -308,10 +290,6 @@ describe('ShellFrame header slots', () => {
     const surfaceIds: string[] = [];
     renderFrame({
       children: <h1>Settings</h1>,
-      navigation: ({ disclosure }) => {
-        surfaceIds.push(disclosure.surfaceId);
-        return null;
-      },
       notifications: ({ disclosure }) => {
         surfaceIds.push(disclosure.surfaceId);
         return null;
@@ -322,14 +300,13 @@ describe('ShellFrame header slots', () => {
       },
     });
 
-    expect(new Set(surfaceIds).size).toBe(3);
+    expect(new Set(surfaceIds).size).toBe(2);
   });
 
   it('leaves the landmark set intact when no slot is supplied', () => {
     renderFrame({ children: <h1>Settings</h1> });
 
     expect(screen.getAllByRole('banner')).toHaveLength(1);
-    expect(screen.getAllByRole('navigation')).toHaveLength(1);
     expect(screen.getAllByRole('main')).toHaveLength(1);
   });
 });

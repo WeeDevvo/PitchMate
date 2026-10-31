@@ -209,11 +209,13 @@ describe('LogInScreen — Property 8 (sign-in non-disclosure)', () => {
 
           // The announced message equals the single constant, verbatim — never
           // any of the generated (possibly credential-revealing) detail. The
-          // screen renders its status region first, ahead of the Google
-          // control's own (empty) region, so index 0 is the sign-in status.
+          // Google control keeps its own (empty) region, so the sign-in status
+          // is the one region outside it.
           await waitFor(() =>
             expect(
-              screen.getAllByTestId('auth-live-region')[0]?.textContent,
+              screen
+                .getAllByTestId('auth-live-region')
+                .find((region) => !region.closest('.auth-google__wrap'))?.textContent,
             ).toBe(GENERIC_AUTH_FAILURE),
           )
         } finally {

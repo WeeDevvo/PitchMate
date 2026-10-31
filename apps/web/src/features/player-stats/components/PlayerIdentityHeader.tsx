@@ -78,6 +78,7 @@
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
  */
 import { type ReactElement } from 'react';
+import { Avatar } from '../../../ui';
 
 import { isAnonymisedPlaceholder } from '../lib/anonymisedName';
 import {
@@ -203,27 +204,33 @@ export function PlayerIdentityHeader({
 
   return (
     <div className="player-stats-identity" data-player-stats-identity="true">
-      {/* 5.1, 16.1: the screen's one level-one heading, carrying the name as
-          parsed. No control sits on it or beside it (5.5). */}
-      <h1 className="player-stats-identity__name">{displayName}</h1>
+      {/* Decorative: the name beside it is the heading. Guests get the hatched
+          avatar, as everywhere else in the app. */}
+      <Avatar name={displayName} guest={isGuest} size={84} />
 
-      {/* 5.2, 5.3, 5.4, 5.5: the membership labels, in a fixed order, each one
-          text so none depends on colour being perceived. */}
-      <p className="player-stats-identity__labels">
-        {labels.map((label) => (
-          <span
-            key={label.kind}
-            className={`player-stats-identity__label player-stats-identity__label--${label.kind}`}
-            data-player-stats-identity-label={label.kind}
-          >
-            {label.text}
-          </span>
-        ))}
-      </p>
+      <div className="player-stats-identity__text">
+        {/* 5.1, 16.1: the screen's one level-one heading, carrying the name as
+            parsed. No control sits on it or beside it (5.5). */}
+        <h1 className="player-stats-identity__name">{displayName}</h1>
 
-      {/* 5.6: stated before a reader reaches a figure, so the numbers below
-          cannot be read as a cross-squad total. */}
-      <p className="player-stats-identity__scope">{SQUAD_SCOPE_STATEMENT}</p>
+        {/* 5.2, 5.3, 5.4, 5.5: the membership labels, in a fixed order, each one
+            text so none depends on colour being perceived. */}
+        <p className="player-stats-identity__labels">
+          {labels.map((label) => (
+            <span
+              key={label.kind}
+              className={`player-stats-identity__label player-stats-identity__label--${label.kind}`}
+              data-player-stats-identity-label={label.kind}
+            >
+              {label.text}
+            </span>
+          ))}
+        </p>
+
+        {/* 5.6: stated before a reader reaches a figure, so the numbers below
+            cannot be read as a cross-squad total. */}
+        <p className="player-stats-identity__scope">{SQUAD_SCOPE_STATEMENT}</p>
+      </div>
     </div>
   );
 }

@@ -79,6 +79,7 @@
 import { useCallback, useId, useMemo, type ReactElement } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
+import { Icon, Logo, buttonClasses } from '../../../ui';
 import { HOME_ROUTE } from '../../app-shell';
 import {
   LOG_IN_ROUTE,
@@ -221,17 +222,30 @@ export function InviteLandingScreen({
    * second decision made here.
    */
   const homeControl = (
-    <Link className="squads-invite-landing__home" to={HOME_ROUTE}>
+    <Link className={`squads-invite-landing__home ${buttonClasses({ variant: 'secondary', block: true })}`} to={HOME_ROUTE}>
+      <Icon name="home" size={18} />
       {SQUADS_HOME_CONTROL_LABEL}
     </Link>
   );
 
+  // A link that can't be used shows a broken-link mark; one that can, the
+  // invite's own.
+  const linkFailed = machine.incompleteLink || machine.unusable || machine.failed;
+
   return (
     <div className="squads-invite-landing" data-squads-invite-landing="true">
+      <Logo size={34} />
       <section
         className="squads-invite-landing__surface"
         aria-labelledby={headingId}
       >
+        <span
+          className={`squads-invite-landing__art${linkFailed ? '' : ' squads-invite-landing__art--accent'}`}
+          aria-hidden="true"
+        >
+          <Icon name={linkFailed ? 'link' : 'userPlus'} size={44} strokeWidth={1.8} />
+        </span>
+
         {/* 5.2, 19.1: the route's single level-one heading, naming joining a
             squad and naming no squad. */}
         <h1 id={headingId} className="squads-invite-landing__heading">
@@ -268,13 +282,10 @@ export function InviteLandingScreen({
               {machine.instruction ?? INVITE_SIGN_IN_REQUIRED_INSTRUCTION}
             </p>
             <div className="squads-invite-landing__controls">
-              <Link
-                className="squads-invite-landing__control"
-                to={signUpTarget}
-              >
+              <Link className={`squads-invite-landing__control ${buttonClasses({ size: 'lg', block: true })}`} to={signUpTarget}>
                 {INVITE_SIGN_UP_LABEL}
               </Link>
-              <Link className="squads-invite-landing__control" to={logInTarget}>
+              <Link className={`squads-invite-landing__control ${buttonClasses({ variant: 'secondary', size: 'lg', block: true })}`} to={logInTarget}>
                 {INVITE_LOG_IN_LABEL}
               </Link>
             </div>

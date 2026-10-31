@@ -51,6 +51,7 @@ import {
   RATING_UNAVAILABLE_LABEL,
   SQUAD_DETAIL_SECTION_HEADING,
   SQUAD_SCREEN_HEADING,
+  SQUAD_TABS_LABEL,
   SQUADS_RETRY_LABEL,
   STATS_SECTION_HEADING,
 } from '../lib/messages';
@@ -58,6 +59,7 @@ import type { DisplayRatingLeaderboard } from '../lib/parse/leaderboard';
 import type { SquadDetail, SquadMember } from '../lib/parse/squadDetail';
 import type { SquadSummary } from '../lib/parse/squadSummary';
 import { PLAYER_STATS_ROUTE, SQUAD_ROUTE, playerStatsPath, squadPath } from '../lib/routePaths';
+import { SQUAD_TABS, squadTabChildPath, squadTabPath, type SquadTab } from '../lib/squadTabs';
 import {
   CALLER_ROLE_SELECTOR,
   PLAYERS_SECTION_SELECTOR,
@@ -251,13 +253,23 @@ function LocationProbe(): ReactElement {
   return <output data-testid="location">{location.pathname}</output>;
 }
 
-/** The screen at its real route, inside a real router and a real AuthProvider. */
-function screenTree(api: SquadsApi, requestedSquadId: string): ReactElement {
+/** The screen at its real routes — one per tab — inside a real router and a real AuthProvider. */
+function screenTree(api: SquadsApi, requestedSquadId: string, tab: SquadTab = 'players'): ReactElement {
   return (
     <AuthProvider manager={sessionManager()}>
-      <MemoryRouter initialEntries={[squadPath(requestedSquadId)]}>
+      <MemoryRouter initialEntries={[squadTabPath(requestedSquadId, tab)]}>
         <Routes>
-          <Route path={SQUAD_ROUTE} element={<SquadScreen api={api} />} />
+          {SQUAD_TABS.map((routeTab) => (
+            <Route
+              key={routeTab}
+              path={
+                routeTab === 'players'
+                  ? SQUAD_ROUTE
+                  : `${SQUAD_ROUTE}/${squadTabChildPath(routeTab)}`
+              }
+              element={<SquadScreen api={api} />}
+            />
+          ))}
           <Route path={PLAYER_STATS_ROUTE} element={<p>player stats</p>} />
         </Routes>
         <LocationProbe />
@@ -269,13 +281,22 @@ function screenTree(api: SquadsApi, requestedSquadId: string): ReactElement {
 function renderScreen(
   api: SquadsApi,
   requestedSquadId: string = SQUAD_ID,
+  tab: SquadTab = 'players',
 ): { readonly rerender: () => void } {
-  const { rerender } = render(screenTree(api, requestedSquadId));
+  const { rerender } = render(screenTree(api, requestedSquadId, tab));
 
   // A *fresh* element each time, so React re-renders rather than bailing out on
   // an unchanged element identity — which is what makes the publication count
   // below observable.
-  return { rerender: () => rerender(screenTree(api, requestedSquadId)) };
+  return { rerender: () => rerender(screenTree(api, requestedSquadId, tab)) };
+}
+
+/** The tabs the screen's tab bar offers, by their link text. */
+function offeredTabs(): readonly string[] {
+  const nav = screen.getByRole('navigation', { name: SQUAD_TABS_LABEL });
+  return within(nav)
+    .getAllByRole('link')
+    .map((link) => link.textContent ?? '');
 }
 
 function headingTexts(level: number): readonly string[] {
@@ -314,28 +335,41 @@ describe('SquadScreen — the states of the detail slot', () => {
   });
 
   // Requirements: 6.3, 6.8, 15.1
-  it('renders the parsed Squad_Name as its one level-one heading and the five sections in order', async () => {
+  it('renders the parsed Squad_Name as its one level-one heading, and each tab its own section', async () => {
     const { api } = createFakeApi({
       detailOutcomes: [{ kind: 'success', value: detail() }],
       leaderboardOutcome: { kind: 'success', value: leaderboard() },
       summaries: [summary({ role: 'Owner' })],
       invitesAvailable: true,
     });
+    const user = userEvent.setup();
 
     renderScreen(api);
 
     await screen.findByRole('heading', { level: 1, name: 'Thursday Ballers' });
 
     expect(headingTexts(1)).toEqual(['Thursday Ballers']);
+    // An admin is offered all four tabs, Players with its count.
+    expect(offeredTabs()).toEqual(['Players1', 'Matches', 'Leaderboards', 'Admin']);
 
-    // 6.8: the document order, each section introduced by exactly one `h2`.
-    expect(headingTexts(2)).toEqual([
-      SQUAD_DETAIL_SECTION_HEADING,
-      PLAYERS_SECTION_HEADING,
-      MATCHES_SECTION_HEADING,
-      STATS_SECTION_HEADING,
-      ADMIN_SECTION_HEADING,
-    ]);
+    // 6.8: each page introduced by exactly one `h2`, after the Squad_Detail's.
+    const sectionOf: readonly (readonly [SquadTab, string])[] = [
+      ['players', PLAYERS_SECTION_HEADING],
+      ['matches', MATCHES_SECTION_HEADING],
+      ['leaderboards', STATS_SECTION_HEADING],
+      ['admin', ADMIN_SECTION_HEADING],
+    ];
+    for (const [tab, heading] of sectionOf) {
+      await user.click(
+        document.querySelector(`a[href="${squadTabPath(SQUAD_ID, tab)}"]`) as HTMLElement,
+      );
+      await screen.findByRole('heading', { level: 2, name: heading });
+      expect(headingTexts(1)).toEqual(['Thursday Ballers']);
+      expect(headingTexts(2)).toEqual([SQUAD_DETAIL_SECTION_HEADING, heading]);
+      expect(
+        document.querySelector(`a[href="${squadTabPath(SQUAD_ID, tab)}"]`),
+      ).toHaveAttribute('aria-current', 'page');
+    }
   });
 
   // Requirements: 6.4
@@ -455,12 +489,49 @@ describe('SquadScreen — the caller’s own standing', () => {
     );
     expect(document.querySelector(ADMIN_SECTION_SELECTOR)).toBeNull();
     expect(document.querySelectorAll(PLAYER_ROW_SELECTOR)).toHaveLength(1);
-    expect(headingTexts(2)).toEqual([
-      SQUAD_DETAIL_SECTION_HEADING,
-      PLAYERS_SECTION_HEADING,
-      MATCHES_SECTION_HEADING,
-      STATS_SECTION_HEADING,
-    ]);
+    expect(headingTexts(2)).toEqual([SQUAD_DETAIL_SECTION_HEADING, PLAYERS_SECTION_HEADING]);
+    // The Admin tab is absent for a member, not disabled.
+    expect(offeredTabs()).toEqual(['Players1', 'Matches', 'Leaderboards']);
+  });
+
+  it('shows a member who opens the Admin tab address the Players tab instead', async () => {
+    const { api } = createFakeApi({
+      detailOutcomes: [{ kind: 'success', value: detail() }],
+      summaries: [summary({ role: 'Member' })],
+    });
+
+    renderScreen(api, SQUAD_ID, 'admin');
+
+    await screen.findByRole('heading', { level: 1, name: 'Thursday Ballers' });
+    // Wait for the exact address: the Admin address contains the squad's, so a
+    // substring match can pass before the redirect has happened.
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(squadPath(SQUAD_ID)));
+    expect(document.querySelector(ADMIN_SECTION_SELECTOR)).toBeNull();
+    expect(document.querySelectorAll(PLAYER_ROW_SELECTOR)).toHaveLength(1);
+    // One level-one heading: the squad's, and no not-found heading beside it.
+    expect(headingTexts(1)).toEqual(['Thursday Ballers']);
+  });
+
+  it('reads the squad once, however often the tabs change', async () => {
+    const user = userEvent.setup();
+    const { api } = createFakeApi({
+      detailOutcomes: [{ kind: 'success', value: detail() }],
+      summaries: [summary({ role: 'Owner' })],
+      invitesAvailable: true,
+    });
+    const getSquad = vi.spyOn(api, 'getSquad');
+
+    renderScreen(api);
+    await screen.findByRole('heading', { level: 1, name: 'Thursday Ballers' });
+
+    for (const tab of ['matches', 'leaderboards', 'admin', 'players'] as const) {
+      await user.click(
+        document.querySelector(`a[href="${squadTabPath(SQUAD_ID, tab)}"]`) as HTMLElement,
+      );
+    }
+
+    // The tabs are one mounted screen, so the squad is never read again.
+    expect(getSquad).toHaveBeenCalledTimes(1);
   });
 });
 

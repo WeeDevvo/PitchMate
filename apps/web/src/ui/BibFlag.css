@@ -37,3 +37,46 @@
   text-transform: none;
   transform: none;
 }
+
+.pm-bibtoggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pm-space-2);
+  width: 100%;
+  min-height: 56px;
+  padding: 0 var(--pm-space-4);
+  border-radius: var(--pm-radius-md);
+  border: 1.5px solid var(--pm-border-control);
+  background: var(--pm-surface);
+  color: var(--pm-text-primary);
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.pm-bibtoggle:hover {
+  background: var(--pm-surface-hover);
+}
+
+.pm-bibtoggle.is-pressed {
+  border-color: var(--pm-bib);
+  background-color: var(--pm-bib);
+  color: var(--pm-on-bib);
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 6px,
+    color-mix(in srgb, var(--pm-brand-ink) 12%, transparent) 6px 8px
+  );
+}
+
+.pm-bibtoggle:focus-visible {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+}
+
+.pm-bibtoggle[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.7;
+}

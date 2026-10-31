@@ -42,6 +42,32 @@ describe('FairnessMeter', () => {
     );
   });
 
+  it('shows whole percentages that always add up to 100, each within a point of its share', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 1000 }),
+        fc.integer({ min: 0, max: 1000 }),
+        fc.integer({ min: 0, max: 1000 }),
+        (rawA, rawDraw, rawB) => {
+          const total = rawA + rawDraw + rawB;
+          const [winA, draw, winB] = [rawA / total, rawDraw / total, rawB / total];
+          const { unmount } = render(<FairnessMeter teamA="A" teamB="B" winA={winA} winB={winB} draw={draw} />);
+          const shown = screen.getAllByRole('definition').map((value) => Number.parseInt(value.textContent ?? '', 10));
+          expect(shown.reduce((sum, value) => sum + value, 0)).toBe(100);
+          [winA, draw, winB].forEach((share, index) => expect(Math.abs(shown[index] - share * 100)).toBeLessThan(1));
+          unmount();
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it('rounds the screenshot case to 100 rather than 101', () => {
+    // 51% / 49% wins with a 5% draw, as shares of the whole outcome.
+    render(<FairnessMeter teamA="A" teamB="B" winA={0.51 * 0.95} winB={0.49 * 0.95} draw={0.05} />);
+    expect(screen.getAllByRole('definition').map((value) => value.textContent)).toEqual(['48%', '5%', '47%']);
+  });
+
   it('shows the side sizes only when the teams are uneven', () => {
     const { rerender } = render(<FairnessMeter teamA="A" teamB="B" winA={0.5} winB={0.4} draw={0.1} sizes={[7, 6]} />);
     expect(screen.getByText(/7/)).toBeInTheDocument();
@@ -74,6 +100,21 @@ describe('DayPicker', () => {
     expect(saturday.closest('.pm-day')).toHaveClass('is-selected');
     await userEvent.click(saturday);
     expect(saturday).not.toBeChecked();
+  });
+
+  it('keeps a time line on every tile when asked, blank until the day has a time', () => {
+    const days = [
+      { id: 'sat', label: 'Sat 24 Oct, 19:00', dow: 'Sat', num: '24', mon: 'Oct', time: '19:00' },
+      { id: 'sun', label: 'Sun 25 Oct', dow: 'Sun', num: '25', mon: 'Oct' },
+    ];
+    const { container, rerender } = render(<DayPicker days={days} selected={[]} onToggle={() => {}} />);
+    expect(Array.from(container.querySelectorAll('.pm-day__time'), (line) => line.textContent)).toEqual(['19:00']);
+
+    rerender(<DayPicker days={days} selected={[]} onToggle={() => {}} reserveTime />);
+    expect(Array.from(container.querySelectorAll('.pm-day__time'), (line) => line.textContent)).toEqual([
+      '19:00',
+      '',
+    ]);
   });
 });
 

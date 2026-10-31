@@ -129,3 +129,20 @@ export function formatInstantDate(instantMs: number): string {
 
   return `${String(date.getUTCDate())} ${monthName} ${String(date.getUTCFullYear())}`;
 }
+
+/**
+ * The month of an instant as a chart's axis names it, `'Oct'`, in UTC like
+ * {@link formatInstantDate}, or the empty string for an instant that is not
+ * representable.
+ */
+export function formatInstantMonth(instantMs: number): string {
+  if (
+    typeof instantMs !== 'number' ||
+    !Number.isFinite(instantMs) ||
+    Math.abs(instantMs) > MAX_INSTANT_MS
+  ) {
+    return '';
+  }
+
+  return MONTH_NAMES[new Date(instantMs).getUTCMonth()] ?? '';
+}

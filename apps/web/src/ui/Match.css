@@ -141,6 +141,12 @@
   color: var(--pm-text-muted);
 }
 
+/* A reserved time line holds its height while blank. */
+.pm-day__time {
+  min-height: 16px;
+  line-height: 16px;
+}
+
 /* Selected: the fill, and a tick in the corner, so it is not colour alone. */
 .pm-day.is-selected {
   background: var(--pm-accent-fill);
@@ -211,6 +217,15 @@
   font-weight: 600;
   color: var(--pm-text-secondary);
   overflow-wrap: anywhere;
+}
+
+/* Team A's swatch leads its name and Team B's trails it: space on the name side. */
+.pm-fair__team > .pm-team__swatch--a {
+  margin-inline-end: var(--pm-space-2);
+}
+
+.pm-fair__team > .pm-team__swatch--b {
+  margin-inline-start: var(--pm-space-2);
 }
 
 .pm-fair__draw {

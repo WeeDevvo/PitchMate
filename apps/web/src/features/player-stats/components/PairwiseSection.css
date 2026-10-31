@@ -75,17 +75,24 @@
    table header cell in several engines, which would discard the very column
    association this table exists for. The control and the Former_Player label are
    inline-level instead, so they flow and wrap inside the cell as it is. */
+.player-stats-pairwise__entry + .player-stats-pairwise__entry {
+  border-top: var(--player-stats-border-width) solid var(--pm-border-subtle);
+}
+
 .player-stats-pairwise__player {
-  padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
+  padding: 6px var(--player-stats-gap-tight);
   color: var(--pm-text-primary);
   font-weight: var(--player-stats-font-weight-body);
   text-align: left;
 }
 
 .player-stats-pairwise__figure {
-  padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
+  padding: 6px var(--player-stats-gap-tight);
   color: var(--pm-text-primary);
-  font-weight: var(--player-stats-font-weight-label);
+  font-family: var(--pm-font-display);
+  font-size: 22px;
+  font-weight: 800;
+  text-align: right;
   /* Each figure column shrinks to its digits, leaving the name column the
      remainder of the row. */
   width: 1%;
@@ -96,8 +103,16 @@
  * The Pairwise_Link (Requirements 10.5, 10.6, 16.4, 16.5)
  * ------------------------------------------------------------------ */
 
+/* The avatar sits inline before the control, so the cell stays a table cell. */
+.player-stats-pairwise__avatar {
+  display: inline-block;
+  margin-inline-end: 10px;
+  vertical-align: middle;
+}
+
 .player-stats-pairwise__link {
   display: inline-flex;
+  vertical-align: middle;
   align-items: center;
   min-height: var(--player-stats-touch-target);
   padding: 0;

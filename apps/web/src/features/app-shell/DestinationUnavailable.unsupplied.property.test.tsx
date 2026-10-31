@@ -6,24 +6,21 @@
  * nothing else.** *For any* subset of the injectable destination content slots
  * that is supplied, each destination whose content is absent renders the
  * unavailable state carrying exactly one level-one heading with that
- * destination's visible label, keeps the header and primary navigation rendered
- * with that destination's control marked as the current page, presents a control
+ * destination's visible label, keeps the header rendered, presents a control
  * navigating to the home destination, and renders neither another destination's
  * content nor any error indication.
  *
  * That is the whole of Requirement 3.8 — "IF a registered Destination has no
  * Destination_Content supplied, THEN … exactly one level-one heading carrying
- * that Destination's visible label, … keep the Shell_Header and the
- * Primary_Navigation rendered with that Destination's control marked as the
- * current page, … present a control that navigates to the Home_Destination, and
+ * that Destination's visible label, … keep the Shell_Header rendered, … present
+ * a control that navigates to the Home_Destination, and
  * … render neither the Destination_Content of another Destination nor any error
  * indication" — quantified over Requirement 3.7's injectable slots:
  *
  * | Clause of 3.8 | Where it is asserted |
  * | --- | --- |
  * | exactly one `h1`, carrying the registered label | {@link expectHeadingIsTheRegisteredLabel} |
- * | header and navigation still rendered | {@link expectFrameSurvives} |
- * | that Destination's control marked current, and no other | {@link expectOnlyThisDestinationIsCurrent} |
+ * | header still rendered | {@link expectFrameSurvives} |
  * | a control navigating to Home | {@link expectControlToHome} |
  * | no other Destination's content | {@link expectNoOtherDestinationContent} |
  * | no error indication | {@link expectNoErrorIndication} |
@@ -40,12 +37,9 @@
  * 3. **The requested path.** That Destination's registered path, upper-cased,
  *    trailing-slashed, or with further whole segments beneath a nested
  *    Destination — the spellings Requirements 3.11 and 3.13 make equivalent, so
- *    "its control is marked current" is checked against every way of arriving.
- * 4. **The layout.** In the Wide_Layout the destination controls are rendered
- *    directly; in the Compact_Layout the same list sits behind the header's
- *    disclosure, which the harness expands first — a collapsed surface renders no
- *    control to mark, so the criterion is about the expanded list
- *    (Requirements 1.6, 1.7).
+ *    the contract is checked against every way of arriving.
+ * 4. **The layout.** Compact and wide, so the contract holds whichever layout the
+ *    header reports.
  *
  * ### The route table is not involved
  *
@@ -88,13 +82,12 @@
  */
 import { type ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import fc from 'fast-check';
 
 import { DestinationUnavailable } from './DestinationUnavailable';
 import { ShellFrame } from './ShellFrame';
-import { PrimaryNavigation } from './components/PrimaryNavigation';
 import {
   HOME_ROUTE,
   SHELL_DESTINATIONS,
@@ -104,7 +97,6 @@ import {
 import {
   ACCOUNT_MENU_LABEL,
   HOME_CONTROL_LABEL,
-  PRIMARY_NAVIGATION_TOGGLE,
   UNAVAILABLE_BODY,
 } from './lib/messages';
 import { WIDE_LAYOUT_QUERY, type ShellLayout } from './state/useViewportLayout';
@@ -218,7 +210,6 @@ function renderDestination({
   const { container } = render(
     <MemoryRouter initialEntries={[requestedPath]}>
       <ShellFrame
-        navigation={(props) => <PrimaryNavigation {...props} />}
         notifications={() => (
           <button type="button">{NOTIFICATIONS_STAND_IN}</button>
         )}
@@ -232,12 +223,6 @@ function renderDestination({
       </ShellFrame>
     </MemoryRouter>,
   );
-
-  if (layout === 'compact') {
-    // 1.6: the destination controls live behind the disclosure at compact widths,
-    // so expand it — a collapsed surface renders no control to mark current.
-    fireEvent.click(screen.getByRole('button', { name: PRIMARY_NAVIGATION_TOGGLE }));
-  }
 
   return container;
 }
@@ -259,50 +244,26 @@ function expectHeadingIsTheRegisteredLabel(destinationId: DestinationId): void {
 }
 
 /**
- * Requirement 3.8: the Shell_Header and the Primary_Navigation stay rendered —
- * an absent body changes nothing about the frame.
+ * Requirement 3.8: the Shell_Header stays rendered — an absent body changes
+ * nothing about the frame.
  */
 function expectFrameSurvives(): void {
   const banner = screen.getByRole('banner');
-  const navigation = screen.getByRole('navigation');
 
-  expect(banner).toContainElement(navigation);
-  // The header's other surfaces are still there too, so "the header stays
-  // rendered" is more than the landmark element surviving.
+  // The header's surfaces are still there, so "the header stays rendered" is
+  // more than the landmark element surviving.
   expect(
     within(banner).getByRole('button', { name: NOTIFICATIONS_STAND_IN }),
   ).toBeInTheDocument();
   expect(
     within(banner).getByRole('button', { name: ACCOUNT_MENU_LABEL }),
   ).toBeInTheDocument();
-
-  // 3.3: one control per registered Destination, each carrying its label.
-  const controls = within(navigation).getAllByRole('link');
-  expect(controls.map((control) => control.textContent)).toEqual(
-    SHELL_DESTINATIONS.map((destination) => destination.label),
-  );
-}
-
-/**
- * Requirement 3.8: that Destination's control is marked as the current page, and
- * no other control is.
- */
-function expectOnlyThisDestinationIsCurrent(destinationId: DestinationId): void {
-  const marked = Array.from(
-    document.querySelectorAll<HTMLElement>('[aria-current]'),
-    (element) => ({
-      destination: element.getAttribute('data-destination'),
-      value: element.getAttribute('aria-current'),
-    }),
-  );
-
-  expect(marked).toEqual([{ destination: destinationId, value: 'page' }]);
 }
 
 /**
  * Requirement 3.8: a control that navigates to the Home_Destination, inside the
- * content rather than only in the navigation — the navigation's Home control is
- * there whatever the content is, so it cannot be what satisfies this.
+ * content — the header's brand control is there whatever the content is, so it
+ * cannot be what satisfies this.
  */
 function expectControlToHome(): void {
   const main = screen.getByRole('main');
@@ -362,7 +323,6 @@ function expectUnavailableContract(destinationId: DestinationId): void {
 
   expectHeadingIsTheRegisteredLabel(destinationId);
   expectFrameSurvives();
-  expectOnlyThisDestinationIsCurrent(destinationId);
   expectControlToHome();
   expectNoOtherDestinationContent();
   expectNoErrorIndication();
@@ -389,7 +349,6 @@ function expectSuppliedContract(destinationId: DestinationId): void {
   }
 
   expectFrameSurvives();
-  expectOnlyThisDestinationIsCurrent(destinationId);
 }
 
 // --- Generators --------------------------------------------------------------

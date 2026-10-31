@@ -24,18 +24,16 @@
  */
 import { useCallback, type ReactElement } from 'react';
 import { useParams } from 'react-router-dom';
-import { MatchStateChip } from '../../../ui';
+import { MatchStateChip, Steps } from '../../../ui';
 import { DESIGN_STATES } from '../components/designStates';
 
 import { SQUAD_SCOPE_ROUTE_PARAMETER, usePublishSquadScopeFromRoute } from '../../app-shell';
 import { useAuth } from '../../auth';
 import { readUuid } from '../../../wire';
 import type { MatchesApi } from '../api/matchesApi';
-import { AvailabilityForm } from '../components/AvailabilityForm';
-import { AvailabilityTally } from '../components/AvailabilityTally';
+import { AvailabilityPanel } from '../components/AvailabilityPanel';
 import { CompletePanel } from '../components/CompletePanel';
 import { ConfirmPanel } from '../components/ConfirmPanel';
-import { GuestAvailabilityPanel } from '../components/GuestAvailabilityPanel';
 import { MatchActionsPanel } from '../components/MatchActionsPanel';
 import { ParticipantsPanel } from '../components/ParticipantsPanel';
 import { ResultForm } from '../components/ResultForm';
@@ -51,14 +49,17 @@ import { TeamsEditor } from '../components/TeamsEditor';
 import { countsByDay } from '../lib/availability';
 import { canRecordResult } from '../lib/lifecycle';
 import { formatDay } from '../lib/matchDays';
-import { MATCH_STATE_LABELS, isGatheringAvailability, isOrganiser } from '../lib/matchState';
+import { MATCH_STATE_LABELS, isGatheringAvailability, isOrganiser, setupStepOf } from '../lib/matchState';
 import {
   AVAILABILITY_CLOSED_STATEMENT,
   CONFIRMED_DAY_LABEL,
   MATCH_CANCELLED_STATEMENT,
+  MATCH_FLOW_STEPS,
+  MATCH_FLOW_STEPS_LABEL,
   MATCH_LOADING_LABEL,
   MATCH_SCREEN_FALLBACK_HEADING,
   STATE_LABEL,
+  STEP_DONE_LABEL,
   TALLY_LOADING_LABEL,
   TEAM_SHEET_LOADING_LABEL,
 } from '../lib/messages';
@@ -180,11 +181,24 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
     );
   }
 
+  const setupStep = setupStepOf(match.state);
   const dayCounts = tally.value === null ? [] : countsByDay(match.candidateDaysMs, tally.value);
 
   return (
     <div className="matches-screen">
-      <h1 className="matches-heading">{match.location}</h1>
+      <div className="matches-titles">
+        {standing.value === null ? null : <p className="matches-overline">{standing.value.squadName}</p>}
+        <h1 className="matches-heading">{match.location}</h1>
+      </div>
+
+      {organiser && setupStep !== null ? (
+        <Steps
+          label={MATCH_FLOW_STEPS_LABEL}
+          steps={MATCH_FLOW_STEPS}
+          current={setupStep}
+          doneLabel={STEP_DONE_LABEL}
+        />
+      ) : null}
 
       <dl className="matches-facts">
         <div>
@@ -232,6 +246,7 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
           <CompletePanel
             state={match.state}
             recordedResult={match.recordedResult}
+            sheet={sheet.value}
             complete={(signal) => api.completeMatch(matchId, signal)}
             onSettled={reloadDetail}
           />
@@ -240,50 +255,36 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
 
       {gathering ? (
         <>
-          <AvailabilityForm
+          {tally.phase === 'failed' ? <FailureNotice onRetry={tally.reload} /> : null}
+          {tally.value === null && tally.phase !== 'failed' ? <LoadingNotice label={TALLY_LOADING_LABEL} /> : null}
+          <AvailabilityPanel
             key={match.matchId}
             candidateDaysMs={match.candidateDaysMs}
             availability={match.callerAvailability}
+            tally={tally.value}
             submit={(days, signal) => api.submitAvailability(squadId, matchId, days, signal)}
             clear={(signal) => api.clearAvailability(squadId, matchId, signal)}
+            guests={
+              organiser
+                ? {
+                    guests:
+                      players.phase === 'failed' ? 'failed' : players.value === null ? null : guestsOf(players.value),
+                    marked: match.guestAvailability,
+                    submit: (guestId, days, signal) =>
+                      api.setGuestAvailability(squadId, matchId, guestId, days, signal),
+                    clear: (guestId, signal) => api.clearGuestAvailability(squadId, matchId, guestId, signal),
+                  }
+                : undefined
+            }
             onSettled={reloadAfterWrite}
           />
-
-          {organiser ? (
-            <GuestAvailabilityPanel
-              key={`guests-${match.matchId}`}
-              candidateDaysMs={match.candidateDaysMs}
-              guests={
-                players.phase === 'failed' ? 'failed' : players.value === null ? null : guestsOf(players.value)
-              }
-              marked={match.guestAvailability}
-              submit={(guestId, days, signal) =>
-                api.setGuestAvailability(squadId, matchId, guestId, days, signal)
-              }
-              clear={(guestId, signal) => api.clearGuestAvailability(squadId, matchId, guestId, signal)}
+          {organiser && tally.value !== null ? (
+            <ConfirmPanel
+              dayCounts={dayCounts}
+              confirm={(day, signal) => api.confirmMatch(squadId, matchId, day, signal)}
               onSettled={reloadAfterWrite}
             />
           ) : null}
-
-          {tally.phase === 'failed' ? (
-            <FailureNotice onRetry={tally.reload} />
-          ) : tally.value === null ? (
-            <LoadingNotice label={TALLY_LOADING_LABEL} />
-          ) : (
-            <>
-              <AvailabilityTally
-                candidateDaysMs={match.candidateDaysMs}
-                tally={tally.value}
-              />
-              {organiser ? (
-                <ConfirmPanel
-                  dayCounts={dayCounts}
-                  confirm={(day, signal) => api.confirmMatch(squadId, matchId, day, signal)}
-                  onSettled={reloadAfterWrite}
-                />
-              ) : null}
-            </>
-          )}
         </>
       ) : (
         <>
@@ -296,7 +297,18 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
             ) : sheet.value === null ? (
               <LoadingNotice label={TEAM_SHEET_LOADING_LABEL} />
             ) : (
-              <TeamSheetView squadId={squadId} sheet={sheet.value} />
+              <TeamSheetView
+                squadId={squadId}
+                sheet={sheet.value}
+                squadName={standing.value?.squadName}
+                guestIds={
+                  new Set(
+                    match.participants
+                      .filter((participant) => participant.isGuest)
+                      .map((participant) => participant.membershipId.toLowerCase()),
+                  )
+                }
+              />
             )
           ) : match.state === 'Cancelled' ? null : match.participants.length > 0 ||
             editingParticipants ||
@@ -346,6 +358,7 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
       {organiser ? (
         <MatchActionsPanel
           state={match.state}
+          location={match.location}
           sheet={sheet.value}
           getWorkingTeams={(signal) => api.getWorkingTeams(matchId, signal)}
           start={(signal) => api.startMatch(matchId, signal)}

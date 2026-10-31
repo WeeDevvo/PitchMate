@@ -64,6 +64,15 @@ describe('LeaderboardRow', () => {
     expect(screen.getByRole('link', { name: 'Priya Shah' })).toBeInTheDocument();
   });
 
+  it('reads a sub line under the name, after the name and before the value', () => {
+    render(
+      <ol>
+        <LeaderboardRow rank={2} name="Aisha Bello" value="1,262" sub="10W · 3D · 5L" />
+      </ol>,
+    );
+    expect(screen.getByRole('listitem')).toHaveTextContent('2Aisha Bello10W · 3D · 5L1,262');
+  });
+
   it('highlights only first place and only the viewer’s row', () => {
     const { container } = render(
       <ol>

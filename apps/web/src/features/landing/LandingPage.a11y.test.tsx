@@ -80,6 +80,17 @@ function interactiveAnchors(container: HTMLElement): HTMLAnchorElement[] {
   return Array.from(container.querySelectorAll<HTMLAnchorElement>('a[href]'))
 }
 
+/**
+ * The controls Tab reaches at the width under test. The header's section links
+ * are hidden below the desktop breakpoint, and jsdom applies the base rule
+ * without evaluating the media query, so they are skipped here.
+ */
+function tabbableAnchors(container: HTMLElement): HTMLAnchorElement[] {
+  return interactiveAnchors(container).filter(
+    (anchor) => !anchor.closest('.landing-header__sections'),
+  )
+}
+
 // ---- Stylesheet contracts (read once; they are static build artifacts) ----
 const here = dirname(fileURLToPath(import.meta.url))
 const ctaCss = readFileSync(join(here, 'components/Cta.css'), 'utf8')
@@ -129,8 +140,9 @@ describe('LandingPage accessibility', () => {
     const user = userEvent.setup()
 
     const anchors = interactiveAnchors(container)
-    // header: Log In + Sign Up, hero: Sign Up, closing: Sign Up, footer: 2 links
-    expect(anchors).toHaveLength(6)
+    // header: 3 section links + Log in + Start a squad, hero: Start a squad +
+    // See how it works, closing: Start a squad, footer: 2 links
+    expect(anchors).toHaveLength(10)
 
     for (const anchor of anchors) {
       // A real anchor with a non-empty href is inherently keyboard-activatable
@@ -152,19 +164,25 @@ describe('LandingPage accessibility', () => {
     const { container } = renderLandingPage()
     const user = userEvent.setup()
 
-    const expectedOrder = interactiveAnchors(container)
-    // Sanity-check the reading order the DOM encodes: header CTAs, hero CTA,
-    // closing CTA, then footer links.
-    expect(expectedOrder.map((a) => a.getAttribute('href'))).toEqual([
+    const domOrder = interactiveAnchors(container)
+    // Sanity-check the reading order the DOM encodes: header section links and
+    // CTAs, the hero pair, the closing CTA, then footer links.
+    expect(domOrder.map((a) => a.getAttribute('href'))).toEqual([
+      '#how-it-works',
+      '#fair-teams',
+      '#stats',
       '/login',
       '/signup',
       '/signup',
+      '#how-it-works',
       '/signup',
       '/privacy',
       '/terms',
     ])
 
     // Tabbing forward visits the controls in exactly that order.
+    const expectedOrder = tabbableAnchors(container)
+    expect(expectedOrder).toHaveLength(7)
     for (const expected of expectedOrder) {
       await user.tab()
       expect(document.activeElement).toBe(expected)
@@ -176,7 +194,7 @@ describe('LandingPage accessibility', () => {
     const { container } = renderLandingPage()
     const user = userEvent.setup()
 
-    const anchors = interactiveAnchors(container)
+    const anchors = tabbableAnchors(container)
 
     // Advance through every control; focus must move each time (never stuck).
     const visited: Element[] = []
@@ -238,29 +256,28 @@ describe('LandingPage accessibility', () => {
   it('distinguishes primary and secondary CTAs by more than colour', () => {
     const { container } = renderLandingPage()
 
-    const primary = container.querySelector<HTMLAnchorElement>(
-      "a.cta[data-cta-kind='primary']",
-    )
-    const secondary = container.querySelector<HTMLAnchorElement>(
-      "a.cta[data-cta-kind='secondary']",
-    )
+    const header = container.querySelector<HTMLElement>('.landing-header')
+    const primary = header?.querySelector<HTMLAnchorElement>("a.cta[data-cta-kind='primary']")
+    const quiet = header?.querySelector<HTMLAnchorElement>("a.cta[data-cta-kind='ghost']")
     expect(primary).not.toBeNull()
-    expect(secondary).not.toBeNull()
+    expect(quiet).not.toBeNull()
 
     // 1) Distinct, self-describing text labels (a non-colour cue in itself).
-    expect(primary?.textContent?.trim()).toBe('Sign Up')
-    expect(secondary?.textContent?.trim()).toBe('Log In')
-    expect(primary?.textContent).not.toBe(secondary?.textContent)
+    expect(primary?.textContent?.trim()).toBe('Start a squad')
+    expect(quiet?.textContent?.trim()).toBe('Log in')
 
     // 2) Distinct roles exposed as a non-colour attribute hook.
     expect(primary?.getAttribute('data-cta-kind')).toBe('primary')
-    expect(secondary?.getAttribute('data-cta-kind')).toBe('secondary')
+    expect(quiet?.getAttribute('data-cta-kind')).toBe('ghost')
 
-    // 3) They are the design system's filled primary and outlined secondary
-    //    buttons, so they differ by shape as well as colour.
+    // 3) They are the design system's filled primary and unfilled ghost
+    //    buttons, so they differ by shape as well as colour; the hero's pair is
+    //    a filled primary beside an outlined secondary.
     expect(primary).toHaveClass('pm-btn', 'pm-btn--primary')
-    expect(secondary).toHaveClass('pm-btn', 'pm-btn--secondary')
-    expect(primary).not.toHaveClass('pm-btn--secondary')
+    expect(quiet).toHaveClass('pm-btn', 'pm-btn--ghost')
+    const heroActions = container.querySelectorAll<HTMLAnchorElement>('.hero__actions a')
+    expect(heroActions[0]).toHaveClass('pm-btn--primary')
+    expect(heroActions[1]).toHaveClass('pm-btn--secondary')
   })
 
   // Validates: Requirements 6.2 (supporting) / overall accessibility

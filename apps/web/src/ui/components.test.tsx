@@ -10,11 +10,16 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   Avatar,
   AvatarStack,
+  Banner,
   BibFlag,
+  BibToggle,
   Button,
+  Checkbox,
   Chip,
+  EmptyState,
   ErrorState,
   FormGuide,
+  GoogleMark,
   GuestBadge,
   IconButton,
   Logo,
@@ -58,6 +63,58 @@ describe('Button', () => {
     render(<Button onClick={onClick}>Complete match</Button>);
     await userEvent.click(screen.getByRole('button', { name: 'Complete match' }));
     expect(onClick).toHaveBeenCalledOnce();
+  });
+});
+
+describe('EmptyState', () => {
+  it('can be the page heading, carry attributes, and announce its message', () => {
+    render(
+      <EmptyState
+        headingLevel={1}
+        title="Squad not found"
+        data-testid="state"
+        bodyProps={{ role: 'status' }}
+      >
+        It may have been removed.
+      </EmptyState>,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: 'Squad not found' })).toBeInTheDocument();
+    expect(screen.getByTestId('state')).toHaveClass('pm-empty');
+    expect(screen.getByRole('status')).toHaveTextContent('It may have been removed.');
+  });
+
+  it('has no heading when it sits under one of its own', () => {
+    render(<EmptyState tone="error">That did not load.</EmptyState>);
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getByText('That did not load.')).toBeInTheDocument();
+  });
+});
+
+describe('Banner', () => {
+  it('announces itself by tone unless the caller owns the live region', () => {
+    const { rerender } = render(<Banner tone="error">That email and password don't match.</Banner>);
+    expect(screen.getByRole('alert')).toHaveTextContent("That email and password don't match.");
+
+    rerender(
+      <Banner tone="error" announce={false}>
+        That email and password don't match.
+      </Banner>,
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText("That email and password don't match.")).toBeInTheDocument();
+  });
+});
+
+describe('GoogleMark', () => {
+  it('is decorative, so the button label alone names the provider', () => {
+    render(
+      <button type="button">
+        <GoogleMark />
+        Continue with Google
+      </button>,
+    );
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+    expect(screen.queryByRole('img')).toBeNull();
   });
 });
 
@@ -112,6 +169,36 @@ describe('Toggle', () => {
     await userEvent.click(toggle);
     expect(toggle).toBeChecked();
     expect(onChange).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('Checkbox', () => {
+  it('is named by its label, even when the label is hidden, and reports a change', async () => {
+    const onChange = vi.fn();
+    render(<Checkbox label="Guest Gary" hideLabel checked={false} onChange={onChange} />);
+    const box = screen.getByRole('checkbox', { name: 'Guest Gary' });
+    expect(box).not.toBeChecked();
+    await userEvent.click(box);
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it('draws a tick when checked, so the state is not colour alone', () => {
+    const { container } = render(<Checkbox label="Guests pay too" checked onChange={vi.fn()} />);
+    expect(screen.getByRole('checkbox', { name: 'Guests pay too' })).toBeChecked();
+    expect(container.querySelector('.pm-check__box svg')).not.toBeNull();
+  });
+});
+
+describe('BibToggle', () => {
+  it('says whether the team wears the bibs in words and as aria-pressed', () => {
+    render(
+      <>
+        <BibToggle pressed pressedLabel="Wearing bibs" label="Wear bibs" />
+        <BibToggle pressed={false} pressedLabel="Wearing bibs" label="Wear bibs" />
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Wearing bibs' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Wear bibs' })).toHaveAttribute('aria-pressed', 'false');
   });
 });
 
@@ -228,6 +315,11 @@ describe('Avatar', () => {
     expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
   });
 
+  it('takes initials from letters and digits only, skipping punctuation', () => {
+    expect(render(<Avatar name="Kev (Sam’s mate)" />).container.firstElementChild).toHaveTextContent('KS');
+    expect(render(<Avatar name="- Ünal 7s" />).container.firstElementChild).toHaveTextContent('Ü7');
+  });
+
   it('keeps a name on the same tint every time', () => {
     const first = render(<Avatar name="Priya" />).container.firstElementChild?.className;
     const second = render(<Avatar name="Priya" />).container.firstElementChild?.className;
@@ -314,6 +406,43 @@ describe('SquadCard and SquadCrest', () => {
     expect(card.querySelector('.pm-crest')).toHaveTextContent('TB');
     await userEvent.click(card);
     expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it('reads the next match and the form as part of the one control', () => {
+    render(
+      <SquadCard
+        name="Thursday Ballers"
+        meta={<span>14 players</span>}
+        next={{ state: 'rolled', title: 'Sun 9 Nov · 10:00', sub: 'Hackney Marshes' }}
+        form={['W', 'D', 'L']}
+        render={(props) => <button type="button" {...props} />}
+      />,
+    );
+    const card = screen.getByRole('button', {
+      name: 'Thursday Ballers 14 players Teams rolled Sun 9 Nov · 10:00 Hackney Marshes Form Last 3: Win, Draw, Loss',
+    });
+    expect(card.querySelector('.pm-squadcard__next')).not.toHaveClass('pm-squadcard__next--none');
+  });
+
+  it('says so when there is no next match and no form, and leaves out what is not supplied', () => {
+    const { rerender } = render(
+      <SquadCard
+        name="Uni Old Boys"
+        next={null}
+        noNextMatch="Nothing planned yet"
+        form={[]}
+        noForm="No games yet"
+        render={(props) => <button type="button" {...props} />}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Uni Old Boys Nothing planned yet Form No games yet' }),
+    ).toBeInTheDocument();
+
+    rerender(<SquadCard name="Uni Old Boys" render={(props) => <button type="button" {...props} />} />);
+    const card = screen.getByRole('button', { name: 'Uni Old Boys' });
+    expect(card.querySelector('.pm-squadcard__next')).toBeNull();
+    expect(card.querySelector('.pm-squadcard__foot')).toBeNull();
   });
 
   it('uses a chosen crest over the initials', () => {

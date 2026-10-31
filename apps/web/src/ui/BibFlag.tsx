@@ -1,6 +1,29 @@
+import type { ButtonHTMLAttributes } from 'react';
 import { Icon } from './Icon';
 import { cx } from './cx';
 import './BibFlag.css';
+
+export interface BibToggleProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'type'> {
+  /** This team wears the bibs. */
+  pressed: boolean;
+  /** The words while it does ("Wearing bibs") and while it doesn't ("Wear bibs"). */
+  pressedLabel: string;
+  label: string;
+}
+
+/**
+ * The bibs choice for one team: a pressed button in hi-vis orange with the bib
+ * icon while the team wears them. Exactly one team does, so pressing the other
+ * team's toggle moves the bibs; the caller re-reads which team has them.
+ */
+export function BibToggle({ pressed, pressedLabel, label, className, ...rest }: BibToggleProps) {
+  return (
+    <button {...rest} type="button" aria-pressed={pressed} className={cx('pm-bibtoggle', pressed && 'is-pressed', className)}>
+      <Icon name="bib" size={22} />
+      {pressed ? pressedLabel : label}
+    </button>
+  );
+}
 
 /**
  * The bibs flag. Orange sits near loss red and draw amber, so the bib icon and

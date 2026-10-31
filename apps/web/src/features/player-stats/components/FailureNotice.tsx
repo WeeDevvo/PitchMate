@@ -57,6 +57,7 @@
  */
 import { useCallback, type ReactElement, type ReactNode } from 'react';
 
+import { EmptyState, Icon } from '../../../ui';
 import { GENERIC_PROFILE_FAILURE, RETRY_LABEL } from '../lib/messages';
 import '../styles/playerStatsTokens.css';
 import './surfaces.css';
@@ -108,36 +109,44 @@ export function FailureNotice({
   }, [onRetry, retryBusy]);
 
   return (
-    <div className="player-stats-failure" data-player-stats-failure="true">
+    // The design system's error state, with no heading of its own: the screen
+    // carries the heading above it.
+    <EmptyState
+      className="player-stats-failure"
+      data-player-stats-failure="true"
+      tone="error"
+      icon="cloudOff"
+      // 4.6: announced in place, with keyboard focus left where it was.
+      bodyProps={{
+        className: 'player-stats-failure__message',
+        role: 'status',
+        'aria-live': 'polite',
+        'aria-atomic': true,
+      }}
+      action={
+        <div className="player-stats-failure__actions">
+          {/* 4.4: exactly one retry control, named by its own label, keyboard
+              reachable and keyboard operable because it is a real button. */}
+          {/* 4.5: presented as unavailable while a retry awaits a response, and
+              `aria-disabled` rather than `disabled` so it keeps its place in the
+              keyboard order. */}
+          <button
+            type="button"
+            className="player-stats-failure__retry"
+            aria-disabled={retryBusy ? true : undefined}
+            aria-busy={retryBusy ? true : undefined}
+            onClick={handleRetry}
+          >
+            <Icon name="sync" size={18} />
+            {RETRY_LABEL}
+          </button>
+          {children}
+        </div>
+      }
+    >
       {/* 4.1, 4.2: the one fixed statement, carrying nothing of the response. */}
-      {/* 4.6: announced in place, with keyboard focus left where it was. */}
-      <p
-        className="player-stats-failure__message"
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        {GENERIC_PROFILE_FAILURE}
-      </p>
-
-      <div className="player-stats-failure__actions">
-        {/* 4.4: exactly one retry control, named by its own label, keyboard
-            reachable and keyboard operable because it is a real button. */}
-        {/* 4.5: presented as unavailable while a retry awaits a response, and
-            `aria-disabled` rather than `disabled` so it keeps its place in the
-            keyboard order. */}
-        <button
-          type="button"
-          className="player-stats-failure__retry"
-          aria-disabled={retryBusy ? true : undefined}
-          aria-busy={retryBusy ? true : undefined}
-          onClick={handleRetry}
-        >
-          {RETRY_LABEL}
-        </button>
-        {children}
-      </div>
-    </div>
+      {GENERIC_PROFILE_FAILURE}
+    </EmptyState>
   );
 }
 

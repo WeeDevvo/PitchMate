@@ -138,14 +138,21 @@ export function ResultBreakdown({
           key={outcome.kind}
           className={`player-stats-result-breakdown__item player-stats-result-breakdown__item--${outcome.kind}`}
           data-player-stats-result={outcome.kind}
+          // Each segment of the bar is as wide as its share of the matches.
+          style={{ flexGrow: counts[outcome.kind] }}
         >
-          {/* 6.2, 15.5: the hue lives here, on a non-text mark owing 3:1, and
-              never on the letter beside it. */}
+          {/* 6.2, 15.5: the outcome's mark, a shape as well as the segment's
+              fill, so the outcome never rests on colour alone. */}
           <span className="player-stats-result-breakdown__icon" aria-hidden="true">
             {outcome.icon}
           </span>
 
-          {/* 6.2: the letter, in the ordinary body text colour. Hidden from the
+          {/* 6.1: the count, exactly as parsed. */}
+          <span className="player-stats-result-breakdown__count">
+            {formatCount(counts[outcome.kind])}
+          </span>
+
+          {/* 6.2: the letter, after the count as "7 W". Hidden from the
               accessibility tree in favour of the word below it, which says the
               same thing in full. */}
           <span className="player-stats-result-breakdown__letter" aria-hidden="true">
@@ -156,11 +163,6 @@ export function ResultBreakdown({
               technology, clipped from view. */}
           <span className="player-stats-result-breakdown__name">
             {outcome.label}
-          </span>
-
-          {/* 6.1: the count, exactly as parsed. */}
-          <span className="player-stats-result-breakdown__count">
-            {formatCount(counts[outcome.kind])}
           </span>
         </li>
       ))}

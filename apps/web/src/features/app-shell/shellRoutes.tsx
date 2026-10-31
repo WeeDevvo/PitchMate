@@ -73,7 +73,6 @@ import { Disclosure } from './components/Disclosure';
 import { NotificationIndicator } from './components/NotificationIndicator';
 import { NotificationListView } from './components/NotificationListView';
 import { NotificationPanel } from './components/NotificationPanel';
-import { PrimaryNavigation } from './components/PrimaryNavigation';
 import { ShellThemeProvider } from './components/ShellThemeProvider';
 import type { ShellHeaderSlotProps } from './components/ShellHeader';
 import { DestinationUnavailable } from './DestinationUnavailable';
@@ -275,8 +274,10 @@ export function createShellRoutes({
                 pollIntervalSeconds={pollIntervalSeconds}
                 now={now}
               >
+                {/* The design system's top bar: the logo (home), the bell and the
+                    account menu, which holds Profile and Settings. No row of
+                    destination links. */}
                 <ShellFrame
-                  navigation={(props) => <PrimaryNavigation {...props} />}
                   notifications={(props) => <ShellNotifications {...props} />}
                   account={(props) => (
                     <ShellAccount {...props} signOut={signOut} />

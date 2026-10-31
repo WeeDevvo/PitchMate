@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { Button } from './Button';
 import { Icon, type IconName } from './Icon';
 import { cx } from './cx';
@@ -53,12 +53,19 @@ export interface BannerProps {
   title?: string;
   action?: ReactNode;
   children?: ReactNode;
+  /**
+   * Announce the banner as an alert or status (the default). Turn it off when
+   * the banner sits inside a live region the caller already keeps in the page,
+   * so the message is announced once.
+   */
+  announce?: boolean;
 }
 
 /** The inline equivalent of a toast. An error banner is announced as an alert. */
-export function Banner({ tone = 'info', icon, title, action, children }: BannerProps) {
+export function Banner({ tone = 'info', icon, title, action, children, announce = true }: BannerProps) {
+  const role = !announce ? undefined : tone === 'error' ? 'alert' : 'status';
   return (
-    <div className={`pm-banner pm-banner--${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
+    <div className={`pm-banner pm-banner--${tone}`} role={role}>
       <Icon name={icon ?? BANNER_ICONS[tone]} size={20} />
       <div className="pm-banner__body">
         {title && <b className="pm-banner__title">{title}</b>}
@@ -69,11 +76,19 @@ export function Banner({ tone = 'info', icon, title, action, children }: BannerP
   );
 }
 
-export interface EmptyStateProps {
+export interface EmptyStateProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   icon?: IconName;
-  title: string;
-  /** The heading level that fits the outline of the screen it sits in. */
-  headingLevel?: 2 | 3;
+  /** The heading; leave it out where the state sits under a heading of its own, such as a failed load. */
+  title?: string;
+  /**
+   * The heading level that fits the outline of the screen it sits in: 1 where
+   * the state is the whole screen (not found).
+   */
+  headingLevel?: 1 | 2 | 3;
+  /** Attributes for the heading, such as a feature's own class. */
+  headingProps?: HTMLAttributes<HTMLHeadingElement>;
+  /** Attributes for the message, such as a live region's role. */
+  bodyProps?: HTMLAttributes<HTMLParagraphElement>;
   action?: ReactNode;
   tone?: 'error';
   /** Drops the dashed outline. */
@@ -81,15 +96,38 @@ export interface EmptyStateProps {
   children?: ReactNode;
 }
 
-export function EmptyState({ icon = 'ball', title, headingLevel = 2, action, tone, plain, children }: EmptyStateProps) {
-  const Heading = headingLevel === 3 ? 'h3' : 'h2';
+export function EmptyState({
+  icon = 'ball',
+  title,
+  headingLevel = 2,
+  headingProps,
+  bodyProps,
+  action,
+  tone,
+  plain,
+  children,
+  className,
+  ...rest
+}: EmptyStateProps) {
+  const Heading = headingLevel === 1 ? 'h1' : headingLevel === 3 ? 'h3' : 'h2';
   return (
-    <div className={cx('pm-empty', tone === 'error' && 'pm-empty--error', plain && 'pm-empty--plain')}>
-      <span className="pm-empty__art">
+    <div
+      {...rest}
+      className={cx('pm-empty', tone === 'error' && 'pm-empty--error', plain && 'pm-empty--plain', className)}
+    >
+      <span className="pm-empty__art" aria-hidden="true">
         <Icon name={icon} size={44} strokeWidth={1.8} />
       </span>
-      <Heading className="pm-empty__title">{title}</Heading>
-      {children && <p className="pm-empty__body">{children}</p>}
+      {title === undefined ? null : (
+        <Heading {...headingProps} className={cx('pm-empty__title', headingProps?.className)}>
+          {title}
+        </Heading>
+      )}
+      {children && (
+        <p {...bodyProps} className={cx('pm-empty__body', bodyProps?.className)}>
+          {children}
+        </p>
+      )}
       {action}
     </div>
   );
@@ -97,7 +135,7 @@ export function EmptyState({ icon = 'ball', title, headingLevel = 2, action, ton
 
 export interface ErrorStateProps {
   title?: string;
-  headingLevel?: 2 | 3;
+  headingLevel?: 1 | 2 | 3;
   onRetry: () => void;
   children?: ReactNode;
 }
@@ -127,7 +165,7 @@ export function ErrorState({
 }
 
 export interface NotFoundStateProps {
-  headingLevel?: 2 | 3;
+  headingLevel?: 1 | 2 | 3;
   /** Usually a way back to the squads list. */
   action?: ReactNode;
 }

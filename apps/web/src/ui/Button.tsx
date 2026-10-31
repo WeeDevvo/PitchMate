@@ -1,11 +1,14 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import { Icon, type IconName } from './Icon';
 import { buttonClasses } from './buttonClasses';
 import { cx } from './cx';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  /** One primary per view; destructive only behind a confirmation. */
-  variant?: 'primary' | 'secondary' | 'destructive' | 'ghost' | 'accent-ghost';
+  /**
+   * One primary per view; destructive only behind a confirmation. `ink` is the
+   * call to action on an accent-fill ground, where a primary would vanish.
+   */
+  variant?: 'primary' | 'secondary' | 'destructive' | 'ghost' | 'accent-ghost' | 'ink';
   /** `pitch` (64px) is for live tracking only. */
   size?: 'sm' | 'md' | 'lg' | 'pitch';
   block?: boolean;
@@ -15,6 +18,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   iconRight?: IconName;
   /** Marks the moment teams are ready to lock. */
   glow?: boolean;
+  /** The native button, for a caller that returns focus to it. */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({

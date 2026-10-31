@@ -15,6 +15,7 @@ import { THEME_ATTRIBUTE, applyThemeAttribute, type Theme } from '../../theme';
 import { MatchesSection } from './components/MatchesSection';
 import {
   CANCEL_MATCH_LABEL,
+  CONFIRM_DAY_BUTTON_LABEL,
   COMPLETE_MATCH_LABEL,
   FINAL_RESULT_LABEL,
   LOCATION_LABEL,
@@ -22,9 +23,11 @@ import {
   RESULT_FORM_HEADING,
   SAVE_RESULT_LABEL,
   SUBMIT_DRAFT_LABEL,
+  addTimeLabel,
   scoreLabel,
 } from './lib/messages';
 import { MATCH_ROUTE, NEW_MATCH_ROUTE, matchPath, newMatchPath } from './lib/routePaths';
+import { upcomingDates } from './lib/candidateSlots';
 import { CreateMatchScreen } from './screens/CreateMatchScreen';
 import { MatchScreen } from './screens/MatchScreen';
 import {
@@ -81,14 +84,27 @@ describe.each(THEMES)('in the %s theme', (theme) => {
 
     await userEvent.click(screen.getByRole('button', { name: SUBMIT_DRAFT_LABEL }));
     await expectNoWcagViolations(document.body);
+
+    // A picked day with two kick-offs, neither set: each time field is flagged.
+    const [, tomorrow] = upcomingDates(NOW_MS);
+    await userEvent.click(screen.getByRole('checkbox', { name: tomorrow.label }));
+    await userEvent.click(screen.getByRole('button', { name: addTimeLabel(tomorrow.label) }));
+    await userEvent.click(screen.getByRole('button', { name: SUBMIT_DRAFT_LABEL }));
+    await expectNoWcagViolations(document.body);
   });
 
   it('the match screen while gathering availability', async () => {
     applyThemeAttribute(theme);
     renderAtRoute(<MatchScreen api={fakeMatchesApi()} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
     await screen.findAllByText(/^\d+ can play$/);
-    // The organiser's guest-availability panel, with its guest row loaded.
-    await screen.findByRole('group', { name: 'Guest Gary' });
+    // The organiser's grid, with a guest's row loaded and a day ticked since the last save.
+    const [guestDay] = await screen.findAllByRole('checkbox', { name: /^Guest Gary, / });
+    await userEvent.click(guestDay);
+    await expectNoWcagViolations(document.body);
+
+    // The confirm dialog, open on the chosen day with its short-of-players warning.
+    await userEvent.click(screen.getByRole('button', { name: CONFIRM_DAY_BUTTON_LABEL }));
+    await screen.findByRole('dialog');
     await expectNoWcagViolations(document.body);
   });
 
@@ -108,7 +124,7 @@ describe.each(THEMES)('in the %s theme', (theme) => {
         ),
     });
     renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
-    await screen.findByText('Alex');
+    await screen.findByRole('checkbox', { name: 'Alex' });
     await expectNoWcagViolations(document.body);
   });
 
@@ -128,7 +144,7 @@ describe.each(THEMES)('in the %s theme', (theme) => {
         ),
     });
     renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
-    await screen.findByRole('heading', { name: 'Team sheet' });
+    await screen.findByRole('heading', { name: /^Team sheet/ });
     await screen.findByRole('heading', { name: 'Predicted result' });
     await expectNoWcagViolations(document.body);
   });

@@ -5,48 +5,11 @@
  * in `styles/squadsTokens.css` layered over the shared `src/theme` tables — so no
  * colour is written here (Requirements 18.8, 18.9).
  *
- * The shape mirrors the App_Shell's own boundary surfaces, so a person who lands
- * on an unreachable squad reads the same layout they would on an unregistered
- * path.
+ * The layout is the design system's not-found state (`EmptyState` in
+ * `src/ui`), the same as every other screen's, so a person who lands on an
+ * unreachable squad reads the same page they would on an unregistered path.
+ * This file adds only the control's focus indication.
  */
-
-.squads-not-found {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--squads-gap-tight);
-  max-width: var(--squads-measure);
-}
-
-.squads-not-found h1 {
-  margin: 0;
-  color: var(--pm-text-primary);
-  font-size: var(--squads-font-size-screen-heading);
-  line-height: var(--squads-line-height-heading);
-  font-family: var(--pm-font-display);
-  font-weight: var(--squads-font-weight-heading);
-}
-
-.squads-not-found__body {
-  margin: 0;
-  color: var(--pm-text-secondary);
-  font-size: var(--squads-font-size-body);
-  line-height: var(--squads-line-height-body);
-}
-
-.squads-not-found__home {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--squads-touch-target);
-  padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--pm-border-control);
-  border-radius: var(--squads-radius-chip);
-  background: var(--pm-surface-raised);
-  color: var(--pm-text-primary);
-  font-size: var(--squads-font-size-body);
-  font-weight: var(--squads-font-weight-label);
-  text-decoration: none;
-}
 
 .squads-not-found__home:focus-visible {
   outline: var(--squads-focus-width) solid var(--pm-focus-ring);

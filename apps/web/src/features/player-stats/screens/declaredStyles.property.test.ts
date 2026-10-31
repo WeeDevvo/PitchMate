@@ -404,6 +404,12 @@ const PAIRINGS: readonly Pairing[] = [
     floor: TEXT_FLOOR,
     usage: 'the chosen statistic in the leaderboard switcher: Ink on Pitch Green',
   },
+  ...(['win', 'draw', 'loss'] as const).map((outcome) => ({
+    foreground: '--pm-on-result',
+    background: `--pm-result-${outcome}`,
+    floor: TEXT_FLOOR,
+    usage: `the record bar's ${outcome} segment: its mark, count and letter in Ink on the ${outcome} fill`,
+  })),
 
   // ---- Focus indications, borders and graphical cues: 3:1 (Requirement 15.4) ----
   ...onNeutralSurfaces('--pm-focus-ring', NON_TEXT_FLOOR, 'every control’s focus indication'),
