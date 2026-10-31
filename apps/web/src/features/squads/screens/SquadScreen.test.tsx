@@ -503,10 +503,9 @@ describe('SquadScreen — the caller’s own standing', () => {
     renderScreen(api, SQUAD_ID, 'admin');
 
     await screen.findByRole('heading', { level: 1, name: 'Thursday Ballers' });
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent(squadPath(SQUAD_ID)),
-    );
-    expect(screen.getByTestId('location').textContent).toBe(squadPath(SQUAD_ID));
+    // Wait for the exact address: the Admin address contains the squad's, so a
+    // substring match can pass before the redirect has happened.
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(squadPath(SQUAD_ID)));
     expect(document.querySelector(ADMIN_SECTION_SELECTOR)).toBeNull();
     expect(document.querySelectorAll(PLAYER_ROW_SELECTOR)).toHaveLength(1);
     // One level-one heading: the squad's, and no not-found heading beside it.

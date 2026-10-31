@@ -144,7 +144,7 @@ describe.each(THEMES)('in the %s theme', (theme) => {
         ),
     });
     renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
-    await screen.findByRole('heading', { name: 'Team sheet' });
+    await screen.findByRole('heading', { name: /^Team sheet/ });
     await screen.findByRole('heading', { name: 'Predicted result' });
     await expectNoWcagViolations(document.body);
   });

@@ -2,85 +2,88 @@
  * The team sheet: when and where, both named teams with their players, and a
  * clear flag on the team that wears bibs. The flag is a labelled badge with a
  * mark, never colour alone. Each player links to their stats in this squad.
+ * It is drawn as the design system's shareable card, built to be screenshotted
+ * into the group chat.
  */
 import { useId, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
-import { TeamColumn } from '../../../ui';
+import { GuestBadge, TeamSheetCard, TeamSheetPlayer, TeamSheetSide } from '../../../ui';
 
 import { playerStatsPath } from '../../squads';
-import { formatDay } from '../lib/matchDays';
+import { dayParts } from '../lib/matchDays';
 import {
   KICKOFF_LABEL,
-  TEAM_SHEET_HEADING,
   VENUE_LABEL,
   WEARS_BIBS_BADGE,
-  playerCountStatement,
+  kickOffTimeText,
+  teamSheetHeading,
+  teamSideLabel,
+  teamSizesStatement,
 } from '../lib/messages';
 import type { TeamSheet } from '../lib/parse/teamSheet';
 
 export interface TeamSheetViewProps {
   readonly squadId: string;
   readonly sheet: TeamSheet;
+  /** The squad's name for the sheet's heading, once known. */
+  readonly squadName?: string;
+  /** The players who are guests, by membership id, for their badge. */
+  readonly guestIds?: ReadonlySet<string>;
 }
 
-export function TeamSheetView({ squadId, sheet }: TeamSheetViewProps): ReactElement {
+export function TeamSheetView({ squadId, sheet, squadName, guestIds }: TeamSheetViewProps): ReactElement {
   const headingId = useId();
+  const day = dayParts(sheet.kickoffMs);
+  const isGuest = (membershipId: string): boolean => guestIds?.has(membershipId.toLowerCase()) ?? false;
 
   return (
-    <section className="matches-panel matches-sheet" aria-labelledby={headingId}>
-      <h2 id={headingId} className="matches-subheading">
-        {TEAM_SHEET_HEADING}
-      </h2>
-      <dl className="matches-facts">
-        <div>
-          <dt>{KICKOFF_LABEL}</dt>
-          <dd>
-            <time dateTime={new Date(sheet.kickoffMs).toISOString()}>{formatDay(sheet.kickoffMs)}</time>
-          </dd>
-        </div>
-        <div>
-          <dt>{VENUE_LABEL}</dt>
-          <dd>{sheet.location}</dd>
-        </div>
-      </dl>
-      <div className="matches-teams">
-        {sheet.teams.map((team, index) => {
-          const teamHeadingId = `${headingId}-${index}`;
-          return (
-            <TeamColumn
-              key={`${index}-${team.teamName}`}
-              className="matches-team"
-              side={index % 2 === 0 ? 'a' : 'b'}
-              data-bibs={team.bibFlag}
-              aria-labelledby={teamHeadingId}
-              // The bib team carries the flag, named in the sheet's own words; the
-              // other carries nothing.
-              bibs={team.bibFlag}
-              bibsLabel={WEARS_BIBS_BADGE}
-              heading={
-                <h3 id={teamHeadingId} className="matches-team__heading">
-                  {team.teamName}
-                </h3>
-              }
-              meta={playerCountStatement(team.roster.length)}
-            >
-              <ul className="matches-people">
-                {team.roster.map((player) => (
-                  <li key={player.membershipId}>
-                    <Link
-                      className="matches-link"
-                      to={playerStatsPath(squadId, player.membershipId)}
-                    >
+    <TeamSheetCard
+      className="matches-sheet"
+      aria-labelledby={headingId}
+      heading={<h2 id={headingId}>{teamSheetHeading(squadName)}</h2>}
+      day={`${day.dow} ${day.num} ${day.mon}`}
+      dateTime={new Date(sheet.kickoffMs).toISOString()}
+      time={kickOffTimeText(day.time)}
+      timeLabel={KICKOFF_LABEL}
+      location={sheet.location}
+      locationLabel={VENUE_LABEL}
+      footer={teamSizesStatement(sheet.teams.map((team) => team.roster.length))}
+    >
+      {sheet.teams.map((team, index) => {
+        const teamHeadingId = `${headingId}-${index}`;
+        return (
+          <TeamSheetSide
+            key={`${index}-${team.teamName}`}
+            side={index % 2 === 0 ? 'a' : 'b'}
+            sideLabel={teamSideLabel(index)}
+            data-bibs={team.bibFlag}
+            aria-labelledby={teamHeadingId}
+            // The bib team carries the flag, named in the sheet's own words; the
+            // other says it has none.
+            bibs={team.bibFlag}
+            bibsLabel={WEARS_BIBS_BADGE}
+            heading={<h3 id={teamHeadingId}>{team.teamName}</h3>}
+          >
+            {team.roster.map((player) => {
+              const guest = isGuest(player.membershipId);
+              return (
+                <TeamSheetPlayer
+                  key={player.membershipId}
+                  name={player.displayName}
+                  guest={guest}
+                  badges={guest ? <GuestBadge /> : undefined}
+                  nameContent={
+                    <Link className="matches-link" to={playerStatsPath(squadId, player.membershipId)}>
                       {player.displayName}
                     </Link>
-                  </li>
-                ))}
-              </ul>
-            </TeamColumn>
-          );
-        })}
-      </div>
-    </section>
+                  }
+                />
+              );
+            })}
+          </TeamSheetSide>
+        );
+      })}
+    </TeamSheetCard>
   );
 }
 

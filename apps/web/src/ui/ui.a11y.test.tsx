@@ -16,6 +16,9 @@ import {
   Banner,
   BibFlag,
   BibToggle,
+  TeamSheetCard,
+  TeamSheetPlayer,
+  TeamSheetSide,
   Checkbox,
   Button,
   Card,
@@ -120,6 +123,25 @@ function Gallery() {
       <Rating provisional band="1,1xx" />
       <BibFlag size="lg" />
       <BibFlag off />
+      <TeamSheetCard
+        aria-labelledby="sheet-heading"
+        heading={<h2 id="sheet-heading">Team sheet · Thursday Ballers</h2>}
+        day="Sun 9 Nov"
+        dateTime="2026-11-09T10:00:00Z"
+        time="10:00 KO"
+        timeLabel="Kick-off"
+        location="Hackney Marshes, pitch 4"
+        locationLabel="Where"
+        footer="5 v 5"
+      >
+        <TeamSheetSide side="a" sideLabel="Team A" heading={<h3>Galácticos</h3>} bibs>
+          <TeamSheetPlayer name="Conor Doyle" />
+          <TeamSheetPlayer name="Big Mike" guest badges={<GuestBadge />} />
+        </TeamSheetSide>
+        <TeamSheetSide side="b" sideLabel="Team B" heading={<h3>Legends</h3>} bibs={false}>
+          <TeamSheetPlayer name="Jamie Okafor" />
+        </TeamSheetSide>
+      </TeamSheetCard>
       <BibToggle pressed pressedLabel="Wearing bibs" label="Wear bibs" />
       <BibToggle pressed={false} pressedLabel="Wearing bibs" label="Wear bibs" />
       <Checkbox label="Guests pay too" description="Or a member covers them" checked onChange={noop} />

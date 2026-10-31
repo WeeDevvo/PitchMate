@@ -86,6 +86,14 @@ export {
   type SidebarProps,
 } from './Sidebar';
 export { Steps, type StepsProps } from './Steps';
+export {
+  TeamSheetCard,
+  TeamSheetPlayer,
+  TeamSheetSide,
+  type TeamSheetCardProps,
+  type TeamSheetPlayerProps,
+  type TeamSheetSideProps,
+} from './TeamSheet';
 export { TabNav, type TabNavItem, type TabNavLinkProps, type TabNavProps } from './TabNav';
 export {
   SegmentedControl,

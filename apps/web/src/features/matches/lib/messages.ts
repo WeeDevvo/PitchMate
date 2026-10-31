@@ -284,6 +284,20 @@ export const KICKOFF_LABEL = 'Kick-off';
 export const VENUE_LABEL = 'Where';
 export const WEARS_BIBS_BADGE = 'Wears bibs';
 
+/** The team sheet's heading: "Team sheet · Thursday Ballers", or just "Team sheet" before the squad is known. */
+export function teamSheetHeading(squadName?: string): string {
+  return squadName === undefined ? TEAM_SHEET_HEADING : `${TEAM_SHEET_HEADING} · ${squadName}`;
+}
+
+export function kickOffTimeText(time: string): string {
+  return `${time} KO`;
+}
+
+/** Each team's size, side by side: "5 v 5", "7 v 6". */
+export function teamSizesStatement(sizes: readonly number[]): string {
+  return sizes.join(' v ');
+}
+
 export function lockedTeamsLabel(teamNames: readonly string[]): string {
   return teamNames.join(' v ');
 }

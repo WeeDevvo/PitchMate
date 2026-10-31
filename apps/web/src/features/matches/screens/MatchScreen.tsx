@@ -296,7 +296,18 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
             ) : sheet.value === null ? (
               <LoadingNotice label={TEAM_SHEET_LOADING_LABEL} />
             ) : (
-              <TeamSheetView squadId={squadId} sheet={sheet.value} />
+              <TeamSheetView
+                squadId={squadId}
+                sheet={sheet.value}
+                squadName={standing.value?.squadName}
+                guestIds={
+                  new Set(
+                    match.participants
+                      .filter((participant) => participant.isGuest)
+                      .map((participant) => participant.membershipId.toLowerCase()),
+                  )
+                }
+              />
             )
           ) : match.state === 'Cancelled' ? null : match.participants.length > 0 ||
             editingParticipants ||

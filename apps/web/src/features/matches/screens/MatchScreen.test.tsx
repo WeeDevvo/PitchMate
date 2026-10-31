@@ -349,7 +349,7 @@ describe('MatchScreen once confirmed', () => {
       }),
     );
 
-    expect(await screen.findByRole('heading', { name: TEAM_SHEET_HEADING })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: new RegExp(`^${TEAM_SHEET_HEADING}`) })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: PARTICIPANTS_HEADING })).toBeNull();
     expect(screen.queryByRole('heading', { name: TEAMS_HEADING })).toBeNull();
     await expect.poll(() => api.getTeamSheet.mock.calls[0]?.[0]).toBe(MATCH_ID);
@@ -364,7 +364,7 @@ describe('MatchScreen once confirmed', () => {
         MATCH_ROUTE,
         matchPath(SQUAD_ID, MATCH_ID),
       );
-      expect(await screen.findByRole('heading', { name: TEAM_SHEET_HEADING })).toBeTruthy();
+      expect(await screen.findByRole('heading', { name: new RegExp(`^${TEAM_SHEET_HEADING}`) })).toBeTruthy();
       expect(screen.queryByRole('heading', { name: TEAMS_HEADING })).toBeNull();
       unmount();
     }
@@ -375,7 +375,7 @@ describe('MatchScreen once confirmed', () => {
       fakeMatchesApi({ getMatch: async () => success(confirmedMatch(10, { state: 'TeamsRolled' })) }),
     );
 
-    await screen.findByRole('heading', { name: TEAM_SHEET_HEADING });
+    await screen.findByRole('heading', { name: new RegExp(`^${TEAM_SHEET_HEADING}`) });
     await userEvent.click(await screen.findByRole('button', { name: RELOCK_TEAMS_LABEL }));
 
     await expect.poll(() => api.getTeamSheet.mock.calls.length).toBe(2);
@@ -512,7 +512,7 @@ describe('MatchScreen from kick-off to the final score', () => {
 
     expect(await screen.findByText(MATCH_CANCELLED_STATEMENT)).toBeTruthy();
     expect(screen.queryByRole('button', { name: CANCEL_MATCH_LABEL })).toBeNull();
-    expect(screen.queryByRole('heading', { name: TEAM_SHEET_HEADING })).toBeNull();
+    expect(screen.queryByRole('heading', { name: new RegExp(`^${TEAM_SHEET_HEADING}`) })).toBeNull();
   });
 
   it('shows a member the score, not yet final while in play, and no controls', async () => {
