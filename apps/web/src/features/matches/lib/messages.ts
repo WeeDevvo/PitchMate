@@ -311,15 +311,21 @@ export const START_HINT = 'Starting fixes the teams. You record the score once t
 export const UNLOCKED_CHANGES_STATEMENT =
   'Your team changes are not locked yet. Lock them first, so the teams that play are the ones on the team sheet.';
 export const CANCEL_MATCH_LABEL = 'Cancel match';
-export const CANCEL_CONFIRM_STATEMENT = 'Cancel this match? This cannot be undone.';
 export const CONFIRM_CANCEL_LABEL = 'Yes, cancel the match';
-export const KEEP_MATCH_LABEL = 'Keep the match';
+export const KEEP_MATCH_LABEL = 'Keep it';
+
+export function cancelDialogTitle(location: string): string {
+  return `Cancel ${location}?`;
+}
+
+export const CANCEL_DIALOG_BODY =
+  "This can't be undone. The match stays in the squad's list, marked cancelled.";
 export const CANCELLING_LABEL = 'Cancelling…';
 export const MATCH_CANCELLED_STATEMENT = 'This match was cancelled.';
 
 export const RESULT_HEADING = 'Result';
 export const RESULT_FORM_HEADING = 'Record the score';
-export const RESULT_FORM_HINT = `Enter each team's goals, from 0 to 99. You can correct the score until the match is completed.`;
+export const RESULT_FORM_HINT = `Enter each team's goals, from 0 to 99, or use the buttons. You can correct the score until the match is completed.`;
 export const SAVE_RESULT_LABEL = 'Save score';
 export const SAVING_RESULT_LABEL = 'Saving…';
 export const RESULT_SAVED_STATEMENT = 'The score is saved.';
@@ -335,6 +341,37 @@ export const COMPLETE_MATCH_LABEL = 'Complete match';
 export const CONFIRM_COMPLETE_LABEL = 'Yes, complete the match';
 export const COMPLETING_LABEL = 'Completing…';
 export const NOT_YET_LABEL = 'Not yet';
+
+export function completeDialogTitle(score: string): string {
+  return `Complete with ${score}?`;
+}
+
+export function completeDialogBody(playerCount: number): string {
+  return `Ratings and stats update for all ${playerCountStatement(playerCount)}. The score can't be changed after this.`;
+}
+
+export function addGoalLabel(teamName: string): string {
+  return `Add a goal for ${teamName}`;
+}
+
+export function removeGoalLabel(teamName: string): string {
+  return `Take a goal off ${teamName}`;
+}
+
+/** The score as written on a scoreboard: "5–3", teams in sheet order. */
+export function scoreText(scores: readonly number[]): string {
+  return scores.join('–');
+}
+
+const STILL_EDITABLE = ' You can still change it until you complete the match.';
+
+/** What the score on screen says, for two teams: "Red Wolves win 5–3." or "It's a draw, 2–2." */
+export function scoreOutcomeStatement(teams: readonly { name: string; score: number }[]): string {
+  const [first, second] = teams;
+  if (first.score === second.score) return `It's a draw, ${scoreText([first.score, second.score])}.${STILL_EDITABLE}`;
+  const [winner, loser] = first.score > second.score ? [first, second] : [second, first];
+  return `${winner.name} win ${scoreText([winner.score, loser.score])}.${STILL_EDITABLE}`;
+}
 
 export function scoreLabel(teamName: string, bibFlag: boolean): string {
   return bibFlag ? `${teamName} (wears bibs) goals` : `${teamName} goals`;

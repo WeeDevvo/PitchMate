@@ -246,6 +246,7 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
           <CompletePanel
             state={match.state}
             recordedResult={match.recordedResult}
+            sheet={sheet.value}
             complete={(signal) => api.completeMatch(matchId, signal)}
             onSettled={reloadDetail}
           />
@@ -357,6 +358,7 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
       {organiser ? (
         <MatchActionsPanel
           state={match.state}
+          location={match.location}
           sheet={sheet.value}
           getWorkingTeams={(signal) => api.getWorkingTeams(matchId, signal)}
           start={(signal) => api.startMatch(matchId, signal)}

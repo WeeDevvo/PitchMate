@@ -223,6 +223,15 @@
   color: var(--pm-on-accent);
 }
 
+/* The accent button keeps its green on hover, a shade deeper, rather than the plain hover grey. */
+.pm-iconbtn--accent:hover {
+  background: var(--pm-accent-fill-hover);
+}
+
+.pm-iconbtn--accent:active {
+  background: var(--pm-accent-fill-pressed);
+}
+
 .pm-iconbtn:disabled {
   color: var(--pm-text-disabled);
   cursor: not-allowed;

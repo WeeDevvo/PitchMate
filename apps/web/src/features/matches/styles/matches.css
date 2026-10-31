@@ -301,12 +301,13 @@
 }
 
 .matches-input--score {
-  width: 5rem;
-  height: 60px;
+  width: 5.5rem;
+  height: 88px;
   text-align: center;
   font-family: var(--pm-font-display);
-  font-size: 32px;
+  font-size: 64px;
   font-weight: 800;
+  line-height: 1;
 }
 
 .matches-fieldset {
@@ -481,6 +482,16 @@
   border-top: var(--matches-border-width) solid var(--pm-border-subtle);
 }
 
+.matches-footer--plain {
+  padding-top: 0;
+  border-top: 0;
+  align-items: center;
+}
+
+.matches-actions--end {
+  justify-content: flex-end;
+}
+
 .matches-footer__end {
   display: flex;
   flex-wrap: wrap;
@@ -533,11 +544,19 @@
 
 /* Results ------------------------------------------------------------ */
 
+.matches-result-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-4);
+}
+
+/* Score entry: a counter per team, spread across the card. */
 .matches-score-fields {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--matches-gap);
-  margin: 0 0 var(--matches-gap-tight);
+  justify-content: space-around;
+  gap: var(--pm-space-6);
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -545,7 +564,25 @@
 .matches-score-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 10px;
+}
+
+.matches-score-field__name {
+  font-family: var(--pm-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.matches-stepper {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .matches-result .matches-chip {
