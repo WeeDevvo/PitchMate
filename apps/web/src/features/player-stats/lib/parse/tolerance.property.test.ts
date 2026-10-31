@@ -168,6 +168,9 @@ interface UnrecognisedProperties {
   readonly throwing: readonly string[];
 }
 
+/** The timeout for the property that extends every object of a body, over Vitest's 5 s default. */
+const PROPERTY_TIMEOUT_MS = 30_000;
+
 /** A value an added property might carry, from a null to a nested object. */
 const unrecognisedValueArb: fc.Arbitrary<unknown> = fc.oneof(
   fc.constant(null),
@@ -517,14 +520,20 @@ function assertInert(fixture: PlayerProfileFixture, extended: ExtendedBody): voi
 // Validates: Requirements 13.9
 describe('unrecognised properties are inert', () => {
   for (const shape of PROFILE_FIXTURE_ARBS) {
-    it(`parses a body with ${shape.label} the same when every object is extended`, () => {
-      fc.assert(
-        fc.property(shape.arbitrary, extensionsArb, (fixture, extensions) => {
-          assertInert(fixture, extendEveryObject(fixture.wire, extensions));
-        }),
-        { numRuns: 100 },
-      );
-    });
+    it(
+      `parses a body with ${shape.label} the same when every object is extended`,
+      () => {
+        fc.assert(
+          fc.property(shape.arbitrary, extensionsArb, (fixture, extensions) => {
+            assertInert(fixture, extendEveryObject(fixture.wire, extensions));
+          }),
+          { numRuns: 100 },
+        );
+      },
+      // The large-collections shape extends every object of a big body a hundred
+      // times, which runs near Vitest's 5 s default under full-suite load.
+      PROPERTY_TIMEOUT_MS,
+    );
   }
 
   it('parses the same when only the outermost object is extended', () => {
