@@ -124,7 +124,7 @@ describe.each(THEMES)('in the %s theme', (theme) => {
         ),
     });
     renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
-    await screen.findByText('Alex');
+    await screen.findByRole('checkbox', { name: 'Alex' });
     await expectNoWcagViolations(document.body);
   });
 

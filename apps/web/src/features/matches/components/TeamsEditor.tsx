@@ -3,13 +3,24 @@
  * rename them, choose who wears bibs, and lock.
  *
  * Every change is sent at once and the working teams are re-read, so the
- * predicted result beside them is always the engine's view of the split on
+ * predicted result above them is always the engine's view of the split on
  * screen. Moving is a button per destination team rather than a drag, so it
  * works from the keyboard and with a screen reader.
  */
 import { useCallback, useId, useState, type FormEvent, type ReactElement } from 'react';
 
-import { Button, FairnessMeter, TeamColumn } from '../../../ui';
+import {
+  Banner,
+  BibToggle,
+  Button,
+  Card,
+  FairnessMeter,
+  GuestBadge,
+  IconButton,
+  PlayerRow,
+  TeamColumn,
+  TextField,
+} from '../../../ui';
 import type { AuthState } from '../../auth';
 import type { CallResult, MatchesApi } from '../api/matchesApi';
 import { formatProbability, lockProblems, predictionLines, rollGap, TEAM_NAME_MAX_LENGTH } from '../lib/teams';
@@ -19,10 +30,7 @@ import {
   LOCK_HINT,
   LOCK_TEAMS_LABEL,
   LOCKING_LABEL,
-  rollGapStatement,
-  UNLOCK_HINT,
-  UNLOCK_TEAMS_LABEL,
-  UNLOCKING_LABEL,
+  NAMES_AND_BIBS_HEADING,
   NO_PREDICTION_STATEMENT,
   NO_TEAMS_STATEMENT,
   PREDICTION_HEADING,
@@ -38,11 +46,19 @@ import {
   TEAMS_LOADING_LABEL,
   TEAMS_LOCKED_STATEMENT,
   UNASSIGNED_HEADING,
+  UNLOCK_HINT,
+  UNLOCK_TEAMS_LABEL,
+  UNLOCKING_LABEL,
+  WEAR_BIBS_LABEL,
+  WEARING_BIBS_LABEL,
+  bibToggleLabel,
   lockProblemMessage,
   moveToLabel,
-  teamHeading,
+  playerCountStatement,
+  rollGapStatement,
+  sillyNameLabel,
   teamNameLabel,
-  wearsBibsLabel,
+  teamSideLabel,
 } from '../lib/messages';
 import type { Participant } from '../lib/parse/matchDetail';
 import type { WorkingTeam, WorkingTeams } from '../lib/parse/teams';
@@ -68,45 +84,71 @@ function failureMessage(outcome: ActionOutcome<void> | null): string | null {
   return outcome.kind === 'rejected' ? REJECTION_MESSAGES[outcome.reason] : GENERIC_MATCHES_FAILURE;
 }
 
-function TeamNameForm({
+/** One team's card under "Names & bibs": its name, the silly-name dice and the bibs toggle. */
+function TeamIdentityCard({
   team,
+  side,
   busy,
   rename,
+  wearBibs,
 }: {
   readonly team: WorkingTeam;
+  readonly side: number;
   readonly busy: boolean;
   readonly rename: (name: string | null) => void;
+  readonly wearBibs: () => void;
 }): ReactElement {
-  const fieldId = useId();
-  const hintId = `${fieldId}-hint`;
   const [name, setName] = useState(team.teamName);
+  const sideLabel = teamSideLabel(side);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
+    if (busy) return;
     const trimmed = name.trim();
     rename(trimmed.length === 0 ? null : trimmed);
   };
 
   return (
-    <form className="matches-inline-form" noValidate onSubmit={handleSubmit}>
-      <label htmlFor={fieldId}>{teamNameLabel(team.teamName)}</label>
-      <input
-        id={fieldId}
-        className="matches-input"
-        type="text"
-        autoComplete="off"
-        maxLength={TEAM_NAME_MAX_LENGTH}
-        value={name}
-        aria-describedby={hintId}
-        onChange={(event) => setName(event.target.value)}
+    <Card as="li" className="matches-identity">
+      <span className="pm-team__side">
+        <span className={`pm-team__swatch pm-team__swatch--${side % 2 === 0 ? 'a' : 'b'}`} aria-hidden="true" />
+        {sideLabel}
+      </span>
+      <form className="matches-identity__name" noValidate onSubmit={handleSubmit}>
+        <TextField
+          label={teamNameLabel(sideLabel)}
+          hint={TEAM_NAME_HINT}
+          autoComplete="off"
+          maxLength={TEAM_NAME_MAX_LENGTH}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+        <div className="matches-identity__actions">
+          <IconButton
+            icon="dice"
+            variant="filled"
+            label={sillyNameLabel(sideLabel)}
+            aria-disabled={busy ? true : undefined}
+            onClick={() => {
+              if (!busy) rename(null);
+            }}
+          />
+          <Button type="submit" variant="secondary" aria-disabled={busy ? true : undefined}>
+            {SAVE_TEAM_NAME_LABEL}
+          </Button>
+        </div>
+      </form>
+      <BibToggle
+        pressed={team.bibFlag}
+        label={WEAR_BIBS_LABEL}
+        pressedLabel={WEARING_BIBS_LABEL}
+        aria-label={bibToggleLabel(team.teamName, team.bibFlag)}
+        aria-disabled={busy ? true : undefined}
+        onClick={() => {
+          if (!busy && !team.bibFlag) wearBibs();
+        }}
       />
-      <Button type="submit" variant="secondary" aria-disabled={busy ? true : undefined}>
-        {SAVE_TEAM_NAME_LABEL}
-      </Button>
-      <p id={hintId} className="matches-hint">
-        {TEAM_NAME_HINT}
-      </p>
-    </form>
+    </Card>
   );
 }
 
@@ -114,8 +156,8 @@ function Prediction({ teams }: { readonly teams: WorkingTeams }): ReactElement {
   const headingId = useId();
 
   return (
-    <section className="matches-prediction" aria-labelledby={headingId}>
-      <h3 id={headingId} className="matches-minor-heading">
+    <Card as="section" className="matches-prediction" aria-labelledby={headingId}>
+      <h3 id={headingId} className="pm-sr">
         {PREDICTION_HEADING}
       </h3>
       {teams.prediction === null ? (
@@ -149,7 +191,7 @@ function Prediction({ teams }: { readonly teams: WorkingTeams }): ReactElement {
           ))}
         </dl>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -162,7 +204,6 @@ export function TeamsEditor({
   onLocked,
 }: TeamsEditorProps): ReactElement {
   const headingId = useId();
-  const bibName = useId();
 
   const teams = useRemote(
     matchId,
@@ -176,6 +217,7 @@ export function TeamsEditor({
     kind: Write,
     invoke: (signal: AbortSignal) => Promise<CallResult<void>>,
   ): Promise<void> => {
+    if (action.busy) return;
     setLastWrite(kind);
     const outcome = await action.run(invoke);
     if (outcome === null) return;
@@ -183,8 +225,14 @@ export function TeamsEditor({
     if ((kind === 'lock' || kind === 'unlock') && outcome.kind === 'success') onLocked();
   };
 
-  const names = new Map(participants.map((p) => [p.membershipId, p.displayName]));
+  const people = new Map(participants.map((p) => [p.membershipId.toLowerCase(), p]));
+  const personOf = (membershipId: string) => people.get(membershipId.toLowerCase());
   const failure = failureMessage(action.outcome);
+  const busy = action.busy ? true : undefined;
+  const move = (membershipId: string, teamId: string): void =>
+    void write('edit', (signal) => api.moveParticipant(matchId, membershipId, teamId, signal));
+  const reroll = (): void => void write('roll', (signal) => api.rerollTeams(matchId, signal));
+  const rollLabel = (idle: string) => (action.busy && lastWrite === 'roll' ? ROLLING_LABEL : idle);
 
   let body: ReactElement;
 
@@ -197,25 +245,23 @@ export function TeamsEditor({
     // the panel says how far off it is, so the admin adds or removes players.
     const gap = rollGap(participants.length);
     body = (
-      <>
-        <p className="matches-notice">{NO_TEAMS_STATEMENT}</p>
+      <Card className="matches-roll">
+        <p className="matches-roll__title">{NO_TEAMS_STATEMENT}</p>
         <p className="matches-hint">{ROLL_HINT}</p>
         {gap === null ? (
           <div className="matches-actions">
-            <Button
-              type="button"
-              aria-disabled={action.busy ? true : undefined}
-              onClick={() => void write('roll', (signal) => api.rerollTeams(matchId, signal))}
-            >
-              {action.busy && lastWrite === 'roll' ? ROLLING_LABEL : ROLL_TEAMS_LABEL}
+            <Button type="button" icon="shuffle" aria-disabled={busy} onClick={reroll}>
+              {rollLabel(ROLL_TEAMS_LABEL)}
             </Button>
           </div>
         ) : (
-          <p className="matches-notice" data-matches-roll-gap={gap.kind}>
-            {rollGapStatement(participants.length, gap)}
-          </p>
+          <div data-matches-roll-gap={gap.kind}>
+            <Banner tone="info" announce={false}>
+              {rollGapStatement(participants.length, gap)}
+            </Banner>
+          </div>
         )}
-      </>
+      </Card>
     );
   } else {
     const view = teams.value;
@@ -223,155 +269,161 @@ export function TeamsEditor({
 
     body = (
       <>
-        {locked ? <p className="matches-notice">{TEAMS_LOCKED_STATEMENT}</p> : null}
+        {locked ? (
+          <Banner tone="success" announce={false}>
+            {TEAMS_LOCKED_STATEMENT}
+          </Banner>
+        ) : null}
 
         <Prediction teams={view} />
 
         <div className="matches-teams">
-            {view.teams.map((team, index) => {
-              const others = view.teams.filter((other) => other.teamId !== team.teamId);
-              const teamHeadingId = `${headingId}-${team.teamId}`;
-              const bibId = `${bibName}-${team.teamId}`;
+          {view.teams.map((team, index) => {
+            const others = view.teams.filter((other) => other.teamId !== team.teamId);
+            const teamHeadingId = `${headingId}-${team.teamId}`;
 
-              return (
-                <TeamColumn
-                  key={team.teamId}
-                  className="matches-team"
-                  side={index % 2 === 0 ? 'a' : 'b'}
-                  aria-labelledby={teamHeadingId}
-                  bibs={team.bibFlag}
-                  heading={
-                    <h3 id={teamHeadingId} className="matches-team__heading">
-                      {teamHeading(team.teamName, team.roster.length)}
-                    </h3>
-                  }
-                >
-                  <TeamNameForm
-                    key={team.teamName}
-                    team={team}
-                    busy={action.busy}
-                    rename={(name) =>
-                      void write('edit', (signal) => api.setTeamName(matchId, team.teamId, name, signal))
-                    }
-                  />
-                  <div className="matches-bib">
-                    <input
-                      id={bibId}
-                      type="radio"
-                      name={bibName}
-                      className="matches-checkbox"
-                      checked={team.bibFlag}
-                      onChange={() =>
-                        void write('edit', (signal) => api.setBibTeam(matchId, team.teamId, signal))
-                      }
-                    />
-                    <label htmlFor={bibId}>{wearsBibsLabel(team.teamName)}</label>
-                  </div>
-                  <ul className="matches-people">
-                    {team.roster.map((player) => (
-                      <li key={player.membershipId} className="matches-person">
-                        <span>{player.displayName}</span>
-                        {others.map((other) => (
-                          <Button
-                            key={other.teamId}
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            aria-disabled={action.busy ? true : undefined}
-                            onClick={() =>
-                              void write('edit', (signal) =>
-                                api.moveParticipant(matchId, player.membershipId, other.teamId, signal),
-                              )
-                            }
-                          >
-                            {moveToLabel(player.displayName, other.teamName)}
-                          </Button>
-                        ))}
+            return (
+              <TeamColumn
+                key={team.teamId}
+                className="matches-team"
+                side={index % 2 === 0 ? 'a' : 'b'}
+                sideLabel={teamSideLabel(index)}
+                aria-labelledby={teamHeadingId}
+                bibs={team.bibFlag}
+                heading={
+                  <h3 id={teamHeadingId} className="matches-team__heading">
+                    {team.teamName}
+                  </h3>
+                }
+                meta={playerCountStatement(team.roster.length)}
+              >
+                <ul className="matches-roster">
+                  {team.roster.map((player) => {
+                    const guest = personOf(player.membershipId)?.isGuest ?? false;
+                    return (
+                      <li key={player.membershipId}>
+                        <PlayerRow
+                          name={player.displayName}
+                          guest={guest}
+                          badges={guest ? <GuestBadge /> : undefined}
+                          end={others.map((other) => (
+                            <IconButton
+                              key={other.teamId}
+                              icon="swap"
+                              label={moveToLabel(player.displayName, other.teamName)}
+                              aria-disabled={busy}
+                              onClick={() => move(player.membershipId, other.teamId)}
+                            />
+                          ))}
+                        />
                       </li>
-                    ))}
-                  </ul>
-                </TeamColumn>
-              );
-            })}
+                    );
+                  })}
+                </ul>
+              </TeamColumn>
+            );
+          })}
         </div>
 
         {view.unassigned.length === 0 ? null : (
-          <section className="matches-panel" aria-labelledby={`${headingId}-unassigned`}>
+          <Card as="section" className="matches-unassigned" aria-labelledby={`${headingId}-unassigned`}>
             <h3 id={`${headingId}-unassigned`} className="matches-minor-heading">
               {UNASSIGNED_HEADING}
             </h3>
-            <ul className="matches-people">
+            <ul className="matches-roster">
               {view.unassigned.map((membershipId) => {
-                const name = names.get(membershipId) ?? membershipId;
+                const person = personOf(membershipId);
+                const name = person?.displayName ?? membershipId;
                 return (
-                  <li key={membershipId} className="matches-person">
-                    <span>{name}</span>
-                    {view.teams.map((team) => (
-                      <Button
-                        key={team.teamId}
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        aria-disabled={action.busy ? true : undefined}
-                        onClick={() =>
-                          void write('edit', (signal) =>
-                            api.moveParticipant(matchId, membershipId, team.teamId, signal),
-                          )
-                        }
-                      >
-                        {moveToLabel(name, team.teamName)}
-                      </Button>
-                    ))}
+                  <li key={membershipId}>
+                    <PlayerRow
+                      name={name}
+                      guest={person?.isGuest}
+                      badges={person?.isGuest ? <GuestBadge /> : undefined}
+                      end={view.teams.map((team) => (
+                        <Button
+                          key={team.teamId}
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          aria-label={moveToLabel(name, team.teamName)}
+                          aria-disabled={busy}
+                          onClick={() => move(membershipId, team.teamId)}
+                        >
+                          {team.teamName}
+                        </Button>
+                      ))}
+                    />
                   </li>
                 );
               })}
             </ul>
-          </section>
+          </Card>
         )}
 
-        {problems.length === 0 ? null : (
-          <ul className="matches-problems">
-            {problems.map((problem) => (
-              <li key={lockProblemMessage(problem)} className="matches-error">
-                {lockProblemMessage(problem)}
-              </li>
+        <section className="matches-identities" aria-labelledby={`${headingId}-identity`}>
+          <h3 id={`${headingId}-identity`} className="matches-minor-heading">
+            {NAMES_AND_BIBS_HEADING}
+          </h3>
+          <ul className="matches-identities__list">
+            {view.teams.map((team, index) => (
+              <TeamIdentityCard
+                // A re-read name resets the field to it.
+                key={`${team.teamId}-${team.teamName}`}
+                team={team}
+                side={index}
+                busy={action.busy}
+                rename={(name) =>
+                  void write('edit', (signal) => api.setTeamName(matchId, team.teamId, name, signal))
+                }
+                wearBibs={() => void write('edit', (signal) => api.setBibTeam(matchId, team.teamId, signal))}
+              />
             ))}
           </ul>
+        </section>
+
+        {problems.length === 0 ? null : (
+          <Banner tone="warn" announce={false}>
+            <ul className="matches-problems">
+              {problems.map((problem) => (
+                <li key={lockProblemMessage(problem)}>{lockProblemMessage(problem)}</li>
+              ))}
+            </ul>
+          </Banner>
         )}
 
-        <p className="matches-hint">{LOCK_HINT}</p>
-        <div className="matches-actions">
-          <Button
-            type="button"
-            variant="secondary"
-            aria-disabled={action.busy ? true : undefined}
-            onClick={() => void write('roll', (signal) => api.rerollTeams(matchId, signal))}
-          >
-            {action.busy && lastWrite === 'roll' ? ROLLING_LABEL : REROLL_TEAMS_LABEL}
+        <p className="matches-hint">{locked ? UNLOCK_HINT : LOCK_HINT}</p>
+        <div className="matches-footer">
+          <Button type="button" variant="secondary" icon="shuffle" aria-disabled={busy} onClick={reroll}>
+            {rollLabel(REROLL_TEAMS_LABEL)}
           </Button>
-          <Button
-            type="button"
-            aria-disabled={action.busy ? true : undefined}
-            onClick={() => void write('lock', (signal) => api.lockTeams(matchId, signal))}
-          >
-            {action.busy && lastWrite === 'lock'
-              ? LOCKING_LABEL
-              : locked
-                ? RELOCK_TEAMS_LABEL
-                : LOCK_TEAMS_LABEL}
-          </Button>
-          {locked ? (
+          <div className="matches-footer__end">
+            {locked ? (
+              <Button
+                type="button"
+                variant="secondary"
+                icon="unlock"
+                aria-disabled={busy}
+                onClick={() => void write('unlock', (signal) => api.unlockTeams(matchId, signal))}
+              >
+                {action.busy && lastWrite === 'unlock' ? UNLOCKING_LABEL : UNLOCK_TEAMS_LABEL}
+              </Button>
+            ) : null}
             <Button
               type="button"
-              variant="secondary"
-              aria-disabled={action.busy ? true : undefined}
-              onClick={() => void write('unlock', (signal) => api.unlockTeams(matchId, signal))}
+              icon="lock"
+              glow={!locked && problems.length === 0}
+              aria-disabled={busy}
+              onClick={() => void write('lock', (signal) => api.lockTeams(matchId, signal))}
             >
-              {action.busy && lastWrite === 'unlock' ? UNLOCKING_LABEL : UNLOCK_TEAMS_LABEL}
+              {action.busy && lastWrite === 'lock'
+                ? LOCKING_LABEL
+                : locked
+                  ? RELOCK_TEAMS_LABEL
+                  : LOCK_TEAMS_LABEL}
             </Button>
-          ) : null}
+          </div>
         </div>
-        {locked ? <p className="matches-hint">{UNLOCK_HINT}</p> : null}
       </>
     );
   }
@@ -382,11 +434,7 @@ export function TeamsEditor({
         {TEAMS_HEADING}
       </h2>
       {body}
-      {failure === null ? null : (
-        <p className="matches-error" role="alert">
-          {failure}
-        </p>
-      )}
+      {failure === null ? null : <Banner tone="error">{failure}</Banner>}
       {teams.refreshing ? <LoadingNotice label={TEAMS_LOADING_LABEL} /> : null}
     </section>
   );

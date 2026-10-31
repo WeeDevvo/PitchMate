@@ -11,12 +11,13 @@ function sizeStyle(size: number): CSSProperties | undefined {
   return size === DEFAULT_SIZE ? undefined : ({ '--pm-avatar-size': `${size}px` } as CSSProperties);
 }
 
+/** The first letter or digit of the first two words that have one, so "Kev (Sam's mate)" is "KS", not "K(". */
 function initialsOf(name: string): string {
   return name
     .split(/\s+/)
-    .filter(Boolean)
+    .map((word) => word.match(/[\p{L}\p{N}]/u)?.[0])
+    .filter((initial): initial is string => initial !== undefined)
     .slice(0, 2)
-    .map((word) => word[0])
     .join('');
 }
 

@@ -290,10 +290,11 @@ describe('MatchScreen once confirmed', () => {
     );
 
     const players = await screen.findByRole('list');
-    expect(within(players).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Alex',
-      `Robin${GUEST_LABEL}`,
-    ]);
+    expect(
+      within(players)
+        .getAllByRole('listitem')
+        .map((item) => item.querySelector('.pm-player__name')?.textContent),
+    ).toEqual(['Alex', `Robin${GUEST_LABEL}`]);
     expect(screen.getByText(formatDay(DAY_MS[1]))).toBeTruthy();
     expect(screen.queryByRole('checkbox')).toBeNull();
     expect(screen.queryByRole('heading', { name: TEAMS_HEADING })).toBeNull();
@@ -335,7 +336,7 @@ describe('MatchScreen once confirmed', () => {
     const api = renderScreen(fakeMatchesApi({ getMatch: async () => success(confirmedMatch()) }));
 
     expect(await screen.findByRole('heading', { name: TEAMS_HEADING })).toBeTruthy();
-    expect(await screen.findByRole('button', { name: 'Remove Player 1' })).toBeTruthy();
+    expect(await screen.findByRole('checkbox', { name: 'Player 1' })).toBeChecked();
     await expect.poll(() => api.getWorkingTeams.mock.calls[0]?.[0]).toBe(MATCH_ID);
     await expect.poll(() => api.getSquadPlayers.mock.calls[0]?.[0]).toBe(SQUAD_ID);
   });
@@ -386,7 +387,7 @@ describe('MatchScreen once confirmed', () => {
     );
 
     expect(await screen.findByRole('heading', { name: TEAMS_HEADING })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Remove Player 1' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Player 1' })).toBeNull();
     expect(api.getSquadPlayers).not.toHaveBeenCalled();
   });
 });

@@ -12,7 +12,9 @@ import {
   AvatarStack,
   Banner,
   BibFlag,
+  BibToggle,
   Button,
+  Checkbox,
   Chip,
   ErrorState,
   FormGuide,
@@ -145,6 +147,36 @@ describe('Toggle', () => {
   });
 });
 
+describe('Checkbox', () => {
+  it('is named by its label, even when the label is hidden, and reports a change', async () => {
+    const onChange = vi.fn();
+    render(<Checkbox label="Guest Gary" hideLabel checked={false} onChange={onChange} />);
+    const box = screen.getByRole('checkbox', { name: 'Guest Gary' });
+    expect(box).not.toBeChecked();
+    await userEvent.click(box);
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it('draws a tick when checked, so the state is not colour alone', () => {
+    const { container } = render(<Checkbox label="Guests pay too" checked onChange={vi.fn()} />);
+    expect(screen.getByRole('checkbox', { name: 'Guests pay too' })).toBeChecked();
+    expect(container.querySelector('.pm-check__box svg')).not.toBeNull();
+  });
+});
+
+describe('BibToggle', () => {
+  it('says whether the team wears the bibs in words and as aria-pressed', () => {
+    render(
+      <>
+        <BibToggle pressed pressedLabel="Wearing bibs" label="Wear bibs" />
+        <BibToggle pressed={false} pressedLabel="Wearing bibs" label="Wear bibs" />
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Wearing bibs' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Wear bibs' })).toHaveAttribute('aria-pressed', 'false');
+  });
+});
+
 describe('Chip', () => {
   it('exposes its selection as aria-pressed', () => {
     render(<Chip selected>Guests</Chip>);
@@ -256,6 +288,11 @@ describe('Avatar', () => {
     const { container } = render(<Avatar name="Sam Ade Okafor" />);
     expect(container.firstElementChild).toHaveTextContent('SA');
     expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('takes initials from letters and digits only, skipping punctuation', () => {
+    expect(render(<Avatar name="Kev (Sam’s mate)" />).container.firstElementChild).toHaveTextContent('KS');
+    expect(render(<Avatar name="- Ünal 7s" />).container.firstElementChild).toHaveTextContent('Ü7');
   });
 
   it('keeps a name on the same tint every time', () => {

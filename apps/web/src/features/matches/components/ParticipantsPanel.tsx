@@ -1,29 +1,26 @@
 /**
  * Who is playing. Everyone sees the list. While the match is confirmed, a
- * member can join or leave it themselves, and an organiser can also add any
- * member or guest of the squad and remove anyone.
+ * member can join or leave it themselves, and an organiser ticks anyone in the
+ * squad, member or guest, in or out: each tick adds or removes that player at
+ * once.
  */
-import { useId, useState, type FormEvent, type ReactElement } from 'react';
+import { useId, useState, type ReactElement } from 'react';
 
-import { Button } from '../../../ui';
+import { Banner, Button, Checkbox, GuestBadge, PlayerRow } from '../../../ui';
 
 import type { CallResult } from '../api/matchesApi';
 import {
-  ADD_PLAYER_LABEL,
-  ADD_PLAYER_SUBMIT_LABEL,
   GENERIC_MATCHES_FAILURE,
-  GUEST_LABEL,
   JOIN_MATCH_LABEL,
   LEAVE_MATCH_LABEL,
-  NO_PLAYERS_TO_ADD,
   NOT_PLAYING_STATEMENT,
   PARTICIPANTS_HEADING,
+  PICK_PLAYERS_HINT,
   PLAYERS_LOADING_LABEL,
   PLAYING_STATEMENT,
   REJECTION_MESSAGES,
-  guestOptionLabel,
-  playerCountStatement,
-  removeParticipantLabel,
+  WHO_IS_PLAYING_LEGEND,
+  playingCountLabel,
 } from '../lib/messages';
 import type { Participant } from '../lib/parse/matchDetail';
 import type { SquadPlayer } from '../lib/parse/teams';
@@ -48,37 +45,62 @@ export interface ParticipantsPanelProps {
   };
 }
 
+interface Row {
+  readonly membershipId: string;
+  readonly displayName: string;
+  readonly isGuest: boolean;
+  readonly playing: boolean;
+}
+
+/** A tick the organiser just made, shown until the re-read list replaces the one it was made on. */
+interface PendingTick {
+  readonly listKey: string;
+  readonly membershipId: string;
+  readonly playing: boolean;
+}
+
 function failureMessage(outcome: ActionOutcome<void> | null): string | null {
   if (outcome === null || outcome.kind === 'success') return null;
   return outcome.kind === 'rejected' ? REJECTION_MESSAGES[outcome.reason] : GENERIC_MATCHES_FAILURE;
 }
 
+const idOf = (membershipId: string) => membershipId.toLowerCase();
+
+/** Players in roster order, then everyone else in the squad in the squad's order. */
+function rowsOf(participants: readonly Participant[], players: readonly SquadPlayer[]): readonly Row[] {
+  const playing = [...participants]
+    .sort((a, b) => a.rosterPosition - b.rosterPosition)
+    .map((participant) => ({ ...participant, playing: true }));
+  const taken = new Set(playing.map((row) => idOf(row.membershipId)));
+  const others = players
+    .filter((player) => !taken.has(idOf(player.membershipId)))
+    .map((player) => ({ ...player, playing: false }));
+  return [...playing, ...others];
+}
+
 export function ParticipantsPanel({ participants, self, editing }: ParticipantsPanelProps): ReactElement {
   const idPrefix = useId();
   const headingId = `${idPrefix}-heading`;
-  const selectId = `${idPrefix}-player`;
   const action = useAction<void>();
-  const [playerId, setPlayerId] = useState('');
+  const [pending, setPending] = useState<PendingTick | null>(null);
 
-  const ordered = [...participants].sort((a, b) => a.rosterPosition - b.rosterPosition);
-  const playing = new Set(participants.map((participant) => participant.membershipId.toLowerCase()));
+  const listKey = participants.map((participant) => participant.membershipId).join();
   const players = editing === undefined || typeof editing.players === 'string' ? [] : (editing.players ?? []);
-  const addable = players.filter((player) => !playing.has(player.membershipId.toLowerCase()));
-  const selected = addable.some((player) => player.membershipId === playerId)
-    ? playerId
-    : (addable[0]?.membershipId ?? '');
+  const rows = rowsOf(participants, players);
+  const ticked = (row: Row): boolean =>
+    pending !== null && pending.listKey === listKey && pending.membershipId === row.membershipId
+      ? pending.playing
+      : row.playing;
 
-  const remove = async (membershipId: string): Promise<void> => {
-    if (editing === undefined) return;
-    const outcome = await action.run((signal) => editing.remove(membershipId, signal));
-    if (outcome !== null) editing.onSettled();
-  };
-
-  const handleAdd = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    if (editing === undefined || selected === '') return;
-    const outcome = await action.run((signal) => editing.addParticipant(selected, signal));
-    if (outcome !== null) editing.onSettled();
+  const tick = async (row: Row, playing: boolean): Promise<void> => {
+    if (editing === undefined || action.busy) return;
+    setPending({ listKey, membershipId: row.membershipId, playing });
+    const outcome = await action.run((signal) =>
+      playing ? editing.addParticipant(row.membershipId, signal) : editing.remove(row.membershipId, signal),
+    );
+    if (outcome === null) return;
+    if (outcome.kind !== 'success') setPending(null);
+    editing.onSettled();
   };
 
   const toggleSelf = async (): Promise<void> => {
@@ -88,20 +110,46 @@ export function ParticipantsPanel({ participants, self, editing }: ParticipantsP
   };
 
   const failure = failureMessage(action.outcome);
+  const list = (
+    <ul className="matches-roster">
+      {(editing === undefined ? rows.filter((row) => row.playing) : rows).map((row) => (
+        <li key={row.membershipId}>
+          <PlayerRow
+            name={row.displayName}
+            guest={row.isGuest}
+            badges={row.isGuest ? <GuestBadge /> : undefined}
+            end={
+              editing === undefined ? undefined : (
+                <Checkbox
+                  label={row.displayName}
+                  hideLabel
+                  checked={ticked(row)}
+                  onChange={(checked) => void tick(row, checked)}
+                />
+              )
+            }
+          />
+        </li>
+      ))}
+    </ul>
+  );
 
   return (
     <section className="matches-panel" aria-labelledby={headingId}>
-      <h2 id={headingId} className="matches-subheading">
-        {PARTICIPANTS_HEADING}
-      </h2>
-      <p className="matches-hint">{playerCountStatement(participants.length)}</p>
+      <div className="matches-panel__head">
+        <h2 id={headingId} className="matches-subheading">
+          {PARTICIPANTS_HEADING}
+        </h2>
+        <span className="matches-count pm-num">{playingCountLabel(participants.length)}</span>
+      </div>
 
       {self === undefined ? null : (
-        <div className="matches-actions" data-matches-self-participation="true">
-          <p className="matches-hint">{self.isParticipant ? PLAYING_STATEMENT : NOT_PLAYING_STATEMENT}</p>
+        <div className="matches-self" data-matches-self-participation="true">
+          <p>{self.isParticipant ? PLAYING_STATEMENT : NOT_PLAYING_STATEMENT}</p>
           <Button
             type="button"
             variant={self.isParticipant ? 'secondary' : 'primary'}
+            icon={self.isParticipant ? 'logout' : 'userPlus'}
             aria-disabled={action.busy ? true : undefined}
             onClick={() => void toggleSelf()}
           >
@@ -110,66 +158,24 @@ export function ParticipantsPanel({ participants, self, editing }: ParticipantsP
         </div>
       )}
 
-      <ul className="matches-people">
-        {ordered.map((participant) => (
-          <li key={participant.membershipId} className="matches-person">
-            <span>
-              {participant.displayName}
-              {participant.isGuest ? <span className="matches-chip">{GUEST_LABEL}</span> : null}
-            </span>
-            {editing === undefined ? null : (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                aria-disabled={action.busy ? true : undefined}
-                onClick={() => void remove(participant.membershipId)}
-              >
-                {removeParticipantLabel(participant.displayName)}
-              </Button>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {editing === undefined ? null : editing.players === 'failed' ? (
-        <p className="matches-hint">{GENERIC_MATCHES_FAILURE}</p>
-      ) : editing.players === null ? (
-        <p className="matches-hint" role="status">
-          {PLAYERS_LOADING_LABEL}
-        </p>
-      ) : addable.length === 0 ? (
-        <p className="matches-hint">{NO_PLAYERS_TO_ADD}</p>
+      {editing === undefined ? (
+        list
       ) : (
-        <form className="matches-inline-form" noValidate onSubmit={(event) => void handleAdd(event)}>
-          <label htmlFor={selectId}>{ADD_PLAYER_LABEL}</label>
-          <select
-            id={selectId}
-            className="matches-input"
-            value={selected}
-            onChange={(event) => setPlayerId(event.target.value)}
-          >
-            {addable.map((player) => (
-              <option key={player.membershipId} value={player.membershipId}>
-                {player.isGuest ? guestOptionLabel(player.displayName) : player.displayName}
-              </option>
-            ))}
-          </select>
-          <Button
-            type="submit"
-            variant="secondary"
-            aria-disabled={action.busy ? true : undefined}
-          >
-            {ADD_PLAYER_SUBMIT_LABEL}
-          </Button>
-        </form>
+        <fieldset className="matches-fieldset">
+          <legend className="matches-legend">{WHO_IS_PLAYING_LEGEND}</legend>
+          <p className="matches-hint">{PICK_PLAYERS_HINT}</p>
+          {list}
+          {editing.players === 'failed' ? (
+            <p className="matches-hint">{GENERIC_MATCHES_FAILURE}</p>
+          ) : editing.players === null ? (
+            <p className="matches-hint" role="status">
+              {PLAYERS_LOADING_LABEL}
+            </p>
+          ) : null}
+        </fieldset>
       )}
 
-      {failure === null ? null : (
-        <p className="matches-error" role="alert">
-          {failure}
-        </p>
-      )}
+      {failure === null ? null : <Banner tone="error">{failure}</Banner>}
     </section>
   );
 }

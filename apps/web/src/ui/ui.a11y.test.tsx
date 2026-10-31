@@ -15,6 +15,8 @@ import {
   Badge,
   Banner,
   BibFlag,
+  BibToggle,
+  Checkbox,
   Button,
   Card,
   Chip,
@@ -118,6 +120,10 @@ function Gallery() {
       <Rating provisional band="1,1xx" />
       <BibFlag size="lg" />
       <BibFlag off />
+      <BibToggle pressed pressedLabel="Wearing bibs" label="Wear bibs" />
+      <BibToggle pressed={false} pressedLabel="Wearing bibs" label="Wear bibs" />
+      <Checkbox label="Guests pay too" description="Or a member covers them" checked onChange={noop} />
+      <Checkbox label="Big Mike" hideLabel checked={false} onChange={noop} />
       <Avatar name="Priya Shah" />
       <Avatar name="Big Dave" guest tag={<Icon name="glove" size={12} />} />
       <AvatarStack names={['A B', 'C D', 'E F', 'G H', 'I J']} />

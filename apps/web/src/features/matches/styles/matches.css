@@ -75,11 +75,52 @@
   background: var(--pm-surface);
 }
 
-/* A panel inside a panel (the unassigned players) sits flat. */
-.matches-panel .matches-panel {
+/* A panel's heading with a count on the right ("10 playing"). */
+.matches-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--pm-space-2);
+}
+
+.matches-panel__head .matches-subheading {
+  margin: 0;
+}
+
+.matches-count {
+  font-weight: 700;
+  color: var(--pm-text-secondary);
+}
+
+/* The caller's own place in the match, with join or leave beside it. */
+.matches-self {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--pm-space-3);
+  padding: var(--pm-space-3) var(--pm-space-4);
+  border-radius: var(--pm-radius-md);
+  background: var(--pm-surface-raised);
+}
+
+.matches-self p {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* A list of PlayerRows, divided. */
+.matches-roster {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
   padding: 0;
-  border: 0;
-  background: none;
+  list-style: none;
+}
+
+.matches-roster > li + li {
+  border-top: var(--matches-border-width) solid var(--pm-border-subtle);
 }
 
 .matches-notice,
@@ -373,11 +414,77 @@
   min-width: 0;
 }
 
-.matches-bib {
+.matches-team .pm-team__body {
+  padding: var(--pm-space-1);
+}
+
+/* The roll before there are teams. */
+.matches-roll {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--pm-space-3);
+}
+
+.matches-roll__title {
+  margin: 0;
+  font: var(--pm-type-title);
+}
+
+.matches-unassigned {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-2);
+}
+
+/* Names & bibs: a card per team, side by side where there is room. */
+.matches-identities {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
+}
+
+.matches-identities__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--matches-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matches-identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
+}
+
+.matches-identity__name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-2);
+}
+
+.matches-identity__actions {
+  display: flex;
+  gap: var(--pm-space-2);
   align-items: center;
-  gap: var(--matches-gap-tight);
-  min-height: var(--matches-touch-target);
+}
+
+/* The step's footer: re-roll on the left, lock on the right. */
+.matches-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--pm-space-3);
+  padding-top: var(--pm-space-4);
+  border-top: var(--matches-border-width) solid var(--pm-border-subtle);
+}
+
+.matches-footer__end {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pm-space-2);
 }
 
 /* The prediction for more than two teams, as a list with bars. The bar repeats

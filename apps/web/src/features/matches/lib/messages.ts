@@ -186,21 +186,17 @@ export const CONFIRM_FEW_PLAYERS_WARNING = `That's fewer than the ${ROLL_MIN_PAR
 
 export const PARTICIPANTS_HEADING = 'Players';
 export const GUEST_LABEL = 'Guest';
-export const ADD_PLAYER_LABEL = 'Player to add';
-export const ADD_PLAYER_SUBMIT_LABEL = 'Add player';
-export const NO_PLAYERS_TO_ADD = 'Everyone in this squad is already playing.';
 export const PLAYERS_LOADING_LABEL = 'Loading the squad';
 export const JOIN_MATCH_LABEL = 'Join this match';
 export const LEAVE_MATCH_LABEL = 'Leave this match';
 export const NOT_PLAYING_STATEMENT = "You're not playing in this match yet.";
 export const PLAYING_STATEMENT = "You're playing in this match.";
 
-export function guestOptionLabel(name: string): string {
-  return `${name} (guest)`;
-}
+export const WHO_IS_PLAYING_LEGEND = "Who's playing";
+export const PICK_PLAYERS_HINT = 'Tick everyone who is playing, guests included. Each tick saves straight away.';
 
-export function removeParticipantLabel(name: string): string {
-  return `Remove ${name}`;
+export function playingCountLabel(count: number): string {
+  return `${count} playing`;
 }
 
 export function playerCountStatement(count: number): string {
@@ -228,7 +224,10 @@ export const PREDICTION_HEADING = 'Predicted result';
 export const DRAW_LABEL = 'Draw';
 export const NO_PREDICTION_STATEMENT = 'A prediction appears once two teams have players.';
 export const SAVE_TEAM_NAME_LABEL = 'Save name';
-export const TEAM_NAME_HINT = 'Leave it blank for a generated name.';
+export const TEAM_NAME_HINT = 'Leave it blank, or roll the dice, for a silly name.';
+export const NAMES_AND_BIBS_HEADING = 'Names & bibs';
+export const WEAR_BIBS_LABEL = 'Wear bibs';
+export const WEARING_BIBS_LABEL = 'Wearing bibs';
 export const UNASSIGNED_HEADING = 'Not on a team';
 export const LOCK_TEAMS_LABEL = 'Lock teams';
 export const RELOCK_TEAMS_LABEL = 'Lock changes';
@@ -240,16 +239,22 @@ export const UNLOCK_HINT =
   'Need to add or remove someone? Unlock the teams, make the change, then lock them again before kickoff.';
 export const TEAMS_LOCKED_STATEMENT = 'Teams are locked. You can still change them until the match starts.';
 
-export function teamHeading(name: string, size: number): string {
-  return `${name} (${playerCountStatement(size)})`;
+/** The side's word above its name: "Team A", "Team B". */
+export function teamSideLabel(index: number): string {
+  return `Team ${String.fromCharCode(65 + index)}`;
 }
 
-export function teamNameLabel(teamName: string): string {
-  return `Name of ${teamName}`;
+export function teamNameLabel(side: string): string {
+  return `${side} name`;
 }
 
-export function wearsBibsLabel(teamName: string): string {
-  return `${teamName} wears bibs`;
+export function sillyNameLabel(side: string): string {
+  return `Pick a silly name for ${side}`;
+}
+
+/** The bibs toggle's name: the team, then what the button shows. */
+export function bibToggleLabel(teamName: string, wearing: boolean): string {
+  return `${teamName}: ${wearing ? WEARING_BIBS_LABEL : WEAR_BIBS_LABEL}`;
 }
 
 export function moveToLabel(playerName: string, teamName: string): string {

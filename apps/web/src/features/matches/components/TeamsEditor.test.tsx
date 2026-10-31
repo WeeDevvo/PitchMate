@@ -15,10 +15,12 @@ import {
   ROLL_TEAMS_LABEL,
   rollGapStatement,
   SAVE_TEAM_NAME_LABEL,
+  bibToggleLabel,
   lockProblemMessage,
   moveToLabel,
+  sillyNameLabel,
   teamNameLabel,
-  wearsBibsLabel,
+  teamSideLabel,
 } from '../lib/messages';
 import {
   MATCH_ID,
@@ -99,7 +101,9 @@ describe('TeamsEditor with teams', () => {
   it('names each team with its size and players, and the predicted result in words', async () => {
     renderEditor();
 
-    await screen.findByRole('heading', { name: 'Red Wolves (5 players)' });
+    await screen.findByRole('heading', { name: 'Red Wolves' });
+    expect(within(team('Red Wolves')).getByText('5 players')).toBeTruthy();
+    expect(within(team('Red Wolves')).getByText(teamSideLabel(0))).toBeTruthy();
     expect(within(team('Blue Herons')).getByText('Player 2')).toBeTruthy();
 
     const prediction = screen.getByRole('heading', { name: 'Predicted result' }).closest(
@@ -152,12 +156,12 @@ describe('TeamsEditor with teams', () => {
     expect(screen.getByText(lockProblemMessage({ kind: 'unassigned', count: 1 }))).toBeTruthy();
   });
 
-  it('renames a team, and asks for a generated name when left blank', async () => {
+  it('renames a team, and asks for a generated name when left blank or on the dice', async () => {
     const { api } = renderEditor();
 
-    const red = await screen.findByRole('heading', { name: /^Red Wolves/ });
-    const form = within(red.closest('section') as HTMLElement);
-    const input = form.getByLabelText(teamNameLabel('Red Wolves'));
+    const input = await screen.findByLabelText(teamNameLabel(teamSideLabel(0)));
+    const form = within(input.closest('form') as HTMLElement);
+    expect((input as HTMLInputElement).value).toBe('Red Wolves');
 
     await userEvent.clear(input);
     await userEvent.type(input, '  The Reds ');
@@ -172,15 +176,27 @@ describe('TeamsEditor with teams', () => {
     await userEvent.clear(input);
     await userEvent.click(form.getByRole('button', { name: SAVE_TEAM_NAME_LABEL }));
     await expect.poll(() => api.setTeamName.mock.calls.at(-1)?.[2]).toBe(null);
+
+    await userEvent.click(screen.getByRole('button', { name: sillyNameLabel(teamSideLabel(1)) }));
+    await expect.poll(() => api.setTeamName.mock.calls.at(-1)).toEqual([
+      MATCH_ID,
+      TEAM_IDS[1],
+      null,
+      expect.any(AbortSignal),
+    ]);
   });
 
   it('moves the bibs to the chosen team', async () => {
     const { api } = renderEditor();
 
-    const red = await screen.findByRole('radio', { name: wearsBibsLabel('Red Wolves') });
-    expect((red as HTMLInputElement).checked).toBe(true);
+    const red = await screen.findByRole('button', { name: bibToggleLabel('Red Wolves', true) });
+    expect(red).toHaveAttribute('aria-pressed', 'true');
+    const blue = screen.getByRole('button', { name: bibToggleLabel('Blue Herons', false) });
+    expect(blue).toHaveAttribute('aria-pressed', 'false');
 
-    await userEvent.click(screen.getByRole('radio', { name: wearsBibsLabel('Blue Herons') }));
+    await userEvent.click(red);
+    expect(api.setBibTeam).not.toHaveBeenCalled();
+    await userEvent.click(blue);
     expect(api.setBibTeam).toHaveBeenCalledWith(MATCH_ID, TEAM_IDS[1], expect.any(AbortSignal));
   });
 
