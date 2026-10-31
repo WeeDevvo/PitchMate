@@ -19,6 +19,33 @@ docs/             Backlog, ADRs, local-dev guide (local only; git-ignored)
 
 ## Quick start
 
+### Using Makefile (Recommended)
+
+```bash
+# View all available targets
+make help
+
+# Build Docker images by Dockerfile
+make build-backend
+make build-client
+# Or build both:
+make build
+
+# Run containers
+make run-backend
+make run-client
+# Or run both:
+make run
+
+# Run full stack with Database, Backend and Web Client via Docker Compose:
+make up
+
+# Stop services:
+make down
+```
+
+### Manual / Local Dev
+
 ```powershell
 # Database (Docker)
 docker compose up -d
