@@ -105,7 +105,7 @@ internal sealed class SingleMatchRepository(Match match) : IMatchRepository
 /// In-memory <see cref="ISquadMembershipRepository"/> resolving the acting membership by backing user
 /// and squad — the only operation the recording handler uses. Every other member throws if called.
 /// </summary>
-internal sealed class ConfiguredMembershipRepository(IReadOnlyList<SquadMembership> memberships) : ISquadMembershipRepository
+internal sealed class ConfiguredMembershipRepository(IReadOnlyList<SquadMembership> memberships, bool squadPendingDeletion = false) : ISquadMembershipRepository
 {
     public Task<SquadMembership?> GetByUserAndSquadAsync(Guid userId, Guid squadId, CancellationToken cancellationToken)
     {
@@ -126,7 +126,7 @@ internal sealed class ConfiguredMembershipRepository(IReadOnlyList<SquadMembersh
         throw new NotSupportedException("Not exercised by the recording handler under test.");
 
     public Task<bool> IsSquadPendingDeletionAsync(Guid squadId, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Not exercised by the recording handler under test.");
+        Task.FromResult(squadPendingDeletion && memberships.Any(m => m.SquadId == squadId));
 
     public Task<bool> DisplayNameTakenAsync(Guid squadId, string normalisedName, Guid? excludingMembershipId, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Not exercised by the recording handler under test.");
