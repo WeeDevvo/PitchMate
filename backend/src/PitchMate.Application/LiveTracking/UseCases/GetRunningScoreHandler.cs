@@ -100,6 +100,13 @@ public sealed class GetRunningScoreHandler
             return Result<GetRunningScoreResult>.Fail(gate.Error!);
         }
 
+        // A squad in its deletion grace period is not visible: soft-deleting the squad leaves its
+        // memberships active, so it is refused here, uniformly with the other causes.
+        if (await _memberships.IsSquadPendingDeletionAsync(match.SquadId, cancellationToken))
+        {
+            return Unauthorized();
+        }
+
         // Project the current running score from the match's effective events. The derivation reads the
         // events as an unordered set and reflects retractions in force, so the tally is order-independent
         // and reuses the Domain projection rather than deriving anything here (Requirement 6.1, 6.2, 13.3).

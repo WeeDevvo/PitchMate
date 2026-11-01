@@ -96,6 +96,19 @@ public class GetRunningScoreHandlerTests
     }
 
     [Fact]
+    public void ASquadPendingDeletionGivesAnActiveMemberTheUniformUnauthorized()
+    {
+        GetRunningScoreWorld world = GetRunningScoreWorld.Build(squadPendingDeletion: true);
+        world.SeedGoal(world.TeamAId, 5);
+
+        Result<GetRunningScoreResult> result = world.Read(world.ActiveMemberUserId);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(LiveTrackingErrorCode.Unauthorized, result.Error!.Code);
+        Assert.Null(result.Value);
+    }
+
+    [Fact]
     public void AnInactiveMembershipReceivesTheUniformUnauthorizedDisclosingNoMatchData()
     {
         GetRunningScoreWorld world = GetRunningScoreWorld.Build();
@@ -266,9 +279,10 @@ public class GetRunningScoreHandlerTests
         /// <summary>
         /// Builds a world with a match walked to <see cref="MatchState.InProgress"/>. Ten participants
         /// are split into two teams of five (within the 5..8 lock rule), giving two genuine working
-        /// teams for the running-score projection.
+        /// teams for the running-score projection. <paramref name="squadPendingDeletion"/> puts the squad
+        /// in its deletion grace period.
         /// </summary>
-        public static GetRunningScoreWorld Build()
+        public static GetRunningScoreWorld Build(bool squadPendingDeletion = false)
         {
             Squad squad = Squad.Create("The Squad").Value!;
             squad.SetFeature(SquadFeature.LiveMatchTracking, enabled: true);
@@ -319,7 +333,7 @@ public class GetRunningScoreHandlerTests
 
             var events = new InMemoryMatchEventRepository();
             var matches = new SingleMatchRepository(match);
-            var membershipRepository = new ConfiguredMembershipRepository(memberships);
+            var membershipRepository = new ConfiguredMembershipRepository(memberships, squadPendingDeletion);
             var currentUser = new MutableCurrentUserAccessor { CurrentUserId = ownerUserId.ToString() };
 
             var handler = new GetRunningScoreHandler(matches, membershipRepository, events, currentUser);

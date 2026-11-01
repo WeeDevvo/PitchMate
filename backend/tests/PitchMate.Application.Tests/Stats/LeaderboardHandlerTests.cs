@@ -106,6 +106,28 @@ public class LeaderboardHandlerTests
         Assert.Null(result.Value);
     }
 
+    // A squad in its deletion grace period answers an active member with the same uniform Unauthorized
+    // failure as a non-member, so its leaderboard stays hidden until it is restored.
+    [Fact]
+    public async Task Squad_pending_deletion_is_rejected_uniformly()
+    {
+        Guid squadId = Guid.NewGuid();
+        Guid userId = Guid.NewGuid();
+        SquadMembership requester = SquadMembership.CreateRegistered(squadId, userId, "Requester").Value!;
+
+        var handler = new GetLeaderboardHandler(
+            new FakeStatsMembershipRepository(requester, squadPendingDeletion: true),
+            new FakeStatsRepository(throwOnAggregate: true));
+
+        var result = await handler.HandleAsync(
+            new GetLeaderboardCommand(userId, squadId, LeaderboardStatistic.Appearances),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(StatsErrorCode.Unauthorized, result.Error!.Code);
+        Assert.Null(result.Value);
+    }
+
     // A streak leaderboard folds each row's ordered result sequence and orders best-first, tie-broken by
     // ascending membership identity (Requirement 4.2, 4.3).
     [Fact]
@@ -172,7 +194,7 @@ public class LeaderboardHandlerTests
             throw new NotSupportedException();
 
         public Task<bool> IsSquadPendingDeletionAsync(Guid squadId, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+            Task.FromResult(false);
 
         public Task<bool> DisplayNameTakenAsync(Guid squadId, string normalisedName, Guid? excludingMembershipId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();

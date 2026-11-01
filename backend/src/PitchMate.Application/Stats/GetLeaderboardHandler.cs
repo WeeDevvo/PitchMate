@@ -60,6 +60,13 @@ public sealed class GetLeaderboardHandler
             return Result<Leaderboard>.Fail(gate.Error!);
         }
 
+        // A squad in its deletion grace period is not visible: soft-deleting the squad leaves its
+        // memberships active, so it is refused here with the same uniform failure as the gate.
+        if (await _memberships.IsSquadPendingDeletionAsync(command.SquadId, cancellationToken))
+        {
+            return Result<Leaderboard>.Fail(StatsAuthorization.RequireActiveMember(null).Error!);
+        }
+
         // Reject a statistic outside the closed supported set, returning no leaderboard (Requirement 4.7).
         if (!Enum.IsDefined(command.Statistic))
         {

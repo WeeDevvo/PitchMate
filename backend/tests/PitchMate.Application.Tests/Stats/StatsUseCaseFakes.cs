@@ -102,11 +102,11 @@ internal sealed class FakeRichStatsSource(RichStats? rich = null, Guid? topScore
 
 /// <summary>
 /// In-memory <see cref="ISquadMembershipRepository"/> for the stats use-case tests. It resolves the
-/// requester's membership by backing user and squad — the only member the stats handlers call — and
-/// throws for every other member so a test that accidentally depends on them fails loudly. It is a
-/// real fake, not a mocking-framework stub.
+/// requester's membership by backing user and squad and reports whether the squad is in its deletion
+/// grace period — the only members the stats handlers call — and throws for every other member so a
+/// test that accidentally depends on them fails loudly. It is a real fake, not a mocking-framework stub.
 /// </summary>
-internal sealed class FakeStatsMembershipRepository(SquadMembership? requester) : ISquadMembershipRepository
+internal sealed class FakeStatsMembershipRepository(SquadMembership? requester, bool squadPendingDeletion = false) : ISquadMembershipRepository
 {
     private readonly SquadMembership? _requester = requester;
 
@@ -132,7 +132,7 @@ internal sealed class FakeStatsMembershipRepository(SquadMembership? requester) 
         throw new NotSupportedException("Not exercised by the stats handlers under test.");
 
     public Task<bool> IsSquadPendingDeletionAsync(Guid squadId, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Not exercised by the stats handlers under test.");
+        Task.FromResult(squadPendingDeletion && _requester is not null && _requester.SquadId == squadId);
 
     public Task<bool> DisplayNameTakenAsync(Guid squadId, string normalisedName, Guid? excludingMembershipId, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Not exercised by the stats handlers under test.");

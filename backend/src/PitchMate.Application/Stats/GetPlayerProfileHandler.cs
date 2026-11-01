@@ -96,6 +96,13 @@ public sealed class GetPlayerProfileHandler
             return Result<PlayerProfile>.Fail(gate.Error!);
         }
 
+        // A squad in its deletion grace period is not visible: soft-deleting the squad leaves its
+        // memberships active, so it is refused here with the same uniform failure as the gate.
+        if (await _memberships.IsSquadPendingDeletionAsync(command.SquadId, cancellationToken))
+        {
+            return Result<PlayerProfile>.Fail(StatsAuthorization.RequireActiveMember(null).Error!);
+        }
+
         try
         {
             // Resolve the subject within the target squad; a subject in another squad or none at all is
