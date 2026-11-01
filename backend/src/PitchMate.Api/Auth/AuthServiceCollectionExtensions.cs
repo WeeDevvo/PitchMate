@@ -137,6 +137,8 @@ public static class AuthServiceCollectionExtensions
         services.AddScoped<UnlinkAuthIdentityHandler>();
         services.AddScoped<EraseUserHandler>();
         services.AddScoped<ExportUserDataHandler>();
+        services.AddScoped<ExportUserGdprDataHandler>();
+        services.AddScoped<PurgeExpiredTokensHandler>();
 
         // The account-settings read (GET /auth/me). Read-only, but scoped like the rest so it shares
         // the request scope's DbContext-backed repositories.

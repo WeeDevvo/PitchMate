@@ -53,6 +53,7 @@ public static class AuthInfrastructureRegistration
         services.TryAddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
         services.TryAddScoped<IEmailVerificationTokenRepository, EfEmailVerificationTokenRepository>();
         services.TryAddScoped<IPasswordResetTokenRepository, EfPasswordResetTokenRepository>();
+        services.TryAddScoped<ITokenPurgeRepository, EfTokenPurgeRepository>();
 
         return services;
     }
