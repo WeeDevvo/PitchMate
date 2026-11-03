@@ -288,6 +288,7 @@ export function fakeMatchesApi(overrides: Partial<MatchesApi> = {}): FakeMatches
     cancelMatch: async () => success(undefined),
     getLiveTracking: async () => success(false),
     getRunningScore: async () => success([]),
+    getMatchEvents: async () => success([]),
     recordEvents: async (_matchId, events) =>
       success(events.map(({ eventId }) => ({ eventId, outcome: 'Applied' as const }))),
     finaliseTrackedResult: async () => success([]),

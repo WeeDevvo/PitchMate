@@ -3,11 +3,11 @@
  * pitch-side, and what the screen shows while some of them are still on their
  * way to the server.
  *
- * The backend's event log is the record. The tracker keeps a session log of the
- * events it sent, each pending until the server settles it, so the score can
- * move the moment a goal is tapped and a failed send can be retried with the
- * same identities. Corrections are new events, never edits: undoing a goal
- * sends a retraction that names it.
+ * The backend's event log is the record. The tracker starts from it, then keeps
+ * a session log of the events it sends, each pending until the server settles
+ * it, so the score can move the moment a goal is tapped and a failed send can be
+ * retried with the same identities. Corrections are new events, never edits:
+ * undoing a goal sends a retraction that names it.
  */
 import type { TeamScore } from './parse/matchDetail';
 import type { TeamSheet } from './parse/teamSheet';
@@ -65,7 +65,15 @@ export interface GoalUndoEvent {
   readonly targetEventId: string;
 }
 
-export type TrackedEvent = GoalEvent | KeeperEvent | GoalUndoEvent;
+/** Takes back the keeper stint `targetEventId`. */
+export interface KeeperUndoEvent {
+  readonly kind: 'keeper-undo';
+  readonly eventId: string;
+  readonly minute: number;
+  readonly targetEventId: string;
+}
+
+export type TrackedEvent = GoalEvent | KeeperEvent | GoalUndoEvent | KeeperUndoEvent;
 
 /** Pending until the server answers; then recorded (applied, or already there) or rejected. */
 export type EventStatus = 'pending' | 'recorded' | 'rejected';
@@ -84,6 +92,22 @@ export interface EventResult {
 /** The log with one more event, pending. */
 export function appendEvent(log: readonly LoggedEvent[], event: TrackedEvent): readonly LoggedEvent[] {
   return [...log, { event, status: 'pending' }];
+}
+
+/**
+ * The log started from the server's: every event the server has, recorded and
+ * in its order, then any event of `log` the server does not have yet. An event
+ * the server has is recorded whatever `log` said about it.
+ */
+export function mergeServerLog(
+  log: readonly LoggedEvent[],
+  serverEvents: readonly TrackedEvent[],
+): readonly LoggedEvent[] {
+  const known = new Set(serverEvents.map(({ eventId }) => eventId));
+  return [
+    ...serverEvents.map((event): LoggedEvent => ({ event, status: 'recorded' })),
+    ...log.filter(({ event }) => !known.has(event.eventId)),
+  ];
 }
 
 /** The events still to send, oldest first. */
@@ -171,11 +195,14 @@ export function displayedScores(
   return sheet.teams.map(({ teamId }) => ({ teamId, score: Math.max(0, scores.get(teamId) ?? 0) }));
 }
 
-/** Who this session put in goal for each team, latest first wins. */
+/** Who is in goal for each team: the latest stint that stands, by team. */
 export function currentKeepers(log: readonly LoggedEvent[]): ReadonlyMap<string, string> {
+  const undone = new Set(
+    log.flatMap((entry) => (isLive(entry) && entry.event.kind === 'keeper-undo' ? [entry.event.targetEventId] : [])),
+  );
   const keepers = new Map<string, string>();
   for (const entry of log) {
-    if (isLive(entry) && entry.event.kind === 'keeper') {
+    if (isLive(entry) && entry.event.kind === 'keeper' && !undone.has(entry.event.eventId)) {
       keepers.set(entry.event.teamId, entry.event.keeperId);
     }
   }
