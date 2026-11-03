@@ -51,6 +51,7 @@ public sealed class MatchDetailEndpointIntegrationTests : IClassFixture<RoutingA
         "callerIsParticipant",
         "callerAvailability",
         "recordedResult",
+        "startedAt",
         "completedAt",
         "guestAvailability",
     ];
@@ -112,6 +113,7 @@ public sealed class MatchDetailEndpointIntegrationTests : IClassFixture<RoutingA
         Assert.Equal(0, detail.GetProperty("participants").GetArrayLength());
         Assert.False(detail.GetProperty("callerIsParticipant").GetBoolean());
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("recordedResult").ValueKind);
+        Assert.Equal(JsonValueKind.Null, detail.GetProperty("startedAt").ValueKind);
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("completedAt").ValueKind);
 
         // The caller stored a response marking no day: both members present, true and empty.

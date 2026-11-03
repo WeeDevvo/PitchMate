@@ -153,7 +153,7 @@ public sealed class MatchReadInvariancePropertyTests
         MatchDetailReferenceOracle.AssertAgrees(
             new MatchDetailProjection(
                 first.MatchId, first.SquadId, first.State, first.Location, first.CandidateDays,
-                first.ConfirmedDay, first.Participants, first.RecordedResult, first.CompletedAt),
+                first.ConfirmedDay, first.Participants, first.RecordedResult, first.StartedAt, first.CompletedAt),
             first.CallerAvailability,
             second);
     }

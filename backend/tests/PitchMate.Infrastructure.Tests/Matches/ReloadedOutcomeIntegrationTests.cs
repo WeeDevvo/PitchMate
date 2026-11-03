@@ -89,7 +89,7 @@ public sealed class ReloadedOutcomeIntegrationTests
                         new ProposedTeam("Blues", BibFlag: true, blues)
                     ]).IsSuccess);
                     Assert.True(match.Lock().IsSuccess);
-                    Assert.True(match.Start().IsSuccess);
+                    Assert.True(match.Start(DateTimeOffset.UnixEpoch).IsSuccess);
 
                     var redsId = match.Teams.Single(team => team.TeamName == "Reds").Id;
                     var bluesId = match.Teams.Single(team => team.TeamName == "Blues").Id;

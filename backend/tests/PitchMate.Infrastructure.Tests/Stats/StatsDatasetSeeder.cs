@@ -202,7 +202,7 @@ public sealed class StatsDatasetSeeder
             return new BuiltMatch(match, [], RolledMatchData(matchId, MatchState.TeamsRolled, null, spec.Fidelity, teamEntities, scores: null));
         }
 
-        Check(match.Start(), "start");
+        Check(match.Start(DateTimeOffset.UnixEpoch), "start");
 
         if (spec.State == MatchState.InProgress)
         {

@@ -237,7 +237,7 @@ internal sealed class MatchListDatasetSeeder
             return match;
         }
 
-        Check(match.Start(), "start");
+        Check(match.Start(DateTimeOffset.UnixEpoch), "start");
 
         if (spec.State == MatchState.InProgress)
         {

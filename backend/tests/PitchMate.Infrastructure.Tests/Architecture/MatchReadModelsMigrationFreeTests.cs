@@ -29,6 +29,9 @@ public sealed class MatchReadModelsMigrationFreeTests
     [
         // Guest claims by claim link (ADR 0003).
         "20261023163741_AddGuestClaimLinks",
+
+        // The kickoff instant live tracking derives match minutes from (live-tracking recorder).
+        "20261103153315_AddMatchStartedAt",
     ];
 
     /// <summary>The aggregate's public operations before the chore, pinned so a new one fails by name.</summary>

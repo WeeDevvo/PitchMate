@@ -176,7 +176,7 @@ public sealed class MatchPersistenceRoundTripIntegrationTests
             Assert.True(match.Lock().IsSuccess);
             Assert.NotNull(match.KickoffLineup);
 
-            Assert.True(match.Start().IsSuccess);
+            Assert.True(match.Start(DateTimeOffset.UnixEpoch).IsSuccess);
 
             var teamAId = match.Teams.First(t => t.TeamName == "Reds").Id;
             var teamBId = match.Teams.First(t => t.TeamName == "Blues").Id;

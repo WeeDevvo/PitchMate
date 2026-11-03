@@ -42,7 +42,7 @@ public class MatchLifecycleTransitionPropertyTests
             var location = match.Location;
             var candidateDayCount = match.CandidateDays.Count;
 
-            var result = match.Start();
+            var result = match.Start(DateTimeOffset.UnixEpoch);
 
             if (originalState == StartRequiredState)
             {

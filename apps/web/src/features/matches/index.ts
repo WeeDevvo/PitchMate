@@ -9,7 +9,14 @@ export { createMatchesShellRoutes, type MatchesRoutesOptions } from './matchesRo
 
 export { MatchesSection, type MatchesSectionProps } from './components/MatchesSection';
 
-export { MATCH_ROUTE, NEW_MATCH_ROUTE, matchPath, newMatchPath } from './lib/routePaths';
+export {
+  MATCH_LIVE_ROUTE,
+  MATCH_ROUTE,
+  NEW_MATCH_ROUTE,
+  liveTrackerPath,
+  matchPath,
+  newMatchPath,
+} from './lib/routePaths';
 
 export {
   createMatchesApi,

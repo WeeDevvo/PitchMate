@@ -400,3 +400,123 @@ export const REJECTION_MESSAGES: Readonly<Record<RejectionReason, string>> = {
   'result-required': 'Save the score before completing the match.',
   conflict: 'Someone else changed this match at the same time. The page has been refreshed.',
 };
+
+/* Live tracking -------------------------------------------------------------- */
+
+export const LIVE_SCORE_HEADING = 'Live score';
+export const LIVE_SCORE_HINT = 'Updates as goals go in. It becomes final when the match ends.';
+export const LIVE_SCORE_LOADING_LABEL = 'Loading the live score';
+export const LIVE_LABEL = 'Live';
+export const OPEN_TRACKER_LABEL = 'Open the live tracker';
+export const BACK_TO_MATCH_LABEL = 'Back to the match';
+
+export const TRACKER_HEADING = 'Live tracker';
+export const TRACKER_LOADING_LABEL = 'Loading the live tracker';
+export const TRACKER_NOT_ORGANISER_STATEMENT = 'Only squad admins can track a match live.';
+export const TRACKER_NOT_IN_PLAY_STATEMENT = 'This match is not in play, so there is nothing to track.';
+export const TRACKER_OFF_STATEMENT =
+  'Live tracking is off for this squad. Record the final score on the match page instead.';
+export const TRACKER_HALTED_STATEMENT =
+  'This match can no longer be tracked here. It may have ended. Head back to the match to see where it stands.';
+
+export const CLOCK_LABEL = 'Match clock';
+export const CLOCK_FALLBACK_NOTE =
+  "The kickoff time wasn't recorded, so the clock started when you opened the tracker.";
+
+export const GOAL_LABEL = 'Goal';
+export const UNDO_LABEL = 'Undo';
+export const UNDO_GOAL_LABEL = 'Undo last goal';
+export const KEEPER_LABEL = 'Keeper';
+export const END_MATCH_LABEL = 'End match';
+
+export function minuteText(minute: number): string {
+  return `${minute}′`;
+}
+
+export function goalAtHeading(minute: number): string {
+  return `Goal at ${minuteText(minute)}`;
+}
+
+export const WHICH_TEAM_HINT = 'Which team scored?';
+
+export function teamGoalButtonLabel(teamName: string, bibFlag: boolean): string {
+  return bibFlag ? `${teamName}, in bibs` : teamName;
+}
+
+export function teamGoalHeading(teamName: string): string {
+  return `${teamName} goal`;
+}
+
+export function whoScoredHint(minute: number): string {
+  return `${minuteText(minute)} · who scored?`;
+}
+
+export const OWN_GOAL_LABEL = 'Own goal';
+export const NOT_OWN_GOAL_LABEL = 'Not an own goal';
+export const SKIP_SCORER_LABEL = 'Skip';
+export const BACK_LABEL = 'Back';
+
+export function ownGoalHint(teamName: string): string {
+  return `Pick the player who put it in their own net. It counts for ${teamName}.`;
+}
+
+export function sessionGoalsMeta(goals: number): string {
+  return goals === 1 ? '1 today' : `${goals} today`;
+}
+
+export function goalLoggedStatement(scorerName: string | null, teamName: string, ownGoal: boolean, minute: number): string {
+  if (scorerName === null) return `Goal for ${teamName} ${minuteText(minute)}`;
+  return ownGoal
+    ? `Own goal by ${scorerName}, for ${teamName} ${minuteText(minute)}`
+    : `Goal: ${scorerName} ${minuteText(minute)}`;
+}
+
+export const GOAL_UNDONE_STATEMENT = 'Goal taken back.';
+
+export const KEEPER_DIALOG_TITLE = "Who's in goal?";
+export const KEEPER_DIALOG_HINT = 'Pick the keeper for either team. Changes count from this minute.';
+export const IN_GOAL_LABEL = 'In goal';
+export const NO_KEEPER_LABEL = 'No keeper set';
+export const CLOSE_LABEL = 'Close';
+
+export function keeperButtonLabel(name: string, teamName: string): string {
+  return `${name} in goal for ${teamName}`;
+}
+
+export function keeperLoggedStatement(name: string, teamName: string, minute: number): string {
+  return `${name} in goal for ${teamName} from ${minuteText(minute)}`;
+}
+
+export function keeperLine(teamName: string, keeperName: string | null): string {
+  return `${teamName} keeper: ${keeperName ?? NO_KEEPER_LABEL}`;
+}
+
+export const END_MATCH_DIALOG_TITLE = 'Full time?';
+export const END_MATCH_BODY =
+  "Ending makes this score final and updates everyone's ratings. It can't be undone.";
+export const END_NEEDS_SYNC_STATEMENT = 'Send the waiting events before ending the match.';
+export const KEEP_PLAYING_LABEL = 'Keep playing';
+export const ENDING_LABEL = 'Ending…';
+
+export function endAtLabel(score: string): string {
+  return `End at ${score}`;
+}
+
+export const SYNC_LABELS = {
+  synced: 'Synced',
+  syncing: 'Syncing',
+  unsynced: 'Not synced',
+} as const;
+
+export function unsyncedStatement(count: number): string {
+  const events = count === 1 ? '1 event' : `${count} events`;
+  return `${events} not sent yet. Check your signal, then try again.`;
+}
+
+export const SEND_AGAIN_LABEL = 'Send again';
+export const EVENT_REJECTED_STATEMENT = 'One event was not accepted, so it was left out of the score.';
+
+/** The score in words, for a screen reader: each team with its goals. */
+export function liveScoreStatement(teams: readonly { readonly name: string; readonly score: number }[]): string {
+  return teams.map(({ name, score }) => `${name} ${score}`).join(', ');
+}

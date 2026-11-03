@@ -18,6 +18,9 @@ import type {
 
 import { ok, type ParseResult } from '../../../wire';
 import { classifyOutcome, type RejectionReason } from '../lib/callOutcome';
+import type { EventResult, TrackedEvent } from '../lib/liveTracking';
+import type { TeamScore } from '../lib/parse/matchDetail';
+import { parseBatchResult, parseLiveTrackingEnabled, parseTeamScores } from '../lib/parse/liveTracking';
 import { parseMatchDetail, type MatchDetail } from '../lib/parse/matchDetail';
 import { parseMatchList, type MatchList } from '../lib/parse/matchList';
 import { parseTeamSheet, type TeamSheet } from '../lib/parse/teamSheet';
@@ -73,6 +76,10 @@ const START_PATH = '/matches/{matchId}/start';
 const RESULT_PATH = '/matches/{matchId}/result';
 const COMPLETE_PATH = '/matches/{matchId}/complete';
 const CANCEL_PATH = '/matches/{matchId}/cancel';
+const FEATURES_PATH = '/squads/{squadId}/features';
+const EVENTS_PATH = '/matches/{matchId}/events';
+const RUNNING_SCORE_PATH = '/matches/{matchId}/running-score';
+const TRACKED_RESULT_PATH = '/matches/{matchId}/tracked-result';
 
 /** How long a call may take before it is abandoned. */
 export const MATCH_CALL_TIMEOUT_MS = 10_000;
@@ -234,6 +241,31 @@ export interface MatchesApi {
 
   /** Cancel a match that has not started. */
   cancelMatch(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /* Live tracking ------------------------------------------------------------ */
+
+  /** Whether the squad has live match tracking on. Any active member may ask. */
+  getLiveTracking(squadId: string, signal?: AbortSignal): Promise<CallResult<boolean>>;
+
+  /** The score of a match in progress, from the events recorded so far. Any member may read it. */
+  getRunningScore(matchId: string, signal?: AbortSignal): Promise<CallResult<readonly TeamScore[]>>;
+
+  /**
+   * Record events against a match in progress, answering each one's outcome.
+   * Each event carries its own identity, so resending a batch records nothing
+   * twice.
+   */
+  recordEvents(
+    matchId: string,
+    events: readonly TrackedEvent[],
+    signal?: AbortSignal,
+  ): Promise<CallResult<readonly EventResult[]>>;
+
+  /**
+   * End a tracked match: the recorded events become its result and the match is
+   * completed, which applies the rating update once.
+   */
+  finaliseTrackedResult(matchId: string, signal?: AbortSignal): Promise<CallResult<readonly TeamScore[]>>;
 }
 
 export interface MatchesApiDependencies {
@@ -573,7 +605,80 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
         signal,
       );
     },
+
+    getLiveTracking(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'GetFeatureFlags'> =>
+          apiClient.GET(FEATURES_PATH, { params: { path: { squadId } }, signal: callSignal }),
+        parseLiveTrackingEnabled,
+        signal,
+      );
+    },
+
+    getRunningScore(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'GetMatchRunningScore'> =>
+          apiClient.GET(RUNNING_SCORE_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        parseTeamScores,
+        signal,
+      );
+    },
+
+    recordEvents(matchId, events, signal) {
+      const body: Schemas['EventBatchRequest'] = { events: events.map(toSubmission) };
+      return call(
+        (callSignal): ClientCall<'RecordMatchEvents'> =>
+          apiClient.POST(EVENTS_PATH, {
+            params: { path: { matchId } },
+            body,
+            signal: callSignal,
+          }),
+        parseBatchResult,
+        signal,
+      );
+    },
+
+    finaliseTrackedResult(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'FinaliseTrackedResult'> =>
+          apiClient.POST(TRACKED_RESULT_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        parseTeamScores,
+        signal,
+      );
+    },
   };
+}
+
+/** One tracked event as the recording endpoint takes it. */
+function toSubmission(event: TrackedEvent): Schemas['EventSubmissionRequest'] {
+  switch (event.kind) {
+    case 'goal':
+      return {
+        eventId: event.eventId,
+        kind: 'GoalScored',
+        minute: event.minute,
+        scoringTeamId: event.teamId,
+        scorerMembershipId: event.scorerId,
+        ownGoal: event.ownGoal,
+      };
+    case 'keeper':
+      return {
+        eventId: event.eventId,
+        kind: 'KeeperStintStarted',
+        minute: event.minute,
+        keeperMembershipId: event.keeperId,
+        keptTeamId: event.teamId,
+        ownGoal: false,
+      };
+    case 'goal-undo':
+      return {
+        eventId: event.eventId,
+        kind: 'GoalRetracted',
+        minute: event.minute,
+        targetEventId: event.targetEventId,
+        ownGoal: false,
+      };
+  }
 }
 
 /** The parser for a call whose success carries nothing this feature reads. */

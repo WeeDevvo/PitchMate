@@ -74,6 +74,7 @@ internal sealed class EfMatchDetailSource(PitchMateDbContext db) : IMatchDetailS
             header.ConfirmedDay,
             participants,
             recordedResult,
+            state is MatchState.InProgress or MatchState.Completed ? header.StartedAt : null,
             state == MatchState.Completed ? header.CompletedAt : null);
     }
 
@@ -101,6 +102,7 @@ internal sealed class EfMatchDetailSource(PitchMateDbContext db) : IMatchDetailS
                     m."{{{match.Column(nameof(Match.State))}}}"                 AS state,
                     m."{{{match.Column(nameof(Match.Location))}}}"              AS location,
                     m."{{{match.Column(nameof(Match.ConfirmedDay))}}}"          AS confirmed_day,
+                    m."{{{match.Column(nameof(Match.StartedAt))}}}"             AS started_at,
                     m."{{{match.Column(nameof(Match.CompletedAt))}}}"           AS completed_at,
                     m."{{{match.Column(nameof(Match.CandidateDays))}}}"::text   AS candidate_days_json,
                     m."{{{match.Column(nameof(Match.RecordedResult))}}}"::text  AS recorded_result_json,

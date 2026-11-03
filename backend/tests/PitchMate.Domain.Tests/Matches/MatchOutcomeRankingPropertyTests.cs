@@ -202,7 +202,7 @@ public class MatchOutcomeRankingPropertyTests
 
         match.ApplyTeamProposal(proposal);
         match.Lock();
-        match.Start();
+        match.Start(DateTimeOffset.UnixEpoch);
 
         teamIds = match.Teams.Select(team => team.Id).ToList();
         ratingsByMembershipId = ratings;

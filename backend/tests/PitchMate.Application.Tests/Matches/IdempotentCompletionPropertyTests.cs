@@ -257,7 +257,7 @@ public class IdempotentCompletionPropertyTests
             };
             match.ApplyTeamProposal(teams);
             match.Lock();
-            match.Start();
+            match.Start(DateTimeOffset.UnixEpoch);
 
             // Scores reference the match's working teams (index-aligned with the kickoff lineup).
             Guid teamAId = match.Teams.ElementAt(0).Id;

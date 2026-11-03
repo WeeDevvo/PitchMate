@@ -12,7 +12,9 @@
  *   starts, an organiser can still adjust and re-lock the teams, then start it.
  * - **In progress:** an organiser records the score, correcting it as needed,
  *   then completes the match, which applies the rating update. Everyone sees
- *   the score, marked as not yet final until completion.
+ *   the score, marked as not yet final until completion. In a squad with live
+ *   tracking on, everyone sees the live score instead, and an organiser tracks
+ *   and ends the match from the live tracker.
  * - **Completed:** everyone sees the final score beside the team sheet.
  * - **Cancelled:** a statement that it was cancelled, and nothing to change.
  *
@@ -33,6 +35,7 @@ import { readUuid } from '../../../wire';
 import type { MatchesApi } from '../api/matchesApi';
 import { AvailabilityPanel } from '../components/AvailabilityPanel';
 import { CompletePanel } from '../components/CompletePanel';
+import { LiveScorePanel } from '../components/LiveScorePanel';
 import { ConfirmPanel } from '../components/ConfirmPanel';
 import { MatchActionsPanel } from '../components/MatchActionsPanel';
 import { ParticipantsPanel } from '../components/ParticipantsPanel';
@@ -63,7 +66,7 @@ import {
   TALLY_LOADING_LABEL,
   TEAM_SHEET_LOADING_LABEL,
 } from '../lib/messages';
-import { MATCH_ROUTE_PARAMETER } from '../lib/routePaths';
+import { MATCH_ROUTE_PARAMETER, liveTrackerPath } from '../lib/routePaths';
 import { guestsOf } from '../lib/parse/teams';
 import { hasTeamSheet, participantsEditable, teamsEditable } from '../lib/teams';
 import { useRemote } from '../state/useRemote';
@@ -134,6 +137,15 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
   );
 
   const sheetReadable = belongs && hasTeamSheet(match.state);
+  const inPlay = belongs && canRecordResult(match.state);
+
+  const tracking = useRemote(
+    inPlay ? squadId : null,
+    useCallback((signal: AbortSignal) => api.getLiveTracking(squadId ?? '', signal), [api, squadId]),
+    authState,
+  );
+  // Until the flag is read, and if it cannot be, the match is recorded the basic way.
+  const tracked = inPlay && tracking.value === true;
 
   const sheet = useRemote(
     sheetReadable ? matchId : null,
@@ -235,7 +247,17 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
         />
       ) : null}
 
-      {organiser && canRecordResult(match.state) && sheet.value !== null ? (
+      {tracked && sheet.value !== null ? (
+        <LiveScorePanel
+          matchId={matchId}
+          sheet={sheet.value}
+          api={api}
+          authState={authState}
+          trackerPath={organiser ? liveTrackerPath(squadId, matchId) : undefined}
+        />
+      ) : null}
+
+      {organiser && !tracked && canRecordResult(match.state) && sheet.value !== null ? (
         <>
           <ResultForm
             sheet={sheet.value}

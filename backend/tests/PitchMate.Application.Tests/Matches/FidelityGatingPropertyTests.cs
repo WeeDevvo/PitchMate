@@ -186,7 +186,7 @@ public class FidelityGatingPropertyTests
             };
             match.ApplyTeamProposal(teams);
             match.Lock();
-            match.Start();
+            match.Start(DateTimeOffset.UnixEpoch);
 
             IReadOnlyList<Guid> teamIds = match.Teams.Select(t => t.Id).ToList();
             IReadOnlyDictionary<Guid, PlayerRating> ratings =

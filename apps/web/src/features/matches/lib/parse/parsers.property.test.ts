@@ -190,6 +190,7 @@ describe('parseMatchDetail result and completion', () => {
       wireMatchDetail({
         state: 'Completed',
         recordedResult: { fidelity: 'Basic', teamScores },
+        startedAt: '2030-03-02T19:00:00Z',
         completedAt: '2030-03-02T20:15:00Z',
       }),
     );
@@ -199,6 +200,7 @@ describe('parseMatchDetail result and completion', () => {
       value: matchDetail({
         state: 'Completed',
         recordedResult: { fidelity: 'Basic', teamScores },
+        startedAtMs: Date.parse('2030-03-02T19:00:00Z'),
         completedAtMs: Date.parse('2030-03-02T20:15:00Z'),
       }),
     });

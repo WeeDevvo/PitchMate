@@ -126,7 +126,7 @@ public class MatchKickoffLineupRatingInputPropertyTests
                 return false;
             }
 
-            if (!match.Start().IsSuccess)
+            if (!match.Start(DateTimeOffset.UnixEpoch).IsSuccess)
             {
                 return false;
             }

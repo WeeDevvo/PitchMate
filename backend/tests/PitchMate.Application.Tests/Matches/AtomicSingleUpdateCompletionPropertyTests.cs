@@ -270,7 +270,7 @@ public class AtomicSingleUpdateCompletionPropertyTests
 
             // Capture the working-team ids (which the recorded result scores) before starting.
             List<MatchTeam> teams = match.Teams.ToList();
-            match.Start();
+            match.Start(DateTimeOffset.UnixEpoch);
 
             if (scenario.HasResult)
             {

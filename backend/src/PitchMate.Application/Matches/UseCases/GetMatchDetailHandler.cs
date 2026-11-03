@@ -102,6 +102,7 @@ public sealed class GetMatchDetailHandler
             projection.Participants.Any(p => p.SquadMembershipId == acting.Id),
             callerAvailability,
             projection.RecordedResult,
+            projection.StartedAt,
             projection.CompletedAt,
             guestAvailability));
     }

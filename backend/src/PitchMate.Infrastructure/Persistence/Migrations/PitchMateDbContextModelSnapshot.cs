@@ -594,6 +594,10 @@ namespace PitchMate.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("squad_id");
 
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
                     b.Property<int>("State")
                         .HasColumnType("integer")
                         .HasColumnName("state");

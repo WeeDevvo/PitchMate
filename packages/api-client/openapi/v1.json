@@ -8464,6 +8464,7 @@
           "callerIsParticipant",
           "callerAvailability",
           "recordedResult",
+          "startedAt",
           "completedAt",
           "guestAvailability"
         ],
@@ -8526,6 +8527,13 @@
                 "$ref": "#/components/schemas/RecordedResultView"
               }
             ]
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           },
           "completedAt": {
             "type": [

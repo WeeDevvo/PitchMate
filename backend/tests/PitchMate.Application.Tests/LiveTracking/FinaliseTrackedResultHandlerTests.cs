@@ -402,7 +402,7 @@ public class FinaliseTrackedResultHandlerTests
                             break;
 
                         default:
-                            match.Start();
+                            match.Start(DateTimeOffset.UnixEpoch);
                             if (state == MatchState.Completed)
                             {
                                 var basic = new MatchResult(ResultFidelity.Basic, new[]

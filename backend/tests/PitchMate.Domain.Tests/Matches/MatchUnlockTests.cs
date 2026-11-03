@@ -70,7 +70,7 @@ public class MatchUnlockTests
     public void AMatchInPlay_CannotBeUnlocked_AndKeepsItsLineup()
     {
         Match match = LockedMatch(playerCount: 10);
-        Assert.True(match.Start().IsSuccess);
+        Assert.True(match.Start(DateTimeOffset.UnixEpoch).IsSuccess);
         KickoffLineup lineup = match.KickoffLineup!;
 
         Result refused = match.Unlock();

@@ -80,7 +80,7 @@ import {
   SQUAD_ROUTE,
   SQUAD_TAB_ROUTES,
 } from '../features/squads';
-import { MATCH_ROUTE, NEW_MATCH_ROUTE } from '../features/matches';
+import { MATCH_LIVE_ROUTE, MATCH_ROUTE, NEW_MATCH_ROUTE } from '../features/matches';
 import { APP_CATCH_ALL_ROUTE, LANDING_ROUTE } from './appRoutePaths';
 import {
   assembleRoutes,
@@ -157,6 +157,7 @@ const OTHER_TABLE_PATHS: readonly string[] = [
   PLAYER_STATS_ROUTE,
   NEW_MATCH_ROUTE,
   MATCH_ROUTE,
+  MATCH_LIVE_ROUTE,
   `${HOME_ROUTE}/${APP_CATCH_ALL_ROUTE}`,
   APP_CATCH_ALL_ROUTE,
 ];
