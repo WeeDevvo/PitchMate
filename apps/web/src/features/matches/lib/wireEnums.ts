@@ -100,6 +100,10 @@ export const EVENT_KIND_NAMES = [
   'KeeperStintRetracted',
 ] as const satisfies WireEnumNames<EventKind>;
 
+export function isEventKind(candidate: unknown): candidate is EventKind {
+  return isWireEnumName(EVENT_KIND_NAMES, candidate);
+}
+
 export type EventOutcome = Exclude<components['schemas']['EventOutcome'], null>;
 
 export const EVENT_OUTCOME_NAMES = ['Applied', 'Duplicate', 'Rejected'] as const satisfies WireEnumNames<EventOutcome>;

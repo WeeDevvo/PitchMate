@@ -1,6 +1,10 @@
 /**
  * The live tracker's session log, and its trip to the server.
  *
+ * The log starts from the server's event log, read once on mount, so a reload
+ * still knows who is in goal and which goals an undo can name. Anything recorded
+ * before that read lands keeps its place after the server's events.
+ *
  * `record` adds an event as pending and sends every pending event as one batch.
  * One batch is in flight at a time; events recorded meanwhile go in the next.
  * When a batch lands, the running score is read again and the log and score
@@ -16,7 +20,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { CallResult, MatchesApi } from '../api/matchesApi';
-import { appendEvent, pendingEvents, settleEvents, type LoggedEvent, type TrackedEvent } from '../lib/liveTracking';
+import {
+  appendEvent,
+  mergeServerLog,
+  pendingEvents,
+  settleEvents,
+  type LoggedEvent,
+  type TrackedEvent,
+} from '../lib/liveTracking';
 import type { TeamScore } from '../lib/parse/matchDetail';
 
 export type SyncState = 'synced' | 'syncing' | 'unsynced';
@@ -34,7 +45,7 @@ export interface EventLog {
 
 export interface EventLogOptions {
   readonly matchId: string;
-  readonly api: Pick<MatchesApi, 'recordEvents' | 'getRunningScore'>;
+  readonly api: Pick<MatchesApi, 'recordEvents' | 'getRunningScore' | 'getMatchEvents'>;
   /** Called once when a batch is turned away whole. */
   readonly onHalted: () => void;
 }
@@ -81,6 +92,16 @@ export function useEventLog({ matchId, api, onHalted }: EventLogOptions): EventL
     logRef.current = next;
     setLog(next);
   }, []);
+
+  useEffect(() => {
+    let current = true;
+    void api.getMatchEvents(matchId).then((read) => {
+      if (current && read.kind === 'success') commit(mergeServerLog(logRef.current, read.value));
+    });
+    return () => {
+      current = false;
+    };
+  }, [api, matchId, commit]);
 
   const send = useCallback(async (): Promise<void> => {
     if (sendingRef.current || haltedRef.current) return;

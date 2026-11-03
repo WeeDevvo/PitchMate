@@ -46,12 +46,13 @@ public class LiveTrackingNoBroadcastApiTests
     // renamed/moved endpoint mapper fails to compile rather than passing this suite silently.
     private static readonly Assembly ApiAssembly = typeof(LiveTrackingEndpoints).Assembly;
 
-    /// <summary>The complete, documented set of live-tracking routes — one recording, one finalise, one read.</summary>
+    /// <summary>The complete, documented set of live-tracking routes — one recording, one finalise, two reads.</summary>
     private static readonly (string Method, string Pattern)[] ExpectedRoutes =
     {
         ("POST", "/matches/{matchId:guid}/events"),
         ("POST", "/matches/{matchId:guid}/tracked-result"),
         ("GET", "/matches/{matchId:guid}/running-score"),
+        ("GET", "/matches/{matchId:guid}/events"),
     };
 
     /// <summary>The single batched-submission recording route (Requirement 2.1, 13.1).</summary>
@@ -95,9 +96,9 @@ public class LiveTrackingNoBroadcastApiTests
     }
 
     [Fact]
-    public void LiveTrackingEndpoints_AreExactlyTheThreeDocumentedRoutes()
+    public void LiveTrackingEndpoints_AreExactlyTheDocumentedRoutes()
     {
-        // Req 13.1 / 2.1 — mapping the live-tracking surface yields exactly the three pull/POST routes and
+        // Req 13.1 / 2.1 — mapping the live-tracking surface yields exactly the documented pull/POST routes and
         // nothing else, so no push / stream / broadcast route can be introduced unnoticed.
         var mapped = MappedLiveTrackingRoutes();
 
@@ -122,8 +123,9 @@ public class LiveTrackingNoBroadcastApiTests
         // Req 13.1 / 2.1 — recording an Event_Batch is reachable through exactly one endpoint: the
         // batched-submission POST /matches/{matchId:guid}/events. There is no second write path (no
         // per-event route, no push/stream ingest), so all recording flows through the one batched path.
+        // The event-log read (GET) shares the path but records nothing, so only writes count here.
         var recordingRoutes = MappedLiveTrackingRoutes()
-            .Where(route => route.Pattern.EndsWith("/events", StringComparison.Ordinal))
+            .Where(route => route.Method != "GET" && route.Pattern.EndsWith("/events", StringComparison.Ordinal))
             .ToList();
 
         var single = Assert.Single(recordingRoutes);
@@ -132,7 +134,7 @@ public class LiveTrackingNoBroadcastApiTests
 
         // And it is the only POST that ingests events: the other POST (tracked-result) records no events.
         var eventIngestRoutes = MappedLiveTrackingRoutes()
-            .Where(route => route.Pattern.Contains("/events", StringComparison.Ordinal))
+            .Where(route => route.Method != "GET" && route.Pattern.Contains("/events", StringComparison.Ordinal))
             .Select(route => $"{route.Method} {route.Pattern}")
             .ToList();
 

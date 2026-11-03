@@ -20,7 +20,7 @@ import { ok, type ParseResult } from '../../../wire';
 import { classifyOutcome, type RejectionReason } from '../lib/callOutcome';
 import type { EventResult, TrackedEvent } from '../lib/liveTracking';
 import type { TeamScore } from '../lib/parse/matchDetail';
-import { parseBatchResult, parseLiveTrackingEnabled, parseTeamScores } from '../lib/parse/liveTracking';
+import { parseBatchResult, parseEventLog, parseLiveTrackingEnabled, parseTeamScores } from '../lib/parse/liveTracking';
 import { parseMatchDetail, type MatchDetail } from '../lib/parse/matchDetail';
 import { parseMatchList, type MatchList } from '../lib/parse/matchList';
 import { parseTeamSheet, type TeamSheet } from '../lib/parse/teamSheet';
@@ -249,6 +249,9 @@ export interface MatchesApi {
 
   /** The score of a match in progress, from the events recorded so far. Any member may read it. */
   getRunningScore(matchId: string, signal?: AbortSignal): Promise<CallResult<readonly TeamScore[]>>;
+
+  /** Every event recorded for a match, retractions included, oldest first. Any member may read it. */
+  getMatchEvents(matchId: string, signal?: AbortSignal): Promise<CallResult<readonly TrackedEvent[]>>;
 
   /**
    * Record events against a match in progress, answering each one's outcome.
@@ -624,6 +627,15 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
       );
     },
 
+    getMatchEvents(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'GetMatchEvents'> =>
+          apiClient.GET(EVENTS_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        parseEventLog,
+        signal,
+      );
+    },
+
     recordEvents(matchId, events, signal) {
       const body: Schemas['EventBatchRequest'] = { events: events.map(toSubmission) };
       return call(
@@ -671,9 +683,10 @@ function toSubmission(event: TrackedEvent): Schemas['EventSubmissionRequest'] {
         ownGoal: false,
       };
     case 'goal-undo':
+    case 'keeper-undo':
       return {
         eventId: event.eventId,
-        kind: 'GoalRetracted',
+        kind: event.kind === 'goal-undo' ? 'GoalRetracted' : 'KeeperStintRetracted',
         minute: event.minute,
         targetEventId: event.targetEventId,
         ownGoal: false,

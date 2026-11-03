@@ -1,7 +1,7 @@
 /**
  * Who is in goal, for either team. Picking a player logs them in goal for
- * their own team from the current minute and closes the dialog; the keeper
- * this session last put in goal is marked as such.
+ * their own team from the current minute and closes the dialog; whoever is in
+ * goal now is marked as such.
  */
 import type { ReactElement } from 'react';
 
@@ -19,7 +19,7 @@ import type { TeamSheet } from '../lib/parse/teamSheet';
 export interface KeeperDialogProps {
   readonly open: boolean;
   readonly sheet: TeamSheet;
-  /** The keeper this session put in goal, by team. */
+  /** Who is in goal now, by team. */
   readonly keepers: ReadonlyMap<string, string>;
   readonly onPick: (teamId: string, keeperId: string) => void;
   readonly onClose: () => void;

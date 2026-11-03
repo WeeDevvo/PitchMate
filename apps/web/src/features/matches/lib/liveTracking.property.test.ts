@@ -18,9 +18,11 @@ import {
   MATCH_MINUTE_MAX,
   appendEvent,
   clockText,
+  currentKeepers,
   displayedScores,
   lastStandingGoal,
   matchMinute,
+  mergeServerLog,
   pendingEvents,
   scorerChoices,
   settleEvents,
@@ -145,6 +147,45 @@ describe('displayedScores', () => {
         expect(pendingEvents(recorded)).toEqual([]);
       }),
     );
+  });
+});
+
+describe('mergeServerLog', () => {
+  it('puts the server\'s events first, recorded, then the session\'s it lacks, each once', () => {
+    fc.assert(
+      fc.property(fc.array(stepArb, { maxLength: 20 }), fc.nat(), (steps, cut) => {
+        const everything = play(steps);
+        const split = everything.length === 0 ? 0 : cut % (everything.length + 1);
+        const server = everything.slice(0, split).map(({ event }) => event);
+
+        // The session holds everything still pending, some of which the server already has.
+        const merged = mergeServerLog(everything, server);
+
+        expect(merged.map(({ event }) => event.eventId)).toEqual(everything.map(({ event }) => event.eventId));
+        merged.forEach((entry, index) => expect(entry.status).toBe(index < split ? 'recorded' : 'pending'));
+      }),
+    );
+  });
+
+  it('starts an empty session from the server\'s log alone', () => {
+    const server: TrackedEvent[] = [
+      { kind: 'goal', eventId: 'a', minute: 1, teamId: TEAM_IDS[0], scorerId: null, ownGoal: false },
+    ];
+    expect(mergeServerLog([], server)).toEqual([{ event: server[0], status: 'recorded' }]);
+  });
+});
+
+describe('currentKeepers', () => {
+  it('keeps the latest stint that stands for each team', () => {
+    const [red, blue] = TEAM_IDS;
+    const log: readonly LoggedEvent[] = [
+      { kind: 'keeper', eventId: 's1', minute: 0, teamId: red, keeperId: 'leo' },
+      { kind: 'keeper', eventId: 's2', minute: 0, teamId: blue, keeperId: 'tom' },
+      { kind: 'keeper', eventId: 's3', minute: 30, teamId: red, keeperId: 'mike' },
+      { kind: 'keeper-undo', eventId: 'u1', minute: 31, targetEventId: 's3' },
+    ].map((event) => ({ event: event as TrackedEvent, status: 'recorded' as const }));
+
+    expect(currentKeepers(log)).toEqual(new Map([[red, 'leo'], [blue, 'tom']]));
   });
 });
 

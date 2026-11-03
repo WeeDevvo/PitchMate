@@ -365,6 +365,42 @@ describe('live tracking', () => {
     ]);
   });
 
+  it('reads the event log as the tracker\'s own events, in order', async () => {
+    const STINT_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f04';
+    const STINT_UNDO_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f05';
+    const { api, requests } = harness(() =>
+      json({
+        matchId: MATCH_ID,
+        events: [
+          { eventId: GOAL_ID, kind: 'GoalScored', minute: 3, scoringTeamId: TEAM_IDS[0], scorerMembershipId: null, ownGoal: false, keeperMembershipId: null, keptTeamId: null, targetEventId: null },
+          { eventId: STINT_ID, kind: 'KeeperStintStarted', minute: 4, scoringTeamId: null, scorerMembershipId: null, ownGoal: false, keeperMembershipId: SCORER, keptTeamId: TEAM_IDS[1], targetEventId: null },
+          { eventId: UNDO_ID, kind: 'GoalRetracted', minute: 5, scoringTeamId: null, scorerMembershipId: null, ownGoal: false, keeperMembershipId: null, keptTeamId: null, targetEventId: GOAL_ID },
+          { eventId: STINT_UNDO_ID, kind: 'KeeperStintRetracted', minute: 6, scoringTeamId: null, scorerMembershipId: null, ownGoal: false, keeperMembershipId: null, keptTeamId: null, targetEventId: STINT_ID },
+        ],
+      }),
+    );
+
+    expect(await api.getMatchEvents(MATCH_ID)).toEqual({
+      kind: 'success',
+      value: [
+        { kind: 'goal', eventId: GOAL_ID, minute: 3, teamId: TEAM_IDS[0], scorerId: null, ownGoal: false },
+        { kind: 'keeper', eventId: STINT_ID, minute: 4, teamId: TEAM_IDS[1], keeperId: SCORER },
+        { kind: 'goal-undo', eventId: UNDO_ID, minute: 5, targetEventId: GOAL_ID },
+        { kind: 'keeper-undo', eventId: STINT_UNDO_ID, minute: 6, targetEventId: STINT_ID },
+      ],
+    });
+    expect(requests.map(({ method, url }) => [method, url.slice(BASE_URL.length)])).toEqual([
+      ['GET', `/matches/${MATCH_ID}/events`],
+    ]);
+  });
+
+  it('refuses an event log with an event it cannot read', async () => {
+    const { api } = harness(() =>
+      json({ matchId: MATCH_ID, events: [{ eventId: GOAL_ID, kind: 'GoalScored', minute: 3, ownGoal: false }] }),
+    );
+    expect(await api.getMatchEvents(MATCH_ID)).toEqual({ kind: 'parse-failure' });
+  });
+
   it('reads a squad with tracking off, or with no flags at all, as off', async () => {
     expect(
       await harness(() => json([{ feature: 'LiveMatchTracking', isEnabled: false }])).api.getLiveTracking(SQUAD_ID),

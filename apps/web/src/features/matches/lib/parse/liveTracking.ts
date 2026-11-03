@@ -6,6 +6,8 @@
  * - `GetMatchRunningScore` (`GET /matches/{matchId}/running-score`) and
  *   `FinaliseTrackedResult` (`POST /matches/{matchId}/tracked-result`): one score
  *   per locked team;
+ * - `GetMatchEvents` (`GET /matches/{matchId}/events`): every recorded event,
+ *   oldest first, as the tracker's own event shapes;
  * - `GetFeatureFlags` (`GET /squads/{squadId}/features`): whether the squad has
  *   live tracking on.
  *
@@ -17,14 +19,15 @@ import {
   ok,
   readArray,
   readBoolean,
+  readCount,
   readObject,
   readProperty,
   readUuid,
   readWireEnumName,
   type ParseResult,
 } from '../../../../wire';
-import type { EventResult } from '../liveTracking';
-import { isEventOutcome, isSquadFeature } from '../wireEnums';
+import type { EventResult, TrackedEvent } from '../liveTracking';
+import { isEventKind, isEventOutcome, isSquadFeature } from '../wireEnums';
 import { parseTeamScore, type TeamScore } from './matchDetail';
 
 function readEach<T>(
@@ -62,6 +65,56 @@ export function parseBatchResult(body: unknown): ParseResult<readonly EventResul
   const object = readObject(body, 'batch result');
   if (!object.ok) return object;
   return readEach(readProperty(object.value, 'outcomes'), 'outcomes', parseEventResult);
+}
+
+function parseTrackedEvent(value: unknown): ParseResult<TrackedEvent> {
+  const object = readObject(value, 'event');
+  if (!object.ok) return object;
+  const source = object.value;
+
+  const eventId = readUuid(readProperty(source, 'eventId'), 'eventId');
+  if (!eventId.ok) return eventId;
+
+  const kind = readWireEnumName(readProperty(source, 'kind'), 'kind', isEventKind);
+  if (!kind.ok) return kind;
+
+  const minute = readCount(readProperty(source, 'minute'), 'minute');
+  if (!minute.ok) return minute;
+
+  const base = { eventId: eventId.value, minute: minute.value };
+
+  switch (kind.value) {
+    case 'GoalScored': {
+      const teamId = readUuid(readProperty(source, 'scoringTeamId'), 'scoringTeamId');
+      if (!teamId.ok) return teamId;
+      const scorer = readProperty(source, 'scorerMembershipId');
+      const scorerId = scorer === null || scorer === undefined ? ok(null) : readUuid(scorer, 'scorerMembershipId');
+      if (!scorerId.ok) return scorerId;
+      const ownGoal = readBoolean(readProperty(source, 'ownGoal'), 'ownGoal');
+      if (!ownGoal.ok) return ownGoal;
+      return ok({ kind: 'goal', ...base, teamId: teamId.value, scorerId: scorerId.value, ownGoal: ownGoal.value });
+    }
+    case 'KeeperStintStarted': {
+      const teamId = readUuid(readProperty(source, 'keptTeamId'), 'keptTeamId');
+      if (!teamId.ok) return teamId;
+      const keeperId = readUuid(readProperty(source, 'keeperMembershipId'), 'keeperMembershipId');
+      if (!keeperId.ok) return keeperId;
+      return ok({ kind: 'keeper', ...base, teamId: teamId.value, keeperId: keeperId.value });
+    }
+    case 'GoalRetracted':
+    case 'KeeperStintRetracted': {
+      const target = readUuid(readProperty(source, 'targetEventId'), 'targetEventId');
+      if (!target.ok) return target;
+      return ok({ kind: kind.value === 'GoalRetracted' ? 'goal-undo' : 'keeper-undo', ...base, targetEventId: target.value });
+    }
+  }
+}
+
+/** Parse a `MatchEventLogResponse` body to its events, oldest first. */
+export function parseEventLog(body: unknown): ParseResult<readonly TrackedEvent[]> {
+  const object = readObject(body, 'event log');
+  if (!object.ok) return object;
+  return readEach(readProperty(object.value, 'events'), 'events', parseTrackedEvent);
 }
 
 /** Parse a `RunningScoreResponse` or `FinaliseTrackedResultResponse` body to its team scores. */

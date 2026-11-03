@@ -1083,7 +1083,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["GetMatchEvents"];
         put?: never;
         post: operations["RecordMatchEvents"];
         delete?: never;
@@ -1417,6 +1417,29 @@ export interface components {
             /** Format: date-time */
             completedAt: null | string;
             guestAvailability: components["schemas"]["GuestAvailabilityView"][];
+        };
+        MatchEventLogResponse: {
+            /** Format: uuid */
+            matchId: string;
+            events: components["schemas"]["MatchEventResponse"][];
+        };
+        MatchEventResponse: {
+            /** Format: uuid */
+            eventId: string;
+            kind: components["schemas"]["EventKind"];
+            /** Format: int32 */
+            minute: number | string;
+            /** Format: uuid */
+            scoringTeamId: null | string;
+            /** Format: uuid */
+            scorerMembershipId: null | string;
+            ownGoal: boolean;
+            /** Format: uuid */
+            keeperMembershipId: null | string;
+            /** Format: uuid */
+            keptTeamId: null | string;
+            /** Format: uuid */
+            targetEventId: null | string;
         };
         MatchList: {
             matches: components["schemas"]["MatchListEntry"][];
@@ -7652,6 +7675,73 @@ export interface operations {
             };
             /** @description Service Unavailable */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetMatchEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                matchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchEventLogResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };

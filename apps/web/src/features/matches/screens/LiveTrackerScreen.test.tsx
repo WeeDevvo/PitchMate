@@ -25,6 +25,7 @@ import {
   UNDO_GOAL_LABEL,
   endAtLabel,
   keeperButtonLabel,
+  keeperLine,
   liveScoreStatement,
   teamGoalButtonLabel,
 } from '../lib/messages';
@@ -213,6 +214,32 @@ describe('the live tracker', () => {
 
     await waitFor(() => expect(api.finaliseTrackedResult).toHaveBeenCalledTimes(1));
     expect(await screen.findByTestId('location')).toHaveTextContent(matchPath(SQUAD_ID, MATCH_ID));
+  });
+
+  it('starts from the server\'s log, so a reload keeps the keeper and can undo an earlier goal', async () => {
+    const earlierGoal = '0198e2a7-bbbb-7a5e-9c2f-6b1d4a5e7f01';
+    const { api, recorded } = trackedApi({
+      getMatchEvents: async () =>
+        success([
+          { kind: 'goal', eventId: earlierGoal, minute: 4, teamId: BLUE.teamId, scorerId: BLUE.roster[0].membershipId, ownGoal: false },
+          { kind: 'keeper', eventId: '0198e2a7-bbbb-7a5e-9c2f-6b1d4a5e7f02', minute: 5, teamId: RED.teamId, keeperId: RED.roster[3].membershipId },
+        ]),
+      getRunningScore: async () =>
+        success([
+          { teamId: RED.teamId, score: 0 },
+          // Blue's earlier goal counts until it is undone.
+          { teamId: BLUE.teamId, score: recorded.some((event) => event.kind === 'goal-undo') ? 0 : 1 },
+        ]),
+    });
+    renderTracker(api);
+
+    expect(await screen.findByText(keeperLine(RED.teamName, RED.roster[3].displayName))).toBeInTheDocument();
+    await screen.findByText(scoreIs(0, 1));
+
+    await userEvent.click(screen.getByRole('button', { name: UNDO_GOAL_LABEL }));
+
+    await screen.findByText(scoreIs(0, 0));
+    expect(recorded).toEqual([expect.objectContaining({ kind: 'goal-undo', targetEventId: earlierGoal })]);
   });
 
   it.each([

@@ -10,8 +10,9 @@
  * Every event is minted with its own GUID v7 identity and sent at once. The
  * score moves the moment a goal is tapped, a send that does not get through is
  * kept and can be sent again, and the connection's state is always shown in a
- * word and an icon. Nothing is stored on the device yet, so a reload forgets
- * which keeper this session put in goal, though never a recorded event.
+ * word and an icon. The tracker starts from the server's event log, so a
+ * reload still shows who is in goal and can undo a goal logged before it; only
+ * an event not yet sent is lost to a reload, as nothing is stored on the device.
  *
  * Only an organiser of a squad with live tracking on, for a match in play, gets
  * the tracker; anyone else is told why and pointed back to the match. A match
