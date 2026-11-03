@@ -82,8 +82,14 @@ const PLAUSIBLE_LAST_MS = 1_893_456_000_000;
 /** Decimal places the `polyline` attribute is rounded to, restated. */
 const COORDINATE_DECIMALS = 3;
 
-/** How far a printed coordinate may sit from the one it was printed from. */
-const PRINT_TOLERANCE = 0.5 * 10 ** -COORDINATE_DECIMALS + Number.EPSILON;
+/**
+ * How far a printed coordinate may sit from the one it was printed from: half
+ * the last printed digit, plus the floating-point error of a decimal half-way
+ * case, which grows with the coordinate's size (a few units in its last place).
+ */
+function printTolerance(coordinate: number): number {
+  return 0.5 * 10 ** -COORDINATE_DECIMALS + 4 * Number.EPSILON * Math.max(1, Math.abs(coordinate));
+}
 
 /** The divisor that takes a band's length to its centre line. */
 const HALVES = 2;
@@ -233,8 +239,8 @@ function expectPolylineMatchesPoints(plot: ChartPlot): void {
 
     // The attribute is rounded for readability, so it may differ from the
     // coordinate only by that rounding.
-    expectNear(x, plot.points[index].x, PRINT_TOLERANCE);
-    expectNear(y, plot.points[index].y, PRINT_TOLERANCE);
+    expectNear(x, plot.points[index].x, printTolerance(plot.points[index].x));
+    expectNear(y, plot.points[index].y, printTolerance(plot.points[index].y));
   }
 }
 
