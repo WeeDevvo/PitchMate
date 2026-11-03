@@ -97,6 +97,7 @@ export function wireMatchDetail(
     callerIsParticipant: false,
     callerAvailability: { hasStoredResponse: true, markedDays: [DAY_ISO[1]] },
     recordedResult: null,
+    startedAt: null,
     completedAt: null,
     guestAvailability: [],
     ...overrides,
@@ -148,6 +149,7 @@ export function matchDetail(overrides: Partial<MatchDetail> = {}): MatchDetail {
     callerIsParticipant: false,
     callerAvailability: { hasStoredResponse: true, markedDaysMs: [DAY_MS[1]] },
     recordedResult: null,
+    startedAtMs: null,
     completedAtMs: null,
     guestAvailability: [],
     ...overrides,
@@ -284,6 +286,11 @@ export function fakeMatchesApi(overrides: Partial<MatchesApi> = {}): FakeMatches
     recordResult: async () => success(undefined),
     completeMatch: async () => success(undefined),
     cancelMatch: async () => success(undefined),
+    getLiveTracking: async () => success(false),
+    getRunningScore: async () => success([]),
+    recordEvents: async (_matchId, events) =>
+      success(events.map(({ eventId }) => ({ eventId, outcome: 'Applied' as const }))),
+    finaliseTrackedResult: async () => success([]),
     ...overrides,
   };
 

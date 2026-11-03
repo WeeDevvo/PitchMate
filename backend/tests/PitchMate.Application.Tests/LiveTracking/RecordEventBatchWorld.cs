@@ -213,7 +213,7 @@ internal sealed class RecordEventBatchWorld
                         break;
 
                     default:
-                        match.Start();
+                        match.Start(DateTimeOffset.UnixEpoch);
                         if (state == MatchState.Completed)
                         {
                             var result = new MatchResult(ResultFidelity.Basic, new[]

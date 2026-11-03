@@ -130,7 +130,7 @@ public class MatchResultScoreValidationPropertyTests
 
         match.ApplyTeamProposal(proposal);
         match.Lock();
-        match.Start();
+        match.Start(DateTimeOffset.UnixEpoch);
 
         teamIds = match.Teams.Select(t => t.Id).ToList();
         return match;

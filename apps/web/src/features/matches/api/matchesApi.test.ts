@@ -297,6 +297,101 @@ describe('the match lifecycle', () => {
   });
 });
 
+describe('live tracking', () => {
+  const GOAL_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f01';
+  const KEEPER_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f02';
+  const UNDO_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f03';
+  const SCORER = '0198e2a7-5555-7a5e-9c2f-000000000000';
+
+  it('reads the flag, sends each event kind, reads the score and finalises', async () => {
+    const { api, requests } = harness(({ url }) => {
+      if (url.endsWith('/features')) return json([{ feature: 'LiveMatchTracking', isEnabled: true }]);
+      if (url.endsWith('/events')) {
+        return json({
+          outcomes: [
+            { eventId: GOAL_ID, outcome: 'Applied', rejectionCode: null, rejectionReason: null },
+            { eventId: KEEPER_ID, outcome: 'Duplicate', rejectionCode: null, rejectionReason: null },
+            { eventId: UNDO_ID, outcome: 'Rejected', rejectionCode: 'TargetNotFound', rejectionReason: 'internal text' },
+          ],
+        });
+      }
+      return json({
+        matchId: MATCH_ID,
+        teamScores: [
+          { teamId: TEAM_IDS[0], score: 2 },
+          { teamId: TEAM_IDS[1], score: 1 },
+        ],
+        alreadyCompleted: false,
+      });
+    });
+
+    expect(await api.getLiveTracking(SQUAD_ID)).toEqual({ kind: 'success', value: true });
+    expect(
+      await api.recordEvents(MATCH_ID, [
+        { kind: 'goal', eventId: GOAL_ID, minute: 12, teamId: TEAM_IDS[0], scorerId: SCORER, ownGoal: false },
+        { kind: 'keeper', eventId: KEEPER_ID, minute: 13, teamId: TEAM_IDS[1], keeperId: SCORER },
+        { kind: 'goal-undo', eventId: UNDO_ID, minute: 14, targetEventId: GOAL_ID },
+      ]),
+    ).toEqual({
+      kind: 'success',
+      value: [
+        { eventId: GOAL_ID, outcome: 'Applied' },
+        { eventId: KEEPER_ID, outcome: 'Duplicate' },
+        { eventId: UNDO_ID, outcome: 'Rejected' },
+      ],
+    });
+    const scores = [
+      { teamId: TEAM_IDS[0], score: 2 },
+      { teamId: TEAM_IDS[1], score: 1 },
+    ];
+    expect(await api.getRunningScore(MATCH_ID)).toEqual({ kind: 'success', value: scores });
+    expect(await api.finaliseTrackedResult(MATCH_ID)).toEqual({ kind: 'success', value: scores });
+
+    expect(requests.map(({ method, url, body }) => [method, url.slice(BASE_URL.length), body])).toEqual([
+      ['GET', `/squads/${SQUAD_ID}/features`, undefined],
+      [
+        'POST',
+        `/matches/${MATCH_ID}/events`,
+        {
+          events: [
+            { eventId: GOAL_ID, kind: 'GoalScored', minute: 12, scoringTeamId: TEAM_IDS[0], scorerMembershipId: SCORER, ownGoal: false },
+            { eventId: KEEPER_ID, kind: 'KeeperStintStarted', minute: 13, keeperMembershipId: SCORER, keptTeamId: TEAM_IDS[1], ownGoal: false },
+            { eventId: UNDO_ID, kind: 'GoalRetracted', minute: 14, targetEventId: GOAL_ID, ownGoal: false },
+          ],
+        },
+      ],
+      ['GET', `/matches/${MATCH_ID}/running-score`, undefined],
+      ['POST', `/matches/${MATCH_ID}/tracked-result`, undefined],
+    ]);
+  });
+
+  it('reads a squad with tracking off, or with no flags at all, as off', async () => {
+    expect(
+      await harness(() => json([{ feature: 'LiveMatchTracking', isEnabled: false }])).api.getLiveTracking(SQUAD_ID),
+    ).toEqual({ kind: 'success', value: false });
+    expect(await harness(() => json([])).api.getLiveTracking(SQUAD_ID)).toEqual({ kind: 'success', value: false });
+  });
+
+  it('reads a sealed log or a match not yet started as a match that has moved on', async () => {
+    for (const code of ['LogSealed', 'MatchNotStarted']) {
+      expect(await harness(() => problem(409, code)).api.recordEvents(MATCH_ID, [])).toEqual({
+        kind: 'rejected',
+        reason: 'invalid-state',
+      });
+    }
+    expect(await harness(() => problem(409, 'NotEnabled')).api.finaliseTrackedResult(MATCH_ID)).toEqual({
+      kind: 'rejected',
+      reason: 'validation',
+    });
+  });
+
+  it('conceals a non-organiser tracking a match as not found', async () => {
+    expect(await harness(() => problem(404, 'Unauthorized')).api.recordEvents(MATCH_ID, [])).toEqual({
+      kind: 'not-found',
+    });
+  });
+});
+
 describe('failures', () => {
   it('conceals a missing or forbidden match as not found', async () => {
     for (const status of [401, 403, 404]) {

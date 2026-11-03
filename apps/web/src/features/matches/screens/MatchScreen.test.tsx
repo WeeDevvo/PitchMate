@@ -48,9 +48,12 @@ import {
   SAVE_AVAILABILITY_LABEL,
   tallyCountLabel,
   STATE_LABEL,
+  LIVE_SCORE_HEADING,
+  OPEN_TRACKER_LABEL,
+  liveScoreStatement,
   MATCH_FLOW_STEPS_LABEL,
 } from '../lib/messages';
-import { MATCH_ROUTE, matchPath } from '../lib/routePaths';
+import { MATCH_ROUTE, liveTrackerPath, matchPath } from '../lib/routePaths';
 import {
   confirmedMatch,
   DAY_ISO,
@@ -539,5 +542,51 @@ describe('MatchScreen from kick-off to the final score', () => {
     expect(await screen.findByText(PROVISIONAL_RESULT_LABEL)).toBeTruthy();
     expect(screen.getAllByText(OUTCOME_LABELS.draw)).toHaveLength(2);
     expect(screen.queryByRole('button')).toBeNull();
+  });
+});
+
+describe('MatchScreen for a tracked match in play', () => {
+  const tracked = (overrides: Parameters<typeof fakeMatchesApi>[0] = {}) =>
+    fakeMatchesApi({
+      getMatch: async () => success(confirmedMatch(10, { state: 'InProgress' })),
+      getLiveTracking: async () => success(true),
+      getRunningScore: async () => {
+        const [red, blue] = teamSheet().teams;
+        return success([
+          { teamId: red.teamId, score: 2 },
+          { teamId: blue.teamId, score: 1 },
+        ]);
+      },
+      ...overrides,
+    });
+
+  it('shows an organiser the live score and the way into the tracker, in place of the score form', async () => {
+    const [red, blue] = teamSheet().teams;
+    renderScreen(tracked());
+
+    expect(await screen.findByRole('heading', { name: LIVE_SCORE_HEADING })).toBeTruthy();
+    expect(
+      await screen.findByText(liveScoreStatement([{ name: red.teamName, score: 2 }, { name: blue.teamName, score: 1 }])),
+    ).toBeTruthy();
+    expect(screen.getByRole('link', { name: OPEN_TRACKER_LABEL })).toHaveAttribute(
+      'href',
+      liveTrackerPath(SQUAD_ID, MATCH_ID),
+    );
+    expect(screen.queryByRole('button', { name: SAVE_RESULT_LABEL })).toBeNull();
+    expect(screen.queryByRole('button', { name: COMPLETE_MATCH_LABEL })).toBeNull();
+  });
+
+  it('shows a member the live score and no way into the tracker', async () => {
+    renderScreen(tracked({ getSquadStanding: async () => success(MEMBER) }));
+
+    expect(await screen.findByRole('heading', { name: LIVE_SCORE_HEADING })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: OPEN_TRACKER_LABEL })).toBeNull();
+  });
+
+  it('falls back to the score form when the squad does not track matches', async () => {
+    renderScreen(tracked({ getLiveTracking: async () => success(false) }));
+
+    expect(await screen.findByRole('button', { name: SAVE_RESULT_LABEL })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: LIVE_SCORE_HEADING })).toBeNull();
   });
 });

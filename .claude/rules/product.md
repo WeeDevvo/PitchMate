@@ -57,6 +57,8 @@ Two fidelities, and both must produce a valid outcome so ratings always update:
 
 Stats views degrade gracefully when only basic results exist.
 
+In a squad with live tracking on, an admin records a match in play from the **live tracker** (GOAL → team → scorer, own goals, keeper changes, undo the last goal), and members see the live score on the match page. Each event's minute counts from the kickoff instant recorded when the match starts. **Ending** the match makes the tracked score its result and completes it. **Today:** the tracker needs a connection (a failed send is kept and resent only while the page stays open), corrections go no further than undoing the last goal, and after a reload it no longer shows which keeper it put in goal.
+
 ## Presentation
 
 - The **team sheet** shows match time and location, both teams with names and players, and a clear flag for the bib-wearing team. It is shown once teams are locked.

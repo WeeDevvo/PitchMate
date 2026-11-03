@@ -326,7 +326,7 @@ public class GetRunningScoreHandlerTests
             };
             match.ApplyTeamProposal(proposal);
             match.Lock();
-            match.Start();
+            match.Start(DateTimeOffset.UnixEpoch);
 
             Guid teamAId = match.Teams.ElementAt(0).Id;
             Guid teamBId = match.Teams.ElementAt(1).Id;

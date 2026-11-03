@@ -35,6 +35,7 @@ internal static class MatchDetailReferenceOracle
             match.ConfirmedDay?.Instant,
             [.. match.Participants.OrderBy(static participant => participant.RosterPosition).Select(participant => ViewOf(squad, participant))],
             match.RecordedResult is { } result ? new RecordedResultView(result.Fidelity, [.. result.TeamScores]) : null,
+            match.State is MatchState.InProgress or MatchState.Completed ? match.StartedAt : null,
             match.State == MatchState.Completed ? match.CompletedAt : null);
     }
 
@@ -60,6 +61,7 @@ internal static class MatchDetailReferenceOracle
         Assert.Equal(expected.CandidateDays, actual.CandidateDays);
         Assert.Equal(expected.ConfirmedDay, actual.ConfirmedDay);
         Assert.Equal(expected.Participants, actual.Participants);
+        Assert.Equal(expected.StartedAt, actual.StartedAt);
         Assert.Equal(expected.CompletedAt, actual.CompletedAt);
         AssertResultAgrees(expected.RecordedResult, actual.RecordedResult);
     }
@@ -76,7 +78,7 @@ internal static class MatchDetailReferenceOracle
             expected,
             new MatchDetailProjection(
                 actual.MatchId, actual.SquadId, actual.State, actual.Location, actual.CandidateDays,
-                actual.ConfirmedDay, actual.Participants, actual.RecordedResult, actual.CompletedAt));
+                actual.ConfirmedDay, actual.Participants, actual.RecordedResult, actual.StartedAt, actual.CompletedAt));
 
         Assert.Equal(actual.Participants.Count, actual.ParticipantCount);
         Assert.Equal(expectedCaller.HasStoredResponse, actual.CallerAvailability.HasStoredResponse);

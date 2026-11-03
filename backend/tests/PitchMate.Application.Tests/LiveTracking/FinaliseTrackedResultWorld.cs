@@ -191,7 +191,7 @@ internal sealed class FinaliseTrackedResultWorld
                 break;
 
             default:
-                match.Start();
+                match.Start(DateTimeOffset.UnixEpoch);
                 break;
         }
 

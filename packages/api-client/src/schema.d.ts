@@ -1413,6 +1413,8 @@ export interface components {
             callerAvailability: components["schemas"]["CallerAvailability"];
             recordedResult: null | components["schemas"]["RecordedResultView"];
             /** Format: date-time */
+            startedAt: null | string;
+            /** Format: date-time */
             completedAt: null | string;
             guestAvailability: components["schemas"]["GuestAvailabilityView"][];
         };

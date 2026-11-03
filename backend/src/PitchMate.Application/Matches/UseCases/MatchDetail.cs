@@ -34,6 +34,7 @@ namespace PitchMate.Application.Matches.UseCases;
 /// <param name="CallerIsParticipant">Whether the calling member is one of the <see cref="Participants"/>, so they can join or leave.</param>
 /// <param name="CallerAvailability">The calling member's own stored availability response, present on every detail.</param>
 /// <param name="RecordedResult">The recorded result where the match has one; otherwise an explicit <see langword="null"/>.</param>
+/// <param name="StartedAt">The kickoff instant for an <c>InProgress</c> or <c>Completed</c> match that recorded one; otherwise an explicit <see langword="null"/>.</param>
 /// <param name="CompletedAt">The completion instant for a <c>Completed</c> match; otherwise an explicit <see langword="null"/>.</param>
 /// <param name="GuestAvailability">
 /// The stored availability responses of the squad's active guests, which an owner or admin marks on
@@ -52,5 +53,6 @@ public sealed record MatchDetail(
     bool CallerIsParticipant,
     CallerAvailability CallerAvailability,
     RecordedResultView? RecordedResult,
+    DateTimeOffset? StartedAt,
     DateTimeOffset? CompletedAt,
     IReadOnlyList<GuestAvailabilityView> GuestAvailability);

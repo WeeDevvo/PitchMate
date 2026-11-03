@@ -25,10 +25,17 @@ import {
   SUBMIT_DRAFT_LABEL,
   addTimeLabel,
   scoreLabel,
+  END_MATCH_LABEL,
+  GOAL_LABEL,
+  KEEPER_LABEL,
+  LIVE_SCORE_HEADING,
+  OWN_GOAL_LABEL,
+  teamGoalButtonLabel,
 } from './lib/messages';
-import { MATCH_ROUTE, NEW_MATCH_ROUTE, matchPath, newMatchPath } from './lib/routePaths';
+import { MATCH_LIVE_ROUTE, MATCH_ROUTE, NEW_MATCH_ROUTE, liveTrackerPath, matchPath, newMatchPath } from './lib/routePaths';
 import { upcomingDates } from './lib/candidateSlots';
 import { CreateMatchScreen } from './screens/CreateMatchScreen';
+import { LiveTrackerScreen } from './screens/LiveTrackerScreen';
 import { MatchScreen } from './screens/MatchScreen';
 import {
   DAY_MS,
@@ -220,6 +227,49 @@ describe.each(THEMES)('in the %s theme', (theme) => {
     );
     await userEvent.click(await screen.findByRole('button', { name: CANCEL_MATCH_LABEL }));
     await expectNoWcagViolations(document.body);
+  });
+
+  it('the live score on a tracked match in play', async () => {
+    applyThemeAttribute(theme);
+    const api = fakeMatchesApi({
+      getMatch: async () => success(matchDetail({ state: 'InProgress', confirmedDayMs: DAY_MS[0] })),
+      getLiveTracking: async () => success(true),
+    });
+    renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
+    await screen.findByRole('heading', { name: LIVE_SCORE_HEADING });
+    await expectNoWcagViolations(document.body);
+  });
+
+  it('the live tracker, each goal step, and its keeper and full-time dialogs', async () => {
+    applyThemeAttribute(theme);
+    const [red, blue] = teamSheet().teams;
+    const api = fakeMatchesApi({
+      getMatch: async () =>
+        success(matchDetail({ state: 'InProgress', confirmedDayMs: DAY_MS[0], startedAtMs: DAY_MS[0] })),
+      getLiveTracking: async () => success(true),
+    });
+    const tracker = renderAtRoute(<LiveTrackerScreen api={api} />, MATCH_LIVE_ROUTE, liveTrackerPath(SQUAD_ID, MATCH_ID));
+    await userEvent.click(await screen.findByRole('button', { name: GOAL_LABEL }));
+    await expectNoWcagViolations(document.body);
+
+    await userEvent.click(screen.getByRole('button', { name: teamGoalButtonLabel(red.teamName, red.bibFlag) }));
+    await userEvent.click(screen.getByRole('button', { name: OWN_GOAL_LABEL }));
+    await expectNoWcagViolations(document.body);
+
+    // An own goal for Red is put in by a Blue player.
+    await userEvent.click(screen.getByRole('button', { name: blue.roster[0].displayName }));
+    await screen.findByRole('button', { name: GOAL_LABEL });
+    await expectNoWcagViolations(document.body);
+
+    await userEvent.click(screen.getByRole('button', { name: KEEPER_LABEL }));
+    await screen.findByRole('dialog');
+    await expectNoWcagViolations(document.body);
+    await userEvent.keyboard('{Escape}');
+
+    await userEvent.click(screen.getByRole('button', { name: END_MATCH_LABEL }));
+    await screen.findByRole('dialog');
+    await expectNoWcagViolations(document.body);
+    tracker.unmount();
   });
 
   it('the not-found treatment', async () => {

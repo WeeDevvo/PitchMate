@@ -1,8 +1,10 @@
 /**
  * The parser for `GetMatchDetail` (`GET /matches/{matchId}`).
  *
- * All or nothing, like every parser here. `recordedResult` and `completedAt`
- * are null until a result is recorded and the match completed.
+ * All or nothing, like every parser here. `startedAt`, `recordedResult` and
+ * `completedAt` are null until the match kicks off, a result is recorded and the
+ * match completed. A match started before kickoff times were recorded keeps a
+ * null `startedAt`.
  */
 import {
   fail,
@@ -68,6 +70,8 @@ export interface MatchDetail {
   readonly callerIsParticipant: boolean;
   readonly callerAvailability: CallerAvailability;
   readonly recordedResult: RecordedResult | null;
+  /** When the match kicked off, or `null` before then (or when it was never recorded). */
+  readonly startedAtMs: number | null;
   /** When the match was completed and ratings applied, or `null` before then. */
   readonly completedAtMs: number | null;
   /** What was marked for each active guest; empty unless the caller is an owner or admin. */
@@ -146,7 +150,8 @@ function parseGuestAvailability(value: unknown): ParseResult<GuestAvailability> 
   return ok({ membershipId: membershipId.value, markedDaysMs: markedDays.value });
 }
 
-function parseTeamScore(value: unknown): ParseResult<TeamScore> {
+/** Parse one team's score, as a result or a running score carries it. */
+export function parseTeamScore(value: unknown): ParseResult<TeamScore> {
   const object = readObject(value, 'team score');
   if (!object.ok) return object;
 
@@ -253,6 +258,13 @@ export function parseMatchDetail(body: unknown): ParseResult<MatchDetail> {
   );
   if (!recordedResult.ok) return recordedResult;
 
+  const startedAt = readOptional(
+    readProperty(source, 'startedAt'),
+    'startedAt',
+    readInstantMs,
+  );
+  if (!startedAt.ok) return startedAt;
+
   const completedAt = readOptional(
     readProperty(source, 'completedAt'),
     'completedAt',
@@ -285,6 +297,7 @@ export function parseMatchDetail(body: unknown): ParseResult<MatchDetail> {
     callerIsParticipant: callerIsParticipant.value,
     callerAvailability: callerAvailability.value,
     recordedResult: recordedResult.value,
+    startedAtMs: startedAt.value,
     completedAtMs: completedAt.value,
     guestAvailability,
   });

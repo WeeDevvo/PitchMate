@@ -342,7 +342,8 @@ public class OrganiserAuthorisationPropertyTests
         var handler = new StartMatchHandler(
             new FakeMatchRepository(match),
             new FakeMembershipRepository(actingUserId, squadId, acting, participants),
-            new FakeUnitOfWork());
+            new FakeUnitOfWork(),
+            TimeProvider.System);
 
         var result = handler
             .HandleAsync(new StartMatchCommand(actingUserId, match.Id), CancellationToken.None)
@@ -464,7 +465,7 @@ public class OrganiserAuthorisationPropertyTests
     private static (Match Match, List<SquadMembership> Participants) BuildInProgress(Guid squadId)
     {
         (Match match, List<SquadMembership> participants) = BuildLocked(squadId);
-        match.Start();
+        match.Start(DateTimeOffset.UnixEpoch);
         return (match, participants);
     }
 

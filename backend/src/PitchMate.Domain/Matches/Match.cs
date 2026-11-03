@@ -128,6 +128,13 @@ public sealed class Match : BaseEntity
     public MatchResult? RecordedResult { get; private set; }
 
     /// <summary>
+    /// The instant the match kicked off, or <see langword="null"/> before it starts. Set by
+    /// <see cref="Start"/>; live tracking derives each event's match minute from it. Matches started
+    /// before the instant was recorded keep <see langword="null"/>.
+    /// </summary>
+    public DateTimeOffset? StartedAt { get; private set; }
+
+    /// <summary>
     /// The instant the match was completed and its rating update applied, or <see langword="null"/>
     /// before completion. Set only by the first successful <see cref="Complete"/>; it is the stable
     /// replay ordering key, tie-broken by <see cref="BaseEntity.Id"/> via
@@ -899,8 +906,9 @@ public sealed class Match : BaseEntity
     /// <see cref="MatchState.Cancelled"/> states (Requirement 11.1, 15.1, 15.3); on rejection
     /// <see cref="State"/> and all match data are left unchanged (Requirement 15.2).
     /// </summary>
+    /// <param name="startedAtUtc">The kickoff instant, recorded as <see cref="StartedAt"/>.</param>
     /// <returns>A success once started, or an <see cref="MatchErrorCode.InvalidState"/> failure.</returns>
-    public Result Start()
+    public Result Start(DateTimeOffset startedAtUtc)
     {
         var guard = EnsureState(MatchState.TeamsRolled);
         if (!guard.IsSuccess)
@@ -908,6 +916,7 @@ public sealed class Match : BaseEntity
             return guard;
         }
 
+        StartedAt = startedAtUtc;
         State = MatchState.InProgress;
         return Result.Ok();
     }

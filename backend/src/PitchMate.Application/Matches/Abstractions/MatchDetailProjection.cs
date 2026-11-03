@@ -17,6 +17,7 @@ namespace PitchMate.Application.Matches.Abstractions;
 /// <param name="ConfirmedDay">The confirmed day, or <see langword="null"/>.</param>
 /// <param name="Participants">The participant views in ascending roster-position order, names already resolved.</param>
 /// <param name="RecordedResult">The recorded result, or <see langword="null"/>.</param>
+/// <param name="StartedAt">The kickoff instant, or <see langword="null"/>.</param>
 /// <param name="CompletedAt">The completion instant, or <see langword="null"/>.</param>
 public sealed record MatchDetailProjection(
     Guid MatchId,
@@ -27,4 +28,5 @@ public sealed record MatchDetailProjection(
     DateTimeOffset? ConfirmedDay,
     IReadOnlyList<ParticipantView> Participants,
     RecordedResultView? RecordedResult,
+    DateTimeOffset? StartedAt,
     DateTimeOffset? CompletedAt);

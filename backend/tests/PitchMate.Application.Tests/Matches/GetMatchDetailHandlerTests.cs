@@ -353,6 +353,7 @@ public class GetMatchDetailHandlerTests
                     new ParticipantView(Guid.NewGuid(), "Sam (guest)", IsGuest: true, RosterPosition: 2),
                 ],
                 RecordedResult: null,
+                StartedAt: state is MatchState.InProgress or MatchState.Completed ? Now.AddDays(7) : null,
                 CompletedAt: state == MatchState.Completed ? Now.AddDays(8) : null);
     }
 }

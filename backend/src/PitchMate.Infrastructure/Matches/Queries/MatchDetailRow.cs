@@ -17,6 +17,8 @@ internal sealed class MatchDetailRow
 
     public DateTimeOffset? ConfirmedDay { get; set; }
 
+    public DateTimeOffset? StartedAt { get; set; }
+
     public DateTimeOffset? CompletedAt { get; set; }
 
     public string CandidateDaysJson { get; set; } = string.Empty;

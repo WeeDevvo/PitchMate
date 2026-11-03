@@ -27,3 +27,11 @@ export function newMatchPath(squadId: string): string {
 export function matchPath(squadId: string, matchId: string): string {
   return `${squadPath(squadId)}/matches/${encodeURIComponent(matchId)}`;
 }
+
+/** The live tracker for one match: `/app/squads/:squadId/matches/:matchId/live`. */
+export const MATCH_LIVE_ROUTE = `${MATCH_ROUTE}/live`;
+
+/** The live tracker's path for one match. */
+export function liveTrackerPath(squadId: string, matchId: string): string {
+  return `${matchPath(squadId, matchId)}/live`;
+}

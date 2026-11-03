@@ -87,6 +87,35 @@ export function isResultFidelity(candidate: unknown): candidate is ResultFidelit
   return isWireEnumName(RESULT_FIDELITY_NAMES, candidate);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Live tracking: event kinds, per-event outcomes and the squad feature flag   */
+/* -------------------------------------------------------------------------- */
+
+export type EventKind = Exclude<components['schemas']['EventKind'], null>;
+
+export const EVENT_KIND_NAMES = [
+  'GoalScored',
+  'GoalRetracted',
+  'KeeperStintStarted',
+  'KeeperStintRetracted',
+] as const satisfies WireEnumNames<EventKind>;
+
+export type EventOutcome = Exclude<components['schemas']['EventOutcome'], null>;
+
+export const EVENT_OUTCOME_NAMES = ['Applied', 'Duplicate', 'Rejected'] as const satisfies WireEnumNames<EventOutcome>;
+
+export function isEventOutcome(candidate: unknown): candidate is EventOutcome {
+  return isWireEnumName(EVENT_OUTCOME_NAMES, candidate);
+}
+
+export type SquadFeature = Exclude<components['schemas']['SquadFeature'], null>;
+
+export const SQUAD_FEATURE_NAMES = ['LiveMatchTracking'] as const satisfies WireEnumNames<SquadFeature>;
+
+export function isSquadFeature(candidate: unknown): candidate is SquadFeature {
+  return isWireEnumName(SQUAD_FEATURE_NAMES, candidate);
+}
+
 /** Compile-time proof that every list covers its whole generated union. */
 export const WIRE_ENUM_COVERAGE = {
   MatchState: {} satisfies UncoveredNames<MatchState, typeof MATCH_STATE_NAMES>,
@@ -96,4 +125,7 @@ export const WIRE_ENUM_COVERAGE = {
     typeof MEMBERSHIP_STATE_NAMES
   >,
   ResultFidelity: {} satisfies UncoveredNames<ResultFidelity, typeof RESULT_FIDELITY_NAMES>,
+  EventKind: {} satisfies UncoveredNames<EventKind, typeof EVENT_KIND_NAMES>,
+  EventOutcome: {} satisfies UncoveredNames<EventOutcome, typeof EVENT_OUTCOME_NAMES>,
+  SquadFeature: {} satisfies UncoveredNames<SquadFeature, typeof SQUAD_FEATURE_NAMES>,
 } as const;

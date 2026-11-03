@@ -166,7 +166,7 @@ public class MatchTeamSheetPropertyTests
             }
 
             var scores = sheetIds.Select((id, index) => new TeamScore(id, index)).ToList();
-            return match.Start().IsSuccess
+            return match.Start(DateTimeOffset.UnixEpoch).IsSuccess
                 && match.RecordResult(new MatchResult(ResultFidelity.Basic, scores), liveTrackingEnabled: false).IsSuccess;
         });
 

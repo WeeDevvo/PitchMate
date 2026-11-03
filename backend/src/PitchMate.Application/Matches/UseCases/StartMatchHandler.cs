@@ -30,24 +30,28 @@ public sealed class StartMatchHandler
     private readonly IMatchRepository _matches;
     private readonly ISquadMembershipRepository _memberships;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _clock;
 
     /// <summary>
     /// Creates the handler with the match repository it loads the squad-scoped match through, the
-    /// membership repository it resolves and gates the acting membership through, and the unit of work
-    /// it commits the start through.
+    /// membership repository it resolves and gates the acting membership through, the unit of work
+    /// it commits the start through, and the clock it reads the kickoff instant from.
     /// </summary>
     public StartMatchHandler(
         IMatchRepository matches,
         ISquadMembershipRepository memberships,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(matches);
         ArgumentNullException.ThrowIfNull(memberships);
         ArgumentNullException.ThrowIfNull(unitOfWork);
+        ArgumentNullException.ThrowIfNull(clock);
 
         _matches = matches;
         _memberships = memberships;
         _unitOfWork = unitOfWork;
+        _clock = clock;
     }
 
     /// <summary>
@@ -97,7 +101,7 @@ public sealed class StartMatchHandler
         // The aggregate enforces the state gate (TeamsRolled) and moves the match into play while
         // retaining the immutable kickoff lineup; a failure names the required and current state and
         // leaves the match unchanged (Requirement 11.1, 2.3).
-        Result started = match.Start();
+        Result started = match.Start(_clock.GetUtcNow());
         if (!started.IsSuccess)
         {
             return Result<StartMatchResult>.Fail(started.Error!);
