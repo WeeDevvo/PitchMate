@@ -618,6 +618,26 @@ public static class MatchEndpoints
             .Produces<StartMatchResult>(StatusCodes.Status200OK)
             .WithMatchProblemResponses();
 
+        // Undo a kickoff made by mistake, back to locked teams, while nothing has been recorded for the
+        // match — organiser-only, under the same uniform authorisation failure as the start.
+        group.MapPost("/undo-start", static async (
+            Guid matchId,
+            ClaimsPrincipal principal,
+            UndoMatchStartHandler handler,
+            CancellationToken ct) =>
+        {
+            if (CallerIdentity.ResolveUserId(principal) is not { } userId)
+            {
+                return MatchErrorResults.Unauthenticated();
+            }
+
+            return ToHttpResult(await handler.HandleAsync(new UndoMatchStartCommand(userId, matchId), ct));
+        })
+            .RequireAuthorization()
+            .WithName("UndoMatchStart")
+            .Produces<UndoMatchStartResult>(StatusCodes.Status200OK)
+            .WithMatchProblemResponses();
+
         // Record the played match's result at Basic or (feature-gated) Rich fidelity (Requirement 11).
         group.MapPost("/result", static async (
             Guid matchId,

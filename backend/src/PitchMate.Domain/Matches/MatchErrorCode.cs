@@ -27,6 +27,9 @@ public enum MatchErrorCode
     /// <summary>Completion was requested but no result has been recorded for the match.</summary>
     ResultRequired,
 
+    /// <summary>Kickoff cannot be undone because something has already been recorded for the match in play (a live-tracking event or a result).</summary>
+    PlayRecorded,
+
     /// <summary>A concurrent modification was detected; the operation must be retried against fresh state.</summary>
     ConcurrencyConflict
 }

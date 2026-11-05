@@ -261,6 +261,7 @@ public static class SeamBehaviourBaseline
         Problem(MatchStandard, nameof(MatchErrorCode.AlreadyParticipant), StatusCodes.Status409Conflict),
         Problem(MatchStandard, nameof(MatchErrorCode.LiveTrackingDisabled), StatusCodes.Status409Conflict),
         Problem(MatchStandard, nameof(MatchErrorCode.ResultRequired), StatusCodes.Status409Conflict),
+        Problem(MatchStandard, nameof(MatchErrorCode.PlayRecorded), StatusCodes.Status409Conflict),
         Problem(MatchStandard, nameof(MatchErrorCode.ConcurrencyConflict), StatusCodes.Status409Conflict),
 
         // ── MatchErrorResults (concealed) ───────────────────────────────────────────────────────────
@@ -276,6 +277,7 @@ public static class SeamBehaviourBaseline
         Problem(MatchConcealed, nameof(MatchErrorCode.AlreadyParticipant), StatusCodes.Status409Conflict),
         Problem(MatchConcealed, nameof(MatchErrorCode.LiveTrackingDisabled), StatusCodes.Status409Conflict),
         Problem(MatchConcealed, nameof(MatchErrorCode.ResultRequired), StatusCodes.Status409Conflict),
+        Problem(MatchConcealed, nameof(MatchErrorCode.PlayRecorded), StatusCodes.Status409Conflict),
         Problem(MatchConcealed, nameof(MatchErrorCode.ConcurrencyConflict), StatusCodes.Status409Conflict),
 
         // ── StatsErrorResults (standard) ────────────────────────────────────────────────────────────

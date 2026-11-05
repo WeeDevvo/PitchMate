@@ -922,6 +922,44 @@ public sealed class Match : BaseEntity
     }
 
     /// <summary>
+    /// Undoes a kickoff made by mistake, transitioning <see cref="MatchState.InProgress"/> →
+    /// <see cref="MatchState.TeamsRolled"/>. The teams stay locked and the captured
+    /// <see cref="KickoffLineup"/> is kept; <see cref="StartedAt"/> is cleared, so starting again
+    /// records a fresh kickoff instant. It is allowed only while nothing has been recorded for the
+    /// match: a recorded result, or any live-tracking event (a corrected one included, because the
+    /// event log is append-only and cannot be discarded), refuses it with
+    /// <see cref="MatchErrorCode.PlayRecorded"/>. Every refusal leaves the match unchanged.
+    /// </summary>
+    /// <param name="hasLiveEvents">Whether the match's live-tracking event log holds any event.</param>
+    /// <returns>A success once kickoff is undone, or an <see cref="MatchErrorCode.InvalidState"/> or <see cref="MatchErrorCode.PlayRecorded"/> failure.</returns>
+    public Result UndoStart(bool hasLiveEvents)
+    {
+        var guard = EnsureState(MatchState.InProgress);
+        if (!guard.IsSuccess)
+        {
+            return guard;
+        }
+
+        if (RecordedResult is not null)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.PlayRecorded,
+                "Kickoff cannot be undone because a result has been recorded for the match."));
+        }
+
+        if (hasLiveEvents)
+        {
+            return Result.Fail(new MatchError(
+                MatchErrorCode.PlayRecorded,
+                "Kickoff cannot be undone because live-tracking events have been recorded for the match."));
+        }
+
+        StartedAt = null;
+        State = MatchState.TeamsRolled;
+        return Result.Ok();
+    }
+
+    /// <summary>
     /// Records <paramref name="result"/> as the played match's outcome, storing each team's final
     /// score at the result's fidelity (Requirement 11.2, 11.3). Permitted only while the match is in
     /// <see cref="MatchState.InProgress"/>; from any other state an

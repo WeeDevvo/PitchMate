@@ -51,6 +51,9 @@ public sealed class MatchReadModelsMigrationFreeTests
     [
         // Unlocking teams before kickoff, to add or remove players (match-guest-availability).
         "Unlock",
+
+        // Undoing a kickoff made by mistake, while nothing is recorded (undo-match-start).
+        "UndoStart",
     ];
 
     [Fact]

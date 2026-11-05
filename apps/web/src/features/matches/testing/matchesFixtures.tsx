@@ -283,6 +283,7 @@ export function fakeMatchesApi(overrides: Partial<MatchesApi> = {}): FakeMatches
     unlockTeams: async () => success(undefined),
     getTeamSheet: async () => success(teamSheet()),
     startMatch: async () => success(undefined),
+    undoMatchStart: async () => success(undefined),
     recordResult: async () => success(undefined),
     completeMatch: async () => success(undefined),
     cancelMatch: async () => success(undefined),

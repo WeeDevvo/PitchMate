@@ -7,7 +7,9 @@
  * away; the keeper for either team can be changed at any minute; the timeline
  * lists everything logged and fixes any of it (a goal's scorer changed or the
  * goal removed, a keeper change removed) with a correction, never an edit; and
- * ending the match makes the tracked score final and completes it.
+ * ending the match makes the tracked score final and completes it. Until
+ * anything is logged, a kickoff made by mistake can be undone, which goes back
+ * to the match page with the teams still locked.
  *
  * Every event is minted with its own GUID v7 identity and sent at once. The
  * score moves the moment a goal is tapped, a send that does not get through is
@@ -34,6 +36,7 @@ import { EndMatchDialog } from '../components/EndMatchDialog';
 import { GoalPicker, type GoalPick } from '../components/GoalPicker';
 import { KeeperDialog } from '../components/KeeperDialog';
 import { TrackerTimeline } from '../components/TrackerTimeline';
+import { UndoKickoffDialog } from '../components/UndoKickoffDialog';
 import { FailureNotice, LoadingNotice, MatchNotFound } from '../components/StatusNotices';
 import { EVENT_ID_RANDOM_BYTES, eventIdFrom } from '../lib/eventIds';
 import {
@@ -71,6 +74,7 @@ import {
   TRACKER_NOT_ORGANISER_STATEMENT,
   TRACKER_OFF_STATEMENT,
   UNDO_GOAL_LABEL,
+  UNDO_START_LABEL,
   UNDO_LABEL,
   changeScorerHeading,
   goalCorrectedStatement,
@@ -256,6 +260,7 @@ function Tracker({ api, squadId, matchId, location, startedAtMs, sheet, onHalted
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [fixing, setFixing] = useState<GoalEvent | null>(null);
   const [endOpen, setEndOpen] = useState(false);
+  const [undoKickoffOpen, setUndoKickoffOpen] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const goalButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -462,6 +467,11 @@ function Tracker({ api, squadId, matchId, location, startedAtMs, sheet, onHalted
             <Button variant="secondary" icon="flag" onClick={() => setEndOpen(true)}>
               {END_MATCH_LABEL}
             </Button>
+            {events.log.length === 0 ? (
+              <Button variant="ghost" icon="undo" onClick={() => setUndoKickoffOpen(true)}>
+                {UNDO_START_LABEL}
+              </Button>
+            ) : null}
           </div>
           <Button
             ref={goalButtonRef}
@@ -490,6 +500,12 @@ function Tracker({ api, squadId, matchId, location, startedAtMs, sheet, onHalted
         finalise={(signal) => api.finaliseTrackedResult(matchId, signal)}
         onClose={() => setEndOpen(false)}
         onEnded={() => navigate(matchPath(squadId, matchId))}
+      />
+      <UndoKickoffDialog
+        open={undoKickoffOpen}
+        undoStart={(signal) => api.undoMatchStart(matchId, signal)}
+        onClose={() => setUndoKickoffOpen(false)}
+        onSettled={() => navigate(matchPath(squadId, matchId))}
       />
     </div>
   );

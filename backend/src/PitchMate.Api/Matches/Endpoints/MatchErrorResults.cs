@@ -77,6 +77,9 @@ internal static class MatchErrorResults
             // Completion was requested before a result was recorded.
             MatchErrorCode.ResultRequired => StatusCodes.Status409Conflict,
 
+            // Kickoff undo was refused because play has already been recorded.
+            MatchErrorCode.PlayRecorded => StatusCodes.Status409Conflict,
+
             // The row changed since it was loaded (xmin mismatch on save).
             MatchErrorCode.ConcurrencyConflict => StatusCodes.Status409Conflict,
 

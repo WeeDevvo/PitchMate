@@ -16,6 +16,7 @@ export type RejectionReason =
   | 'validation'
   | 'invalid-state'
   | 'result-required'
+  | 'play-recorded'
   | 'conflict';
 
 export interface SettledCall {
@@ -50,6 +51,7 @@ const REJECTION_REASONS_BY_PROBLEM_CODE: Readonly<Record<string, RejectionReason
     ValidationFailed: 'validation',
     InvalidState: 'invalid-state',
     ResultRequired: 'result-required',
+    PlayRecorded: 'play-recorded',
     LiveTrackingDisabled: 'validation',
     NotEnabled: 'validation',
     TargetNotFound: 'validation',

@@ -290,6 +290,27 @@ describe('the match lifecycle', () => {
     });
   });
 
+  it('undoes a kickoff at its contract path, and names a refusal because play was recorded', async () => {
+    const { api, requests } = harness(() => json({ matchId: MATCH_ID }));
+
+    expect(await api.undoMatchStart(MATCH_ID)).toEqual({ kind: 'success', value: undefined });
+    expect(requests.map(({ method, url, body }) => [method, url.slice(BASE_URL.length), body])).toEqual([
+      ['POST', `/matches/${MATCH_ID}/undo-start`, undefined],
+    ]);
+
+    expect(await harness(() => problem(409, 'PlayRecorded')).api.undoMatchStart(MATCH_ID)).toEqual({
+      kind: 'rejected',
+      reason: 'play-recorded',
+    });
+    expect(await harness(() => problem(409, 'InvalidState')).api.undoMatchStart(MATCH_ID)).toEqual({
+      kind: 'rejected',
+      reason: 'invalid-state',
+    });
+    expect(await harness(() => problem(403, 'Unauthorized')).api.undoMatchStart(MATCH_ID)).toEqual({
+      kind: 'not-found',
+    });
+  });
+
   it('conceals a lifecycle step by a non-organiser as not found', async () => {
     expect(await harness(() => problem(403, 'NotAnOrganiser')).api.cancelMatch(MATCH_ID)).toEqual({
       kind: 'not-found',
