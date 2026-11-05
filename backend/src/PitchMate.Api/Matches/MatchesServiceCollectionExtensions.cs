@@ -73,6 +73,7 @@ public static class MatchesServiceCollectionExtensions
 
         // Play: start, record result, complete, and cancel.
         services.AddScoped<StartMatchHandler>();
+        services.AddScoped<UndoMatchStartHandler>();
         services.AddScoped<RecordResultHandler>();
         services.AddScoped<CompleteMatchHandler>();
         services.AddScoped<CancelMatchHandler>();

@@ -12,6 +12,9 @@ import {
   COMPLETE_NEEDS_RESULT_STATEMENT,
   CONFIRM_CANCEL_LABEL,
   CONFIRM_COMPLETE_LABEL,
+  CONFIRM_UNDO_START_LABEL,
+  KEEP_PLAYING_LABEL,
+  UNDO_START_LABEL,
   FINAL_RESULT_LABEL,
   KEEP_MATCH_LABEL,
   MATCH_CANCELLED_STATEMENT,
@@ -416,8 +419,9 @@ describe('MatchScreen concealment', () => {
 
 describe('MatchScreen from kick-off to the final score', () => {
   /**
-   * A fake whose match moves on as the organiser acts: start puts it in play,
-   * a saved score is kept on the match, and completion stamps it final.
+   * A fake whose match moves on as the organiser acts: start puts it in play
+   * and an undo of kickoff takes it back, a saved score is kept on the match,
+   * and completion stamps it final.
    */
   function playedMatchApi(overrides: Partial<MatchesApi> = {}) {
     let detail: MatchDetail = confirmedMatch(10, { state: 'TeamsRolled' });
@@ -425,6 +429,10 @@ describe('MatchScreen from kick-off to the final score', () => {
       getMatch: async () => success(detail),
       startMatch: async () => {
         detail = { ...detail, state: 'InProgress' };
+        return success(undefined);
+      },
+      undoMatchStart: async () => {
+        detail = { ...detail, state: 'TeamsRolled' };
         return success(undefined);
       },
       recordResult: async (_matchId, teamScores) => {
@@ -516,6 +524,67 @@ describe('MatchScreen from kick-off to the final score', () => {
     expect(await screen.findByText(MATCH_CANCELLED_STATEMENT)).toBeTruthy();
     expect(screen.queryByRole('button', { name: CANCEL_MATCH_LABEL })).toBeNull();
     expect(screen.queryByRole('heading', { name: new RegExp(`^${TEAM_SHEET_HEADING}`) })).toBeNull();
+  });
+
+  it('undoes a mistaken kickoff only on a second activation, back to the locked teams', async () => {
+    const user = userEvent.setup();
+    const api = renderScreen(playedMatchApi());
+
+    await user.click(await screen.findByRole('button', { name: START_MATCH_LABEL }));
+    expect(await screen.findByText(MATCH_STATE_LABELS.InProgress)).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: UNDO_START_LABEL }));
+    await user.click(screen.getByRole('button', { name: KEEP_PLAYING_LABEL }));
+    expect(api.undoMatchStart).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: UNDO_START_LABEL }));
+    await user.click(screen.getByRole('button', { name: CONFIRM_UNDO_START_LABEL }));
+
+    expect(await screen.findByText(MATCH_STATE_LABELS.TeamsRolled)).toBeTruthy();
+    expect(api.undoMatchStart).toHaveBeenCalledWith(MATCH_ID, expect.anything());
+    expect(screen.getByRole('button', { name: START_MATCH_LABEL })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: UNDO_START_LABEL })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('states in words an undo of kickoff refused because play was recorded', async () => {
+    const user = userEvent.setup();
+    renderScreen(
+      fakeMatchesApi({
+        getMatch: async () => success(confirmedMatch(10, { state: 'InProgress' })),
+        undoMatchStart: async () => ({ kind: 'rejected', reason: 'play-recorded' }),
+      }),
+    );
+
+    await user.click(await screen.findByRole('button', { name: UNDO_START_LABEL }));
+    await user.click(screen.getByRole('button', { name: CONFIRM_UNDO_START_LABEL }));
+
+    expect(await screen.findByText(REJECTION_MESSAGES['play-recorded'])).toBeTruthy();
+    expect(screen.getByText(MATCH_STATE_LABELS.InProgress)).toBeTruthy();
+  });
+
+  it('offers no undo of kickoff once a score is recorded', async () => {
+    const [red, blue] = teamSheet().teams;
+    renderScreen(
+      fakeMatchesApi({
+        getMatch: async () =>
+          success(
+            confirmedMatch(10, {
+              state: 'InProgress',
+              recordedResult: {
+                fidelity: 'Basic',
+                teamScores: [
+                  { teamId: blue.teamId, score: 1 },
+                  { teamId: red.teamId, score: 0 },
+                ],
+              },
+            }),
+          ),
+      }),
+    );
+
+    expect(await screen.findByText(MATCH_STATE_LABELS.InProgress)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: UNDO_START_LABEL })).toBeNull();
   });
 
   it('shows a member the score, not yet final while in play, and no controls', async () => {

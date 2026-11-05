@@ -17,7 +17,10 @@ import {
   BACK_LABEL,
   CANCEL_MATCH_LABEL,
   CONFIRM_DAY_BUTTON_LABEL,
+  CONFIRM_UNDO_START_LABEL,
   COMPLETE_MATCH_LABEL,
+  REJECTION_MESSAGES,
+  UNDO_START_LABEL,
   FINAL_RESULT_LABEL,
   LOCATION_LABEL,
   PROVISIONAL_RESULT_LABEL,
@@ -188,6 +191,22 @@ describe.each(THEMES)('in the %s theme', (theme) => {
     await userEvent.clear(screen.getByLabelText(scoreLabel(red.teamName, red.bibFlag)));
     await userEvent.click(screen.getByRole('button', { name: SAVE_RESULT_LABEL }));
     await userEvent.click(screen.getByRole('button', { name: COMPLETE_MATCH_LABEL }));
+    await expectNoWcagViolations(document.body);
+  });
+
+  it('the match screen in play with nothing recorded, and the undo-kickoff confirmation and its refusal', async () => {
+    applyThemeAttribute(theme);
+    const api = fakeMatchesApi({
+      getMatch: async () => success(matchDetail({ state: 'InProgress', confirmedDayMs: DAY_MS[0] })),
+      undoMatchStart: async () => ({ kind: 'rejected', reason: 'play-recorded' }),
+    });
+    renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
+    await userEvent.click(await screen.findByRole('button', { name: UNDO_START_LABEL }));
+    await screen.findByRole('dialog');
+    await expectNoWcagViolations(document.body);
+
+    await userEvent.click(screen.getByRole('button', { name: CONFIRM_UNDO_START_LABEL }));
+    await screen.findByText(REJECTION_MESSAGES['play-recorded']);
     await expectNoWcagViolations(document.body);
   });
 

@@ -24,6 +24,8 @@ import {
   timelineGoalText,
   timelineKeeperText,
   END_MATCH_LABEL,
+  CONFIRM_UNDO_START_LABEL,
+  UNDO_START_LABEL,
   GOAL_LABEL,
   KEEPER_LABEL,
   OWN_GOAL_LABEL,
@@ -251,6 +253,29 @@ describe('the live tracker', () => {
 
     await screen.findByText(scoreIs(0, 0));
     expect(recorded).toEqual([expect.objectContaining({ kind: 'goal-undo', targetEventId: earlierGoal })]);
+  });
+
+  it('undoes a mistaken kickoff before anything is logged, then goes back to the match', async () => {
+    const { api } = trackedApi({ undoMatchStart: async () => success(undefined) });
+    renderTracker(api);
+
+    await userEvent.click(await screen.findByRole('button', { name: UNDO_START_LABEL }));
+    await userEvent.click(screen.getByRole('button', { name: CONFIRM_UNDO_START_LABEL }));
+
+    await waitFor(() => expect(api.undoMatchStart).toHaveBeenCalledWith(MATCH_ID, expect.anything()));
+    expect(await screen.findByTestId('location')).toHaveTextContent(matchPath(SQUAD_ID, MATCH_ID));
+  });
+
+  it('stops offering to undo kickoff once anything is logged', async () => {
+    const { api } = trackedApi();
+    renderTracker(api);
+
+    expect(await screen.findByRole('button', { name: UNDO_START_LABEL })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: GOAL_LABEL }));
+    await userEvent.click(screen.getByRole('button', { name: teamGoalButtonLabel(RED.teamName, RED.bibFlag) }));
+    await userEvent.click(screen.getByRole('button', { name: SKIP_SCORER_LABEL }));
+
+    expect(screen.queryByRole('button', { name: UNDO_START_LABEL })).toBeNull();
   });
 
   it('says so when the timeline has nothing in it yet', async () => {

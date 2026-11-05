@@ -25,6 +25,15 @@ export function canCancel(state: MatchState): boolean {
   return state === 'GatheringAvailability' || state === 'Confirmed' || state === 'TeamsRolled';
 }
 
+/**
+ * True while a match in play has no recorded result, which is when an
+ * organiser may undo its kickoff. The backend also refuses once any live event
+ * is recorded, which this client cannot always see.
+ */
+export function canUndoStart(state: MatchState, result: RecordedResult | null): boolean {
+  return state === 'InProgress' && result === null;
+}
+
 /** True while the match is being played, which is when its score can be recorded. */
 export function canRecordResult(state: MatchState): boolean {
   return state === 'InProgress';

@@ -385,6 +385,8 @@ export function MatchScreen({ api }: MatchScreenProps): ReactElement {
           getWorkingTeams={(signal) => api.getWorkingTeams(matchId, signal)}
           start={(signal) => api.startMatch(matchId, signal)}
           cancel={(signal) => api.cancelMatch(matchId, signal)}
+          recordedResult={match.recordedResult}
+          undoStart={(signal) => api.undoMatchStart(matchId, signal)}
           onSettled={reloadAfterLock}
         />
       ) : null}

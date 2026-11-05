@@ -1,18 +1,20 @@
 /**
- * The organiser's match-day steps before kick-off: start the match once its
- * teams are locked, or cancel it while it has not started.
+ * The organiser's match-day steps around kick-off: start the match once its
+ * teams are locked, cancel it while it has not started, or undo a kickoff made
+ * by mistake while nothing has been recorded for it.
  *
  * Starting checks first that the working teams are still the locked ones. The
  * locked line-up is what plays and is scored, so a change made after locking
  * and not locked again is pointed out rather than silently dropped. Cancelling
- * cannot be undone, so it asks again in a dialog.
+ * cannot be undone, so it asks again in a dialog. Undoing kickoff asks again
+ * too; the backend refuses it once a live event or a score is recorded.
  */
 import { useId, useState, type ReactElement } from 'react';
 
 import { Banner, Button, Dialog } from '../../../ui';
 
 import type { CallResult } from '../api/matchesApi';
-import { canCancel, canStart, workingTeamsAreLocked } from '../lib/lifecycle';
+import { canCancel, canStart, canUndoStart, workingTeamsAreLocked } from '../lib/lifecycle';
 import {
   CANCEL_DIALOG_BODY,
   CANCEL_MATCH_LABEL,
@@ -25,13 +27,18 @@ import {
   START_HINT,
   START_MATCH_LABEL,
   STARTING_LABEL,
+  UNDO_START_HINT,
+  UNDO_START_LABEL,
   UNLOCKED_CHANGES_STATEMENT,
   cancelDialogTitle,
 } from '../lib/messages';
+import type { RecordedResult } from '../lib/parse/matchDetail';
 import type { TeamSheet } from '../lib/parse/teamSheet';
 import type { WorkingTeams } from '../lib/parse/teams';
 import type { MatchState } from '../lib/wireEnums';
 import { useAction, type ActionOutcome } from '../state/useAction';
+
+import { UndoKickoffDialog } from './UndoKickoffDialog';
 
 export interface MatchActionsPanelProps {
   readonly state: MatchState;
@@ -42,7 +49,10 @@ export interface MatchActionsPanelProps {
   readonly getWorkingTeams: (signal: AbortSignal) => Promise<CallResult<WorkingTeams>>;
   readonly start: (signal: AbortSignal) => Promise<CallResult<void>>;
   readonly cancel: (signal: AbortSignal) => Promise<CallResult<void>>;
-  /** Called after a start or cancel settles, so the screen can re-read. */
+  /** The match's recorded result, if any; a recorded score rules out undoing kickoff. */
+  readonly recordedResult: RecordedResult | null;
+  readonly undoStart: (signal: AbortSignal) => Promise<CallResult<void>>;
+  /** Called after a start, cancel or undo settles, so the screen can re-read. */
   readonly onSettled: () => void;
 }
 
@@ -58,6 +68,8 @@ export function MatchActionsPanel({
   getWorkingTeams,
   start,
   cancel,
+  recordedResult,
+  undoStart,
   onSettled,
 }: MatchActionsPanelProps): ReactElement | null {
   const headingId = `${useId()}-heading`;
@@ -68,10 +80,12 @@ export function MatchActionsPanel({
   const [refusedFor, setRefusedFor] = useState<TeamSheet | null>(null);
   const unlocked = refusedFor !== null && refusedFor === sheet;
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [confirmingUndo, setConfirmingUndo] = useState(false);
 
   const startable = canStart(state) && sheet !== null;
   const cancellable = canCancel(state);
-  if (!startable && !cancellable) return null;
+  const undoable = canUndoStart(state, recordedResult);
+  if (!startable && !cancellable && !undoable) return null;
 
   // A start that was issued re-reads the screen whatever its outcome; one
   // stopped for unlocked changes leaves the screen as it is, with the reason.
@@ -103,6 +117,11 @@ export function MatchActionsPanel({
     if (outcome !== null) onSettled();
   };
 
+  const handleUndone = (): void => {
+    setConfirmingUndo(false);
+    onSettled();
+  };
+
   const failure = failureMessage(starting.outcome) ?? failureMessage(cancelling.outcome);
 
   return (
@@ -111,6 +130,7 @@ export function MatchActionsPanel({
         {MATCH_ACTIONS_HEADING}
       </h2>
       {startable ? <p className="matches-hint">{START_HINT}</p> : null}
+      {undoable ? <p className="matches-hint">{UNDO_START_HINT}</p> : null}
       <div className="matches-footer matches-footer--plain">
         {startable ? (
           <Button
@@ -121,6 +141,10 @@ export function MatchActionsPanel({
             onClick={() => void handleStart()}
           >
             {starting.busy ? STARTING_LABEL : START_MATCH_LABEL}
+          </Button>
+        ) : undoable ? (
+          <Button type="button" variant="secondary" icon="undo" onClick={() => setConfirmingUndo(true)}>
+            {UNDO_START_LABEL}
           </Button>
         ) : (
           <span />
@@ -157,6 +181,14 @@ export function MatchActionsPanel({
         >
           <p className="pm-dialog__body">{CANCEL_DIALOG_BODY}</p>
         </Dialog>
+      ) : null}
+      {undoable ? (
+        <UndoKickoffDialog
+          open={confirmingUndo}
+          undoStart={undoStart}
+          onClose={() => setConfirmingUndo(false)}
+          onSettled={handleUndone}
+        />
       ) : null}
     </section>
   );

@@ -73,6 +73,7 @@ const LOCK_PATH = '/matches/{matchId}/teams/lock';
 const UNLOCK_PATH = '/matches/{matchId}/teams/unlock';
 const TEAM_SHEET_PATH = '/matches/{matchId}/team-sheet';
 const START_PATH = '/matches/{matchId}/start';
+const UNDO_START_PATH = '/matches/{matchId}/undo-start';
 const RESULT_PATH = '/matches/{matchId}/result';
 const COMPLETE_PATH = '/matches/{matchId}/complete';
 const CANCEL_PATH = '/matches/{matchId}/cancel';
@@ -225,6 +226,9 @@ export interface MatchesApi {
 
   /** Start a match whose teams are locked. */
   startMatch(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** Undo a mistaken kickoff, back to locked teams, while nothing is recorded for the match. */
+  undoMatchStart(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
 
   /**
    * Record, or re-record, the final score of a match in progress: one score per
@@ -569,6 +573,15 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
       return call(
         (callSignal): ClientCall<'StartMatch'> =>
           apiClient.POST(START_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    undoMatchStart(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'UndoMatchStart'> =>
+          apiClient.POST(UNDO_START_PATH, { params: { path: { matchId } }, signal: callSignal }),
         acceptNoValue,
         signal,
       );

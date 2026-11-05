@@ -321,6 +321,14 @@ export function cancelDialogTitle(location: string): string {
 export const CANCEL_DIALOG_BODY =
   "This can't be undone. The match stays in the squad's list, marked cancelled.";
 export const CANCELLING_LABEL = 'Cancelling…';
+export const UNDO_START_LABEL = 'Undo kickoff';
+export const UNDOING_START_LABEL = 'Undoing…';
+export const UNDO_START_HINT =
+  'Started by mistake? Undo kickoff to go back to the locked teams. It works until a goal, keeper change or score is recorded.';
+export const UNDO_START_DIALOG_TITLE = 'Undo kickoff?';
+export const UNDO_START_DIALOG_BODY =
+  'The match goes back to its locked teams, ready to start again. The clock starts afresh when you next start it.';
+export const CONFIRM_UNDO_START_LABEL = 'Yes, undo kickoff';
 export const MATCH_CANCELLED_STATEMENT = 'This match was cancelled.';
 
 export const RESULT_HEADING = 'Result';
@@ -398,6 +406,8 @@ export const REJECTION_MESSAGES: Readonly<Record<RejectionReason, string>> = {
   validation: 'That was not accepted. Check the details and try again.',
   'invalid-state': 'This match has moved on, so that is no longer possible. The page has been refreshed.',
   'result-required': 'Save the score before completing the match.',
+  'play-recorded':
+    'Something has already been recorded for this match, so kickoff can no longer be undone.',
   conflict: 'Someone else changed this match at the same time. The page has been refreshed.',
 };
 
