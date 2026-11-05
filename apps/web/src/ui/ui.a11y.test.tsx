@@ -26,6 +26,7 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
+  EventTimeline,
   FormerBadge,
   FormGuide,
   GuestBadge,
@@ -201,6 +202,17 @@ function Gallery() {
         <a href="/p1">Player 1</a>
       </TeamColumn>
       <Scoreboard teamA="Red Wolves" teamB="Blue Herons" scoreA={3} scoreB={2} bibs="a" status="provisional" />
+      <EventTimeline
+        label="Timeline"
+        voidLabel="Taken back"
+        events={[
+          { key: 'k', minute: '0′', kind: 'keeper', text: 'Leo in goal', sub: 'Red Wolves' },
+          { key: 'g1', minute: '4′', kind: 'goal', team: 'a', text: 'Conor Doyle', sub: 'Red Wolves', score: '1–0', void: true },
+          { key: 'c', minute: '4′', kind: 'correction', text: 'Correction: goal changed', sub: 'Made at 6′' },
+          { key: 'g2', minute: '4′', kind: 'goal', team: 'a', text: 'Aisha Bello', sub: 'Red Wolves', score: '1–0', actions: <button type="button">Fix</button> },
+          { key: 'g3', minute: '9′', kind: 'goal', team: 'b', own: true, text: 'Own goal by Sam', sub: 'Counts for Blue Herons', score: '1–1' },
+        ]}
+      />
       <dl>
         <StatTile label="Win rate" value="62%" sub="Of 24 games" tone="accent" />
         <StatTile label="Bibs" value="3" icon="bib" tone="bib" />

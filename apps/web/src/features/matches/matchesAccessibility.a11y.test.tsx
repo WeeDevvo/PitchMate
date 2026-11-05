@@ -14,6 +14,7 @@ import { SQUAD_ROUTE, squadPath } from '../squads';
 import { THEME_ATTRIBUTE, applyThemeAttribute, type Theme } from '../../theme';
 import { MatchesSection } from './components/MatchesSection';
 import {
+  BACK_LABEL,
   CANCEL_MATCH_LABEL,
   CONFIRM_DAY_BUTTON_LABEL,
   COMPLETE_MATCH_LABEL,
@@ -30,7 +31,11 @@ import {
   KEEPER_LABEL,
   LIVE_SCORE_HEADING,
   OWN_GOAL_LABEL,
+  REMOVE_GOAL_LABEL,
+  TIMELINE_LABEL,
   teamGoalButtonLabel,
+  timelineActionsLabel,
+  timelineGoalText,
 } from './lib/messages';
 import { MATCH_LIVE_ROUTE, MATCH_ROUTE, NEW_MATCH_ROUTE, liveTrackerPath, matchPath, newMatchPath } from './lib/routePaths';
 import { upcomingDates } from './lib/candidateSlots';
@@ -265,6 +270,17 @@ describe.each(THEMES)('in the %s theme', (theme) => {
     await screen.findByRole('dialog');
     await expectNoWcagViolations(document.body);
     await userEvent.keyboard('{Escape}');
+
+    // The timeline, with a goal's fix menu open, then the goal taken back.
+    await userEvent.click(screen.getByRole('button', { name: TIMELINE_LABEL }));
+    // The goal's minute depends on the clock, so match its menu by the words before it.
+    const menuPrefix = timelineActionsLabel(timelineGoalText(blue.roster[0].displayName, true), 0).replace(/, \d+′$/, '');
+    const menuName = { name: (name: string) => name.startsWith(menuPrefix) };
+    await userEvent.click(screen.getByRole('button', menuName));
+    await expectNoWcagViolations(document.body);
+    await userEvent.click(screen.getByRole('button', { name: REMOVE_GOAL_LABEL }));
+    await expectNoWcagViolations(document.body);
+    await userEvent.click(screen.getByRole('button', { name: BACK_LABEL }));
 
     await userEvent.click(screen.getByRole('button', { name: END_MATCH_LABEL }));
     await screen.findByRole('dialog');

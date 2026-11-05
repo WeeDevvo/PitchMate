@@ -1,0 +1,95 @@
+.pm-timeline {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pm-timeline__row {
+  display: grid;
+  grid-template-columns: 2.75rem 2rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--pm-space-3);
+  min-height: 3.5rem;
+  padding: var(--pm-space-2) 0;
+  border-bottom: 1px solid var(--pm-border-subtle);
+}
+
+.pm-timeline__row:last-child {
+  border-bottom: 0;
+}
+
+.pm-timeline__minute {
+  font: var(--pm-type-label);
+  color: var(--pm-text-secondary);
+  text-align: right;
+}
+
+.pm-timeline__mark {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--pm-radius-pill);
+  border: 1px solid var(--pm-border-control);
+  color: var(--pm-text-primary);
+}
+
+/* A goal's ball sits on its team's colour, so the side reads at a glance; the sub line names the team too. */
+.pm-timeline__mark--a {
+  background: var(--pm-team-a);
+  color: var(--pm-on-team-a);
+}
+
+.pm-timeline__mark--b {
+  background: var(--pm-team-b);
+  color: var(--pm-on-team-b);
+}
+
+.pm-timeline__row--correction .pm-timeline__mark {
+  border-style: dashed;
+  color: var(--pm-text-secondary);
+}
+
+.pm-timeline__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pm-timeline__text {
+  font: var(--pm-type-body-strong);
+  color: var(--pm-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pm-timeline__sub {
+  font: var(--pm-type-small);
+  color: var(--pm-text-secondary);
+}
+
+.pm-timeline__void {
+  font-weight: 700;
+}
+
+.pm-timeline__row--void .pm-timeline__text,
+.pm-timeline__row--void .pm-timeline__score {
+  text-decoration: line-through;
+  color: var(--pm-text-muted);
+}
+
+.pm-timeline__row--void .pm-timeline__mark {
+  opacity: 0.5;
+}
+
+.pm-timeline__score {
+  font-family: var(--pm-font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--pm-text-primary);
+}
+
+.pm-timeline__actions {
+  display: inline-flex;
+}

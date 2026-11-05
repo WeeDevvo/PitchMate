@@ -520,3 +520,58 @@ export const EVENT_REJECTED_STATEMENT = 'One event was not accepted, so it was l
 export function liveScoreStatement(teams: readonly { readonly name: string; readonly score: number }[]): string {
   return teams.map(({ name, score }) => `${name} ${score}`).join(', ');
 }
+
+/* Timeline and corrections */
+
+export const TIMELINE_LABEL = 'Timeline';
+export const TIMELINE_HEADING = 'Timeline';
+export const TIMELINE_EMPTY_STATEMENT = 'Nothing logged yet. Goals and keeper changes show up here as you log them.';
+export const TIMELINE_HINT = 'Got one wrong? Use the menu on a goal or keeper change to fix it. The original stays in the history.';
+export const TAKEN_BACK_LABEL = 'Taken back';
+export const SENDING_LABEL = 'Sending';
+export const CHANGE_SCORER_LABEL = 'Change scorer';
+export const REMOVE_GOAL_LABEL = 'Remove goal';
+export const REMOVE_KEEPER_LABEL = 'Remove keeper change';
+export const GOAL_REMOVED_STATEMENT = 'Goal removed. It stays in the timeline, struck through.';
+export const KEEPER_REMOVED_STATEMENT = 'Keeper change removed.';
+
+export function timelineGoalText(scorerName: string | null, ownGoal: boolean): string {
+  if (scorerName === null) return 'Goal';
+  return ownGoal ? `Own goal by ${scorerName}` : scorerName;
+}
+
+export function timelineGoalSub(teamName: string, ownGoal: boolean): string {
+  return ownGoal ? `Counts for ${teamName}` : teamName;
+}
+
+export function timelineKeeperText(keeperName: string): string {
+  return `${keeperName} in goal`;
+}
+
+export function correctionText(kind: 'goal-removed' | 'scorer-changed' | 'keeper-removed'): string {
+  switch (kind) {
+    case 'goal-removed':
+      return 'Correction: goal removed';
+    case 'scorer-changed':
+      return 'Correction: goal changed';
+    case 'keeper-removed':
+      return 'Correction: keeper change removed';
+  }
+}
+
+export function correctionSub(minute: number): string {
+  return `Made at ${minuteText(minute)}`;
+}
+
+/** The "…" menu's name on one timeline row: what it fixes, and when. */
+export function timelineActionsLabel(text: string, minute: number): string {
+  return `Fix ${text}, ${minuteText(minute)}`;
+}
+
+export function changeScorerHeading(minute: number): string {
+  return `Fix the goal at ${minuteText(minute)}`;
+}
+
+export function goalCorrectedStatement(scorerName: string | null, teamName: string, ownGoal: boolean, minute: number): string {
+  return `Fixed. ${goalLoggedStatement(scorerName, teamName, ownGoal, minute)}`;
+}

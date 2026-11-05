@@ -236,6 +236,122 @@ export function scorerChoices(
     .map(({ entry }) => entry);
 }
 
+/* Timeline and corrections ------------------------------------------------------ */
+
+/** A goal or keeper change as the timeline shows it: still standing, or taken back. */
+export interface TimelineGoal {
+  readonly kind: 'goal';
+  readonly event: GoalEvent;
+  readonly standing: boolean;
+  readonly pending: boolean;
+  /** Each team's score after this goal, in team-sheet order; `null` for a goal taken back. */
+  readonly scoreAfter: readonly number[] | null;
+}
+
+export interface TimelineKeeper {
+  readonly kind: 'keeper';
+  readonly event: KeeperEvent;
+  readonly standing: boolean;
+  readonly pending: boolean;
+}
+
+/**
+ * A correction: the event that took `target` back, and, when the correction
+ * put a goal back in its place (a changed scorer), that `replacement`.
+ */
+export interface TimelineCorrection {
+  readonly kind: 'correction';
+  readonly event: GoalUndoEvent | KeeperUndoEvent;
+  readonly target: GoalEvent | KeeperEvent;
+  readonly replacement: GoalEvent | null;
+  readonly pending: boolean;
+}
+
+export type TimelineEntry = TimelineGoal | TimelineKeeper | TimelineCorrection;
+
+/**
+ * The two events that correct a goal: take `target` back, and log `replacement`
+ * at the same minute in its place. The replacement's identity is minted after
+ * the retraction's, so the server's log (ordered by identity) keeps them
+ * together, which is how the timeline pairs them again after a reload.
+ */
+export function goalCorrection(
+  target: GoalEvent,
+  replacement: Pick<GoalEvent, 'teamId' | 'scorerId' | 'ownGoal'>,
+  minute: number,
+  mintId: () => string,
+): readonly [GoalUndoEvent, GoalEvent] {
+  const undo: GoalUndoEvent = { kind: 'goal-undo', eventId: mintId(), minute, targetEventId: target.eventId };
+  const goal: GoalEvent = { kind: 'goal', eventId: mintId(), minute: target.minute, ...replacement };
+  return [undo, goal];
+}
+
+/**
+ * The match as a timeline, in minute order: every goal and keeper change the
+ * log holds, standing or taken back, each correction straight after the event it
+ * took back, and the running score after each standing goal. Events the server
+ * turned away are left out. Within a minute, events keep the log's order.
+ */
+export function timeline(teamIds: readonly string[], log: readonly LoggedEvent[]): readonly TimelineEntry[] {
+  const live = log.filter(isLive);
+  const indexOf = new Map(live.map((entry, index) => [entry.event.eventId, index]));
+  const targets = new Map(
+    live.flatMap((entry) =>
+      entry.event.kind === 'goal' || entry.event.kind === 'keeper' ? [[entry.event.eventId, entry.event] as const] : [],
+    ),
+  );
+
+  const undone = new Set<string>();
+  const corrections = new Map<string, TimelineCorrection[]>();
+  for (const [index, entry] of live.entries()) {
+    const { event } = entry;
+    if (event.kind !== 'goal-undo' && event.kind !== 'keeper-undo') continue;
+    const target = targets.get(event.targetEventId);
+    const matchesKind = target !== undefined && (event.kind === 'goal-undo' ? target.kind === 'goal' : target.kind === 'keeper');
+    if (!matchesKind) continue;
+
+    undone.add(target.eventId);
+    const next = live[index + 1]?.event;
+    const replacement =
+      target.kind === 'goal' && next?.kind === 'goal' && next.minute === target.minute ? next : null;
+    const list = corrections.get(target.eventId) ?? [];
+    list.push({ kind: 'correction', event, target, replacement, pending: entry.status === 'pending' });
+    corrections.set(target.eventId, list);
+  }
+
+  const occurrences = live
+    .filter((entry) => entry.event.kind === 'goal' || entry.event.kind === 'keeper')
+    .sort(
+      (a, b) =>
+        a.event.minute - b.event.minute ||
+        (indexOf.get(a.event.eventId) ?? 0) - (indexOf.get(b.event.eventId) ?? 0),
+    );
+
+  const score = new Map(teamIds.map((teamId) => [teamId, 0]));
+  const entries: TimelineEntry[] = [];
+  for (const entry of occurrences) {
+    const { event } = entry;
+    const standing = !undone.has(event.eventId);
+    const pending = entry.status === 'pending';
+    if (event.kind === 'goal') {
+      if (standing) score.set(event.teamId, (score.get(event.teamId) ?? 0) + 1);
+      entries.push({
+        kind: 'goal',
+        event,
+        standing,
+        pending,
+        scoreAfter: standing ? teamIds.map((teamId) => score.get(teamId) ?? 0) : null,
+      });
+    } else if (event.kind === 'keeper') {
+      entries.push({ kind: 'keeper', event, standing, pending });
+    }
+    // Only the first retraction of an event took it back; a repeat changes nothing.
+    const first = corrections.get(event.eventId)?.[0];
+    if (first !== undefined) entries.push(first);
+  }
+  return entries;
+}
+
 /** How many goals `membershipId` scored this session, own goals aside. */
 export function sessionGoalsFor(log: readonly LoggedEvent[], membershipId: string): number {
   return standingGoals(log).filter((goal) => goal.scorerId === membershipId && !goal.ownGoal).length;

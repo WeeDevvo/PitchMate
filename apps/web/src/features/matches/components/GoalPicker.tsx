@@ -40,11 +40,25 @@ export interface GoalPickerProps {
   readonly log: readonly LoggedEvent[];
   readonly onPick: (pick: GoalPick) => void;
   readonly onCancel: () => void;
+  /** Open on this team's scorer step, as when fixing a goal already logged. */
+  readonly initialTeamId?: string;
+  readonly initialOwnGoal?: boolean;
+  /** The team step's heading, when it is not a new goal at `minute`. */
+  readonly title?: string;
 }
 
-export function GoalPicker({ sheet, minute, log, onPick, onCancel }: GoalPickerProps): ReactElement {
-  const [teamId, setTeamId] = useState<string | null>(null);
-  const [ownGoal, setOwnGoal] = useState(false);
+export function GoalPicker({
+  sheet,
+  minute,
+  log,
+  onPick,
+  onCancel,
+  initialTeamId,
+  initialOwnGoal = false,
+  title,
+}: GoalPickerProps): ReactElement {
+  const [teamId, setTeamId] = useState<string | null>(initialTeamId ?? null);
+  const [ownGoal, setOwnGoal] = useState(initialOwnGoal);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -58,7 +72,7 @@ export function GoalPicker({ sheet, minute, log, onPick, onCancel }: GoalPickerP
       <section className="matches-tracker-step" aria-labelledby="matches-goal-step-heading">
         <div className="matches-tracker-step__bar">
           <h2 id="matches-goal-step-heading" ref={headingRef} tabIndex={-1} className="matches-subheading">
-            {goalAtHeading(minute)}
+            {title ?? goalAtHeading(minute)}
           </h2>
           <Button variant="ghost" onClick={onCancel}>
             {CANCEL_LABEL}
