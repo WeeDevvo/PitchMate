@@ -4,8 +4,10 @@
  * The score and clock read at arm's length, GOAL sits at the bottom in thumb
  * reach, and every choice after it is one tap on a big target: the team, then
  * the scorer (or skip, or an own goal). A logged goal can be undone straight
- * away; the keeper for either team can be changed at any minute; and ending the
- * match makes the tracked score final and completes it.
+ * away; the keeper for either team can be changed at any minute; the timeline
+ * lists everything logged and fixes any of it (a goal's scorer changed or the
+ * goal removed, a keeper change removed) with a correction, never an edit; and
+ * ending the match makes the tracked score final and completes it.
  *
  * Every event is minted with its own GUID v7 identity and sent at once. The
  * score moves the moment a goal is tapped, a send that does not get through is
@@ -31,15 +33,19 @@ import type { MatchesApi } from '../api/matchesApi';
 import { EndMatchDialog } from '../components/EndMatchDialog';
 import { GoalPicker, type GoalPick } from '../components/GoalPicker';
 import { KeeperDialog } from '../components/KeeperDialog';
+import { TrackerTimeline } from '../components/TrackerTimeline';
 import { FailureNotice, LoadingNotice, MatchNotFound } from '../components/StatusNotices';
 import { EVENT_ID_RANDOM_BYTES, eventIdFrom } from '../lib/eventIds';
 import {
   clockText,
   currentKeepers,
   displayedScores,
+  goalCorrection,
   lastStandingGoal,
   matchMinute,
   pendingEvents,
+  type GoalEvent,
+  type KeeperEvent,
   type LoggedEvent,
 } from '../lib/liveTracking';
 import { isOrganiser } from '../lib/matchState';
@@ -50,11 +56,14 @@ import {
   END_MATCH_LABEL,
   EVENT_REJECTED_STATEMENT,
   GOAL_LABEL,
+  GOAL_REMOVED_STATEMENT,
   GOAL_UNDONE_STATEMENT,
   KEEPER_LABEL,
+  KEEPER_REMOVED_STATEMENT,
   LIVE_LABEL,
   SEND_AGAIN_LABEL,
   SYNC_LABELS,
+  TIMELINE_LABEL,
   TRACKER_HALTED_STATEMENT,
   TRACKER_HEADING,
   TRACKER_LOADING_LABEL,
@@ -63,6 +72,8 @@ import {
   TRACKER_OFF_STATEMENT,
   UNDO_GOAL_LABEL,
   UNDO_LABEL,
+  changeScorerHeading,
+  goalCorrectedStatement,
   goalLoggedStatement,
   keeperLine,
   keeperLoggedStatement,
@@ -92,8 +103,17 @@ function asIdentity(value: string | undefined): string | null {
   return read.ok ? read.value : null;
 }
 
-function newEventId(): string {
-  return eventIdFrom(Date.now(), crypto.getRandomValues(new Uint8Array(EVENT_ID_RANDOM_BYTES)));
+function newEventId(atMs: number = Date.now()): string {
+  return eventIdFrom(atMs, crypto.getRandomValues(new Uint8Array(EVENT_ID_RANDOM_BYTES)));
+}
+
+/**
+ * Mints identities that sort in the order they are minted, a millisecond apart,
+ * for events that must stay together in the server's log (a correction pair).
+ */
+function orderedEventIds(): () => string {
+  let atMs = Date.now();
+  return () => newEventId(atMs++);
 }
 
 const SYNC_BADGES: Readonly<Record<SyncState, { tone: 'neutral' | 'info' | 'provisional'; icon: 'cloudCheck' | 'sync' | 'cloudOff' }>> = {
@@ -233,6 +253,8 @@ function Tracker({ api, squadId, matchId, location, startedAtMs, sheet, onHalted
   const events = useEventLog({ matchId, api, onHalted });
   const [pickingAtMinute, setPickingAtMinute] = useState<number | null>(null);
   const [keeperOpen, setKeeperOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [fixing, setFixing] = useState<GoalEvent | null>(null);
   const [endOpen, setEndOpen] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const goalButtonRef = useRef<HTMLButtonElement>(null);
@@ -279,6 +301,30 @@ function Tracker({ api, squadId, matchId, location, startedAtMs, sheet, onHalted
     setNotice({ text: GOAL_UNDONE_STATEMENT, undoable: false });
   };
 
+  const correctGoal = (target: GoalEvent, pick: GoalPick): void => {
+    for (const event of goalCorrection(target, pick, minute(), orderedEventIds())) events.record(event);
+    setFixing(null);
+    setNotice({
+      text: goalCorrectedStatement(
+        pick.scorerId === null ? null : nameOf(pick.scorerId),
+        teamNameOf(pick.teamId),
+        pick.ownGoal,
+        target.minute,
+      ),
+      undoable: false,
+    });
+  };
+
+  const removeGoal = (target: GoalEvent): void => {
+    events.record({ kind: 'goal-undo', eventId: newEventId(), minute: minute(), targetEventId: target.eventId });
+    setNotice({ text: GOAL_REMOVED_STATEMENT, undoable: false });
+  };
+
+  const removeKeeper = (target: KeeperEvent): void => {
+    events.record({ kind: 'keeper-undo', eventId: newEventId(), minute: minute(), targetEventId: target.eventId });
+    setNotice({ text: KEEPER_REMOVED_STATEMENT, undoable: false });
+  };
+
   const recordKeeper = (teamId: string, keeperId: string): void => {
     const at = minute();
     events.record({ kind: 'keeper', eventId: newEventId(), minute: at, teamId, keeperId });
@@ -315,6 +361,34 @@ function Tracker({ api, squadId, matchId, location, startedAtMs, sheet, onHalted
             requestAnimationFrame(() => goalButtonRef.current?.focus());
           }}
         />
+      ) : fixing !== null ? (
+        <GoalPicker
+          sheet={sheet}
+          minute={fixing.minute}
+          log={events.log}
+          initialTeamId={fixing.teamId}
+          initialOwnGoal={fixing.ownGoal}
+          title={changeScorerHeading(fixing.minute)}
+          onPick={(pick) => correctGoal(fixing, pick)}
+          onCancel={() => setFixing(null)}
+        />
+      ) : timelineOpen ? (
+        <>
+          <TrackerTimeline
+            sheet={sheet}
+            log={events.log}
+            nameOf={nameOf}
+            onChangeScorer={setFixing}
+            onRemoveGoal={removeGoal}
+            onRemoveKeeper={removeKeeper}
+            onClose={() => setTimelineOpen(false)}
+          />
+          {notice === null ? null : (
+            <div className="matches-tracker__notice">
+              <Toast tone="success">{notice.text}</Toast>
+            </div>
+          )}
+        </>
       ) : (
         <>
           <div className="matches-tracker__clock">
@@ -381,6 +455,9 @@ function Tracker({ api, squadId, matchId, location, startedAtMs, sheet, onHalted
             </Button>
             <Button variant="secondary" icon="glove" onClick={() => setKeeperOpen(true)}>
               {KEEPER_LABEL}
+            </Button>
+            <Button variant="secondary" icon="list" onClick={() => setTimelineOpen(true)}>
+              {TIMELINE_LABEL}
             </Button>
             <Button variant="secondary" icon="flag" onClick={() => setEndOpen(true)}>
               {END_MATCH_LABEL}

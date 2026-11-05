@@ -40,6 +40,12 @@ export {
   type ToastProps,
   type ToastTone,
 } from './Feedback';
+export {
+  EventTimeline,
+  type EventTimelineItem,
+  type EventTimelineKind,
+  type EventTimelineProps,
+} from './EventTimeline';
 export { GoogleMark, type GoogleMarkProps } from './GoogleMark';
 export { Icon, type IconName, type IconProps } from './Icon';
 export { Logo, type LogoProps } from './Logo';
