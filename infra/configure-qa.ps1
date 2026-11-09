@@ -28,7 +28,9 @@ try {
   $swaApp = $o.staticWebAppName.value
   $kvName = $o.keyVaultName.value
   $pgServer = $o.postgresServerName.value
-  Log "Outputs: api=$apiApp swa=$swaApp kv=$kvName pg=$pgServer"
+  $registry = $o.registryName.value
+  if (-not $apiApp) { throw "No API in the deployment outputs; run deploy-qa.ps1 to completion first." }
+  Log "Outputs: api=$apiApp swa=$swaApp kv=$kvName pg=$pgServer acr=$registry"
 
   # ── Entra app registration + service principal (idempotent) ────────────────
   $appId = az ad app list --display-name $appName --query "[0].appId" -o tsv
@@ -48,6 +50,11 @@ try {
   Log "Assigning Contributor on $rg..."
   az role assignment create --assignee-object-id $spId --assignee-principal-type ServicePrincipal `
     --role Contributor --scope "/subscriptions/$subId/resourceGroups/$rg" 2>$null | Out-Null
+
+  # ── And AcrPush on the registry, so CD can push the API image ──────────────
+  Log "Assigning AcrPush on $registry..."
+  az role assignment create --assignee-object-id $spId --assignee-principal-type ServicePrincipal `
+    --role AcrPush --scope "/subscriptions/$subId/resourceGroups/$rg/providers/Microsoft.ContainerRegistry/registries/$registry" 2>$null | Out-Null
 
   # ── Federated credentials for the qa and production environments ───────────
   foreach ($envName in 'qa','production') {
@@ -90,7 +97,9 @@ try {
   gh secret set AZURE_SUBSCRIPTION_ID --env qa --repo $repo --body $subId
   gh secret set DB_CONNECTION_STRING  --env qa --repo $repo --body $dbConn
   gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --env qa --repo $repo --body $swaToken
-  gh variable set AZURE_WEBAPP_NAME_QA --repo $repo --body $apiApp
+  # cd-qa.yml pushes the image to this registry and rolls this Container App onto it.
+  gh variable set AZURE_CONTAINERAPP_NAME_QA --repo $repo --body $apiApp
+  gh variable set AZURE_ACR_NAME_QA --repo $repo --body $registry
   # Baked into the web build as VITE_API_BASE_URL (cd-qa.yml), since the web app and API are cross-origin.
   gh variable set API_BASE_URL_QA --repo $repo --body "https://$apiHost"
   # cd-qa.yml opens the Postgres firewall to its runner for the migration step, then closes it.

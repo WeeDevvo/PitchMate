@@ -43,9 +43,6 @@ jobs:
       - name: Restore local tools (dotnet-ef)
         run: dotnet tool restore
 
-      - name: Publish API
-        run: dotnet publish src/PitchMate.Api -c Release -o ../publish/api
-
       # Migrations run as an explicit, out-of-process step BEFORE the app rolls
       # out — never on startup (docs/migrations.md). The bundle embeds every
       # migration and is idempotent (no-op when nothing is pending).
@@ -81,8 +78,8 @@ jobs:
             exit 1
           fi
           ip=$(curl -fsS https://api.ipify.org)
-          az postgres flexible-server firewall-rule create -g "$RESOURCE_GROUP" -n "$PG_SERVER" \
-            --rule-name "$RULE_NAME" --start-ip-address "$ip" --end-ip-address "$ip" -o none
+          az postgres flexible-server firewall-rule create -g "$RESOURCE_GROUP" --server-name "$PG_SERVER" \
+            --name "$RULE_NAME" --start-ip-address "$ip" --end-ip-address "$ip" -o none
 
       - name: Apply migrations (efbundle)
         working-directory: publish
@@ -95,16 +92,30 @@ jobs:
           PG_SERVER: ${{ vars.AZURE_PG_SERVER_QA }}
           RULE_NAME: gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
         run: >-
-          az postgres flexible-server firewall-rule delete -g "$RESOURCE_GROUP" -n "$PG_SERVER"
-          --rule-name "$RULE_NAME" --yes -o none
+          az postgres flexible-server firewall-rule delete -g "$RESOURCE_GROUP" --server-name "$PG_SERVER"
+          --name "$RULE_NAME" --yes -o none
 
-      # Deploy the published API to Azure App Service (zip-deploy). The app name
-      # comes from a repo variable set during provisioning (walking-skeleton.md).
-      - name: Deploy API
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ vars.AZURE_WEBAPP_NAME_QA }}
-          package: publish/api
+      # Build backend/Dockerfile, push it to the environment's registry, and roll the
+      # Container App onto it. The names come from repo variables set by
+      # infra/configure-qa.ps1.
+      - name: Build, push and deploy the API image
+        working-directory: .
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_QA }}
+          REGISTRY: ${{ vars.AZURE_ACR_NAME_QA }}
+          CONTAINER_APP: ${{ vars.AZURE_CONTAINERAPP_NAME_QA }}
+          TAG: pitchmate-api:qa-${{ github.sha }}
+        run: |
+          if [ -z "$REGISTRY" ] || [ -z "$CONTAINER_APP" ]; then
+            echo "::error::Repository variables AZURE_ACR_NAME_QA and AZURE_CONTAINERAPP_NAME_QA must be set (infra/configure-qa.ps1)."
+            exit 1
+          fi
+          az config set extension.use_dynamic_install=yes_without_prompt -o none
+          server=$(az acr show -n "$REGISTRY" --query loginServer -o tsv)
+          az acr login -n "$REGISTRY"
+          docker build -f backend/Dockerfile -t "$server/$TAG" .
+          docker push "$server/$TAG"
+          az containerapp update -n "$CONTAINER_APP" -g "$RESOURCE_GROUP" --image "$server/$TAG" -o none
 
   # ── Web: build and deploy the static React app ────────────────────────────
   deploy-web:

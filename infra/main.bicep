@@ -1,20 +1,21 @@
-// PitchMate walking-skeleton infrastructure (Azure, App Service hosting).
+// PitchMate walking-skeleton infrastructure (Azure, Container Apps hosting).
 //
-// Deploys the thin vertical slice needed to run the auth API + web shell in an
-// environment: an App Service (Linux, .NET 10) for the API, a PostgreSQL
-// Flexible Server, a Static Web App for the React app, a Key Vault for secrets,
-// and Application Insights for the observability baseline.
+// Deploys the thin vertical slice needed to run the API + web app in an
+// environment: a Container App (consumption) for the API, pulling its image
+// from an Azure Container Registry, a PostgreSQL Flexible Server, a Static Web
+// App for the React app, a Key Vault for secrets, and Application Insights for
+// the observability baseline.
 //
-// Decision (reversible): API hosting is App Service (zip-deploy), not Container
-// Apps — simplest path for a walking skeleton, no registry/Dockerfile. See
-// docs/backlog.md decision log and docs/walking-skeleton.md.
+// Decision (reversible): API hosting is Container Apps, not App Service. App
+// Service has no compute quota on this subscription (0 instances for every
+// SKU), while Container Apps has its own quota. The image is built from
+// backend/Dockerfile. See infra/README.md and docs/walking-skeleton.md.
 //
-// Deploy (per environment, e.g. qa):
-//   az group create -n rg-pitchmate-qa -l uksouth
-//   az deployment group create -g rg-pitchmate-qa \
-//     -f infra/main.bicep -p infra/main.qa.bicepparam
+// Deploy (per environment, e.g. qa): infra/deploy-qa.ps1, which pushes a first
+// image to the registry before deploying the app.
 //
-// Secrets (Postgres admin password) are passed at deploy time and never committed.
+// Secrets (Postgres admin password, token signing key) are passed at deploy
+// time, stored in Key Vault, and never committed.
 
 targetScope = 'resourceGroup'
 
@@ -25,9 +26,9 @@ param environmentName string
 @description('Azure region for all resources.')
 param location string = resourceGroup().location
 
-@description('Region for the Static Web App. SWA is only offered in a subset of regions, so it is set separately from the main location.')
+@description('Region for the Static Web App. SWA is only offered in a subset of regions, and westeurope refuses new customers, so it is set separately from the main location.')
 @allowed(['westeurope', 'eastus2', 'centralus', 'westus2', 'eastasia'])
-param staticWebAppLocation string = 'westeurope'
+param staticWebAppLocation string = 'eastus2'
 
 @description('Resource name prefix. Combined with environmentName for uniqueness.')
 param namePrefix string = 'pitchmate'
@@ -38,9 +39,6 @@ param postgresAdminLogin string
 @description('PostgreSQL administrator password. Pass via --parameters or a secure pipeline variable; never commit.')
 @secure()
 param postgresAdminPassword string
-
-@description('App Service plan SKU. B1 is the cheapest always-on tier suitable for a skeleton.')
-param appServicePlanSku string = 'B1'
 
 @description('PostgreSQL Flexible Server SKU (Burstable tier for low-cost QA).')
 param postgresSkuName string = 'Standard_B1ms'
@@ -59,10 +57,26 @@ param googleClientId string
 @description('Audience of the API\'s access tokens; must match what the web client expects.')
 param authTokenAudience string = 'pitchmate-web'
 
+@description('API image repository and tag in the registry, e.g. "pitchmate-api:<sha>". It must already be pushed; CD rolls out later tags itself.')
+param apiImageTag string = ''
+
+@description('Deploy the API Container App. A first run passes false to create the registry, so an image can be pushed before the app that pulls it exists.')
+param deployApi bool = true
+
+@description('Minimum API replicas. 0 lets QA scale to zero (a few seconds of cold start); production should keep 1.')
+@minValue(0)
+param apiMinReplicas int = 0
+
+@description('Maximum API replicas.')
+@minValue(1)
+param apiMaxReplicas int = 2
+
 // ── Naming ──────────────────────────────────────────────────────────────────
 var suffix = uniqueString(resourceGroup().id, environmentName)
 var appName = '${namePrefix}-api-${environmentName}-${suffix}'
-var planName = '${namePrefix}-plan-${environmentName}'
+var caEnvName = '${namePrefix}-cae-${environmentName}'
+var identityName = '${namePrefix}-id-api-${environmentName}'
+var acrName = take('${namePrefix}${environmentName}${suffix}', 50)
 var pgName = '${namePrefix}-pg-${environmentName}-${suffix}'
 var kvName = take('${namePrefix}kv${environmentName}${suffix}', 24)
 var swaName = '${namePrefix}-web-${environmentName}'
@@ -70,17 +84,11 @@ var laName = '${namePrefix}-logs-${environmentName}'
 var aiName = '${namePrefix}-ai-${environmentName}'
 var databaseName = 'pitchmate'
 
-// The token issuer is the API's own origin. It is built from the app name rather than read from
-// the site's defaultHostName, which the site's own settings cannot reference.
-var apiOrigin = 'https://${appName}.azurewebsites.net'
+// The port the image listens on (backend/Dockerfile: ASPNETCORE_URLS).
+var apiPort = 5243
 
 // Npgsql connection string built from the provisioned server + admin credentials.
 var pgConnectionString = 'Host=${pg.properties.fullyQualifiedDomainName};Database=${databaseName};Username=${postgresAdminLogin};Password=${postgresAdminPassword};SslMode=Require;Trust Server Certificate=true'
-
-// Free (F1) / Shared (D1) tiers run on shared compute: no dedicated VM quota, but
-// they do NOT support AlwaysOn or the health-check ping. Enable those only on
-// dedicated tiers (B1+).
-var isDedicatedPlan = !contains(['F1', 'FREE', 'D1', 'SHARED'], toUpper(appServicePlanSku))
 
 // ── Observability ─────────────────────────────────────────────────────────
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -136,7 +144,7 @@ resource pgDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08
   }
 }
 
-// Allow other Azure services (the App Service) to reach the server. The
+// Allow other Azure services (the Container App) to reach the server. The
 // 0.0.0.0 sentinel rule is the documented "Allow Azure services" toggle.
 resource pgAllowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
   parent: pg
@@ -178,89 +186,44 @@ resource authSigningKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-// ── App Service (Linux, .NET 10) ────────────────────────────────────────────
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
-  name: planName
+// ── Identity, registry and role assignments ────────────────────────────────
+// A user-assigned identity, so its roles exist before the Container App is
+// created and its first revision can pull the image and read the secrets.
+resource apiIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: identityName
   location: location
-  sku: {
-    name: appServicePlanSku
-  }
-  kind: 'linux'
+}
+
+resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+  name: acrName
+  location: location
+  sku: { name: 'Basic' }
   properties: {
-    reserved: true // Linux
+    adminUserEnabled: false
   }
 }
 
-resource api 'Microsoft.Web/sites@2023-12-01' = {
-  name: appName
-  location: location
-  identity: {
-    type: 'SystemAssigned'
-  }
+var acrPullRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+
+resource apiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: registry
+  name: guid(registry.id, apiIdentity.id, acrPullRoleId)
   properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-    siteConfig: {
-      linuxFxVersion: 'DOTNETCORE|10.0'
-      alwaysOn: isDedicatedPlan
-      ftpsState: 'Disabled'
-      minTlsVersion: '1.2'
-      healthCheckPath: isDedicatedPlan ? '/health' : null
-      appSettings: [
-        {
-          name: 'ASPNETCORE_ENVIRONMENT'
-          value: environmentName == 'prod' ? 'Production' : 'Staging'
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsights.properties.ConnectionString
-        }
-        {
-          // Key Vault reference — the API resolves ConnectionStrings:Default at runtime
-          // via its managed identity. Secret value never lands in app config.
-          name: 'ConnectionStrings__Default'
-          value: '@Microsoft.KeyVault(SecretUri=${dbConnectionSecret.properties.secretUri})'
-        }
-        // Auth settings the API validates at startup (AuthTokenOptionsValidator,
-        // GoogleOptionsValidator); a missing one stops the host. Lifetimes keep their code
-        // defaults, and email stays on the Console transport until a provider is chosen.
-        {
-          name: 'Auth__Token__SigningKey'
-          value: '@Microsoft.KeyVault(SecretUri=${authSigningKeySecret.properties.secretUri})'
-        }
-        {
-          name: 'Auth__Token__Issuer'
-          value: apiOrigin
-        }
-        {
-          name: 'Auth__Token__Audience'
-          value: authTokenAudience
-        }
-        {
-          name: 'Auth__Google__ClientId'
-          value: googleClientId
-        }
-        {
-          // The web client is served from the Static Web App's origin, so the API must
-          // allow it cross-origin (see PitchMate.Api/WebClientCors.cs).
-          name: 'Cors__AllowedOrigins__0'
-          value: 'https://${staticWebApp.properties.defaultHostname}'
-        }
-      ]
-    }
+    roleDefinitionId: acrPullRoleId
+    principalId: apiIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
-// Grant the API's managed identity read access to Key Vault secrets (RBAC).
 // Role: Key Vault Secrets User.
 var kvSecretsUserRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 
 resource apiKvAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: keyVault
-  name: guid(keyVault.id, api.id, kvSecretsUserRoleId)
+  name: guid(keyVault.id, apiIdentity.id, kvSecretsUserRoleId)
   properties: {
     roleDefinitionId: kvSecretsUserRoleId
-    principalId: api.identity.principalId
+    principalId: apiIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -278,6 +241,91 @@ resource operatorKvAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   }
 }
 
+// ── Container Apps (consumption) ────────────────────────────────────────────
+resource containerAppsEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
+  name: caEnvName
+  location: location
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalytics.properties.customerId
+        sharedKey: logAnalytics.listKeys().primarySharedKey
+      }
+    }
+    workloadProfiles: [
+      { name: 'Consumption', workloadProfileType: 'Consumption' }
+    ]
+  }
+}
+
+// The token issuer is the API's own origin, built from the environment's domain
+// (the app cannot reference its own FQDN in its own settings).
+var apiOrigin = 'https://${appName}.${containerAppsEnv.properties.defaultDomain}'
+
+resource api 'Microsoft.App/containerApps@2024-03-01' = if (deployApi) {
+  name: appName
+  location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: { '${apiIdentity.id}': {} }
+  }
+  dependsOn: [apiAcrPull, apiKvAccess]
+  properties: {
+    environmentId: containerAppsEnv.id
+    workloadProfileName: 'Consumption'
+    configuration: {
+      activeRevisionsMode: 'Single'
+      ingress: {
+        external: true
+        targetPort: apiPort
+        transport: 'auto'
+        allowInsecure: false
+      }
+      registries: [
+        { server: registry.properties.loginServer, identity: apiIdentity.id }
+      ]
+      // Key Vault references, resolved by the identity. Values never land in app config.
+      secrets: [
+        { name: 'db-connection-string', keyVaultUrl: dbConnectionSecret.properties.secretUri, identity: apiIdentity.id }
+        { name: 'auth-signing-key', keyVaultUrl: authSigningKeySecret.properties.secretUri, identity: apiIdentity.id }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: 'api'
+          image: '${registry.properties.loginServer}/${apiImageTag}'
+          resources: { cpu: json('0.5'), memory: '1Gi' }
+          env: [
+            { name: 'ASPNETCORE_ENVIRONMENT', value: environmentName == 'prod' ? 'Production' : 'Staging' }
+            { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
+            { name: 'ConnectionStrings__Default', secretRef: 'db-connection-string' }
+            // Auth settings the API validates at startup (AuthTokenOptionsValidator,
+            // GoogleOptionsValidator); a missing one stops the host. Lifetimes keep their code
+            // defaults, and email stays on the Console transport until a provider is chosen.
+            { name: 'Auth__Token__SigningKey', secretRef: 'auth-signing-key' }
+            { name: 'Auth__Token__Issuer', value: apiOrigin }
+            { name: 'Auth__Token__Audience', value: authTokenAudience }
+            { name: 'Auth__Google__ClientId', value: googleClientId }
+            // The web client is served from the Static Web App's origin, so the API must
+            // allow it cross-origin (see PitchMate.Api/WebClientCors.cs).
+            { name: 'Cors__AllowedOrigins__0', value: 'https://${staticWebApp.properties.defaultHostname}' }
+          ]
+          probes: [
+            { type: 'Liveness', httpGet: { path: '/health', port: apiPort }, periodSeconds: 30 }
+            { type: 'Readiness', httpGet: { path: '/health', port: apiPort }, periodSeconds: 10 }
+          ]
+        }
+      ]
+      scale: {
+        minReplicas: apiMinReplicas
+        maxReplicas: apiMaxReplicas
+      }
+    }
+  }
+}
+
 // ── Static Web App (React/Vite) ─────────────────────────────────────────────
 resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   name: swaName
@@ -290,8 +338,10 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
 }
 
 // ── Outputs (consumed by the runbook / CD secrets) ──────────────────────────
-output apiAppName string = api.name
-output apiDefaultHostname string = api.properties.defaultHostName
+output apiAppName string = deployApi ? appName : ''
+output apiDefaultHostname string = deployApi ? '${appName}.${containerAppsEnv.properties.defaultDomain}' : ''
+output registryName string = registry.name
+output registryLoginServer string = registry.properties.loginServer
 output staticWebAppName string = staticWebApp.name
 output staticWebAppHostname string = staticWebApp.properties.defaultHostname
 output keyVaultName string = keyVault.name
