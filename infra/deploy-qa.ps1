@@ -26,6 +26,9 @@ az config set core.only_show_errors=true 2>$null | Out-Null
 
 $rg       = 'rg-pitchmate-qa'
 $location = 'uksouth'
+# Static Web Apps isn't offered in uksouth, and westeurope refuses new customers
+# ("region is currently not accepting new customers"). The SWA region only places
+# its control plane; content is served from the global edge either way.
 
 # 0) Who is deploying. The signed-in user keeps break-glass Key Vault access.
 $meId = az ad signed-in-user show --query id -o tsv
@@ -64,6 +67,7 @@ az deployment group create `
   --parameters postgresAdminLogin=pmadmin `
   --parameters appServicePlanSku=$AppServicePlanSku `
   --parameters postgresSkuName=Standard_B1ms `
+  --parameters staticWebAppLocation=eastus2 `
   --parameters postgresAdminPassword=$pgPassword `
   --parameters authSigningKey=$signingKey `
   --parameters googleClientId=$GoogleClientId `
