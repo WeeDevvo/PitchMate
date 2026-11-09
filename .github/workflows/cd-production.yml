@@ -46,6 +46,11 @@ jobs:
       - name: Restore local tools (dotnet-ef)
         run: dotnet tool restore
 
+      # The migration bundle reads project metadata before it builds, so the packages
+      # must already be restored (the API image itself is built by Docker below).
+      - name: Restore packages
+        run: dotnet restore src/PitchMate.Api
+
       - name: Produce migration bundle
         run: >-
           dotnet ef migrations bundle
