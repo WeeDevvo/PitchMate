@@ -46,9 +46,6 @@ jobs:
       - name: Restore local tools (dotnet-ef)
         run: dotnet tool restore
 
-      - name: Publish API
-        run: dotnet publish src/PitchMate.Api -c Release -o ../publish/api
-
       - name: Produce migration bundle
         run: >-
           dotnet ef migrations bundle
@@ -68,16 +65,59 @@ jobs:
 
       # Explicit, out-of-process migration step that completes before the app
       # rollout. Idempotent; stops without partial apply on failure.
+      # An Azure Postgres server only admits Azure services, which a GitHub-hosted runner
+      # isn't guaranteed to count as. Open it to this runner's IP for the migration step
+      # alone, and always close it again. An external database (Supabase in QA) needs none.
+      - name: Open the Postgres firewall to this runner
+        id: pg-firewall
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_PROD }}
+          PG_SERVER: ${{ vars.AZURE_PG_SERVER_PROD }}
+          RULE_NAME: gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          if [ -z "$PG_SERVER" ]; then
+            echo "No Azure Postgres server configured (AZURE_PG_SERVER_PROD unset); the database is external, so there is no firewall to open."
+            exit 0
+          fi
+          ip=$(curl -fsS https://api.ipify.org)
+          az postgres flexible-server firewall-rule create -g "$RESOURCE_GROUP" --server-name "$PG_SERVER" \
+            --name "$RULE_NAME" --start-ip-address "$ip" --end-ip-address "$ip" -o none
+          echo "opened=true" >> "$GITHUB_OUTPUT"
+
       - name: Apply migrations (efbundle)
         working-directory: publish
         run: ./efbundle --connection "${{ secrets.DB_CONNECTION_STRING }}"
 
-      # Deploy the published API to Azure App Service (zip-deploy).
-      - name: Deploy API
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ vars.AZURE_WEBAPP_NAME_PROD }}
-          package: publish/api
+      - name: Close the Postgres firewall
+        if: always() && steps.pg-firewall.outputs.opened == 'true'
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_PROD }}
+          PG_SERVER: ${{ vars.AZURE_PG_SERVER_PROD }}
+          RULE_NAME: gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+        run: >-
+          az postgres flexible-server firewall-rule delete -g "$RESOURCE_GROUP" --server-name "$PG_SERVER"
+          --name "$RULE_NAME" --yes -o none
+
+      # Build backend/Dockerfile, push it to the production registry, and roll the
+      # Container App onto it.
+      - name: Build, push and deploy the API image
+        working-directory: .
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_PROD }}
+          REGISTRY: ${{ vars.AZURE_ACR_NAME_PROD }}
+          CONTAINER_APP: ${{ vars.AZURE_CONTAINERAPP_NAME_PROD }}
+          TAG: pitchmate-api:prod-${{ github.sha }}
+        run: |
+          if [ -z "$REGISTRY" ] || [ -z "$CONTAINER_APP" ]; then
+            echo "::error::Repository variables AZURE_ACR_NAME_PROD and AZURE_CONTAINERAPP_NAME_PROD must be set."
+            exit 1
+          fi
+          az config set extension.use_dynamic_install=yes_without_prompt -o none
+          server=$(az acr show -n "$REGISTRY" --query loginServer -o tsv)
+          az acr login -n "$REGISTRY"
+          docker build -f backend/Dockerfile -t "$server/$TAG" .
+          docker push "$server/$TAG"
+          az containerapp update -n "$CONTAINER_APP" -g "$RESOURCE_GROUP" --image "$server/$TAG" -o none
 
   deploy-web:
     name: Deploy web
@@ -91,7 +131,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: package-lock.json
 
