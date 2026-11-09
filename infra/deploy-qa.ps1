@@ -25,7 +25,10 @@ param(
   # Skip step 5, e.g. when CD will apply migrations.
   [switch]$SkipMigrations,
   # Only run step 5, against the stack a previous run deployed.
-  [switch]$MigrationsOnly
+  [switch]$MigrationsOnly,
+  # Use the database whose connection string is already in Key Vault as Db-ConnectionString
+  # (e.g. a Supabase session pooler) instead of creating an Azure PostgreSQL server.
+  [switch]$ExternalDatabase
 )
 
 $log = "$env:TEMP\pm-deploy-qa.log"
@@ -74,7 +77,19 @@ if ($kvName) {
   if ($conn -match 'Password=([^;]+)') { $pgPassword = $Matches[1] }
   $signingKey = az keyvault secret show --vault-name $kvName -n Auth-SigningKey --query value -o tsv 2>$null
 }
-if ($pgPassword) { Log "Reusing the Postgres password from Key Vault." } else { $pgPassword = "Pm9$(New-Secret 24)-Kx"; Log "Generated a new Postgres password." }
+# Once Key Vault holds a non-Azure database, stay external even without the switch, so a
+# plain re-run can't recreate the Azure server and overwrite the operator's secret.
+if (-not $ExternalDatabase -and $conn -and $conn -notmatch 'postgres\.database\.azure\.com') {
+  $ExternalDatabase = [switch]$true
+  Log "Key Vault holds an external database; deploying in -ExternalDatabase mode."
+}
+if ($ExternalDatabase) {
+  if (-not $conn) { Fail "-ExternalDatabase needs the connection string in Key Vault first: az keyvault secret set --vault-name <vault> --name Db-ConnectionString --value ""Host=...""" }
+  if ($conn -match 'postgres\.database\.azure\.com') { Fail "Db-ConnectionString in Key Vault still points at the Azure server; set the external one first." }
+  $externalConn = $conn; $pgPassword = ''
+  Log "Using the external database from Key Vault ($(($conn -split ';' | Where-Object { $_ -like 'Host=*' }) -replace 'Host=',''))."
+}
+elseif ($pgPassword) { Log "Reusing the Postgres password from Key Vault." } else { $pgPassword = "Pm9$(New-Secret 24)-Kx"; Log "Generated a new Postgres password." }
 if ($signingKey) { Log "Reusing the token signing key from Key Vault." } else { $signingKey = "$(New-Secret 48)$(New-Secret 16)"; Log "Generated a new token signing key." }
 
 function Deploy([bool]$withApi, [string]$imageTag) {
@@ -88,6 +103,7 @@ function Deploy([bool]$withApi, [string]$imageTag) {
     --parameters namePrefix=pitchmate `
     --parameters postgresAdminLogin=pmadmin `
     --parameters postgresSkuName=Standard_B1ms `
+    --parameters useExternalDatabase=$($ExternalDatabase.IsPresent.ToString().ToLower()) `
     --parameters postgresAdminPassword=$pgPassword `
     --parameters authSigningKey=$signingKey `
     --parameters googleClientId=$GoogleClientId `
@@ -131,7 +147,18 @@ Log "Web: https://$($o.staticWebAppHostname.value)"
 }
 
 # ── 5. Migrations ──────────────────────────────────────────────────────────
-if (-not $SkipMigrations) {
+if (-not $SkipMigrations -and $ExternalDatabase) {
+  # Nothing to open: the external database authenticates by password from anywhere.
+  Log "Applying migrations to the external database..."
+  Push-Location backend
+  dotnet tool restore | Out-Null
+  dotnet ef database update --project src/PitchMate.Infrastructure --startup-project src/PitchMate.Api --connection $externalConn 2>&1 | Out-File -Append $log
+  $migrateExit = $LASTEXITCODE
+  Pop-Location
+  if ($migrateExit -ne 0) { Fail "migrations failed (see $log)" }
+  Log "Migrations applied."
+}
+elseif (-not $SkipMigrations) {
   $pgServer = $o.postgresServerName.value
   $ip = (Invoke-RestMethod https://api.ipify.org).Trim()
   $rule = "deploy-qa-$((Get-Date).ToString('yyyyMMddHHmmss'))"

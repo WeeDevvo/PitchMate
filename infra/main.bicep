@@ -36,9 +36,12 @@ param namePrefix string = 'pitchmate'
 @description('PostgreSQL administrator login name.')
 param postgresAdminLogin string
 
-@description('PostgreSQL administrator password. Pass via --parameters or a secure pipeline variable; never commit.')
+@description('PostgreSQL administrator password. Pass via --parameters or a secure pipeline variable; never commit. Unused when useExternalDatabase is true.')
 @secure()
-param postgresAdminPassword string
+param postgresAdminPassword string = ''
+
+@description('Use a database outside this deployment (e.g. Supabase for QA) instead of an Azure PostgreSQL Flexible Server. Its connection string must already be in Key Vault as Db-ConnectionString; this template then neither creates the server nor writes that secret.')
+param useExternalDatabase bool = false
 
 @description('PostgreSQL Flexible Server SKU (Burstable tier for low-cost QA).')
 param postgresSkuName string = 'Standard_B1ms'
@@ -47,8 +50,9 @@ param postgresSkuName string = 'Standard_B1ms'
 param keyVaultAdminObjectId string = ''
 
 @description('HMAC signing key for the API\'s access tokens (at least 32 bytes). Stored in Key Vault; pass at deploy time and never commit. Rotating it signs every user out.')
+// No @minLength(32): the .bicepparam files read it from the environment, which Bicep checks
+// at compile time. The API's AuthTokenOptionsValidator enforces the 32-byte minimum at startup.
 @secure()
-@minLength(32)
 param authSigningKey string
 
 @description('Google OAuth client id the API enforces as the audience of Google sign-in assertions. The API refuses to start without one; a placeholder boots it with Google sign-in unusable.')
@@ -87,8 +91,9 @@ var databaseName = 'pitchmate'
 // The port the image listens on (backend/Dockerfile: ASPNETCORE_URLS).
 var apiPort = 5243
 
-// Npgsql connection string built from the provisioned server + admin credentials.
-var pgConnectionString = 'Host=${pg.properties.fullyQualifiedDomainName};Database=${databaseName};Username=${postgresAdminLogin};Password=${postgresAdminPassword};SslMode=Require;Trust Server Certificate=true'
+// Npgsql connection string built from the provisioned server + admin credentials
+// (only when this template owns the database).
+var pgConnectionString = useExternalDatabase ? '' : 'Host=${pg!.properties.fullyQualifiedDomainName};Database=${databaseName};Username=${postgresAdminLogin};Password=${postgresAdminPassword};SslMode=Require;Trust Server Certificate=true'
 
 // ── Observability ─────────────────────────────────────────────────────────
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -111,7 +116,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // ── PostgreSQL Flexible Server ──────────────────────────────────────────────
-resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
+resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = if (!useExternalDatabase) {
   name: pgName
   location: location
   sku: {
@@ -135,7 +140,7 @@ resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   }
 }
 
-resource pgDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = {
+resource pgDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = if (!useExternalDatabase) {
   parent: pg
   name: databaseName
   properties: {
@@ -146,7 +151,7 @@ resource pgDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08
 
 // Allow other Azure services (the Container App) to reach the server. The
 // 0.0.0.0 sentinel rule is the documented "Allow Azure services" toggle.
-resource pgAllowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
+resource pgAllowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = if (!useExternalDatabase) {
   parent: pg
   name: 'AllowAllAzureServices'
   properties: {
@@ -169,7 +174,8 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
 }
 
 // Store the DB connection string as a secret; the API reads it via a Key Vault reference.
-resource dbConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+// With an external database the operator sets this secret, and the template leaves it alone.
+resource dbConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!useExternalDatabase) {
   parent: keyVault
   name: 'Db-ConnectionString'
   properties: {
@@ -270,7 +276,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = if (deployApi) {
     type: 'UserAssigned'
     userAssignedIdentities: { '${apiIdentity.id}': {} }
   }
-  dependsOn: [apiAcrPull, apiKvAccess]
+  dependsOn: [apiAcrPull, apiKvAccess, dbConnectionSecret]
   properties: {
     environmentId: containerAppsEnv.id
     workloadProfileName: 'Consumption'
@@ -287,7 +293,8 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = if (deployApi) {
       ]
       // Key Vault references, resolved by the identity. Values never land in app config.
       secrets: [
-        { name: 'db-connection-string', keyVaultUrl: dbConnectionSecret.properties.secretUri, identity: apiIdentity.id }
+        // Versionless, so the app follows the latest value whoever wrote it.
+        { name: 'db-connection-string', keyVaultUrl: '${keyVault.properties.vaultUri}secrets/Db-ConnectionString', identity: apiIdentity.id }
         { name: 'auth-signing-key', keyVaultUrl: authSigningKeySecret.properties.secretUri, identity: apiIdentity.id }
       ]
     }
@@ -345,6 +352,6 @@ output registryLoginServer string = registry.properties.loginServer
 output staticWebAppName string = staticWebApp.name
 output staticWebAppHostname string = staticWebApp.properties.defaultHostname
 output keyVaultName string = keyVault.name
-output postgresFqdn string = pg.properties.fullyQualifiedDomainName
-output postgresServerName string = pg.name
+output postgresFqdn string = useExternalDatabase ? '' : pg!.properties.fullyQualifiedDomainName
+output postgresServerName string = useExternalDatabase ? '' : pg!.name
 output appInsightsConnectionString string = appInsights.properties.ConnectionString

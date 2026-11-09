@@ -102,9 +102,11 @@ try {
   gh variable set AZURE_ACR_NAME_QA --repo $repo --body $registry
   # Baked into the web build as VITE_API_BASE_URL (cd-qa.yml), since the web app and API are cross-origin.
   gh variable set API_BASE_URL_QA --repo $repo --body "https://$apiHost"
-  # cd-qa.yml opens the Postgres firewall to its runner for the migration step, then closes it.
   gh variable set AZURE_RESOURCE_GROUP_QA --repo $repo --body $rg
-  gh variable set AZURE_PG_SERVER_QA --repo $repo --body $pgServer
+  # cd-qa.yml opens an Azure Postgres firewall to its runner for the migration step, then
+  # closes it. With an external database (Supabase) there's no server, so the variable goes.
+  if ($pgServer) { gh variable set AZURE_PG_SERVER_QA --repo $repo --body $pgServer }
+  else { gh variable delete AZURE_PG_SERVER_QA --repo $repo 2>$null; Log "External database: no AZURE_PG_SERVER_QA." }
 
   Log "DONE"
 }

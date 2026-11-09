@@ -11,9 +11,13 @@ param namePrefix = 'pitchmate'
 param postgresAdminLogin = 'pmadmin'
 param postgresSkuName = 'Standard_B1ms'
 
-// Provided at deploy time (secure). Placeholders overridden on the CLI / pipeline.
-param postgresAdminPassword = ''
-param authSigningKey = ''
+// QA's database is Supabase: its connection string is set in Key Vault by hand
+// (Db-ConnectionString), so no Azure PostgreSQL server is created.
+param useExternalDatabase = true
+
+// Secrets come from the environment at deploy time, never from this file.
+param postgresAdminPassword = readEnvironmentVariable('PM_PG_ADMIN_PASSWORD', '')
+param authSigningKey = readEnvironmentVariable('PM_AUTH_SIGNING_KEY', '')
 
 // Optional: set to your Entra user object id for break-glass Key Vault access.
 param keyVaultAdminObjectId = ''

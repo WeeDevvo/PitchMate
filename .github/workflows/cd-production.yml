@@ -65,9 +65,9 @@ jobs:
 
       # Explicit, out-of-process migration step that completes before the app
       # rollout. Idempotent; stops without partial apply on failure.
-      # The Postgres firewall only admits Azure services, which a GitHub-hosted runner
-      # isn't guaranteed to count as. Open it to this runner's IP for the migration
-      # step alone, and always close it again.
+      # An Azure Postgres server only admits Azure services, which a GitHub-hosted runner
+      # isn't guaranteed to count as. Open it to this runner's IP for the migration step
+      # alone, and always close it again. An external database (Supabase in QA) needs none.
       - name: Open the Postgres firewall to this runner
         id: pg-firewall
         env:
@@ -75,20 +75,21 @@ jobs:
           PG_SERVER: ${{ vars.AZURE_PG_SERVER_PROD }}
           RULE_NAME: gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          if [ -z "$RESOURCE_GROUP" ] || [ -z "$PG_SERVER" ]; then
-            echo "::error::Repository variables AZURE_RESOURCE_GROUP_PROD and AZURE_PG_SERVER_PROD must be set."
-            exit 1
+          if [ -z "$PG_SERVER" ]; then
+            echo "No Azure Postgres server configured (AZURE_PG_SERVER_PROD unset); the database is external, so there is no firewall to open."
+            exit 0
           fi
           ip=$(curl -fsS https://api.ipify.org)
           az postgres flexible-server firewall-rule create -g "$RESOURCE_GROUP" --server-name "$PG_SERVER" \
             --name "$RULE_NAME" --start-ip-address "$ip" --end-ip-address "$ip" -o none
+          echo "opened=true" >> "$GITHUB_OUTPUT"
 
       - name: Apply migrations (efbundle)
         working-directory: publish
         run: ./efbundle --connection "${{ secrets.DB_CONNECTION_STRING }}"
 
       - name: Close the Postgres firewall
-        if: always() && steps.pg-firewall.outcome == 'success'
+        if: always() && steps.pg-firewall.outputs.opened == 'true'
         env:
           RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_PROD }}
           PG_SERVER: ${{ vars.AZURE_PG_SERVER_PROD }}

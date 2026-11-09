@@ -24,6 +24,20 @@ with Docker running:
 ./infra/verify-qa.ps1
 ```
 
+QA's database is **Supabase** (free plan), so QA runs with `-ExternalDatabase`:
+
+```powershell
+# Once: put the Supabase *session pooler* string (port 5432, IPv4) in Key Vault.
+az keyvault secret set --vault-name <qa-vault> --name Db-ConnectionString `
+  --value "Host=aws-0-<region>.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.<ref>;Password=<password>;SslMode=Require"
+./infra/deploy-qa.ps1 -ExternalDatabase
+```
+
+Use the session pooler: Supabase's direct host is IPv6-only on the free plan,
+and the transaction pooler (6543) breaks EF Core's prepared statements and
+migrations. A free project **pauses after 7 days without activity**; restore it
+from the Supabase dashboard if QA starts returning database errors.
+
 `deploy-qa.ps1` deploys `main.bicep` twice. The first pass (`deployApi=false`)
 creates everything except the API, so the registry exists before the first
 image is pushed. The second deploys the Container App on that image. Migrations
@@ -60,6 +74,11 @@ GitHub environments/secrets, activating CD).
   It's user-assigned so its roles exist before the app's first revision starts.
 - **Low-cost tiers** — Container Apps consumption (0.5 vCPU / 1 GiB),
   Container Registry Basic, Postgres Burstable B1ms, Static Web Apps Free.
+- **QA's database is external (Supabase free plan)** to avoid Postgres's standing
+  cost, about £13 a month. `useExternalDatabase=true` creates no Azure Postgres
+  resources and leaves `Db-ConnectionString` in Key Vault to the operator; the
+  app reads it versionless, so a new value applies on the next revision.
+  Production keeps Azure Postgres (UK region, managed backups).
 - **Static Web App in eastus2** — SWA isn't offered in uksouth and westeurope
   refuses new customers. The region only places its control plane; content is
   served from the global edge.

@@ -11,10 +11,11 @@ param namePrefix = 'pitchmate'
 param postgresAdminLogin = 'pmadmin'
 param postgresSkuName = 'Standard_B1ms'
 
-param postgresAdminPassword = ''
+// Secrets come from the environment at deploy time, never from this file.
+param postgresAdminPassword = readEnvironmentVariable('PM_PG_ADMIN_PASSWORD', '')
 
-// Provided at deploy time (secure, >= 32 bytes); use a different key from QA.
-param authSigningKey = ''
+// At least 32 bytes; use a different key from QA.
+param authSigningKey = readEnvironmentVariable('PM_AUTH_SIGNING_KEY', '')
 
 param keyVaultAdminObjectId = ''
 
