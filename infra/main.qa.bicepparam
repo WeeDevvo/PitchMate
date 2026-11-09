@@ -17,3 +17,10 @@ param postgresAdminPassword = ''
 
 // Optional: set to your Entra user object id for break-glass Key Vault access.
 param keyVaultAdminObjectId = ''
+
+// Provided at deploy time (secure, >= 32 bytes). Placeholder overridden on the CLI / pipeline.
+param authSigningKey = ''
+
+// The web's Google sign-in flow isn't wired yet, so QA boots on a placeholder client id.
+// Replace it with the real OAuth client id once Google sign-in ships.
+param googleClientId = 'qa-placeholder.apps.googleusercontent.com'

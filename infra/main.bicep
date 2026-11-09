@@ -48,6 +48,17 @@ param postgresSkuName string = 'Standard_B1ms'
 @description('Object ID (principal) of the operator who should retain Key Vault admin access. Optional.')
 param keyVaultAdminObjectId string = ''
 
+@description('HMAC signing key for the API\'s access tokens (at least 32 bytes). Stored in Key Vault; pass at deploy time and never commit. Rotating it signs every user out.')
+@secure()
+@minLength(32)
+param authSigningKey string
+
+@description('Google OAuth client id the API enforces as the audience of Google sign-in assertions. The API refuses to start without one; a placeholder boots it with Google sign-in unusable.')
+param googleClientId string
+
+@description('Audience of the API\'s access tokens; must match what the web client expects.')
+param authTokenAudience string = 'pitchmate-web'
+
 // ── Naming ──────────────────────────────────────────────────────────────────
 var suffix = uniqueString(resourceGroup().id, environmentName)
 var appName = '${namePrefix}-api-${environmentName}-${suffix}'
@@ -58,6 +69,10 @@ var swaName = '${namePrefix}-web-${environmentName}'
 var laName = '${namePrefix}-logs-${environmentName}'
 var aiName = '${namePrefix}-ai-${environmentName}'
 var databaseName = 'pitchmate'
+
+// The token issuer is the API's own origin. It is built from the app name rather than read from
+// the site's defaultHostName, which the site's own settings cannot reference.
+var apiOrigin = 'https://${appName}.azurewebsites.net'
 
 // Npgsql connection string built from the provisioned server + admin credentials.
 var pgConnectionString = 'Host=${pg.properties.fullyQualifiedDomainName};Database=${databaseName};Username=${postgresAdminLogin};Password=${postgresAdminPassword};SslMode=Require;Trust Server Certificate=true'
@@ -154,6 +169,15 @@ resource dbConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+// The access-token signing key; the API reads Auth:Token:SigningKey via a Key Vault reference.
+resource authSigningKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'Auth-SigningKey'
+  properties: {
+    value: authSigningKey
+  }
+}
+
 // ── App Service (Linux, .NET 10) ────────────────────────────────────────────
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: planName
@@ -196,6 +220,25 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
           // via its managed identity. Secret value never lands in app config.
           name: 'ConnectionStrings__Default'
           value: '@Microsoft.KeyVault(SecretUri=${dbConnectionSecret.properties.secretUri})'
+        }
+        // Auth settings the API validates at startup (AuthTokenOptionsValidator,
+        // GoogleOptionsValidator); a missing one stops the host. Lifetimes keep their code
+        // defaults, and email stays on the Console transport until a provider is chosen.
+        {
+          name: 'Auth__Token__SigningKey'
+          value: '@Microsoft.KeyVault(SecretUri=${authSigningKeySecret.properties.secretUri})'
+        }
+        {
+          name: 'Auth__Token__Issuer'
+          value: apiOrigin
+        }
+        {
+          name: 'Auth__Token__Audience'
+          value: authTokenAudience
+        }
+        {
+          name: 'Auth__Google__ClientId'
+          value: googleClientId
         }
         {
           // The web client is served from the Static Web App's origin, so the API must
@@ -253,4 +296,5 @@ output staticWebAppName string = staticWebApp.name
 output staticWebAppHostname string = staticWebApp.properties.defaultHostname
 output keyVaultName string = keyVault.name
 output postgresFqdn string = pg.properties.fullyQualifiedDomainName
+output postgresServerName string = pg.name
 output appInsightsConnectionString string = appInsights.properties.ConnectionString

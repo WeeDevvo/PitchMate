@@ -14,3 +14,9 @@ param postgresSkuName = 'Standard_B1ms'
 param postgresAdminPassword = ''
 
 param keyVaultAdminObjectId = ''
+
+// Provided at deploy time (secure, >= 32 bytes); use a different key from QA.
+param authSigningKey = ''
+
+// Must be the real Google OAuth client id before production launch.
+param googleClientId = '<google-oauth-client-id>.apps.googleusercontent.com'

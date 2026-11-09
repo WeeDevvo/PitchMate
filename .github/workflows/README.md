@@ -52,8 +52,10 @@ The deploy structure already encodes the project's rules:
 4. **Add secrets** (per environment): `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
    `AZURE_SUBSCRIPTION_ID`, `DB_CONNECTION_STRING`, plus the Static Web Apps
    deployment token.
-5. **Fill in the `TODO` deploy steps** (App Service/Container Apps + Static Web
-   Apps actions).
+5. **Set the migration firewall variables** `AZURE_RESOURCE_GROUP_QA` /
+   `AZURE_PG_SERVER_QA` (and the `_PROD` pair). The deploy opens the Postgres
+   firewall to the runner's IP for the `efbundle` step only and always closes
+   it afterwards. `infra/configure-qa.ps1` sets the QA pair.
 6. **Set the API URL variables** `API_BASE_URL_QA` / `API_BASE_URL_PROD`
    (e.g. `https://<api-app>.azurewebsites.net`). The web build bakes this in as
    `VITE_API_BASE_URL` and fails without it, because the Static Web App and the

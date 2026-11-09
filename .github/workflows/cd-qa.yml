@@ -66,9 +66,37 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      # The Postgres firewall only admits Azure services, which a GitHub-hosted runner
+      # isn't guaranteed to count as. Open it to this runner's IP for the migration
+      # step alone, and always close it again.
+      - name: Open the Postgres firewall to this runner
+        id: pg-firewall
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_QA }}
+          PG_SERVER: ${{ vars.AZURE_PG_SERVER_QA }}
+          RULE_NAME: gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          if [ -z "$RESOURCE_GROUP" ] || [ -z "$PG_SERVER" ]; then
+            echo "::error::Repository variables AZURE_RESOURCE_GROUP_QA and AZURE_PG_SERVER_QA must be set (infra/configure-qa.ps1)."
+            exit 1
+          fi
+          ip=$(curl -fsS https://api.ipify.org)
+          az postgres flexible-server firewall-rule create -g "$RESOURCE_GROUP" -n "$PG_SERVER" \
+            --rule-name "$RULE_NAME" --start-ip-address "$ip" --end-ip-address "$ip" -o none
+
       - name: Apply migrations (efbundle)
         working-directory: publish
         run: ./efbundle --connection "${{ secrets.DB_CONNECTION_STRING }}"
+
+      - name: Close the Postgres firewall
+        if: always() && steps.pg-firewall.outcome == 'success'
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_QA }}
+          PG_SERVER: ${{ vars.AZURE_PG_SERVER_QA }}
+          RULE_NAME: gh-runner-${{ github.run_id }}-${{ github.run_attempt }}
+        run: >-
+          az postgres flexible-server firewall-rule delete -g "$RESOURCE_GROUP" -n "$PG_SERVER"
+          --rule-name "$RULE_NAME" --yes -o none
 
       # Deploy the published API to Azure App Service (zip-deploy). The app name
       # comes from a repo variable set during provisioning (walking-skeleton.md).
@@ -91,7 +119,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: package-lock.json
 
