@@ -18,6 +18,10 @@ The repository is structured as a monorepo with strict architectural boundaries:
 
 The product rules live in `.claude/rules/product.md`, which loads every session. `docs/` is git-ignored and may not exist locally.
 
+## Specs
+
+PitchMate is moving to spec-driven development. The **master spec** lives in `specs/master/` (start at `specs/master/index.md`): one chapter per file, every line tagged Built / Partial / Gap / Idea, and every Built or Partial line citing the code it comes from. Feature specs will live in `specs/features/<feature>.md`. The conventions are in `.claude/rules/specs.md`. Until the to-be spec is signed off, `.claude/rules/product.md` remains the authority; record any disagreement in the spec's Open questions rather than editing `product.md`.
+
 ## Common CLI Commands
 
 Run all commands from the repository root unless noted otherwise.
@@ -149,6 +153,7 @@ Deep domain rules are modularized in `.claude/rules/` to ensure relevant guideli
 - **`security-and-privacy.md`** (Loads for `backend/src/**`, `apps/web/src/features/auth/**`, `apps/web/src/features/*/api/**`): Uniform existence concealment, token rotation and hashing, auth providers, GDPR anonymisation, and secrets management.
 - **`testing-patterns.md`** (Loads for backend tests and web test suites): xUnit, Testcontainers, FsCheck version rules (2.16.6 in Infrastructure vs 3.3.3 elsewhere), database property harnesses, Vitest, Testing Library, `fast-check`, and `jest-axe`.
 - **`brand.md`** (Loads for web styling and UI components): Design tokens (`--pm-*`), semantic colors, dark-first theming, and shared UI component guidelines.
+- **`specs.md`** (Loads for `specs/**`): Spec layout (`specs/master/`, `specs/features/`), status tags (Built / Partial / Gap / Idea), source citations, the five-section chapter shape, Mermaid for flows, and `product.md`'s authority until the to-be spec is signed off.
 
 ## Key Conventions & Gotchas
 
