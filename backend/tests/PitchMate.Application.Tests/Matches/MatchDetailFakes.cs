@@ -43,6 +43,12 @@ internal sealed class StoredResponseAvailabilityRepository(params AvailabilityRe
     public Task RemoveAsync(AvailabilityResponse response, CancellationToken cancellationToken) =>
         throw new NotSupportedException("The detail read writes nothing.");
 
-    public Task<IReadOnlyList<AvailabilityResponse>> ListResponsesAsync(Guid matchId, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("The detail read reports the caller's response alone, never the squad's.");
+    public int ListCount { get; private set; }
+
+    // Read only for an organiser, whose detail carries the guests' responses.
+    public Task<IReadOnlyList<AvailabilityResponse>> ListResponsesAsync(Guid matchId, CancellationToken cancellationToken)
+    {
+        ListCount++;
+        return Task.FromResult<IReadOnlyList<AvailabilityResponse>>([.. responses.Where(r => r.MatchId == matchId)]);
+    }
 }

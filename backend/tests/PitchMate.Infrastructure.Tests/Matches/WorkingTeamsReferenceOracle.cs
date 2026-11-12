@@ -101,8 +101,10 @@ internal static class WorkingTeamsReferenceOracle
             ])),
         ];
 
+        // Shown as shares of the whole outcome: each engine win scaled by 1 − draw, so wins and draw sum to 1.
         MatchPrediction prediction = engine.Predict(rosters).Value!;
-        return new SplitPrediction([.. prediction.WinProbabilities], prediction.DrawProbability);
+        double draw = prediction.DrawProbability;
+        return new SplitPrediction([.. prediction.WinProbabilities.Select(win => win * (1.0 - draw))], draw);
     }
 
     /// <summary>

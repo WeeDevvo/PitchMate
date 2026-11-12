@@ -1,6 +1,4 @@
 # Local development services for PitchMate.
-# Currently just the dev database. Start it with:  docker compose up -d
-# These credentials are LOCAL-DEV ONLY (never used in QA/prod, which use Key Vault).
 services:
   db:
     image: postgres:16
@@ -19,6 +17,35 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: pitchmate-backend
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=pitchmate;Username=pitchmate;Password=pitchmate_local_dev"
+      Auth__Token__SigningKey: "${AUTH_SIGNING_KEY:-development-secret-key-that-is-at-least-32-bytes-long!}"
+      Auth__Token__Issuer: "http://localhost:5243"
+      Auth__Token__Audience: "pitchmate-web"
+    ports:
+      - "5243:5243"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: pitchmate-client
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
 
 volumes:
   pitchmate-db-data:

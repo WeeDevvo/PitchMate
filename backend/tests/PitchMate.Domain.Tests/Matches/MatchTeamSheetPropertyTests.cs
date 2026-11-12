@@ -166,7 +166,7 @@ public class MatchTeamSheetPropertyTests
             }
 
             var scores = sheetIds.Select((id, index) => new TeamScore(id, index)).ToList();
-            return match.Start().IsSuccess
+            return match.Start(DateTimeOffset.UnixEpoch).IsSuccess
                 && match.RecordResult(new MatchResult(ResultFidelity.Basic, scores), liveTrackingEnabled: false).IsSuccess;
         });
 
@@ -179,7 +179,7 @@ public class MatchTeamSheetPropertyTests
     private static Match ConfirmedMatch(Guid squadId, string location, DateTimeOffset day)
     {
         var match = Match.CreateDraft(Guid.Empty, squadId, location, [day], NowUtc).Value!;
-        match.Confirm(day, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+        match.Confirm(day, activeMembers: []);
         return match;
     }
 

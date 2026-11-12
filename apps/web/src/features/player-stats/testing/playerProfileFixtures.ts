@@ -745,6 +745,10 @@ export interface ProgressionRecordInput {
   readonly displayRating: number | null;
   /** How an absent `displayRating` is spelled. */
   readonly displayRatingAbsence: AbsenceSpelling;
+  /** The provisional estimate, read only where `displayRating` is absent. Omitted reads as absent. */
+  readonly estimatedRating?: number | null;
+  /** How an absent `estimatedRating` is spelled. Omitted means the member is missing. */
+  readonly estimatedRatingAbsence?: AbsenceSpelling;
   /** The point's own rating state, which the parser never reads. */
   readonly state: RatingState | null;
   /** The wire's two rating-model member values, which the parser never reads. */
@@ -752,8 +756,9 @@ export interface ProgressionRecordInput {
 }
 
 /**
- * A progression record on the wire, paired with the point it parses to — or
- * with **no point**, when the record carries no Display_Rating.
+ * A progression record on the wire, paired with the point it parses to — an
+ * established point for a Display_Rating, a provisional one for an estimate
+ * alone, or **no point** when the record carries neither.
  *
  * A ratingless record is not a failure: the body is accepted and the record
  * simply contributes nothing to plot, which is why the parsed side of this
@@ -772,15 +777,36 @@ export function progressionRecordFixture(
         input.displayRating,
         input.displayRatingAbsence,
       ),
+      ...optionalMember(
+        'estimatedRating',
+        input.estimatedRating ?? null,
+        input.estimatedRatingAbsence ?? 'missing',
+      ),
     },
-    parsed:
-      input.displayRating === null
-        ? null
-        : {
-            completedAtMs: input.instant.ms,
-            displayRating: input.displayRating,
-          },
+    parsed: parsedProgressionPoint(input),
   };
+}
+
+function parsedProgressionPoint(
+  input: ProgressionRecordInput,
+): ProgressionPoint | null {
+  if (input.displayRating !== null) {
+    return {
+      completedAtMs: input.instant.ms,
+      displayRating: input.displayRating,
+      provisional: false,
+    };
+  }
+
+  if (input.estimatedRating !== undefined && input.estimatedRating !== null) {
+    return {
+      completedAtMs: input.instant.ms,
+      displayRating: input.estimatedRating,
+      provisional: true,
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -805,10 +831,36 @@ export const ratedProgressionRecordFixtureArb: fc.Arbitrary<
     parsed: {
       completedAtMs: input.instant.ms,
       displayRating: input.displayRating,
+      provisional: false,
     },
   }));
 
-/** A progression record that carries no Display_Rating, and so no point. */
+/**
+ * A progression record that carries only a provisional estimate, and so a
+ * provisional point plotted at that estimate.
+ */
+export const provisionalProgressionRecordFixtureArb: fc.Arbitrary<
+  WireFixture<ProgressionPoint>
+> = fc
+  .record({
+    instant: wireInstantFixtureArb,
+    displayRating: fc.constant<number | null>(null),
+    displayRatingAbsence: absenceSpellingArb,
+    estimatedRating: wireDisplayRatingArb,
+    estimatedRatingAbsence: absenceSpellingArb,
+    state: fc.option(wireRatingStateArb, { nil: null }),
+    modelValues: fc.tuple(wireRatingModelValueArb, wireRatingModelValueArb),
+  })
+  .map((input) => ({
+    wire: progressionRecordFixture(input).wire,
+    parsed: {
+      completedAtMs: input.instant.ms,
+      displayRating: input.estimatedRating,
+      provisional: true,
+    },
+  }));
+
+/** A progression record that carries no rating number at all, and so no point. */
 export const ratinglessProgressionRecordFixtureArb: fc.Arbitrary<
   WireFixture<ProgressionPoint | null>
 > = fc
@@ -816,6 +868,8 @@ export const ratinglessProgressionRecordFixtureArb: fc.Arbitrary<
     instant: wireInstantFixtureArb,
     displayRating: fc.constant<number | null>(null),
     displayRatingAbsence: absenceSpellingArb,
+    estimatedRating: fc.constant<number | null>(null),
+    estimatedRatingAbsence: absenceSpellingArb,
     state: fc.option(wireRatingStateArb, { nil: null }),
     modelValues: fc.tuple(wireRatingModelValueArb, wireRatingModelValueArb),
   })
@@ -831,7 +885,8 @@ export const ratinglessProgressionRecordFixtureArb: fc.Arbitrary<
 export const progressionRecordFixtureArb: fc.Arbitrary<
   WireFixture<ProgressionPoint | null>
 > = fc.oneof(
-  { weight: 5, arbitrary: ratedProgressionRecordFixtureArb },
+  { weight: 4, arbitrary: ratedProgressionRecordFixtureArb },
+  { weight: 2, arbitrary: provisionalProgressionRecordFixtureArb },
   { weight: 1, arbitrary: ratinglessProgressionRecordFixtureArb },
 );
 

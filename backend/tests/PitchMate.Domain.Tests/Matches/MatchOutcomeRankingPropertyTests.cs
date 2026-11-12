@@ -177,7 +177,7 @@ public class MatchOutcomeRankingPropertyTests
     {
         var day = NowUtc.AddDays(7);
         var match = Match.CreateDraft(Guid.Empty, squadId, "Community Astro Pitch", [day], NowUtc).Value!;
-        match.Confirm(day, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+        match.Confirm(day, activeMembers: []);
 
         var ratings = new Dictionary<Guid, PlayerRating>();
         var teamRosters = new List<IReadOnlyList<Guid>>(sizes.Count);
@@ -202,7 +202,7 @@ public class MatchOutcomeRankingPropertyTests
 
         match.ApplyTeamProposal(proposal);
         match.Lock();
-        match.Start();
+        match.Start(DateTimeOffset.UnixEpoch);
 
         teamIds = match.Teams.Select(team => team.Id).ToList();
         ratingsByMembershipId = ratings;

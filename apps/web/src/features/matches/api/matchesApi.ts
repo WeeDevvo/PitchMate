@@ -18,13 +18,16 @@ import type {
 
 import { ok, type ParseResult } from '../../../wire';
 import { classifyOutcome, type RejectionReason } from '../lib/callOutcome';
+import type { EventResult, TrackedEvent } from '../lib/liveTracking';
+import type { TeamScore } from '../lib/parse/matchDetail';
+import { parseBatchResult, parseEventLog, parseLiveTrackingEnabled, parseTeamScores } from '../lib/parse/liveTracking';
 import { parseMatchDetail, type MatchDetail } from '../lib/parse/matchDetail';
 import { parseMatchList, type MatchList } from '../lib/parse/matchList';
 import { parseTeamSheet, type TeamSheet } from '../lib/parse/teamSheet';
 import {
-  parseSquadGuests,
+  parseSquadPlayers,
   parseWorkingTeams,
-  type SquadGuest,
+  type SquadPlayer,
   type WorkingTeams,
 } from '../lib/parse/teams';
 import {
@@ -55,21 +58,29 @@ const SQUAD_MATCHES_PATH = '/squads/{squadId}/matches';
 const MATCH_PATH = '/matches/{matchId}';
 const AVAILABILITY_PATH = '/squads/{squadId}/matches/{matchId}/availability';
 const TALLY_PATH = '/squads/{squadId}/matches/{matchId}/availability/tally';
+const GUEST_AVAILABILITY_PATH = '/squads/{squadId}/matches/{matchId}/guest-availability/{membershipId}';
 const SQUAD_PATH = '/squads/{squadId}';
 const CONFIRM_PATH = '/squads/{squadId}/matches/{matchId}/confirm';
 const PARTICIPANTS_PATH = '/squads/{squadId}/matches/{matchId}/participants';
 const PARTICIPANT_PATH = '/squads/{squadId}/matches/{matchId}/participants/{membershipId}';
+const OWN_PARTICIPATION_PATH = '/squads/{squadId}/matches/{matchId}/participants/me';
 const TEAMS_PATH = '/matches/{matchId}/teams';
 const REROLL_PATH = '/matches/{matchId}/teams/reroll';
 const MOVES_PATH = '/matches/{matchId}/teams/moves';
 const TEAM_NAME_PATH = '/matches/{matchId}/teams/{teamId}/name';
 const TEAM_BIB_PATH = '/matches/{matchId}/teams/{teamId}/bib';
 const LOCK_PATH = '/matches/{matchId}/teams/lock';
+const UNLOCK_PATH = '/matches/{matchId}/teams/unlock';
 const TEAM_SHEET_PATH = '/matches/{matchId}/team-sheet';
 const START_PATH = '/matches/{matchId}/start';
+const UNDO_START_PATH = '/matches/{matchId}/undo-start';
 const RESULT_PATH = '/matches/{matchId}/result';
 const COMPLETE_PATH = '/matches/{matchId}/complete';
 const CANCEL_PATH = '/matches/{matchId}/cancel';
+const FEATURES_PATH = '/squads/{squadId}/features';
+const EVENTS_PATH = '/matches/{matchId}/events';
+const RUNNING_SCORE_PATH = '/matches/{matchId}/running-score';
+const TRACKED_RESULT_PATH = '/matches/{matchId}/tracked-result';
 
 /** How long a call may take before it is abandoned. */
 export const MATCH_CALL_TIMEOUT_MS = 10_000;
@@ -140,14 +151,31 @@ export interface MatchesApi {
     signal?: AbortSignal,
   ): Promise<CallResult<void>>;
 
-  /** The squad's active guests, any of whom can be added to a confirmed match. */
-  getSquadGuests(squadId: string, signal?: AbortSignal): Promise<CallResult<readonly SquadGuest[]>>;
-
-  /** Add a guest to a confirmed match. */
-  addGuest(
+  /** Replace a guest's availability, marked on their behalf, with exactly these candidate days. */
+  setGuestAvailability(
     squadId: string,
     matchId: string,
     guestMembershipId: string,
+    markedDays: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** Withdraw the availability marked for a guest altogether. */
+  clearGuestAvailability(
+    squadId: string,
+    matchId: string,
+    guestMembershipId: string,
+    signal?: AbortSignal,
+  ): Promise<CallResult<void>>;
+
+  /** The squad's active members and guests: anyone can be added to a confirmed match, and guests' availability can be marked. */
+  getSquadPlayers(squadId: string, signal?: AbortSignal): Promise<CallResult<readonly SquadPlayer[]>>;
+
+  /** Add any active member or guest to a confirmed match. */
+  addParticipant(
+    squadId: string,
+    matchId: string,
+    membershipId: string,
     signal?: AbortSignal,
   ): Promise<CallResult<void>>;
 
@@ -158,6 +186,12 @@ export interface MatchesApi {
     membershipId: string,
     signal?: AbortSignal,
   ): Promise<CallResult<void>>;
+
+  /** The caller joins a confirmed match themselves. Any registered member may. */
+  joinMatch(squadId: string, matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** The caller leaves a confirmed match they are playing in. */
+  leaveMatch(squadId: string, matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
 
   /** The working teams, the engine's prediction for them, and who is on no team. */
   getWorkingTeams(matchId: string, signal?: AbortSignal): Promise<CallResult<WorkingTeams>>;
@@ -187,8 +221,14 @@ export interface MatchesApi {
   /** Lock the teams, capturing the kickoff lineup. */
   lockTeams(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
 
+  /** Unlock locked teams before kickoff, so players can be added or removed. */
+  unlockTeams(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
   /** Start a match whose teams are locked. */
   startMatch(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /** Undo a mistaken kickoff, back to locked teams, while nothing is recorded for the match. */
+  undoMatchStart(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
 
   /**
    * Record, or re-record, the final score of a match in progress: one score per
@@ -205,6 +245,34 @@ export interface MatchesApi {
 
   /** Cancel a match that has not started. */
   cancelMatch(matchId: string, signal?: AbortSignal): Promise<CallResult<void>>;
+
+  /* Live tracking ------------------------------------------------------------ */
+
+  /** Whether the squad has live match tracking on. Any active member may ask. */
+  getLiveTracking(squadId: string, signal?: AbortSignal): Promise<CallResult<boolean>>;
+
+  /** The score of a match in progress, from the events recorded so far. Any member may read it. */
+  getRunningScore(matchId: string, signal?: AbortSignal): Promise<CallResult<readonly TeamScore[]>>;
+
+  /** Every event recorded for a match, retractions included, oldest first. Any member may read it. */
+  getMatchEvents(matchId: string, signal?: AbortSignal): Promise<CallResult<readonly TrackedEvent[]>>;
+
+  /**
+   * Record events against a match in progress, answering each one's outcome.
+   * Each event carries its own identity, so resending a batch records nothing
+   * twice.
+   */
+  recordEvents(
+    matchId: string,
+    events: readonly TrackedEvent[],
+    signal?: AbortSignal,
+  ): Promise<CallResult<readonly EventResult[]>>;
+
+  /**
+   * End a tracked match: the recorded events become its result and the match is
+   * completed, which applies the rating update once.
+   */
+  finaliseTrackedResult(matchId: string, signal?: AbortSignal): Promise<CallResult<readonly TeamScore[]>>;
 }
 
 export interface MatchesApiDependencies {
@@ -337,19 +405,45 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
       );
     },
 
-    getSquadGuests(squadId, signal) {
+    setGuestAvailability(squadId, matchId, guestMembershipId, markedDays, signal) {
+      const body: Schemas['SubmitAvailabilityRequest'] = { markedDays: [...markedDays] };
       return call(
-        (callSignal): ClientCall<'GetSquad'> =>
-          apiClient.GET(SQUAD_PATH, { params: { path: { squadId } }, signal: callSignal }),
-        parseSquadGuests,
+        (callSignal): ClientCall<'SetGuestAvailability'> =>
+          apiClient.PUT(GUEST_AVAILABILITY_PATH, {
+            params: { path: { squadId, matchId, membershipId: guestMembershipId } },
+            body,
+            signal: callSignal,
+          }),
+        acceptNoValue,
         signal,
       );
     },
 
-    addGuest(squadId, matchId, guestMembershipId, signal) {
-      const body: Schemas['AddGuestParticipantRequest'] = { guestMembershipId };
+    clearGuestAvailability(squadId, matchId, guestMembershipId, signal) {
       return call(
-        (callSignal): ClientCall<'AddGuestParticipant'> =>
+        (callSignal): ClientCall<'ClearGuestAvailability'> =>
+          apiClient.DELETE(GUEST_AVAILABILITY_PATH, {
+            params: { path: { squadId, matchId, membershipId: guestMembershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    getSquadPlayers(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'GetSquad'> =>
+          apiClient.GET(SQUAD_PATH, { params: { path: { squadId } }, signal: callSignal }),
+        parseSquadPlayers,
+        signal,
+      );
+    },
+
+    addParticipant(squadId, matchId, membershipId, signal) {
+      const body: Schemas['AddParticipantRequest'] = { membershipId };
+      return call(
+        (callSignal): ClientCall<'AddParticipant'> =>
           apiClient.POST(PARTICIPANTS_PATH, {
             params: { path: { squadId, matchId } },
             body,
@@ -365,6 +459,30 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
         (callSignal): ClientCall<'RemoveParticipant'> =>
           apiClient.DELETE(PARTICIPANT_PATH, {
             params: { path: { squadId, matchId, membershipId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    joinMatch(squadId, matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'JoinMatch'> =>
+          apiClient.POST(OWN_PARTICIPATION_PATH, {
+            params: { path: { squadId, matchId } },
+            signal: callSignal,
+          }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    leaveMatch(squadId, matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'LeaveMatch'> =>
+          apiClient.DELETE(OWN_PARTICIPATION_PATH, {
+            params: { path: { squadId, matchId } },
             signal: callSignal,
           }),
         acceptNoValue,
@@ -442,10 +560,28 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
       );
     },
 
+    unlockTeams(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'UnlockTeams'> =>
+          apiClient.POST(UNLOCK_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
     startMatch(matchId, signal) {
       return call(
         (callSignal): ClientCall<'StartMatch'> =>
           apiClient.POST(START_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        acceptNoValue,
+        signal,
+      );
+    },
+
+    undoMatchStart(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'UndoMatchStart'> =>
+          apiClient.POST(UNDO_START_PATH, { params: { path: { matchId } }, signal: callSignal }),
         acceptNoValue,
         signal,
       );
@@ -485,7 +621,90 @@ export function createMatchesApi({ apiClient }: MatchesApiDependencies): Matches
         signal,
       );
     },
+
+    getLiveTracking(squadId, signal) {
+      return call(
+        (callSignal): ClientCall<'GetFeatureFlags'> =>
+          apiClient.GET(FEATURES_PATH, { params: { path: { squadId } }, signal: callSignal }),
+        parseLiveTrackingEnabled,
+        signal,
+      );
+    },
+
+    getRunningScore(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'GetMatchRunningScore'> =>
+          apiClient.GET(RUNNING_SCORE_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        parseTeamScores,
+        signal,
+      );
+    },
+
+    getMatchEvents(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'GetMatchEvents'> =>
+          apiClient.GET(EVENTS_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        parseEventLog,
+        signal,
+      );
+    },
+
+    recordEvents(matchId, events, signal) {
+      const body: Schemas['EventBatchRequest'] = { events: events.map(toSubmission) };
+      return call(
+        (callSignal): ClientCall<'RecordMatchEvents'> =>
+          apiClient.POST(EVENTS_PATH, {
+            params: { path: { matchId } },
+            body,
+            signal: callSignal,
+          }),
+        parseBatchResult,
+        signal,
+      );
+    },
+
+    finaliseTrackedResult(matchId, signal) {
+      return call(
+        (callSignal): ClientCall<'FinaliseTrackedResult'> =>
+          apiClient.POST(TRACKED_RESULT_PATH, { params: { path: { matchId } }, signal: callSignal }),
+        parseTeamScores,
+        signal,
+      );
+    },
   };
+}
+
+/** One tracked event as the recording endpoint takes it. */
+function toSubmission(event: TrackedEvent): Schemas['EventSubmissionRequest'] {
+  switch (event.kind) {
+    case 'goal':
+      return {
+        eventId: event.eventId,
+        kind: 'GoalScored',
+        minute: event.minute,
+        scoringTeamId: event.teamId,
+        scorerMembershipId: event.scorerId,
+        ownGoal: event.ownGoal,
+      };
+    case 'keeper':
+      return {
+        eventId: event.eventId,
+        kind: 'KeeperStintStarted',
+        minute: event.minute,
+        keeperMembershipId: event.keeperId,
+        keptTeamId: event.teamId,
+        ownGoal: false,
+      };
+    case 'goal-undo':
+    case 'keeper-undo':
+      return {
+        eventId: event.eventId,
+        kind: event.kind === 'goal-undo' ? 'GoalRetracted' : 'KeeperStintRetracted',
+        minute: event.minute,
+        targetEventId: event.targetEventId,
+        ownGoal: false,
+      };
+  }
 }
 
 /** The parser for a call whose success carries nothing this feature reads. */

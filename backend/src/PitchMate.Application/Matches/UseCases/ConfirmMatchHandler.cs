@@ -11,7 +11,7 @@ using SquadMembership = PitchMate.Domain.Squads.SquadMembership;
 namespace PitchMate.Application.Matches.UseCases;
 
 /// <summary>
-/// Confirms a match on one of its candidate days once enough players are available, transitioning it
+/// Confirms a match on whichever of its candidate days an organiser chooses, transitioning it
 /// from <see cref="MatchState.GatheringAvailability"/> to <see cref="MatchState.Confirmed"/> and
 /// notifying the squad that the game is on (Requirement 6, 2.3).
 /// <para>
@@ -23,16 +23,12 @@ namespace PitchMate.Application.Matches.UseCases;
 /// that changes nothing and discloses neither the squad nor the match (Requirement 6.7, 14.1, 14.2).
 /// </para>
 /// <para>
-/// It reads the squad's <c>Minimum_Player_Threshold</c>, defaulting to
-/// <see cref="DefaultMinimumPlayerThreshold"/> (10) when the squad configures none (Requirement 6.3),
-/// then computes the confirmed day's available count from the squad's active registered members and
-/// their stored availability responses (loaded via <see cref="IAvailabilityRepository"/>) using the
-/// pure <see cref="AvailabilityTally"/> computation (Requirement 5.1, 6.1). It hands the day, the
-/// available count, the threshold, and the active registered members to <see cref="Match.Confirm"/>,
-/// which re-validates the state, the candidate day, and the threshold before setting the confirmed
-/// day, transitioning to <see cref="MatchState.Confirmed"/>, and seeding one registered participant
-/// per active registered member whose response marks the confirmed day (Requirement 6.1, 6.2, 6.4,
-/// 6.5). The change is committed atomically through <see cref="IUnitOfWork.SaveChangesAsync"/>, so a
+/// Availability is a guide, not a gate: there is no minimum player count. The handler hands the day
+/// and the squad's active members, guests included, to <see cref="Match.Confirm"/>, which validates
+/// the state and the candidate day before setting the confirmed day, transitioning to
+/// <see cref="MatchState.Confirmed"/>, and seeding one participant per active member whose stored
+/// response marks the confirmed day, a guest's being one an admin marked for it (Requirement 6.1,
+/// 6.4, 6.5). More players join or are added afterwards. The change is committed atomically through <see cref="IUnitOfWork.SaveChangesAsync"/>, so a
 /// failed commit leaves the match in <see cref="MatchState.GatheringAvailability"/> with no confirmed
 /// day and no participants (Requirement 6.1).
 /// </para>
@@ -53,13 +49,6 @@ namespace PitchMate.Application.Matches.UseCases;
 /// </summary>
 public sealed class ConfirmMatchHandler
 {
-    /// <summary>
-    /// The minimum player threshold applied when the owning squad configures none, so a candidate day
-    /// must have at least this many available active registered members before it can be confirmed
-    /// (Requirement 6.3).
-    /// </summary>
-    public const int DefaultMinimumPlayerThreshold = 10;
-
     private readonly IMatchRepository _matches;
     private readonly IAvailabilityRepository _availability;
     private readonly ISquadMembershipRepository _memberships;
@@ -70,9 +59,9 @@ public sealed class ConfirmMatchHandler
 
     /// <summary>
     /// Creates the handler with the match repository it loads and confirms the match through, the
-    /// availability repository it computes the confirmed day's available count from, the membership
-    /// repository it resolves and gates the acting membership and lists the active registered members
-    /// through, the squad repository it reads the minimum threshold and squad name from, the unit of
+    /// availability repository it reads the stored responses from (they are not part of the loaded
+    /// match graph), the membership repository it resolves and gates the acting membership and lists the active members
+    /// through, the squad repository it reads the squad name from, the unit of
     /// work it commits through, the notification publisher it raises the <c>MatchConfirmed</c> event
     /// through after a committed confirmation, and the logger it records an isolated publish failure
     /// with.
@@ -156,27 +145,28 @@ public sealed class ConfirmMatchHandler
             return Result<ConfirmMatchResult>.Fail(gate.Error!);
         }
 
-        // Read the squad's minimum threshold (default 10 when unset) and, for the notification, its name
-        // (Requirement 6.3).
+        // The squad's name, for the notification.
         Squad? squad = await _squads.GetByIdAsync(match.SquadId, cancellationToken);
-        int minimumThreshold = ResolveMinimumThreshold(squad);
 
-        // The active registered members of the squad are both the seeding candidates and the scope for
-        // the available count: only their responses count towards a candidate day (Requirement 5.1, 6.1).
+        // The active members of the squad, guests included, are the seeding candidates. A guest's
+        // response is one an admin marked for it (Requirement 6.5).
         IReadOnlyList<SquadMembership> squadMembers =
             await _memberships.ListForSquadAsync(match.SquadId, activeOnly: true, cancellationToken);
 
-        List<RegisteredMember> activeRegisteredMembers = squadMembers
-            .Where(m => !m.IsGuest)
-            .Select(m => new RegisteredMember(m.Id, m.DisplayName))
+        List<ConfirmableMember> activeMembers = squadMembers
+            .Select(m => new ConfirmableMember(m.Id, m.DisplayName, m.IsGuest))
             .ToList();
 
-        int availableCount = await ComputeAvailableCountAsync(match, command.Day, activeRegisteredMembers, cancellationToken);
+        // The stored responses, members' own and guests' marked by an admin. They are written through
+        // the availability repository and are not part of the loaded match graph, so they are read here
+        // rather than from the aggregate; without them nobody would be seeded.
+        IReadOnlyList<AvailabilityResponse> responses =
+            await _availability.ListResponsesAsync(match.Id, cancellationToken);
 
-        // Confirm on the aggregate: it re-validates the state, the candidate day, and the threshold,
-        // and seeds participants from the members whose stored response marks the confirmed day
-        // (Requirement 6.1, 6.2, 6.4, 6.5). On any failure the match is left unchanged.
-        Result confirmed = match.Confirm(command.Day, availableCount, minimumThreshold, activeRegisteredMembers);
+        // Confirm on the aggregate: it validates the state and the candidate day, and seeds participants
+        // from the members whose stored response marks the confirmed day (Requirement 6.1, 6.4, 6.5).
+        // On any failure the match is left unchanged.
+        Result confirmed = match.Confirm(command.Day, activeMembers, responses);
         if (!confirmed.IsSuccess)
         {
             return Result<ConfirmMatchResult>.Fail(confirmed.Error!);
@@ -195,46 +185,6 @@ public sealed class ConfirmMatchHandler
             match.ConfirmedDay!.Value.Instant,
             match.Participants.Count));
     }
-
-    /// <summary>
-    /// Computes the count of available active registered members on <paramref name="day"/> from the
-    /// match's stored availability responses, scoped to <paramref name="activeRegisteredMembers"/> so
-    /// a member who has since gone inactive or is a guest is excluded (Requirement 5.1, 5.3, 5.4, 6.1).
-    /// Returns 0 when <paramref name="day"/> is not a candidate day, in which case
-    /// <see cref="Match.Confirm"/> rejects it as an invalid day (Requirement 6.4).
-    /// </summary>
-    private async Task<int> ComputeAvailableCountAsync(
-        Match match,
-        DateTimeOffset day,
-        IReadOnlyList<RegisteredMember> activeRegisteredMembers,
-        CancellationToken cancellationToken)
-    {
-        IReadOnlyList<AvailabilityResponse> responses =
-            await _availability.ListResponsesAsync(match.Id, cancellationToken);
-
-        var activeRegisteredIds = activeRegisteredMembers.Select(m => m.SquadMembershipId).ToHashSet();
-        IEnumerable<AvailabilityResponse> scoped =
-            responses.Where(r => activeRegisteredIds.Contains(r.SquadMembershipId));
-
-        AvailabilityTally tally = AvailabilityTally.Compute(match.CandidateDays, scoped);
-
-        // The tally reports each day as a bare UTC instant; DateTimeOffset equality compares the
-        // instant, so this matches the CandidateDay's by-instant equality it replaced.
-        var confirmedDay = new CandidateDay(day);
-        DayAvailability? entry = tally.Days.FirstOrDefault(d => d.Day == confirmedDay.Instant);
-        return entry?.Count ?? 0;
-    }
-
-    /// <summary>
-    /// Resolves the squad's minimum player threshold, defaulting to
-    /// <see cref="DefaultMinimumPlayerThreshold"/> when the squad is unavailable or configures none
-    /// (Requirement 6.3). Internal so the match detail read publishes the threshold through this same
-    /// seam rather than restating the value (match-read-models Requirement 2.5).
-    /// </summary>
-    internal static int ResolveMinimumThreshold(Squad? squad) =>
-        // The squad aggregate carries no configurable threshold today, so the documented default of 10
-        // is the effective value; this seam reads any future squad-configured threshold in one place.
-        DefaultMinimumPlayerThreshold;
 
     /// <summary>
     /// Publishes the single <see cref="NotificationType.MatchConfirmed"/> broadcast for a freshly

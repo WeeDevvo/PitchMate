@@ -354,6 +354,9 @@ export const WIN_PERCENTAGE_LABEL = 'Win percentage';
  */
 export const RATING_PROVISIONAL = 'Rating still settling';
 
+/** The words on the progression chart's band behind provisional readings. */
+export const PROVISIONAL_BAND_LABEL = '~ Provisional';
+
 /**
  * The Never_Played label (Requirement 7.4).
  *

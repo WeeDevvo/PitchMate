@@ -72,7 +72,7 @@ import { messageForOutcome } from './lib/errorMapping'
 import type { AuthApiFacade } from './api/authApi'
 
 /** The screen heading (the single `h1`, rendered by AuthLayout). */
-export const RESET_CONFIRM_HEADING = 'Choose a new password'
+export const RESET_CONFIRM_HEADING = 'New password'
 
 // --- In-app destinations linked from the Reset_Confirm_Screen ---------------
 
@@ -253,7 +253,23 @@ export function ResetConfirmScreen({
   const showProceedToLogIn = status.kind === 'success'
 
   return (
-    <AuthLayout heading={RESET_CONFIRM_HEADING}>
+    <AuthLayout
+      heading={RESET_CONFIRM_HEADING}
+      footer={
+        (showResetRequestLink || showProceedToLogIn) && (
+          <>
+            {showProceedToLogIn && (
+              <LinkButton to={LOG_IN_PATH}>{PROCEED_TO_LOG_IN_LABEL}</LinkButton>
+            )}
+            {showResetRequestLink && (
+              <LinkButton to={RESET_REQUEST_PATH}>
+                {REQUEST_NEW_LINK_LABEL}
+              </LinkButton>
+            )}
+          </>
+        )
+      }
+    >
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         <PasswordField
           value={password}
@@ -261,6 +277,7 @@ export function ResetConfirmScreen({
           error={passwordError}
           inputRef={passwordRef}
           autoComplete="new-password"
+          hint={`At least ${PASSWORD_MIN} characters`}
           required
           // Without a token the field cannot be redeemed; keep it disabled so
           // the form presents no usable entry point (Requirement 6.4).
@@ -277,19 +294,6 @@ export function ResetConfirmScreen({
       </form>
 
       <LiveRegion message={shownMessage} politeness={politeness} />
-
-      {(showResetRequestLink || showProceedToLogIn) && (
-        <nav className="auth-links" aria-label="Other options">
-          {showProceedToLogIn && (
-            <LinkButton to={LOG_IN_PATH}>{PROCEED_TO_LOG_IN_LABEL}</LinkButton>
-          )}
-          {showResetRequestLink && (
-            <LinkButton to={RESET_REQUEST_PATH}>
-              {REQUEST_NEW_LINK_LABEL}
-            </LinkButton>
-          )}
-        </nav>
-      )}
     </AuthLayout>
   )
 }

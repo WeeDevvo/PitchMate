@@ -14,11 +14,11 @@
 .squads-delete__statement {
   margin: 0;
   max-width: var(--squads-measure);
-  color: var(--text);
+  color: var(--pm-text-primary);
 }
 
 .squads-delete__hint {
   margin: 0;
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-meta);
 }

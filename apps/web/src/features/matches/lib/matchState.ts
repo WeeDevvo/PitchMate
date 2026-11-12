@@ -32,3 +32,24 @@ export function isOrganiser(standing: SquadStanding | null): boolean {
 export function isGatheringAvailability(state: MatchState): boolean {
   return state === 'GatheringAvailability';
 }
+
+/**
+ * Where a match stands in the admin's six-step create-match flow
+ * (`MATCH_FLOW_STEPS`), as the index of the step in progress: gathering
+ * availability is step 2, a confirmed match is filling its players (rolling,
+ * naming and locking follow on the same screen), and locked teams have finished
+ * every step. A match that has started, finished or been cancelled is past the
+ * flow and answers `null`.
+ */
+export function setupStepOf(state: MatchState): number | null {
+  switch (state) {
+    case 'GatheringAvailability':
+      return 1;
+    case 'Confirmed':
+      return 3;
+    case 'TeamsRolled':
+      return 6;
+    default:
+      return null;
+  }
+}

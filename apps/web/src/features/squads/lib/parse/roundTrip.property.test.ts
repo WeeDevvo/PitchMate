@@ -4,7 +4,9 @@ import fc from 'fast-check';
 import { isSquadIdentifier } from '../identifiers';
 import {
   INVITE_STATE_NAMES,
+  MATCH_STATE_NAMES,
   MEMBERSHIP_STATE_NAMES,
+  PLAYER_RESULT_NAMES,
   RATING_STATE_NAMES,
   REDEEM_OUTCOME_NAMES,
   SQUAD_FEATURE_NAMES,
@@ -416,13 +418,31 @@ const squadFeatureArb = fc.constantFrom(...SQUAD_FEATURE_NAMES);
 const inviteStateArb = fc.constantFrom(...INVITE_STATE_NAMES);
 const redeemOutcomeArb = fc.constantFrom(...REDEEM_OUTCOME_NAMES);
 
-/** A Squad_Summary; `role` and `state` are absences for a caller with no membership. */
+/**
+ * A Squad_Summary; `role` and `state` are absences for a caller with no
+ * membership, `nextMatch` for a squad with no open match, and its `scheduledAtMs`
+ * for a match still gathering availability.
+ */
 const squadSummaryArb: fc.Arbitrary<SquadSummary> = plainRecord(
   fc.record({
     squadId: identityArb,
     name: wireTextArb,
     role: fc.option(memberRoleArb, { nil: null }),
     state: fc.option(membershipStateArb, { nil: null }),
+    playerCount: fc.nat({ max: 1000 }),
+    nextMatch: fc.option(
+      plainRecord(
+        fc.record({
+          matchId: identityArb,
+          state: fc.constantFrom(...MATCH_STATE_NAMES),
+          scheduledAtMs: fc.option(instantMsArb, { nil: null }),
+          place: wireTextArb,
+          candidateDayCount: fc.nat({ max: 14 }),
+        }),
+      ),
+      { nil: null },
+    ),
+    recentForm: fc.array(fc.constantFrom(...PLAYER_RESULT_NAMES), { maxLength: 5 }),
   }),
 );
 
@@ -916,12 +936,33 @@ describeRoundTrip<DisplayRatingLeaderboard>(
 // Feature: web-squads-screens, Property 36: Printing then parsing a value is the identity
 // Validates: Requirements 12.11, 16.5, 20.2
 describe('round trip — the wire form carries enums as names and instants as instants', () => {
-  it('prints a Squad_Summary as four properties, each enum as its name', () => {
+  it('prints a Squad_Summary as seven properties, each enum as its name', () => {
     fc.assert(
       fc.property(squadSummaryArb, (summary) => {
         const wire = wireObject(printSquadSummary(summary));
 
-        expect(wireKeys(wire)).toStrictEqual(['name', 'role', 'squadId', 'state']);
+        expect(wireKeys(wire)).toStrictEqual([
+          'name',
+          'nextMatch',
+          'playerCount',
+          'recentForm',
+          'role',
+          'squadId',
+          'state',
+        ]);
+        // The next match's state and the form's results are names too, and its
+        // day an instant string rather than milliseconds.
+        expect(wire.recentForm).toStrictEqual([...summary.recentForm]);
+        if (summary.nextMatch !== null) {
+          const next = wireObject(wire.nextMatch);
+          expect(next.state).toBe(summary.nextMatch.state);
+          expect(next.location).toBe(summary.nextMatch.place);
+          expect(
+            next.scheduledAt === null || typeof next.scheduledAt === 'string',
+          ).toBe(true);
+        } else {
+          expect(wire.nextMatch).toBeNull();
+        }
         expect(wire.squadId).toBe(summary.squadId);
         expect(wire.name).toBe(summary.name);
         // 12.11: a Wire_Enum_Name, emitted verbatim, and a member of the

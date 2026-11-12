@@ -59,9 +59,7 @@ import { useAuth } from './session/AuthContext'
 import { extractToken } from './lib/tokenFromUrl'
 import { messageForOutcome } from './lib/errorMapping'
 import type { AuthApiFacade } from './api/authApi'
-// Reuse the shared submit-control styling for the screen's action buttons
-// (retry / send-new-verification), so they match the auth theme tokens.
-import './components/SubmitButton.css'
+import { Button } from '../../ui'
 
 /** The screen heading (the single `h1`, rendered by AuthLayout). */
 export const VERIFY_EMAIL_HEADING = 'Verify your email'
@@ -293,26 +291,30 @@ export function VerifyEmailScreen({
   const showRequestNew = !succeeded
 
   return (
-    <AuthLayout heading={VERIFY_EMAIL_HEADING}>
+    <AuthLayout
+      heading={VERIFY_EMAIL_HEADING}
+      art={succeeded ? { icon: 'check', tone: 'accent' } : { icon: 'mail' }}
+    >
       <LiveRegion message={shownMessage} politeness={politeness} />
 
       <div className="auth-actions">
         {/* Requirement 7.8: retry the verification, preserving the token. */}
         {retryable && (
-          <button
-            type="button"
-            className="auth-submit"
+          <Button
+            block
             onClick={() => {
               void runRedeem()
             }}
           >
             {RETRY_LABEL}
-          </button>
+          </Button>
         )}
 
         {/* Requirement 7.3: proceed to Log_In or, with a Session, the Redirect_Target. */}
         {succeeded && (
-          <LinkButton to={successTarget}>{successLabel}</LinkButton>
+          <LinkButton to={successTarget} button={{ size: 'lg', block: true }}>
+            {successLabel}
+          </LinkButton>
         )}
 
         {/* Requirements 7.4, 7.5, 7.6, 7.7: session-gated request-new-verification. */}
@@ -320,9 +322,8 @@ export function VerifyEmailScreen({
           (isAuthenticated ? (
             // Requirement 7.5: authenticated → resend via the backend. Disabled
             // while a redeem or resend is in flight (Requirement 7.2).
-            <button
-              type="button"
-              className="auth-submit"
+            <Button
+              block
               disabled={newVerificationPending}
               aria-busy={newVerificationPending || undefined}
               onClick={() => {
@@ -330,7 +331,7 @@ export function VerifyEmailScreen({
               }}
             >
               {SEND_NEW_VERIFICATION_LABEL}
-            </button>
+            </Button>
           ) : (
             // Requirement 7.6: unauthenticated → direct to the Log_In_Screen,
             // because the backend resend endpoint requires an authenticated

@@ -104,6 +104,7 @@ import {
   targetsBarrelOf,
   themeRoot,
   wireRoot,
+  uiRoot,
 } from './structural/sourceScan';
 
 // --- The scanned sets --------------------------------------------------------
@@ -293,7 +294,9 @@ function isAdmittedOutwardTarget(target: string): boolean {
     targetsBarrelOf(squadsRoot, target) ||
     targetsBarrelOf(authRoot, target) ||
     isWithin(themeRoot, target) ||
-    targetsBarrelOf(wireRoot, target)
+    targetsBarrelOf(wireRoot, target) ||
+    // The shared component library, at its barrel (ADR 0004).
+    targetsBarrelOf(uiRoot, target)
   );
 }
 
@@ -471,6 +474,7 @@ describe('every module of the feature lives under features/player-stats/ (Requir
     expect(targets.some((target) => targetsBarrelOf(authRoot, target))).toBe(true);
     expect(targets.some((target) => isWithin(themeRoot, target))).toBe(true);
     expect(targets.some((target) => targetsBarrelOf(wireRoot, target))).toBe(true);
+    expect(targets.some((target) => targetsBarrelOf(uiRoot, target))).toBe(true);
   });
 
   it('imports nothing from the application wiring or another feature internal', () => {

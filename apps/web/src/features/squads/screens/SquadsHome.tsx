@@ -104,6 +104,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 import { HOME_ROUTE } from '../../app-shell';
+import { Button } from '../../../ui';
 import { useAuth } from '../../auth';
 import type {
   CreateSquadRequest,
@@ -563,32 +564,38 @@ export function SquadsHome({ api }: SquadsHomeProps): ReactElement {
 
   return (
     <div className="squads-home" data-squads-home="true">
-      {/* 1.9: the screen's one level-one heading. */}
-      <h1 className="squads-home__heading">{SQUADS_HOME_HEADING}</h1>
+      {/* The design system's squads home header: the heading, with the two
+          entry points beside it. */}
+      <div className="squads-home__header">
+        {/* 1.9: the screen's one level-one heading. */}
+        <h1 className="squads-home__heading">{SQUADS_HOME_HEADING}</h1>
 
-      {/* 2.2, 2.3: both entry points, outside the load-state branch, so each is
-          rendered as exactly one keyboard-operable control in every state. */}
-      <div className="squads-home__entry-points">
-        <button
-          type="button"
-          className="squads-home__entry-point"
-          ref={createOpenerRef}
-          aria-expanded={openPanel === 'create'}
-          aria-controls={CREATE_SQUAD_FORM_ID}
-          onClick={openCreatePanel}
-        >
-          {CREATE_SQUAD_HEADING}
-        </button>
-        <button
-          type="button"
-          className="squads-home__entry-point"
-          ref={joinOpenerRef}
-          aria-expanded={openPanel === 'join'}
-          aria-controls={JOIN_SQUAD_FORM_ID}
-          onClick={openJoinPanel}
-        >
-          {JOIN_SQUAD_HEADING}
-        </button>
+        {/* 2.2, 2.3: both entry points, outside the load-state branch, so each is
+            rendered as exactly one keyboard-operable control in every state. */}
+        <div className="squads-home__entry-points">
+          <Button
+            variant="primary"
+            icon="plus"
+            className="squads-home__entry-point"
+            ref={createOpenerRef}
+            aria-expanded={openPanel === 'create'}
+            aria-controls={CREATE_SQUAD_FORM_ID}
+            onClick={openCreatePanel}
+          >
+            {CREATE_SQUAD_HEADING}
+          </Button>
+          <Button
+            variant="secondary"
+            icon="key"
+            className="squads-home__entry-point"
+            ref={joinOpenerRef}
+            aria-expanded={openPanel === 'join'}
+            aria-controls={JOIN_SQUAD_FORM_ID}
+            onClick={openJoinPanel}
+          >
+            {JOIN_SQUAD_HEADING}
+          </Button>
+        </div>
       </div>
 
       {/* 3.1, 3.5, 3.8: the panel sits under the screen's `h1`, so it takes `h2`.

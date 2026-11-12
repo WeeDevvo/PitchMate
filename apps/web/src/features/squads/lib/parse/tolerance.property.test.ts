@@ -3,7 +3,9 @@ import fc from 'fast-check';
 
 import {
   INVITE_STATE_NAMES,
+  MATCH_STATE_NAMES,
   MEMBERSHIP_STATE_NAMES,
+  PLAYER_RESULT_NAMES,
   RATING_STATE_NAMES,
   REDEEM_OUTCOME_NAMES,
   SQUAD_FEATURE_NAMES,
@@ -181,6 +183,16 @@ function writeOptional(
 /* Part one: `role` and `state` absences (16.8)                               */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * The squad card facts every summary body must carry, held constant where a
+ * property varies only the membership fields: no players and no form, with the
+ * next match left absent — itself a valid absence.
+ */
+const CARD_FACTS = { playerCount: 0, recentForm: [] } as const;
+
+/** {@link CARD_FACTS} as the parser reads them back. */
+const PARSED_CARD_FACTS = { playerCount: 0, nextMatch: null, recentForm: [] } as const;
+
 // Feature: web-squads-screens, Property 38: Absent role and state parse as absences, and unknown properties are disregarded
 // Validates: Requirements 16.8, 16.9
 describe('Response_Parser — a `null` or absent role and state are absences', () => {
@@ -194,7 +206,7 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
         presenceArb,
         membershipStateNameArb,
         (squadId, name, rolePresence, roleName, statePresence, stateName) => {
-          const body: Record<string, unknown> = { squadId, name };
+          const body: Record<string, unknown> = { squadId, name, ...CARD_FACTS };
           writeOptional(body, 'role', rolePresence, roleName);
           writeOptional(body, 'state', statePresence, stateName);
 
@@ -215,6 +227,7 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
             // 12.8: the name arrives unchanged, with nothing mapped.
             role: rolePresence === 'present' ? roleName : null,
             state: statePresence === 'present' ? stateName : null,
+            ...PARSED_CARD_FACTS,
           });
         },
       ),
@@ -234,12 +247,12 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
           // "not sent" carries no meaning here, so the two must be
           // indistinguishable in the parsed value rather than merely both valid.
           expect(
-            parseSquadSummary({ squadId, name, role: null, state: stateName }),
-          ).toStrictEqual(parseSquadSummary({ squadId, name, state: stateName }));
+            parseSquadSummary({ squadId, name, role: null, state: stateName, ...CARD_FACTS }),
+          ).toStrictEqual(parseSquadSummary({ squadId, name, state: stateName, ...CARD_FACTS }));
 
           expect(
-            parseSquadSummary({ squadId, name, role: roleName, state: null }),
-          ).toStrictEqual(parseSquadSummary({ squadId, name, role: roleName }));
+            parseSquadSummary({ squadId, name, role: roleName, state: null, ...CARD_FACTS }),
+          ).toStrictEqual(parseSquadSummary({ squadId, name, role: roleName, ...CARD_FACTS }));
         },
       ),
       { numRuns: 200 },
@@ -254,13 +267,13 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
         absenceArb,
         absenceArb,
         (squadId, name, rolePresence, statePresence) => {
-          const body: Record<string, unknown> = { squadId, name };
+          const body: Record<string, unknown> = { squadId, name, ...CARD_FACTS };
           writeOptional(body, 'role', rolePresence, 'Owner');
           writeOptional(body, 'state', statePresence, 'Active');
 
           expect(parseSquadSummary(body)).toStrictEqual({
             ok: true,
-            value: { squadId, name, role: null, state: null },
+            value: { squadId, name, role: null, state: null, ...PARSED_CARD_FACTS },
           });
         },
       ),
@@ -278,8 +291,10 @@ describe('Response_Parser — a `null` or absent role and state are absences', (
               name: displayNameArb,
               role: fc.oneof(fc.constant(null), roleNameArb),
               state: fc.oneof(fc.constant(null), membershipStateNameArb),
+              playerCount: appearanceCountArb,
+              recentForm: fc.constant([]),
             },
-            { requiredKeys: ['squadId', 'name'] },
+            { requiredKeys: ['squadId', 'name', 'playerCount', 'recentForm'] },
           ),
           { maxLength: 8 },
         ),
@@ -723,8 +738,20 @@ const squadSummaryBodyArb = fc.record(
     name: displayNameArb,
     role: fc.oneof(fc.constant(null), roleNameArb),
     state: fc.oneof(fc.constant(null), membershipStateNameArb),
+    playerCount: appearanceCountArb,
+    nextMatch: fc.oneof(
+      fc.constant(null),
+      fc.record({
+        matchId: uuidArb,
+        state: fc.constantFrom(...MATCH_STATE_NAMES),
+        scheduledAt: fc.oneof(fc.constant(null), isoInstantArb),
+        location: displayNameArb,
+        candidateDayCount: fc.nat({ max: 14 }),
+      }),
+    ),
+    recentForm: fc.array(fc.constantFrom(...PLAYER_RESULT_NAMES), { maxLength: 5 }),
   },
-  { requiredKeys: ['squadId', 'name'] },
+  { requiredKeys: ['squadId', 'name', 'playerCount', 'recentForm'] },
 );
 
 const squadMemberBodyArb = fc.record(
@@ -1178,7 +1205,7 @@ describe('Response_Parser — absences and extra properties together', () => {
         membershipStateNameArb,
         deepExtrasArb,
         (squadId, name, rolePresence, roleName, statePresence, stateName, extras) => {
-          const body: Record<string, unknown> = { squadId, name };
+          const body: Record<string, unknown> = { squadId, name, ...CARD_FACTS };
           writeOptional(body, 'role', rolePresence, roleName);
           writeOptional(body, 'state', statePresence, stateName);
 

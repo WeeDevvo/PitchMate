@@ -35,6 +35,7 @@
  * Requirements: 9.4, 9.5
  */
 import { type ReactElement } from 'react';
+import { StatTile } from '../../../ui';
 
 import { BIB_APPEARANCES_LABEL } from '../lib/messages';
 import { formatCount } from '../lib/numberFormat';
@@ -73,12 +74,16 @@ export function BibAppearances({
 }: BibAppearancesProps): ReactElement {
   return (
     <dl className="player-stats-bibs" data-player-stats-bibs="true">
-      {/* 9.4: the words naming the figure as bib appearances. */}
-      <dt className="player-stats-bibs__label">{BIB_APPEARANCES_LABEL}</dt>
-      {/* 9.4, 9.5: the whole number exactly as parsed, for every profile. */}
-      <dd className="player-stats-bibs__value" data-player-stats-bib-count="true">
-        {formatCount(bibAppearances)}
-      </dd>
+      {/* 9.4: the words naming the figure as bib appearances; 9.4, 9.5: the
+          whole number exactly as parsed, for every profile. */}
+      <StatTile
+        tone="bib"
+        icon="bib"
+        label={BIB_APPEARANCES_LABEL}
+        value={formatCount(bibAppearances)}
+        labelProps={{ className: 'player-stats-bibs__label' }}
+        valueProps={{ className: 'player-stats-bibs__value', 'data-player-stats-bib-count': 'true' }}
+      />
     </dl>
   );
 }

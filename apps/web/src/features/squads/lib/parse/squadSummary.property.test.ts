@@ -3,9 +3,13 @@ import fc from 'fast-check';
 
 import { isSquadIdentifier } from '../identifiers';
 import {
+  MATCH_STATE_NAMES,
   MEMBERSHIP_STATE_NAMES,
+  PLAYER_RESULT_NAMES,
   SQUAD_ROLE_NAMES,
+  isMatchState,
   isMembershipState,
+  isPlayerResult,
   isSquadRole,
   type MembershipState,
   type SquadRole,
@@ -397,9 +401,22 @@ const unnamedStateNameArb: fc.Arbitrary<unknown> = fc.oneof(
 /* -------------------------------------------------------------------------- */
 
 /**
+ * A squad card's next match on the wire: a confirmed one with its day, or one
+ * still gathering availability with none.
+ */
+const nextMatchBodyArb: fc.Arbitrary<Record<string, unknown>> = fc.record({
+  matchId: identityArb,
+  state: fc.constantFrom(...MATCH_STATE_NAMES),
+  scheduledAt: fc.constantFrom<unknown>(null, '2026-11-09T10:00:00Z'),
+  location: nameArb,
+  candidateDayCount: fc.nat({ max: 14 }),
+});
+
+/**
  * A well-formed `ListMySquads` element, generated across every combination of
  * present member name, explicit `null`, and absent property for both enum
- * fields — the three forms Requirement 16.8 makes valid.
+ * fields — the three forms Requirement 16.8 makes valid — and across a present,
+ * `null`, and absent next match.
  *
  * Every member of each Generated_Enum_Union is generated, read from its own
  * tuple, so a name added to the contract is exercised here unedited (12.8).
@@ -412,9 +429,17 @@ const wellFormedSummaryArb: fc.Arbitrary<Record<string, unknown>> = fc
     state: fc.constantFrom<unknown>(...MEMBERSHIP_STATE_NAMES, null),
     dropRole: fc.boolean(),
     dropState: fc.boolean(),
+    playerCount: fc.nat({ max: 400 }),
+    nextMatch: fc.option(nextMatchBodyArb, { nil: null }),
+    dropNextMatch: fc.boolean(),
+    recentForm: fc.array(fc.constantFrom(...PLAYER_RESULT_NAMES), { maxLength: 5 }),
   })
-  .map(({ squadId, name, role, state, dropRole, dropState }) => {
-    const body: Record<string, unknown> = { squadId, name };
+  .map(({ squadId, name, role, state, dropRole, dropState, playerCount, nextMatch, dropNextMatch, recentForm }) => {
+    const body: Record<string, unknown> = { squadId, name, playerCount, recentForm };
+
+    if (!dropNextMatch) {
+      body.nextMatch = nextMatch;
+    }
 
     if (!dropRole) {
       body.role = role;
@@ -428,7 +453,7 @@ const wellFormedSummaryArb: fc.Arbitrary<Record<string, unknown>> = fc
   });
 
 /**
- * Whether a parsed Squad_Summary is fully populated: exactly the four declared
+ * Whether a parsed Squad_Summary is fully populated: exactly the seven declared
  * fields, each of its declared type, with no field left `undefined`.
  *
  * Each enum field is checked against its Generated_Enum_Union's own membership
@@ -437,11 +462,17 @@ const wellFormedSummaryArb: fc.Arbitrary<Record<string, unknown>> = fc
  */
 function isFullyPopulatedSummary(summary: SquadSummary): boolean {
   return (
-    keySignature(summary) === 'name,role,squadId,state' &&
+    keySignature(summary) === 'name,nextMatch,playerCount,recentForm,role,squadId,state' &&
     isSquadIdentifier(summary.squadId) &&
     typeof summary.name === 'string' &&
     (summary.role === null || isSquadRole(summary.role)) &&
-    (summary.state === null || isMembershipState(summary.state))
+    (summary.state === null || isMembershipState(summary.state)) &&
+    Number.isInteger(summary.playerCount) &&
+    (summary.nextMatch === null ||
+      (keySignature(summary.nextMatch) ===
+        'candidateDayCount,matchId,place,scheduledAtMs,state' &&
+        isMatchState(summary.nextMatch.state))) &&
+    summary.recentForm.every(isPlayerResult)
   );
 }
 
@@ -603,7 +634,7 @@ describe('parseSquadSummary — total, and never partial', () => {
         fc.constantFrom('present-null', 'present-undefined', 'absent'),
         fc.constantFrom('present-null', 'present-undefined', 'absent'),
         (squadId, name, roleForm, stateForm) => {
-          const body: Record<string, unknown> = { squadId, name };
+          const body: Record<string, unknown> = { squadId, name, playerCount: 0, recentForm: [] };
 
           if (roleForm === 'present-null') {
             body.role = null;

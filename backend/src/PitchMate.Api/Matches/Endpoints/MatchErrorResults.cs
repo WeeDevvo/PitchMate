@@ -65,9 +65,6 @@ internal static class MatchErrorResults
             // The action is not permitted from the match's current lifecycle state.
             MatchErrorCode.InvalidState => StatusCodes.Status409Conflict,
 
-            // The available player count did not meet the squad's minimum confirmation threshold.
-            MatchErrorCode.ThresholdNotMet => StatusCodes.Status409Conflict,
-
             // The targeted membership is not a participant of the match — nothing to act on.
             MatchErrorCode.NotAParticipant => StatusCodes.Status404NotFound,
 
@@ -79,6 +76,9 @@ internal static class MatchErrorResults
 
             // Completion was requested before a result was recorded.
             MatchErrorCode.ResultRequired => StatusCodes.Status409Conflict,
+
+            // Kickoff undo was refused because play has already been recorded.
+            MatchErrorCode.PlayRecorded => StatusCodes.Status409Conflict,
 
             // The row changed since it was loaded (xmin mismatch on save).
             MatchErrorCode.ConcurrencyConflict => StatusCodes.Status409Conflict,

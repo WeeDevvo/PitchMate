@@ -51,7 +51,7 @@
 .player-stats-pairwise__table {
   width: 100%;
   border-collapse: collapse;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
   text-align: left;
@@ -60,8 +60,8 @@
 .player-stats-pairwise__heading {
   padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
   border-bottom: var(--player-stats-border-width) solid
-    var(--player-stats-card-border);
-  color: var(--muted-text);
+    var(--pm-border-subtle);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-meta);
   font-weight: var(--player-stats-font-weight-label);
   text-align: left;
@@ -75,17 +75,24 @@
    table header cell in several engines, which would discard the very column
    association this table exists for. The control and the Former_Player label are
    inline-level instead, so they flow and wrap inside the cell as it is. */
+.player-stats-pairwise__entry + .player-stats-pairwise__entry {
+  border-top: var(--player-stats-border-width) solid var(--pm-border-subtle);
+}
+
 .player-stats-pairwise__player {
-  padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
-  color: var(--text);
+  padding: 6px var(--player-stats-gap-tight);
+  color: var(--pm-text-primary);
   font-weight: var(--player-stats-font-weight-body);
   text-align: left;
 }
 
 .player-stats-pairwise__figure {
-  padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
-  color: var(--text);
-  font-weight: var(--player-stats-font-weight-label);
+  padding: 6px var(--player-stats-gap-tight);
+  color: var(--pm-text-primary);
+  font-family: var(--pm-font-display);
+  font-size: 22px;
+  font-weight: 800;
+  text-align: right;
   /* Each figure column shrinks to its digits, leaving the name column the
      remainder of the row. */
   width: 1%;
@@ -96,14 +103,22 @@
  * The Pairwise_Link (Requirements 10.5, 10.6, 16.4, 16.5)
  * ------------------------------------------------------------------ */
 
+/* The avatar sits inline before the control, so the cell stays a table cell. */
+.player-stats-pairwise__avatar {
+  display: inline-block;
+  margin-inline-end: 10px;
+  vertical-align: middle;
+}
+
 .player-stats-pairwise__link {
   display: inline-flex;
+  vertical-align: middle;
   align-items: center;
   min-height: var(--player-stats-touch-target);
   padding: 0;
   border: 0;
   background: none;
-  color: var(--control-text);
+  color: var(--pm-text-primary);
   font: inherit;
   font-weight: var(--player-stats-font-weight-label);
   text-align: left;
@@ -116,7 +131,7 @@
 }
 
 .player-stats-pairwise__link:focus-visible {
-  outline: var(--player-stats-focus-width) solid var(--focus-ring);
+  outline: var(--player-stats-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--player-stats-focus-offset);
 }
 
@@ -131,9 +146,9 @@
   align-items: center;
   margin-inline-start: var(--player-stats-gap-tight);
   padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
-  border: var(--player-stats-border-width) solid var(--player-stats-card-border);
+  border: var(--player-stats-border-width) solid var(--pm-border-subtle);
   border-radius: var(--player-stats-radius-chip);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-chip);
   font-weight: var(--player-stats-font-weight-label);
   line-height: var(--player-stats-line-height-body);
@@ -146,7 +161,7 @@
 .player-stats-pairwise__empty {
   margin: 0;
   max-width: var(--player-stats-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
 }

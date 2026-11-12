@@ -22,18 +22,6 @@
 // behaviour (Requirements 14.16, 15.5, 15.7).
 import type { AppearancePreference } from './theme';
 
-/**
- * The accessible name of the Compact_Layout Primary_Navigation disclosure
- * control (Req 1.6, 1.11).
- *
- * Deliberately not "Navigation": the control sits *inside* the navigation
- * landmark, which the Shell_Header already names "Primary", so an assistive
- * technology announces "Primary navigation, Menu button, collapsed" rather than
- * saying "navigation" twice. It is also distinct from the Account_Menu's fixed
- * name "Account menu", so the two controls are never confused by name alone.
- */
-export const PRIMARY_NAVIGATION_TOGGLE = 'Menu';
-
 /** The one message shown for any failing notification call (Req 7.7, 11.10). */
 export const GENERIC_NOTIFICATION_FAILURE =
   'We could not load your notifications just now. Please try again.';
@@ -107,8 +95,7 @@ export const UNREAD_STATE_LABEL = 'Unread';
  * It is rendered as the control's visible text rather than supplied as an
  * `aria-label`, which makes the visible label and the accessible name the same
  * string by construction (WCAG 2.5.3) and leaves nothing for a speech-input user
- * to guess. It is distinct from {@link PRIMARY_NAVIGATION_TOGGLE}, so the header's
- * two disclosure controls are never confused by name alone.
+ * to guess.
  */
 export const ACCOUNT_MENU_LABEL = 'Account menu';
 

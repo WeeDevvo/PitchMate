@@ -1,11 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 import { findProhibitedTerms } from '../lib/content-validation'
-import {
-  landingContent,
-  type BenefitModel,
-  type CtaModel,
-} from './landingContent'
+import { landingContent, type BenefitModel } from './landingContent'
 
 /**
  * A benefit is complete when it has a non-empty (trimmed) heading and a
@@ -20,22 +16,21 @@ function isBenefitComplete(benefit: BenefitModel): boolean {
   return benefit.heading.trim().length > 0 && hasAtLeastOneSentence(benefit.description)
 }
 
-/** Collect every visible string in the content model for vocabulary scanning. */
-function collectVisibleStrings(): string[] {
-  const ctas: CtaModel[] = [
-    landingContent.hero.primaryCta,
-    landingContent.headerCtas.primary,
-    landingContent.headerCtas.secondary,
-    landingContent.closingCta,
-  ]
-  return [
-    landingContent.hero.headline,
-    landingContent.hero.subheadline,
-    ...landingContent.benefits.flatMap((b) => [b.heading, b.description]),
-    ...landingContent.footer.links.map((l) => l.label),
-    landingContent.footer.brandName,
-    ...ctas.map((c) => c.label),
-  ]
+/** Keys whose values are destinations or wiring, never shown as text. */
+const NON_VISIBLE_KEYS = new Set(['href', 'id', 'kind', 'icon', 'tone'])
+
+/**
+ * Collect every visible string in the content model for vocabulary scanning:
+ * a walk of the whole model, so new copy (and the example squad) is covered
+ * without this list needing to know about it.
+ */
+function collectVisibleStrings(value: unknown = landingContent, key = ''): string[] {
+  if (typeof value === 'string') return NON_VISIBLE_KEYS.has(key) ? [] : [value]
+  if (Array.isArray(value)) return value.flatMap((item) => collectVisibleStrings(item, key))
+  if (value !== null && typeof value === 'object') {
+    return Object.entries(value).flatMap(([k, v]) => collectVisibleStrings(v, k))
+  }
+  return []
 }
 
 // Clean vocabulary that contains none of the prohibited substrings, used to
@@ -109,6 +104,10 @@ describe('landingContent (real content model)', () => {
     for (const text of collectVisibleStrings()) {
       expect(findProhibitedTerms(text)).toEqual([])
     }
+  })
+
+  it('sets a green accent that ends the hero headline', () => {
+    expect(landingContent.hero.headline.endsWith(landingContent.hero.headlineAccent)).toBe(true)
   })
 
   it('keeps the hero subheadline within 160 characters', () => {

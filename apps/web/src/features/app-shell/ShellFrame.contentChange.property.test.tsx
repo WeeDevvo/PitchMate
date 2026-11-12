@@ -54,8 +54,7 @@
  * ### How a change is predicted
  *
  * From {@link resolveDestination} — the shell's one pure resolver, the same
- * function {@link ShellFrame} derives its `contentKey` from and
- * {@link PrimaryNavigation} marks the active control from. The expectation is
+ * function {@link ShellFrame} derives its `contentKey` from. The expectation is
  * therefore computed from production logic rather than from a second copy of the
  * matching rules written here, and a path family that the resolver treats
  * differently to what this file assumes cannot silently produce a vacuous run: the
@@ -95,7 +94,6 @@ import { SettingsDestination } from './SettingsDestination';
 import { ShellFrame } from './ShellFrame';
 import { ShellNotFound } from './ShellNotFound';
 import { BRAND_NAME } from './components/BrandControl';
-import { PrimaryNavigation } from './components/PrimaryNavigation';
 import { ShellThemeProvider } from './components/ShellThemeProvider';
 import {
   HOME_ROUTE,
@@ -307,7 +305,7 @@ function renderShell(initialPath: string, plan: ContentPlan): void {
         <Routes>
           <Route
             path={HOME_ROUTE}
-            element={<ShellFrame navigation={(props) => <PrimaryNavigation {...props} />} />}
+            element={<ShellFrame />}
           >
             <Route
               index

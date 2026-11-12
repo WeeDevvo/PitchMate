@@ -177,7 +177,7 @@ public class MatchSchedulingOrderTests
     {
         Match match = Draft(candidateDays);
         Assert.True(match
-            .Confirm(confirmDay, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: [])
+            .Confirm(confirmDay, activeMembers: [])
             .IsSuccess);
         return match;
     }

@@ -1,0 +1,163 @@
+.pm-sheet {
+  width: 100%;
+  max-width: 560px;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid var(--pm-border-subtle);
+  background: var(--pm-surface);
+  box-shadow: var(--pm-shadow-3);
+  color: var(--pm-text-primary);
+}
+
+/* The header is Pitch Green with Ink on it, in both themes. */
+.pm-sheet__head {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 26px;
+  background: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+/* A slanted stripe across the header, as on a kit. */
+.pm-sheet__head::after {
+  content: '';
+  position: absolute;
+  right: -40px;
+  top: -30px;
+  width: 180px;
+  height: 220px;
+  background: color-mix(in srgb, var(--pm-brand-ink) 8%, transparent);
+  transform: skewX(-14deg);
+  pointer-events: none;
+}
+
+.pm-sheet__top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--pm-space-3);
+}
+
+.pm-sheet__overline,
+.pm-sheet__overline > * {
+  margin: 0;
+  font-family: var(--pm-font-display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+.pm-sheet__day {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin-top: 10px;
+  font-family: var(--pm-font-display);
+  font-weight: 800;
+  font-size: clamp(40px, 9vw, 58px);
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.pm-sheet__facts {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 8px 0 0;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.pm-sheet__facts dd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pm-sheet__teams {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.pm-sheet__side {
+  min-width: 0;
+  padding: 20px 22px 24px;
+}
+
+.pm-sheet__side + .pm-sheet__side {
+  border-left: 1px solid var(--pm-border-subtle);
+}
+
+.pm-sheet__name,
+.pm-sheet__name > * {
+  margin: 6px 0 10px;
+  font-family: var(--pm-font-display);
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.pm-sheet__name > * {
+  margin: 0;
+}
+
+.pm-sheet__bibs {
+  min-height: 40px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.pm-sheet__players {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pm-sheet__player {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.pm-sheet__player-name {
+  font-weight: 600;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.pm-sheet__foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--pm-space-2);
+  padding: 14px 22px;
+  border-top: 1px solid var(--pm-border-subtle);
+  font-size: 14px;
+  color: var(--pm-text-secondary);
+}
+
+.pm-sheet__site {
+  color: var(--pm-text-muted);
+}
+
+/* Narrow: the teams stack, so the divider runs across instead of down. */
+@media (max-width: 520px) {
+  .pm-sheet__side + .pm-sheet__side {
+    border-left: 0;
+    border-top: 1px solid var(--pm-border-subtle);
+  }
+}

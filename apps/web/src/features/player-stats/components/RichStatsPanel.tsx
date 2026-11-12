@@ -65,6 +65,7 @@
  * Requirements: 11.1, 11.2, 11.3, 11.4, 11.5
  */
 import { type ReactElement } from 'react';
+import { StatTile } from '../../../ui';
 
 import { formatDuration } from '../lib/duration';
 import {
@@ -305,33 +306,29 @@ export function RichStatsPanel({
           {RICH_STAT_KINDS.map((kind) => {
             const { text, hasValue } = richStatReading(kind, condition.stats);
 
+            // 11.3: the words naming which statistic this figure is, and the
+            // value through a `lib/` formatter. 11.4: or the no-data statement,
+            // with no numeral of any kind beside it.
             return (
-              <div
+              <StatTile
                 key={kind}
                 className="player-stats-rich__entry"
                 data-player-stats-rich-entry={kind}
-              >
-                {/* 11.3: the words naming which statistic this figure is. */}
-                <dt
-                  className="player-stats-rich__label"
-                  data-player-stats-rich-label={kind}
-                >
-                  {RICH_STAT_LABELS[kind]}
-                </dt>
-                {/* 11.3: the value, through a `lib/` formatter. 11.4: or the
-                    no-data statement, with no numeral of any kind beside it. */}
-                <dd
-                  className={
-                    hasValue
-                      ? 'player-stats-rich__value'
-                      : 'player-stats-rich__value player-stats-rich__value--absent'
-                  }
-                  data-player-stats-rich-statistic={kind}
-                  data-player-stats-rich-has-value={hasValue ? 'true' : 'false'}
-                >
-                  {text}
-                </dd>
-              </div>
+                label={RICH_STAT_LABELS[kind]}
+                value={text}
+                empty={!hasValue}
+                labelProps={{
+                  className: 'player-stats-rich__label',
+                  'data-player-stats-rich-label': kind,
+                }}
+                valueProps={{
+                  className: hasValue
+                    ? 'player-stats-rich__value'
+                    : 'player-stats-rich__value player-stats-rich__value--absent',
+                  'data-player-stats-rich-statistic': kind,
+                  'data-player-stats-rich-has-value': hasValue ? 'true' : 'false',
+                }}
+              />
             );
           })}
         </dl>

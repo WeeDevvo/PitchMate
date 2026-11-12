@@ -250,45 +250,50 @@ function profileSections(
         <ProgressionTable series={series} />
       </StatSection>
 
-      <StatSection heading={STREAKS_SECTION_HEADING}>
-        <StreakPanel
-          winStreak={profile.winStreak}
-          unbeatenStreak={profile.unbeatenStreak}
-        />
-      </StatSection>
+      {/* Side by side where there is room; the order is unchanged. */}
+      <div className="player-stats-pair">
+        <StatSection heading={STREAKS_SECTION_HEADING}>
+          <StreakPanel
+            winStreak={profile.winStreak}
+            unbeatenStreak={profile.unbeatenStreak}
+          />
+        </StatSection>
 
-      <StatSection heading={BIBS_SECTION_HEADING}>
-        <BibAppearances bibAppearances={profile.bibAppearances} />
-      </StatSection>
+        <StatSection heading={BIBS_SECTION_HEADING}>
+          <BibAppearances bibAppearances={profile.bibAppearances} />
+        </StatSection>
+      </div>
 
       {/* 10.1: each of the four renders its *own* `StatSection`, heading
           included, so none is wrapped in a second one — two nested regions and
           two level-two headings would be the defect. The squad identity is the
           route's, so every Pairwise_Link opens a profile inside this squad. */}
-      <PairwiseSection
-        heading={MOST_PLAYED_WITH_HEADING}
-        squadId={squadId}
-        variant="co-appearance"
-        entries={profile.mostPlayedWith}
-      />
-      <PairwiseSection
-        heading={MOST_PLAYED_AGAINST_HEADING}
-        squadId={squadId}
-        variant="co-appearance"
-        entries={profile.mostPlayedAgainst}
-      />
-      <PairwiseSection
-        heading={BEST_PARTNERSHIPS_HEADING}
-        squadId={squadId}
-        variant="paired-stat"
-        entries={profile.bestPartnerships}
-      />
-      <PairwiseSection
-        heading={BOGEY_OPPONENTS_HEADING}
-        squadId={squadId}
-        variant="paired-stat"
-        entries={profile.bogeyOpponents}
-      />
+      <div className="player-stats-pair">
+        <PairwiseSection
+          heading={MOST_PLAYED_WITH_HEADING}
+          squadId={squadId}
+          variant="co-appearance"
+          entries={profile.mostPlayedWith}
+        />
+        <PairwiseSection
+          heading={MOST_PLAYED_AGAINST_HEADING}
+          squadId={squadId}
+          variant="co-appearance"
+          entries={profile.mostPlayedAgainst}
+        />
+        <PairwiseSection
+          heading={BEST_PARTNERSHIPS_HEADING}
+          squadId={squadId}
+          variant="paired-stat"
+          entries={profile.bestPartnerships}
+        />
+        <PairwiseSection
+          heading={BOGEY_OPPONENTS_HEADING}
+          squadId={squadId}
+          variant="paired-stat"
+          entries={profile.bogeyOpponents}
+        />
+      </div>
 
       {/* 11.7: last, and the only section a tracking condition can empty. Every
           section above it renders identically in all three conditions. */}

@@ -68,7 +68,7 @@
  */
 import { type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import fc from 'fast-check';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -127,11 +127,8 @@ import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import {
   ADMIN_SECTION_HEADING,
   MATCHES_PLACEHOLDER_STATEMENT,
-  MATCHES_SECTION_HEADING,
-  PLAYERS_SECTION_HEADING,
   SQUAD_DETAIL_SECTION_HEADING,
   STATS_PLACEHOLDER_STATEMENT,
-  STATS_SECTION_HEADING,
 } from '../lib/messages';
 import type { FeatureFlag } from '../lib/parse/featureFlags';
 import type { SquadDetail, SquadMember } from '../lib/parse/squadDetail';
@@ -145,7 +142,8 @@ import {
   resolveOwnerAuthority,
 } from '../lib/membershipActions';
 import { isPromotable } from '../lib/promotionEligibility';
-import { PLAYER_STATS_ROUTE, SQUAD_ROUTE, squadPath } from '../lib/routePaths';
+import { PLAYER_STATS_ROUTE, SQUAD_ROUTE } from '../lib/routePaths';
+import { SQUAD_TABS, squadTabChildPath, squadTabPath, type SquadTab } from '../lib/squadTabs';
 import { SQUAD_DETAIL_SECTION_SELECTOR, SquadScreen } from './SquadScreen';
 
 // --- The App_Shell seam -------------------------------------------------------
@@ -443,13 +441,23 @@ async function flush(): Promise<void> {
   });
 }
 
-/** The screen at its real route, inside a real router and a real AuthProvider. */
-function screenTree(api: SquadsApi): ReactElement {
+/** The screen at its real routes, one per tab, inside a real router and a real AuthProvider. */
+function screenTree(api: SquadsApi, tab: SquadTab): ReactElement {
   return (
     <AuthProvider manager={sessionManager()}>
-      <MemoryRouter initialEntries={[squadPath(SQUAD_ID)]}>
+      <MemoryRouter initialEntries={[squadTabPath(SQUAD_ID, tab)]}>
         <Routes>
-          <Route path={SQUAD_ROUTE} element={<SquadScreen api={api} />} />
+          {SQUAD_TABS.map((routeTab) => (
+            <Route
+              key={routeTab}
+              path={
+                routeTab === 'players'
+                  ? SQUAD_ROUTE
+                  : `${SQUAD_ROUTE}/${squadTabChildPath(routeTab)}`
+              }
+              element={<SquadScreen api={api} />}
+            />
+          ))}
           {/* A navigation away is a legitimate consequence of activating a
               Player_Row, so the destination exists rather than being a dead end
               that would end the interaction sequence in an error. */}
@@ -470,6 +478,8 @@ async function renderSquad(options: {
   readonly members: readonly SquadMember[];
   readonly features: readonly FeatureFlag[];
   readonly caller: CallerStanding;
+  /** The tab the screen opens on; Players unless stated. */
+  readonly tab?: SquadTab;
 }): Promise<readonly string[]> {
   const detail: SquadDetail = {
     squadId: SQUAD_ID,
@@ -491,7 +501,7 @@ async function renderSquad(options: {
 
   const { api, calls } = createRecordingApi({ detail, summaries });
 
-  render(screenTree(api));
+  render(screenTree(api, options.tab ?? 'players'));
   await flush();
 
   return calls;
@@ -626,14 +636,8 @@ function expectAdminSurfaceRendered(
     features.length,
   );
 
-  // 6.8, 10.7: the administration heading joins the four other sections.
-  expect(headingTexts(2)).toEqual([
-    SQUAD_DETAIL_SECTION_HEADING,
-    PLAYERS_SECTION_HEADING,
-    MATCHES_SECTION_HEADING,
-    STATS_SECTION_HEADING,
-    ADMIN_SECTION_HEADING,
-  ]);
+  // 6.8, 10.7: the Admin tab's page — the Squad_Detail, then administration.
+  expect(headingTexts(2)).toEqual([SQUAD_DETAIL_SECTION_HEADING, ADMIN_SECTION_HEADING]);
   expect(headingTexts(3)).toHaveLength(owner ? 5 : 3);
 }
 
@@ -672,6 +676,15 @@ function expectNoAdminSurface(): void {
  * rows — so the expectation is the predicate's answer for the caller the screen
  * actually has, not for an invented one.
  */
+/** Open every row's "…" menu, where the row-level admin controls are. */
+function openEveryRowMenu(): void {
+  for (const trigger of Array.from(document.querySelectorAll<HTMLElement>('.pm-actions__trigger'))) {
+    if (trigger.getAttribute('aria-expanded') !== 'true') {
+      fireEvent.click(trigger);
+    }
+  }
+}
+
 function expectRowControlsMatchEligibility(
   members: readonly SquadMember[],
   authority: boolean,
@@ -761,8 +774,9 @@ function expectSquadRendered(members: readonly SquadMember[]): void {
   expect(document.querySelectorAll(PLAYER_ROW_SELECTOR)).toHaveLength(
     members.length,
   );
-  expect(document.body.textContent ?? '').toContain(MATCHES_PLACEHOLDER_STATEMENT);
-  expect(document.body.textContent ?? '').toContain(STATS_PLACEHOLDER_STATEMENT);
+  // The matches and stats pages are their own tabs, offered to everyone.
+  expect(document.querySelector(`a[href="${squadTabPath(SQUAD_ID, 'matches')}"]`)).not.toBeNull();
+  expect(document.querySelector(`a[href="${squadTabPath(SQUAD_ID, 'leaderboards')}"]`)).not.toBeNull();
   expect(document.querySelector(FAILURE_NOTICE_SELECTOR)).toBeNull();
   expect(document.querySelector(NOT_FOUND_TREATMENT_SELECTOR)).toBeNull();
 }
@@ -821,10 +835,30 @@ describe('Property 26 — admin affordances and admin calls exist exactly while 
 
           let withoutAdmin: NonAdminSurface | null = null;
 
+          // The Players tab: the squad, and the row-level admin controls in
+          // each row's menu.
           try {
             await renderSquad({ members, features, caller });
 
             expectSquadRendered(members);
+            if (!authority) {
+              withoutAdmin = describeNonAdminSurface();
+            }
+
+            // 10.2: exactly the eligible rows carry the row-level admin controls,
+            // in both branches — the predicates already answer `false` for every
+            // row of a caller without authority.
+            openEveryRowMenu();
+            expectRowControlsMatchEligibility(members, authority);
+            expectLeaveMatchesEligibility(caller);
+          } finally {
+            cleanup();
+          }
+
+          // The Admin tab's address: the admin surface exactly while authority
+          // holds — the tab is not even offered otherwise.
+          try {
+            await renderSquad({ members, features, caller, tab: 'admin' });
 
             if (authority) {
               expectAdminSurfaceRendered(
@@ -832,15 +866,10 @@ describe('Property 26 — admin affordances and admin calls exist exactly while 
                 resolveOwnerAuthority(caller.role, caller.state),
               );
             } else {
+              // The tab is absent for them, so its address shows them Players.
               expectNoAdminSurface();
-              withoutAdmin = describeNonAdminSurface();
+              expect(document.querySelector(PLAYER_LIST_SELECTOR) ?? document.querySelector(PLAYER_LIST_EMPTY_SELECTOR)).not.toBeNull();
             }
-
-            // 10.2: exactly the eligible rows carry the row-level admin controls,
-            // in both branches — the predicates already answer `false` for every
-            // row of a caller without authority.
-            expectRowControlsMatchEligibility(members, authority);
-            expectLeaveMatchesEligibility(caller);
             expectOwnershipCandidatesMatchEligibility(members, caller);
           } finally {
             cleanup();

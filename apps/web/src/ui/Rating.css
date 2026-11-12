@@ -1,0 +1,27 @@
+.pm-rating {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--pm-font-display);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.pm-rating--prov {
+  align-items: center;
+  color: var(--pm-provisional-text);
+}
+
+.pm-rating__delta {
+  font-family: var(--pm-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pm-rating__delta.is-up {
+  color: var(--pm-result-win-text);
+}
+
+.pm-rating__delta.is-down {
+  color: var(--pm-result-loss-text);
+}

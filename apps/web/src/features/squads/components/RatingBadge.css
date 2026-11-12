@@ -43,7 +43,7 @@
   align-items: center;
   gap: var(--squads-gap-tight);
   max-width: 100%;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-body);
   line-height: var(--squads-line-height-body);
 }
@@ -51,6 +51,8 @@
 /* A Display_Rating: the number, weighted so it reads as the row's value, and
    tabular so a column of ratings lines up. No chip (8.1). */
 .squads-rating[data-rating-kind='rating'] {
+  font-size: 20px;
+  font-family: var(--pm-font-display);
   font-weight: var(--squads-font-weight-heading);
   font-variant-numeric: tabular-nums;
 }
@@ -61,7 +63,7 @@
 .squads-rating[data-rating-kind='never-played'],
 .squads-rating[data-rating-kind='unavailable'] {
   padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--squads-chip-border);
+  border: var(--squads-border-width) solid var(--pm-border-control);
   border-radius: var(--squads-radius-chip);
   font-size: var(--squads-font-size-chip);
   font-weight: var(--squads-font-weight-label);
@@ -70,21 +72,24 @@
 /* The Provisional_Band — amber, the palette's "unsettled / uncertain" (brand.md).
    The word beside it is what actually states the condition (8.4, 19.3). */
 .squads-rating[data-rating-kind='provisional'] {
-  border-color: var(--squads-provisional-border);
-  color: var(--squads-provisional-text);
+  background: var(--pm-result-draw-subtle);
+  /* The text amber, not the fill amber: the fill is 1.9:1 on the light tint,
+     below the 3:1 a visible outline owes. */
+  border-color: var(--pm-provisional-text);
+  color: var(--pm-provisional-text);
 }
 
 /* The Never_Played band — muted, because it is a statement about this squad's
    match history rather than about the player's ability (player-stats 17.3). Its
    square badge, not its colour, is what separates it from the label below. */
 .squads-rating[data-rating-kind='never-played'] {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
 }
 
 /* The Rating_Unavailable label — muted, because it is a statement about the squad's
    leaderboard rather than about this player (8.13). */
 .squads-rating[data-rating-kind='unavailable'] {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
 }
 
 /* The badge shape: drawn in the label's own colour, so it needs no token of its

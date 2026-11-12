@@ -1,0 +1,57 @@
+.pm-sidebar {
+  width: var(--pm-sidebar-w);
+  max-width: 100%;
+  background: var(--pm-surface);
+  border-right: 1px solid var(--pm-border-subtle);
+  padding: var(--pm-space-4) var(--pm-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-1);
+  flex: none;
+}
+
+.pm-sidebar__label {
+  padding: var(--pm-space-4) var(--pm-space-3) 6px;
+  font-family: var(--pm-font-display);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--pm-text-muted);
+}
+
+.pm-navitem {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-3);
+  min-height: var(--pm-target-touch);
+  padding: 0 var(--pm-space-3);
+  border-radius: var(--pm-radius-md);
+  color: var(--pm-text-secondary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.pm-navitem:hover {
+  background: var(--pm-surface-hover);
+  color: var(--pm-text-primary);
+}
+
+.pm-navitem.is-active {
+  background: var(--pm-accent-subtle);
+  color: var(--pm-accent-on-subtle);
+}
+
+.pm-navitem:focus-visible {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+}
+
+.pm-navitem .pm-badge {
+  margin-left: auto;
+}

@@ -96,6 +96,19 @@ public class GetRunningScoreHandlerTests
     }
 
     [Fact]
+    public void ASquadPendingDeletionGivesAnActiveMemberTheUniformUnauthorized()
+    {
+        GetRunningScoreWorld world = GetRunningScoreWorld.Build(squadPendingDeletion: true);
+        world.SeedGoal(world.TeamAId, 5);
+
+        Result<GetRunningScoreResult> result = world.Read(world.ActiveMemberUserId);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(LiveTrackingErrorCode.Unauthorized, result.Error!.Code);
+        Assert.Null(result.Value);
+    }
+
+    [Fact]
     public void AnInactiveMembershipReceivesTheUniformUnauthorizedDisclosingNoMatchData()
     {
         GetRunningScoreWorld world = GetRunningScoreWorld.Build();
@@ -180,11 +193,13 @@ public class GetRunningScoreHandlerTests
         private static readonly DateTimeOffset MatchDay = Anchor.AddDays(7);
 
         private readonly GetRunningScoreHandler _handler;
+        private readonly GetMatchEventsHandler _eventsHandler;
         private readonly InMemoryMatchEventRepository _events;
         private readonly MutableCurrentUserAccessor _currentUser;
 
         private GetRunningScoreWorld(
             GetRunningScoreHandler handler,
+            GetMatchEventsHandler eventsHandler,
             Match match,
             Guid squadId,
             InMemoryMatchEventRepository events,
@@ -196,6 +211,7 @@ public class GetRunningScoreHandlerTests
             Guid teamBId)
         {
             _handler = handler;
+            _eventsHandler = eventsHandler;
             Match = match;
             SquadId = squadId;
             _events = events;
@@ -263,12 +279,26 @@ public class GetRunningScoreHandlerTests
                 .GetResult();
         }
 
+        /// <summary>Reads the event log as <paramref name="actingUserId"/> for <paramref name="matchId"/>.</summary>
+        public Result<GetMatchEventsResult> ReadEvents(Guid actingUserId, Guid matchId)
+        {
+            _currentUser.CurrentUserId = actingUserId == Guid.Empty ? null : actingUserId.ToString();
+            return _eventsHandler
+                .HandleAsync(new GetMatchEventsCommand(matchId), CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        /// <summary>Seeds already-built events into the log, in the order given.</summary>
+        public void Seed(params MatchEvent[] events) => _events.Seed(events);
+
         /// <summary>
         /// Builds a world with a match walked to <see cref="MatchState.InProgress"/>. Ten participants
         /// are split into two teams of five (within the 5..8 lock rule), giving two genuine working
-        /// teams for the running-score projection.
+        /// teams for the running-score projection. <paramref name="squadPendingDeletion"/> puts the squad
+        /// in its deletion grace period.
         /// </summary>
-        public static GetRunningScoreWorld Build()
+        public static GetRunningScoreWorld Build(bool squadPendingDeletion = false)
         {
             Squad squad = Squad.Create("The Squad").Value!;
             squad.SetFeature(SquadFeature.LiveMatchTracking, enabled: true);
@@ -298,7 +328,7 @@ public class GetRunningScoreHandlerTests
             }
 
             Match match = Match.CreateDraft(Guid.CreateVersion7(), squadId, "Hackney Marshes", [MatchDay], Anchor).Value!;
-            match.Confirm(MatchDay, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+            match.Confirm(MatchDay, activeMembers: []);
             foreach (SquadMembership player in players)
             {
                 match.AddParticipant(player);
@@ -312,20 +342,21 @@ public class GetRunningScoreHandlerTests
             };
             match.ApplyTeamProposal(proposal);
             match.Lock();
-            match.Start();
+            match.Start(DateTimeOffset.UnixEpoch);
 
             Guid teamAId = match.Teams.ElementAt(0).Id;
             Guid teamBId = match.Teams.ElementAt(1).Id;
 
             var events = new InMemoryMatchEventRepository();
             var matches = new SingleMatchRepository(match);
-            var membershipRepository = new ConfiguredMembershipRepository(memberships);
+            var membershipRepository = new ConfiguredMembershipRepository(memberships, squadPendingDeletion);
             var currentUser = new MutableCurrentUserAccessor { CurrentUserId = ownerUserId.ToString() };
 
             var handler = new GetRunningScoreHandler(matches, membershipRepository, events, currentUser);
+            var eventsHandler = new GetMatchEventsHandler(matches, membershipRepository, events, currentUser);
 
             return new GetRunningScoreWorld(
-                handler, match, squadId, events, currentUser,
+                handler, eventsHandler, match, squadId, events, currentUser,
                 ownerUserId, activeMemberUserId, inactiveMemberUserId, teamAId, teamBId);
         }
     }

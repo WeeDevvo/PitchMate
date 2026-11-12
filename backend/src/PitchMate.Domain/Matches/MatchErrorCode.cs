@@ -15,9 +15,6 @@ public enum MatchErrorCode
     /// <summary>The operation is not permitted from the match's current lifecycle state.</summary>
     InvalidState,
 
-    /// <summary>The available player count did not meet the squad's minimum threshold for confirmation.</summary>
-    ThresholdNotMet,
-
     /// <summary>The targeted membership is not a participant of the match.</summary>
     NotAParticipant,
 
@@ -29,6 +26,9 @@ public enum MatchErrorCode
 
     /// <summary>Completion was requested but no result has been recorded for the match.</summary>
     ResultRequired,
+
+    /// <summary>Kickoff cannot be undone because something has already been recorded for the match in play (a live-tracking event or a result).</summary>
+    PlayRecorded,
 
     /// <summary>A concurrent modification was detected; the operation must be retried against fresh state.</summary>
     ConcurrencyConflict

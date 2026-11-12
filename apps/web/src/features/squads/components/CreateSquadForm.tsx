@@ -49,7 +49,8 @@
  */
 import { useCallback, useState, type ReactElement, type RefObject } from 'react';
 
-import { FormField, LiveRegion } from '../../auth';
+import { LiveRegion } from '../../auth';
+import { TextField } from '../../../ui';
 import type { CreateSquadRequest } from '../api/squadsApi';
 import {
   CREATE_SQUAD_HEADING,
@@ -191,10 +192,10 @@ export function CreateSquadForm({
     >
       {/* 3.1: a persistently visible label, and the message programmatically
           associated with the field it is about (Requirement 3.3). */}
-      <FormField
+      <TextField
         label={SQUAD_NAME_LABEL}
         value={name}
-        onValueChange={handleNameChange}
+        onChange={(event) => handleNameChange(event.target.value)}
         error={nameError}
         name="squadName"
         autoComplete="off"
@@ -205,10 +206,10 @@ export function CreateSquadForm({
       />
 
       {/* 3.1: the creator's own display name within the squad being created. */}
-      <FormField
+      <TextField
         label={CREATOR_DISPLAY_NAME_LABEL}
         value={displayName}
-        onValueChange={handleDisplayNameChange}
+        onChange={(event) => handleDisplayNameChange(event.target.value)}
         error={displayNameError}
         name="creatorDisplayName"
         autoComplete="off"

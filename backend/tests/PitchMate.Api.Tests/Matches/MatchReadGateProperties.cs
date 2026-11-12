@@ -252,7 +252,7 @@ public sealed class MatchReadGateProperties : IClassFixture<RoutingApiFactory>
             }
 
             Match match = Match.CreateDraft(Guid.CreateVersion7(), squad.Id, $"{name} pitch", [now.AddDays(7)], now).Value!;
-            Assert.True(match.Confirm(now.AddDays(7), 0, 0, []).IsSuccess);
+            Assert.True(match.Confirm(now.AddDays(7), []).IsSuccess);
             List<SquadMembership> playing = [.. members.Where(static m => m.State == MembershipState.Active).Take(10)];
             foreach (SquadMembership player in playing)
             {

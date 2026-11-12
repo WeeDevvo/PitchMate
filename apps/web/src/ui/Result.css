@@ -1,0 +1,42 @@
+.pm-result-wrap {
+  display: inline-flex;
+}
+
+.pm-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0 6px;
+  border-radius: var(--pm-radius-xs);
+  font-family: var(--pm-font-display);
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--pm-on-result);
+}
+
+.pm-result--w {
+  background: var(--pm-result-win);
+}
+
+.pm-result--l {
+  background: var(--pm-result-loss);
+}
+
+.pm-result--d {
+  background: var(--pm-result-draw);
+}
+
+.pm-result--lg {
+  height: 34px;
+  padding: 0 10px;
+  font-size: 20px;
+  border-radius: var(--pm-radius-sm);
+}
+
+.pm-form {
+  display: inline-flex;
+  gap: 4px;
+}

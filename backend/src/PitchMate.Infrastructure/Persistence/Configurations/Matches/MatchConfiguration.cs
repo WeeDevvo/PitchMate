@@ -60,6 +60,9 @@ internal sealed class MatchConfiguration : IEntityTypeConfiguration<Match>
                 day => day.Instant,
                 instant => new CandidateDay(instant)));
 
+        // The kickoff instant, or null before the match starts.
+        builder.Property(match => match.StartedAt);
+
         // The replay ordering key, or null before completion (Requirement 12.1, 12.4).
         builder.Property(match => match.CompletedAt);
 

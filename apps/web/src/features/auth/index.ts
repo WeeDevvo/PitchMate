@@ -3,8 +3,8 @@
  *
  * The auth feature is a self-contained module under
  * `apps/web/src/features/auth/` (Requirement 1.8), split into pure logic
- * (`lib/`), the session model (`session/`), the typed API facade (`api/`),
- * presentational components (`components/`), and theme tokens (`styles/`).
+ * (`lib/`), the session model (`session/`), the typed API facade (`api/`)
+ * and presentational components (`components/`) built on the shared `src/ui`.
  *
  * As later tasks land the session, API, and screen surfaces, their public
  * entry points are re-exported here so consumers import from a single place.

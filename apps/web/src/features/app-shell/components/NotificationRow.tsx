@@ -61,8 +61,13 @@
  * Requirements: 5.5, 5.6, 5.10, 5.13, 6.11, 6.12, 13.8
  */
 import { useCallback, type ReactElement } from 'react';
+import { NotificationItem, type IconName } from '../../../ui';
 import { UNREAD_STATE_LABEL } from '../lib/messages';
-import type { NotificationRecord } from '../lib/notificationParsing';
+import type {
+  CataloguedNotificationType,
+  NotificationRecord,
+  NotificationType,
+} from '../lib/notificationParsing';
 import { recordDisplay } from '../lib/recordDisplay';
 import { relativeTimeLabel } from '../lib/relativeTime';
 
@@ -93,6 +98,22 @@ export interface NotificationRowProps {
    * (Requirement 6.12).
    */
   readonly onActivate: (notificationId: string) => void;
+}
+
+/** Each catalogued kind's icon; an uncatalogued kind takes the neutral bell. */
+const NOTIFICATION_ICONS: Readonly<Record<CataloguedNotificationType, IconName>> = {
+  MemberJoined: 'userPlus',
+  PromotedToAdmin: 'shield',
+  RemovedFromSquad: 'user',
+  OwnershipTransferred: 'crown',
+  MatchDrafted: 'calendar',
+  MatchConfirmed: 'check',
+  TeamsRolled: 'shuffle',
+  ResultPosted: 'trophy',
+};
+
+function iconFor(type: NotificationType): IconName {
+  return type.kind === 'catalogued' ? NOTIFICATION_ICONS[type.value] : 'bell';
 }
 
 /**
@@ -154,54 +175,61 @@ export function NotificationRow({
   }, [onActivate, record.notificationId]);
 
   return (
-    <button
-      type="button"
-      className="shell-notification-row"
-      // 5.6, 13.8: drives the filled dot in `styles/shell.css`, and is the same
-      // fact in a form a test can read without measuring a pseudo-element.
-      data-unread={unread ? 'true' : 'false'}
-      data-notification-id={record.notificationId}
-      // 5.10: whether the type was catalogued, for the panel's styling and tests.
-      data-type-recognised={display.typeIsRecognised ? 'true' : 'false'}
-      onClick={handleClick}
+    <NotificationItem
+      icon={iconFor(record.type)}
+      // A drafted match is the notification that asks something of the reader:
+      // mark which days they can make.
+      accent={record.type.kind === 'catalogued' && record.type.value === 'MatchDrafted'}
+      unread={unread}
+      render={({ className, children }) => (
+        <button
+          type="button"
+          className={`shell-notification-row ${className}`}
+          // 5.6, 13.8: drives the unread styling, and is the same fact in a form a
+          // test can read without measuring a pseudo-element.
+          data-unread={unread ? 'true' : 'false'}
+          data-notification-id={record.notificationId}
+          // 5.10: whether the type was catalogued, for the panel's styling and tests.
+          data-type-recognised={display.typeIsRecognised ? 'true' : 'false'}
+          onClick={handleClick}
+        >
+          {children}
+        </button>
+      )}
     >
       {/* 5.6, 13.8: the state as a word, so the dot is never the only carrier. */}
       {unread ? (
         <span className="shell-notification-row__state">{UNREAD_STATE_LABEL}</span>
       ) : null}
 
-      {/* The text column beside the dot the stylesheet paints in the row's
-          leading gutter. */}
-      <span className="shell-notification-row__content">
-        {/* 6.11: the record's title, inside the control, so the accessible name
-            contains it. */}
+      {/* 6.11: the record's title, inside the control, so the accessible name
+          contains it. */}
+      <TruncatableText
+        className="shell-notification-row__title"
+        text={display.title}
+        truncated={display.titleTruncated}
+        supplied={record.title}
+      />
+
+      {/* 5.13: a blank body is omitted rather than rendered as an empty line. */}
+      {display.body === null ? null : (
         <TruncatableText
-          className="shell-notification-row__title"
-          text={display.title}
-          truncated={display.titleTruncated}
-          supplied={record.title}
+          className="shell-notification-row__body"
+          text={display.body}
+          truncated={display.bodyTruncated}
+          supplied={record.body}
         />
+      )}
 
-        {/* 5.13: a blank body is omitted rather than rendered as an empty line. */}
-        {display.body === null ? null : (
-          <TruncatableText
-            className="shell-notification-row__body"
-            text={display.body}
-            truncated={display.bodyTruncated}
-            supplied={record.body}
-          />
+      <span className="shell-notification-row__meta">
+        {/* 5.10: the type indication, neutral for an uncatalogued type. */}
+        {typeIndicationRedundant ? null : (
+          <span className="shell-notification-row__type">{display.typeLabel}</span>
         )}
-
-        <span className="shell-notification-row__meta">
-          {/* 5.10: the type indication, neutral for an uncatalogued type. */}
-          {typeIndicationRedundant ? null : (
-            <span className="shell-notification-row__type">{display.typeLabel}</span>
-          )}
-          {/* 5.5, 5.13: always displayed, whatever the title, body, or type. */}
-          <span className="shell-notification-row__time">{timeLabel}</span>
-        </span>
+        {/* 5.5, 5.13: always displayed, whatever the title, body, or type. */}
+        <span className="shell-notification-row__time">{timeLabel}</span>
       </span>
-    </button>
+    </NotificationItem>
   );
 }
 

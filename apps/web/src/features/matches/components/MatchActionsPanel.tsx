@@ -1,18 +1,22 @@
 /**
- * The organiser's match-day steps before kick-off: start the match once its
- * teams are locked, or cancel it while it has not started.
+ * The organiser's match-day steps around kick-off: start the match once its
+ * teams are locked, cancel it while it has not started, or undo a kickoff made
+ * by mistake while nothing has been recorded for it.
  *
  * Starting checks first that the working teams are still the locked ones. The
  * locked line-up is what plays and is scored, so a change made after locking
  * and not locked again is pointed out rather than silently dropped. Cancelling
- * cannot be undone, so it asks for a second, explicit activation.
+ * cannot be undone, so it asks again in a dialog. Undoing kickoff asks again
+ * too; the backend refuses it once a live event or a score is recorded.
  */
 import { useId, useState, type ReactElement } from 'react';
 
+import { Banner, Button, Dialog } from '../../../ui';
+
 import type { CallResult } from '../api/matchesApi';
-import { canCancel, canStart, workingTeamsAreLocked } from '../lib/lifecycle';
+import { canCancel, canStart, canUndoStart, workingTeamsAreLocked } from '../lib/lifecycle';
 import {
-  CANCEL_CONFIRM_STATEMENT,
+  CANCEL_DIALOG_BODY,
   CANCEL_MATCH_LABEL,
   CANCELLING_LABEL,
   CONFIRM_CANCEL_LABEL,
@@ -23,21 +27,32 @@ import {
   START_HINT,
   START_MATCH_LABEL,
   STARTING_LABEL,
+  UNDO_START_HINT,
+  UNDO_START_LABEL,
   UNLOCKED_CHANGES_STATEMENT,
+  cancelDialogTitle,
 } from '../lib/messages';
+import type { RecordedResult } from '../lib/parse/matchDetail';
 import type { TeamSheet } from '../lib/parse/teamSheet';
 import type { WorkingTeams } from '../lib/parse/teams';
 import type { MatchState } from '../lib/wireEnums';
 import { useAction, type ActionOutcome } from '../state/useAction';
 
+import { UndoKickoffDialog } from './UndoKickoffDialog';
+
 export interface MatchActionsPanelProps {
   readonly state: MatchState;
+  /** Where the match is, for the cancel dialog's title. */
+  readonly location: string;
   /** The locked teams, once there are some; needed to start. */
   readonly sheet: TeamSheet | null;
   readonly getWorkingTeams: (signal: AbortSignal) => Promise<CallResult<WorkingTeams>>;
   readonly start: (signal: AbortSignal) => Promise<CallResult<void>>;
   readonly cancel: (signal: AbortSignal) => Promise<CallResult<void>>;
-  /** Called after a start or cancel settles, so the screen can re-read. */
+  /** The match's recorded result, if any; a recorded score rules out undoing kickoff. */
+  readonly recordedResult: RecordedResult | null;
+  readonly undoStart: (signal: AbortSignal) => Promise<CallResult<void>>;
+  /** Called after a start, cancel or undo settles, so the screen can re-read. */
   readonly onSettled: () => void;
 }
 
@@ -48,10 +63,13 @@ function failureMessage(outcome: ActionOutcome<unknown> | null): string | null {
 
 export function MatchActionsPanel({
   state,
+  location,
   sheet,
   getWorkingTeams,
   start,
   cancel,
+  recordedResult,
+  undoStart,
   onSettled,
 }: MatchActionsPanelProps): ReactElement | null {
   const headingId = `${useId()}-heading`;
@@ -62,15 +80,17 @@ export function MatchActionsPanel({
   const [refusedFor, setRefusedFor] = useState<TeamSheet | null>(null);
   const unlocked = refusedFor !== null && refusedFor === sheet;
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [confirmingUndo, setConfirmingUndo] = useState(false);
 
   const startable = canStart(state) && sheet !== null;
   const cancellable = canCancel(state);
-  if (!startable && !cancellable) return null;
+  const undoable = canUndoStart(state, recordedResult);
+  if (!startable && !cancellable && !undoable) return null;
 
   // A start that was issued re-reads the screen whatever its outcome; one
   // stopped for unlocked changes leaves the screen as it is, with the reason.
   const handleStart = async (): Promise<void> => {
-    if (sheet === null) return;
+    if (sheet === null || starting.busy) return;
     setRefusedFor(null);
     let stoppedForChanges = false;
     const outcome = await starting.run(async (signal) => {
@@ -91,9 +111,15 @@ export function MatchActionsPanel({
   };
 
   const handleCancel = async (): Promise<void> => {
+    if (cancelling.busy) return;
     const outcome = await cancelling.run(cancel);
     setConfirmingCancel(false);
     if (outcome !== null) onSettled();
+  };
+
+  const handleUndone = (): void => {
+    setConfirmingUndo(false);
+    onSettled();
   };
 
   const failure = failureMessage(starting.outcome) ?? failureMessage(cancelling.outcome);
@@ -104,59 +130,66 @@ export function MatchActionsPanel({
         {MATCH_ACTIONS_HEADING}
       </h2>
       {startable ? <p className="matches-hint">{START_HINT}</p> : null}
-      <div className="matches-actions">
+      {undoable ? <p className="matches-hint">{UNDO_START_HINT}</p> : null}
+      <div className="matches-footer matches-footer--plain">
         {startable ? (
-          <button
+          <Button
             type="button"
-            className="matches-button matches-button--primary"
+            size="lg"
+            icon="whistle"
             aria-disabled={starting.busy ? true : undefined}
             onClick={() => void handleStart()}
           >
             {starting.busy ? STARTING_LABEL : START_MATCH_LABEL}
-          </button>
-        ) : null}
-        {cancellable && !confirmingCancel ? (
-          <button
-            type="button"
-            className="matches-button"
-            onClick={() => setConfirmingCancel(true)}
-          >
+          </Button>
+        ) : undoable ? (
+          <Button type="button" variant="secondary" icon="undo" onClick={() => setConfirmingUndo(true)}>
+            {UNDO_START_LABEL}
+          </Button>
+        ) : (
+          <span />
+        )}
+        {cancellable ? (
+          <Button type="button" variant="ghost" icon="x" onClick={() => setConfirmingCancel(true)}>
             {CANCEL_MATCH_LABEL}
-          </button>
+          </Button>
         ) : null}
       </div>
-      {cancellable && confirmingCancel ? (
-        <div className="matches-confirm" role="group" aria-label={CANCEL_MATCH_LABEL}>
-          <p>{CANCEL_CONFIRM_STATEMENT}</p>
-          <div className="matches-actions">
-            <button
-              type="button"
-              className="matches-button matches-button--primary"
-              aria-disabled={cancelling.busy ? true : undefined}
-              onClick={() => void handleCancel()}
-            >
-              {cancelling.busy ? CANCELLING_LABEL : CONFIRM_CANCEL_LABEL}
-            </button>
-            <button
-              type="button"
-              className="matches-button"
-              onClick={() => setConfirmingCancel(false)}
-            >
-              {KEEP_MATCH_LABEL}
-            </button>
-          </div>
-        </div>
+      {unlocked ? <Banner tone="error">{UNLOCKED_CHANGES_STATEMENT}</Banner> : null}
+      {failure === null ? null : <Banner tone="error">{failure}</Banner>}
+      {cancellable ? (
+        <Dialog
+          open={confirmingCancel}
+          title={cancelDialogTitle(location)}
+          icon="x"
+          tone="danger"
+          onClose={() => setConfirmingCancel(false)}
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmingCancel(false)}>
+                {KEEP_MATCH_LABEL}
+              </Button>
+              <Button
+                variant="destructive"
+                aria-disabled={cancelling.busy ? true : undefined}
+                onClick={() => void handleCancel()}
+              >
+                {cancelling.busy ? CANCELLING_LABEL : CONFIRM_CANCEL_LABEL}
+              </Button>
+            </>
+          }
+        >
+          <p className="pm-dialog__body">{CANCEL_DIALOG_BODY}</p>
+        </Dialog>
       ) : null}
-      {unlocked ? (
-        <p className="matches-error" role="alert">
-          {UNLOCKED_CHANGES_STATEMENT}
-        </p>
+      {undoable ? (
+        <UndoKickoffDialog
+          open={confirmingUndo}
+          undoStart={undoStart}
+          onClose={() => setConfirmingUndo(false)}
+          onSettled={handleUndone}
+        />
       ) : null}
-      {failure === null ? null : (
-        <p className="matches-error" role="alert">
-          {failure}
-        </p>
-      )}
     </section>
   );
 }

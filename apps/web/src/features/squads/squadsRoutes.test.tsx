@@ -60,19 +60,34 @@ import { createSquadsPublicRoutes, createSquadsShellRoutes } from './squadsRoute
 const api = {} as SquadsApi;
 
 describe('createSquadsShellRoutes', () => {
-  it('registers exactly one route, relative to the shell prefix', () => {
+  it('registers one route per tab, relative to the shell prefix, Players at the squad itself', () => {
     const routes = createSquadsShellRoutes({ api });
 
-    expect(routes).toHaveLength(1);
-    expect(routes[0].path).toBe('squads/:squadId');
-    expect(routes[0].children).toBeUndefined();
-    expect(routes[0].index).toBeUndefined();
+    expect(routes.map((route) => route.path)).toEqual([
+      'squads/:squadId',
+      'squads/:squadId/matches',
+      'squads/:squadId/leaderboards',
+      'squads/:squadId/admin',
+    ]);
+    for (const route of routes) {
+      expect(route.children).toBeUndefined();
+      expect(route.index).toBeUndefined();
+    }
   });
 
-  it('derives a child path that rejoins the shell prefix as the Squad_Route', () => {
-    const [route] = createSquadsShellRoutes({ api });
+  it('derives child paths that rejoin the shell prefix as the Squad_Route and its tabs', () => {
+    const [players, ...tabs] = createSquadsShellRoutes({ api });
 
-    expect(`${HOME_ROUTE}/${route.path}`).toBe(SQUAD_ROUTE);
+    expect(`${HOME_ROUTE}/${players.path}`).toBe(SQUAD_ROUTE);
+    for (const tab of tabs) {
+      expect(`${HOME_ROUTE}/${tab.path}`.startsWith(`${SQUAD_ROUTE}/`)).toBe(true);
+    }
+  });
+
+  it('renders the one Squad_Screen element on every tab route, so a tab change keeps it mounted', () => {
+    const routes = createSquadsShellRoutes({ api });
+
+    expect(new Set(routes.map((route) => route.element)).size).toBe(1);
   });
 
   it('registers no Player_Stats_Route and no Squads_Home route', () => {

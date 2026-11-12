@@ -187,6 +187,9 @@ const summaryArb: fc.Arbitrary<SquadSummary> = fc.record({
   name: nameArb,
   role: roleArb,
   state: stateArb,
+  playerCount: fc.nat({ max: 40 }),
+  nextMatch: fc.constant(null),
+  recentForm: fc.constant([]),
 });
 
 /**

@@ -237,7 +237,7 @@ public class IdempotentCompletionPropertyTests
             // A match walked to InProgress with a recorded result: draft -> confirm -> add participants
             // -> apply a two-team proposal -> lock (capturing the kickoff lineup) -> start -> record.
             Match match = Match.CreateDraft(Guid.CreateVersion7(), squadId, Location, [ConfirmedDay], Anchor).Value!;
-            match.Confirm(ConfirmedDay, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+            match.Confirm(ConfirmedDay, activeMembers: []);
 
             var members = new List<SquadMembership> { owner, admin };
             var participantIds = new List<Guid>(scenario.Count);
@@ -257,7 +257,7 @@ public class IdempotentCompletionPropertyTests
             };
             match.ApplyTeamProposal(teams);
             match.Lock();
-            match.Start();
+            match.Start(DateTimeOffset.UnixEpoch);
 
             // Scores reference the match's working teams (index-aligned with the kickoff lineup).
             Guid teamAId = match.Teams.ElementAt(0).Id;

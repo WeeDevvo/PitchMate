@@ -180,7 +180,7 @@ internal sealed class RecordEventBatchWorld
 
         if (state != MatchState.GatheringAvailability)
         {
-            match.Confirm(MatchDay, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+            match.Confirm(MatchDay, activeMembers: []);
             foreach (SquadMembership player in players)
             {
                 match.AddParticipant(player);
@@ -213,7 +213,7 @@ internal sealed class RecordEventBatchWorld
                         break;
 
                     default:
-                        match.Start();
+                        match.Start(DateTimeOffset.UnixEpoch);
                         if (state == MatchState.Completed)
                         {
                             var result = new MatchResult(ResultFidelity.Basic, new[]

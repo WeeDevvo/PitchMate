@@ -10,8 +10,9 @@ using PitchMate.Infrastructure.Tests.Persistence;
 namespace PitchMate.Infrastructure.Tests.Stats;
 
 /// <summary>
-/// Harness for the membership-standing scope property test (api-response-contracts Property 20,
-/// task 6.2). It runs the real <see cref="EfMembershipStandingSource"/> SQL against real PostgreSQL on
+/// Harness for the squad-scoped aggregation source property tests — the membership-standing scope
+/// property (api-response-contracts Property 20, task 6.2) and the squad card facts. It runs the real
+/// <see cref="EfMembershipStandingSource"/> and <see cref="EfSquadCardSource"/> SQL against real PostgreSQL on
 /// the shared <see cref="PostgreSqlContainerFixture"/> container, with the production EF migrations
 /// applied — never an in-memory or SQLite substitute.
 /// <para>
@@ -36,9 +37,10 @@ internal sealed class MembershipStandingScopeHarness
     /// harness drops any leftover from a previous run before recreating it — and at most one spare
     /// database ever exists inside a container that is thrown away with the test collection.
     /// </summary>
-    private const string DatabaseName = "standing_scope";
+    private const string DefaultDatabaseName = "standing_scope";
 
     private readonly PostgreSqlContainerFixture _fixture;
+    private readonly string _databaseName;
     private readonly StatsDatasetSeeder _seeder = new();
     private readonly SemaphoreSlim _gate = new(1, 1);
     private string _connectionString = string.Empty;
@@ -46,10 +48,17 @@ internal sealed class MembershipStandingScopeHarness
 
     /// <summary>Creates the harness over the shared PostgreSQL container fixture.</summary>
     /// <param name="fixture">The shared, container-backed persistence fixture.</param>
-    public MembershipStandingScopeHarness(PostgreSqlContainerFixture fixture)
+    /// <param name="databaseName">
+    /// The class's fixed database name; each test class using the harness passes its own, so no class
+    /// drops another's database.
+    /// </param>
+    public MembershipStandingScopeHarness(
+        PostgreSqlContainerFixture fixture,
+        string databaseName = DefaultDatabaseName)
     {
         ArgumentNullException.ThrowIfNull(fixture);
         _fixture = fixture;
+        _databaseName = databaseName;
     }
 
     /// <summary>
@@ -78,6 +87,19 @@ internal sealed class MembershipStandingScopeHarness
         await using var read = CreateContext();
         var source = new EfMembershipStandingSource(read);
         return await source.ListForSquadAsync(squadId, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Runs the real squad card source over a fresh context, so the answer comes from SQL alone.
+    /// </summary>
+    /// <param name="squadId">The squad whose card is read.</param>
+    /// <param name="membershipId">The viewer's membership, or <see langword="null"/> for none.</param>
+    public async Task<SquadCardFacts> ReadSquadCardAsync(Guid squadId, Guid? membershipId)
+    {
+        await EnsureDatabaseAsync();
+
+        await using var read = CreateContext();
+        return await new EfSquadCardSource(read).ReadAsync(squadId, membershipId, CancellationToken.None);
     }
 
     /// <summary>
@@ -147,9 +169,9 @@ internal sealed class MembershipStandingScopeHarness
             }
 
             // Drop first: a previous run of this class had no hook in which to clean up.
-            await MigrationTestSupport.DropDatabaseAsync(_fixture.ConnectionString, DatabaseName);
-            await MigrationTestSupport.CreateDatabaseAsync(_fixture.ConnectionString, DatabaseName);
-            _connectionString = PooledConnectionString(DatabaseName);
+            await MigrationTestSupport.DropDatabaseAsync(_fixture.ConnectionString, _databaseName);
+            await MigrationTestSupport.CreateDatabaseAsync(_fixture.ConnectionString, _databaseName);
+            _connectionString = PooledConnectionString(_databaseName);
 
             await using var schema = CreateContext();
             await schema.Database.MigrateAsync();

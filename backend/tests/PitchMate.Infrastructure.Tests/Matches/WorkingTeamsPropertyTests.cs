@@ -157,8 +157,8 @@ public sealed class WorkingTeamsPropertyTests
     // only where the engine accepts the arrangement.
     /// <summary>
     /// **Validates: Requirements 4.9, 4.10, 4.11, 4.16, 4.18, 6.3, 6.9** — with two or more non-empty
-    /// rosters the read predicts once, in team order, each value in [0, 1], the win probabilities summing
-    /// to 1 with the draw excluded, and every value within 1e-9 of the oracle's call to the same engine;
+    /// rosters the read predicts once, in team order, each value in [0, 1], the wins and the draw summing
+    /// to 1 as shares of the whole outcome, and every value within 1e-9 of the oracle's call to the same engine;
     /// otherwise it predicts nothing and calls the engine zero times. A move is reflected on the next
     /// read, and repeated reads with no write between them agree.
     /// </summary>
@@ -184,7 +184,7 @@ public sealed class WorkingTeamsPropertyTests
                         Assert.Equal(first.Teams.Count, prediction.WinProbabilities.Count);
                         Assert.All(prediction.WinProbabilities, static p => Assert.InRange(p, 0, 1));
                         Assert.InRange(prediction.DrawProbability, 0, 1);
-                        Assert.Equal(1.0, prediction.WinProbabilities.Sum(), 1e-6);
+                        Assert.Equal(1.0, prediction.WinProbabilities.Sum() + prediction.DrawProbability, 1e-6);
                     }
 
                     WorkingTeamsReferenceOracle.AssertAgrees(WorkingTeamsReferenceOracle.Expected(squad, match, engine.Inner), first);

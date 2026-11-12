@@ -135,7 +135,13 @@ const summariesArb: fc.Arbitrary<readonly SquadSummary[]> = fc
         maxLength: bodies.length,
       })
       .map((identities) =>
-        bodies.map((body, index) => ({ ...body, squadId: identities[index] })),
+        bodies.map((body, index) => ({
+          ...body,
+          squadId: identities[index],
+          playerCount: 0,
+          nextMatch: null,
+          recentForm: [],
+        })),
       ),
   );
 

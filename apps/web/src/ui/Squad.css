@@ -1,0 +1,122 @@
+.pm-crest {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--pm-radius-md);
+  display: grid;
+  place-items: center;
+  flex: none;
+  font-family: var(--pm-font-display);
+  font-weight: 800;
+  font-size: 22px;
+  text-transform: uppercase;
+  background: var(--pm-accent-subtle);
+  color: var(--pm-accent-on-subtle);
+}
+
+.pm-crest--sm {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.pm-squadcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-4);
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    transform var(--pm-duration-fast),
+    border-color var(--pm-duration-fast);
+}
+
+.pm-squadcard:hover {
+  border-color: var(--pm-border-control);
+  transform: translateY(-2px);
+}
+
+.pm-squadcard:focus-visible {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+}
+
+.pm-squadcard__head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+}
+
+.pm-squadcard__titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-1);
+  min-width: 0;
+}
+
+.pm-squadcard__name {
+  font-family: var(--pm-font-display);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.pm-squadcard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pm-space-2);
+  align-items: center;
+  color: var(--pm-text-secondary);
+  font-size: 14px;
+}
+
+/* The next match: a sunken well under the head. */
+.pm-squadcard__next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pm-space-3);
+  padding: var(--pm-space-3);
+  border-radius: var(--pm-radius-md);
+  background: var(--pm-surface-sunken);
+}
+
+.pm-squadcard__next-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pm-squadcard__next-title {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.pm-squadcard__next-sub {
+  color: var(--pm-text-secondary);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+/* The viewer's form, set off by a rule. */
+.pm-squadcard__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-3);
+  padding-top: var(--pm-space-4);
+  border-top: 1px solid var(--pm-border-subtle);
+}
+
+.pm-squadcard__foot-label {
+  font: var(--pm-type-overline);
+  letter-spacing: var(--pm-type-overline-tracking);
+  text-transform: uppercase;
+  color: var(--pm-text-secondary);
+}

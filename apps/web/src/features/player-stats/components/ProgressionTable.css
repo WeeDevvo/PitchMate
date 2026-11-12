@@ -26,7 +26,7 @@
 .player-stats-progression-table {
   width: 100%;
   border-collapse: collapse;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
   text-align: left;
@@ -35,8 +35,8 @@
 .player-stats-progression-table__heading {
   padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
   border-bottom: var(--player-stats-border-width) solid
-    var(--player-stats-card-border);
-  color: var(--muted-text);
+    var(--pm-border-subtle);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-meta);
   font-weight: var(--player-stats-font-weight-label);
   text-align: left;
@@ -44,7 +44,7 @@
 
 .player-stats-progression-table__date {
   padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-weight: var(--player-stats-font-weight-body);
   text-align: left;
   /* A date never needs to break mid-word, and keeping it whole stops the column
@@ -54,7 +54,7 @@
 
 .player-stats-progression-table__rating {
   padding: var(--player-stats-gap-hairline) var(--player-stats-gap-tight);
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-weight: var(--player-stats-font-weight-label);
   /* The column shrinks to its digits, leaving the date column the remainder. */
   width: 1%;
@@ -66,7 +66,7 @@
 .player-stats-progression-table__empty {
   margin: 0;
   max-width: var(--player-stats-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
 }

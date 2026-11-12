@@ -48,7 +48,10 @@ import { UNIFORM_RESET_ACKNOWLEDGEMENT } from './lib/errorMapping'
 import type { AuthApiFacade } from './api/authApi'
 
 /** The screen heading (the single `h1`, rendered by AuthLayout). */
-export const RESET_REQUEST_HEADING = 'Reset your password'
+export const RESET_REQUEST_HEADING = 'Reset password'
+
+/** The line under the heading. */
+export const RESET_REQUEST_SUBHEADING = "We'll email you a link."
 
 /** Route path of the Log_In_Screen, linked from the Reset_Request_Screen. */
 export const LOG_IN_PATH = '/login'
@@ -155,7 +158,17 @@ export function ResetRequestScreen({ authApi }: ResetRequestScreenProps) {
   }
 
   return (
-    <AuthLayout heading={RESET_REQUEST_HEADING}>
+    <AuthLayout
+      heading={RESET_REQUEST_HEADING}
+      subheading={RESET_REQUEST_SUBHEADING}
+      // The same art for any address once acknowledged: it never says whether
+      // the email has an account.
+      art={status.kind === 'acknowledged' ? { icon: 'mail' } : undefined}
+      footer={
+        // Convenience navigation back to sign-in (client-side, Requirement 1.4).
+        <LinkButton to={LOG_IN_PATH}>{BACK_TO_LOG_IN_LABEL}</LinkButton>
+      }
+    >
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         <EmailField
           value={email}
@@ -174,11 +187,6 @@ export function ResetRequestScreen({ authApi }: ResetRequestScreenProps) {
         message={status.kind === 'none' ? null : status.message}
         politeness="polite"
       />
-
-      {/* Convenience navigation back to sign-in (client-side, Requirement 1.4). */}
-      <nav className="auth-links" aria-label="Other options">
-        <LinkButton to={LOG_IN_PATH}>{BACK_TO_LOG_IN_LABEL}</LinkButton>
-      </nav>
     </AuthLayout>
   )
 }

@@ -47,6 +47,7 @@
  * Requirements: 1.5, 1.6, 1.7, 1.8, 1.14, 19.3, 19.4
  */
 import { type ReactElement } from 'react';
+import { SquadCard as UiSquadCard } from '../../../ui';
 
 import type { MembershipState, SquadRole } from '../lib/wireEnums';
 import type { SquadSummary } from '../lib/parse/squadSummary';
@@ -58,7 +59,11 @@ import {
   NO_MEMBERSHIP_STATE_RECORDED_LABEL,
   NO_ROLE_RECORDED_LABEL,
   OWNER_ROLE_LABEL,
+  SQUAD_CARD_FORM_LABEL,
+  SQUAD_CARD_NO_FORM,
+  SQUAD_CARD_NO_NEXT_MATCH,
 } from '../lib/messages';
+import { squadCardView } from '../lib/squadCardView';
 
 // The feature token table, so a card rendered outside the App_Shell frame still
 // resolves every custom property `SquadCard.css` reads. No colour value is
@@ -128,25 +133,43 @@ export interface SquadCardProps {
  * Requirements: 1.5, 1.6, 1.7, 1.8, 1.14, 19.3
  */
 export function SquadCard({ summary, onOpen }: SquadCardProps): ReactElement {
+  const view = squadCardView(summary);
+
   return (
-    <button
-      // 1.8, 1.14: one native control per card — keyboard-operable, and no
-      // navigation of its own, so no full-document reload is possible here.
-      type="button"
-      className="squads-card"
-      data-squads-card="true"
-      data-squad-id={summary.squadId}
-      onClick={() => onOpen(summary.squadId)}
-    >
-      {/* 1.14: part of the control's own accessible name. */}
-      <span className="squads-card__name">{summary.name}</span>
-      <span className="squads-card__labels">
-        {/* 1.5, 1.6, 19.3: the role in text, or the recorded absence of one. */}
-        <span className="squads-card__label">{roleLabelOf(summary.role)}</span>
-        {/* 1.5, 1.7, 19.3: the state in text, or the recorded absence of one. */}
-        <span className="squads-card__label">{stateLabelOf(summary.state)}</span>
-      </span>
-    </button>
+    <UiSquadCard
+      // 1.14: part of the control's own accessible name. The crest beside it is
+      // decorative, so the name is not read twice.
+      name={summary.name}
+      meta={
+        <span className="squads-card__labels">
+          <span className="squads-card__players">{view.players}</span>
+          {/* 1.5, 1.6, 19.3: the role in text, or the recorded absence of one. */}
+          <span className="squads-card__label">{roleLabelOf(summary.role)}</span>
+          {/* 1.5, 1.7, 19.3: the state in text, or the recorded absence of one. */}
+          <span className="squads-card__label">{stateLabelOf(summary.state)}</span>
+        </span>
+      }
+      // The design system's squad card: the next match in a well, then the
+      // viewer's recent form, each with its own copy when there is none.
+      next={view.next}
+      noNextMatch={SQUAD_CARD_NO_NEXT_MATCH}
+      form={view.form}
+      formLabel={SQUAD_CARD_FORM_LABEL}
+      noForm={SQUAD_CARD_NO_FORM}
+      render={({ className, children }) => (
+        <button
+          // 1.8, 1.14: one native control per card — keyboard-operable, and no
+          // navigation of its own, so no full-document reload is possible here.
+          type="button"
+          className={`squads-card ${className}`}
+          data-squads-card="true"
+          data-squad-id={summary.squadId}
+          onClick={() => onOpen(summary.squadId)}
+        >
+          {children}
+        </button>
+      )}
+    />
   );
 }
 

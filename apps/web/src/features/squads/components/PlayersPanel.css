@@ -1,0 +1,31 @@
+/*
+ * The Players tab's filter row over the Player_List: the chips at the start, the
+ * search at the end, wrapping beneath them on a narrow screen. Colours come from
+ * the design system's components and tokens; this file owns layout.
+ */
+
+.squads-players-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--squads-gap);
+  min-width: 0;
+}
+
+.squads-players-panel__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--squads-gap-tight) var(--squads-gap);
+}
+
+.squads-players-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--squads-touch-gap);
+}
+
+.squads-players-panel__search {
+  flex: 0 1 16rem;
+  min-width: min(100%, 12rem);
+}

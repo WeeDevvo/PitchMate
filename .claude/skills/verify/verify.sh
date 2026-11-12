@@ -3,6 +3,14 @@
 # Usage: verify.sh [all|backend|web]   (default: all)
 set -uo pipefail
 
+# Ensure standard paths on macOS / Linux are in PATH
+for dir in /opt/homebrew/bin /usr/local/bin /usr/local/share/dotnet "$HOME/.dotnet" "$HOME/.dotnet/tools"; do
+  if [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]]; then
+    PATH="$dir:$PATH"
+  fi
+done
+export PATH
+
 scope="${1:-all}"
 case "$scope" in all|backend|web) ;; *) echo "usage: $0 [all|backend|web]" >&2; exit 2 ;; esac
 

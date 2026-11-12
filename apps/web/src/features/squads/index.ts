@@ -18,6 +18,7 @@
  * | `SQUAD_ROUTE`, `INVITE_LANDING_ROUTE`, `CLAIM_LANDING_ROUTE` | the patterns a router or a redirect check names |
  * | `PLAYER_STATS_ROUTE`, `playerStatsPath` | the seam the later player-stats feature registers its screen against (Requirements 9.2, 9.3) |
  * | `squadPath`, `inviteLandingPath` | path construction, so no consumer rebuilds a path from a pattern |
+ * | `SQUAD_TAB_ROUTES`, `squadTabPath`, `SquadTab` | the Squad_Screen's tab addresses, for a router check or a link to one tab |
  * | `createSquadsApi`, `SquadsApi` | the facade `appRouter.tsx` builds once from the Authenticated_Api_Client and threads into the routes (Requirement 16.2) |
  *
  * Nothing else is exported (Requirement 18.7). The Response_Parsers and their
@@ -48,5 +49,7 @@ export {
   playerStatsPath,
   inviteLandingPath,
 } from './lib/routePaths';
+
+export { SQUAD_TAB_ROUTES, squadTabPath, type SquadTab } from './lib/squadTabs';
 
 export { createSquadsApi, type SquadsApi } from './api/squadsApi';

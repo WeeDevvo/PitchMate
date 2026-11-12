@@ -44,10 +44,8 @@ import { ContentRegion } from './components/ContentRegion';
 import { ShellHeader, type ShellHeaderProps } from './components/ShellHeader';
 import { SkipLink } from './components/SkipLink';
 import { resolveDestination } from './lib/routeResolution';
-// The per-Theme token tables first, then the layout that references them: the
-// tables are the only place a colour value is written for the shell, and every
-// `var(--token)` in `shell.css` resolves from them (Requirements 12.8, 13.4).
-import './styles/theme.css';
+// The shell's layout reads the design-system `--pm-*` tokens, which are loaded
+// globally (Requirements 12.8, 13.4).
 import './styles/shell.css';
 
 export interface ShellFrameProps extends ShellHeaderProps {

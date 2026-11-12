@@ -47,6 +47,9 @@ import { navigateWithFallback } from './lib/navigation'
 
 const mockNavigate = vi.mocked(navigateWithFallback)
 
+/** Every sign-up call to action starts "Start a squad". */
+const START_SQUAD = /^Start a squad/
+
 beforeEach(() => {
   mockNavigate.mockClear()
   mockNavigate.mockResolvedValue({ ok: true })
@@ -98,12 +101,12 @@ async function activateBothWays(
 }
 
 describe('LandingPage CTA and footer navigation', () => {
-  it('navigates every Sign Up primary CTA to /signup by pointer and keyboard', async () => {
+  it('navigates every Start a squad CTA to /signup by pointer and keyboard', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    const signUpLinks = screen.getAllByRole('link', { name: 'Sign Up' })
-    // Header + hero + closing CTA all offer Sign Up.
+    const signUpLinks = screen.getAllByRole('link', { name: START_SQUAD })
+    // Header + hero + closing CTA all offer Start a squad.
     expect(signUpLinks.length).toBeGreaterThanOrEqual(3)
 
     for (const link of signUpLinks) {
@@ -113,22 +116,22 @@ describe('LandingPage CTA and footer navigation', () => {
     }
   })
 
-  it('navigates the Log In secondary CTA to /login by pointer and keyboard', async () => {
+  it('navigates the Log in CTA to /login by pointer and keyboard', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    const logIn = screen.getByRole('link', { name: 'Log In' })
+    const logIn = screen.getByRole('link', { name: 'Log in' })
     const { pointerHref, keyboardHref } = await activateBothWays(user, logIn)
 
     expect(pointerHref).toBe('/login')
     expect(keyboardHref).toBe('/login')
   })
 
-  it('navigates the footer Privacy Policy link to /privacy by pointer and keyboard', async () => {
+  it('navigates the footer Privacy link to /privacy by pointer and keyboard', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    const privacy = screen.getByRole('link', { name: 'Privacy Policy' })
+    const privacy = screen.getByRole('link', { name: 'Privacy' })
     const { pointerHref, keyboardHref } = await activateBothWays(user, privacy)
 
     expect(pointerHref).toBe('/privacy')
@@ -139,7 +142,7 @@ describe('LandingPage CTA and footer navigation', () => {
     const user = userEvent.setup()
     renderPage()
 
-    const terms = screen.getByRole('link', { name: 'Terms of Service' })
+    const terms = screen.getByRole('link', { name: 'Terms' })
     const { pointerHref, keyboardHref } = await activateBothWays(user, terms)
 
     expect(pointerHref).toBe('/terms')
@@ -154,10 +157,10 @@ describe('LandingPage CTA and footer navigation', () => {
     renderPage()
 
     const controls = [
-      ...screen.getAllByRole('link', { name: 'Sign Up' }),
-      screen.getByRole('link', { name: 'Log In' }),
-      screen.getByRole('link', { name: 'Privacy Policy' }),
-      screen.getByRole('link', { name: 'Terms of Service' }),
+      ...screen.getAllByRole('link', { name: START_SQUAD }),
+      screen.getByRole('link', { name: 'Log in' }),
+      screen.getByRole('link', { name: 'Privacy' }),
+      screen.getByRole('link', { name: 'Terms' }),
     ]
 
     for (const link of controls) {
@@ -170,19 +173,19 @@ describe('LandingPage CTA and footer navigation', () => {
   })
 
   // Validates: Requirement 3.1 (supporting) — the header carries a primary
-  // Sign Up CTA and a distinct secondary Log In CTA.
-  it('exposes a primary Sign Up CTA and a distinct secondary Log In CTA in the header', () => {
+  // Start a squad CTA and a distinct, quieter Log in CTA.
+  it('exposes a primary Start a squad CTA and a distinct Log in CTA in the header', () => {
     renderPage()
 
     const header = screen.getByRole('banner')
-    const signUp = within(header).getByRole('link', { name: 'Sign Up' })
-    const logIn = within(header).getByRole('link', { name: 'Log In' })
+    const signUp = within(header).getByRole('link', { name: START_SQUAD })
+    const logIn = within(header).getByRole('link', { name: 'Log in' })
 
     expect(signUp).toHaveAttribute('href', '/signup')
     expect(signUp).toHaveAttribute('data-cta-kind', 'primary')
 
     expect(logIn).toHaveAttribute('href', '/login')
-    expect(logIn).toHaveAttribute('data-cta-kind', 'secondary')
+    expect(logIn).toHaveAttribute('data-cta-kind', 'ghost')
 
     // The two entry points are distinct controls.
     expect(signUp).not.toBe(logIn)
@@ -200,11 +203,11 @@ describe('LandingPage CTA and footer navigation', () => {
     })
 
     const closingRegion = screen.getByTestId('closing-cta')
-    const closingCta = within(closingRegion).getByRole('link', { name: 'Sign Up' })
+    const closingCta = within(closingRegion).getByRole('link', { name: START_SQUAD })
 
-    // The closing CTA is a primary Sign Up control...
+    // The closing CTA is the green band's sign-up control...
     expect(closingCta).toHaveAttribute('href', '/signup')
-    expect(closingCta).toHaveAttribute('data-cta-kind', 'primary')
+    expect(closingCta).toHaveAttribute('data-cta-kind', 'ink')
 
     // ...and it appears after the last benefit heading in document order.
     const relation = lastBenefitHeading.compareDocumentPosition(closingCta)

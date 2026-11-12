@@ -27,7 +27,7 @@
   box-sizing: border-box;
   width: 100%;
   max-width: var(--squads-measure);
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-body);
   line-height: var(--squads-line-height-body);
 }
@@ -36,18 +36,18 @@
 .squads-invite-manager__generate {
   align-self: flex-start;
   min-height: var(--squads-touch-target);
-  padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--control-border);
-  border-radius: var(--squads-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  padding: 0 var(--pm-space-5);
+  border: var(--squads-border-width) solid var(--pm-border-control);
+  border-radius: var(--squads-radius-chip);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
   font: inherit;
   font-weight: var(--squads-font-weight-label);
   cursor: pointer;
 }
 
 .squads-invite-manager__generate:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }
 
@@ -58,7 +58,7 @@
 }
 
 .squads-invite-manager__field-label {
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-meta);
   font-weight: var(--squads-font-weight-label);
 }
@@ -66,21 +66,21 @@
 .squads-invite-manager__select {
   min-height: var(--squads-touch-target);
   padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--control-border);
+  border: var(--squads-border-width) solid var(--pm-border-control);
   border-radius: var(--squads-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
   font: inherit;
 }
 
 .squads-invite-manager__select:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }
 
 .squads-invite-manager__empty {
   margin: 0;
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
 }
 
 .squads-invite-manager__entries {
@@ -100,9 +100,9 @@
   gap: var(--squads-touch-gap);
   box-sizing: border-box;
   padding: var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--squads-card-border);
+  border: var(--squads-border-width) solid var(--pm-border-subtle);
   border-radius: var(--squads-radius);
-  background: var(--squads-card-surface);
+  background: var(--pm-surface);
 }
 
 .squads-invite-entry__facts {
@@ -119,23 +119,23 @@
   display: inline-flex;
   align-items: center;
   padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--squads-chip-border);
+  border: var(--squads-border-width) solid var(--pm-border-control);
   border-radius: var(--squads-radius-chip);
   font-size: var(--squads-font-size-chip);
   font-weight: var(--squads-font-weight-label);
 }
 
 .squads-invite-entry__state[data-squads-invite-state='Active'] {
-  border-color: var(--squads-invite-active-accent);
-  color: var(--squads-invite-active-text);
+  border-color: var(--pm-accent-icon);
+  color: var(--pm-accent-text);
 }
 
 .squads-invite-entry__state[data-squads-invite-state='Revoked'] {
-  color: var(--squads-invite-revoked-text);
+  color: var(--pm-danger-text);
 }
 
 .squads-invite-entry__state[data-squads-invite-state='Expired'] {
-  color: var(--squads-invite-expired-text);
+  color: var(--pm-text-muted);
 }
 
 .squads-invite-entry__field {
@@ -147,36 +147,36 @@
 }
 
 .squads-invite-entry__label {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-meta);
   font-weight: var(--squads-font-weight-label);
 }
 
 .squads-invite-entry__instant {
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-meta);
   overflow-wrap: break-word;
 }
 
 .squads-invite-entry__never-expires {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-meta);
 }
 
 .squads-invite-entry__revoke {
   min-height: var(--squads-touch-target);
-  padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--control-border);
-  border-radius: var(--squads-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  padding: 0 var(--pm-space-5);
+  border: var(--squads-border-width) solid var(--pm-border-control);
+  border-radius: var(--squads-radius-chip);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
   font: inherit;
   font-weight: var(--squads-font-weight-label);
   cursor: pointer;
 }
 
 .squads-invite-entry__revoke:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }
 

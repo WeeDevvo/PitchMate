@@ -138,7 +138,8 @@ public class SquadReadProperties
 
         var handler = new ListMySquadsHandler(
             new FakeSquadRepository(store),
-            new FakeSquadMembershipRepository(store));
+            new FakeSquadMembershipRepository(store),
+            new FakeSquadCardSource());
 
         Result<IReadOnlyList<MySquadSummary>> result = handler
             .HandleAsync(new ListMySquadsCommand(userId), CancellationToken.None)

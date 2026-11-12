@@ -11,6 +11,7 @@ import {
   readObject,
   readOptional,
   readProperty,
+  readString,
   readUuid,
   readWireEnumName,
   type ParseResult,
@@ -80,6 +81,8 @@ export function parseCreatedDraft(body: unknown): ParseResult<string> {
 /** The caller's role and membership state in one squad, either possibly absent. */
 export interface SquadStanding {
   readonly squadId: string;
+  /** The squad's name, which the create-match screen shows over its heading. */
+  readonly squadName: string;
   readonly role: SquadRole | null;
   readonly state: MembershipState | null;
 }
@@ -92,6 +95,9 @@ function parseStanding(value: unknown): ParseResult<SquadStanding> {
   const squadId = readUuid(readProperty(source, 'squadId'), 'squadId');
   if (!squadId.ok) return squadId;
 
+  const squadName = readString(readProperty(source, 'name'), 'name');
+  if (!squadName.ok) return squadName;
+
   const role = readOptional(readProperty(source, 'role'), 'role', (value, label) =>
     readWireEnumName(value, label, isSquadRole),
   );
@@ -102,7 +108,7 @@ function parseStanding(value: unknown): ParseResult<SquadStanding> {
   );
   if (!state.ok) return state;
 
-  return ok({ squadId: squadId.value, role: role.value, state: state.value });
+  return ok({ squadId: squadId.value, squadName: squadName.value, role: role.value, state: state.value });
 }
 
 /** Parse a `ListMySquads` body to the caller's standing in each squad. */

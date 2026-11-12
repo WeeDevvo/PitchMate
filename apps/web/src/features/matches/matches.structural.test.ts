@@ -83,7 +83,8 @@ function clientValueImporters(modules: ReadonlyMap<string, string>): string[] {
 
 /* 2. Barrels only ------------------------------------------------------------ */
 
-const ADMITTED_BARRELS = ['features/app-shell', 'features/auth', 'features/squads', 'wire', 'theme'].map(
+// The shared component library is admitted at its barrel (ADR 0004).
+const ADMITTED_BARRELS = ['features/app-shell', 'features/auth', 'features/squads', 'wire', 'theme', 'ui'].map(
   (dir) => norm(join(srcRoot, dir)),
 );
 

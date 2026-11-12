@@ -15,20 +15,20 @@
  *   - focus is never trapped: tabbing advances through every interactive control
  *     and past the last one (Req 6.4);
  *   - the shared control declares a visible `:focus-visible` indicator built on
- *     the `--focus-ring` token (Req 6.5);
- *   - the brand logo is informative with the exact alt text "PitchMate", every
- *     image declares an alt attribute, and any decorative image has empty alt
- *     (Req 6.6, 6.7);
+ *     the `--pm-focus-ring` token (Req 6.5);
+ *   - the brand logo is one informative image named exactly "PitchMate", every
+ *     image declares an alt attribute, and the decorative marks inside the logo
+ *     have empty alt (Req 6.6, 6.7);
  *   - colour-conveyed information (primary vs secondary CTA) is paired with a
- *     non-colour cue — distinct labels plus shape/weight/border differences in
- *     the stylesheet, not colour alone (Req 6.8);
+ *     non-colour cue — distinct labels plus the design system's filled and
+ *     outlined button shapes, not colour alone (Req 6.8);
  *   - `jest-axe` reports no violations on the fully rendered page in BOTH the
  *     dark and light themes (Req 6.2 supporting / overall a11y).
  *
  * jsdom does not implement `window.matchMedia` (so `ThemeProvider` resolves the
  * dark-first default) and does not compute colour/contrast (so axe's contrast
  * check is reported as incomplete, not a violation) — contrast thresholds are
- * covered separately by the theme-token tests (task 6.3). We install a small
+ * covered separately by the design-token contrast test. We install a small
  * `matchMedia` stub, mirroring the ThemeProvider test, to force light vs dark.
  *
  * The `LandingPage` renders CTAs through a control that calls `useNavigate`, so
@@ -80,11 +80,21 @@ function interactiveAnchors(container: HTMLElement): HTMLAnchorElement[] {
   return Array.from(container.querySelectorAll<HTMLAnchorElement>('a[href]'))
 }
 
+/**
+ * The controls Tab reaches at the width under test. The header's section links
+ * are hidden below the desktop breakpoint, and jsdom applies the base rule
+ * without evaluating the media query, so they are skipped here.
+ */
+function tabbableAnchors(container: HTMLElement): HTMLAnchorElement[] {
+  return interactiveAnchors(container).filter(
+    (anchor) => !anchor.closest('.landing-header__sections'),
+  )
+}
+
 // ---- Stylesheet contracts (read once; they are static build artifacts) ----
 const here = dirname(fileURLToPath(import.meta.url))
 const ctaCss = readFileSync(join(here, 'components/Cta.css'), 'utf8')
-const themeCss = readFileSync(join(here, 'styles/theme.css'), 'utf8')
-const landingCss = readFileSync(join(here, 'styles/landing.css'), 'utf8')
+const designTokensCss = readFileSync(join(here, '../../design/tokens.css'), 'utf8')
 
 describe('LandingPage accessibility', () => {
   const originalMatchMedia = window.matchMedia
@@ -130,8 +140,9 @@ describe('LandingPage accessibility', () => {
     const user = userEvent.setup()
 
     const anchors = interactiveAnchors(container)
-    // header: Log In + Sign Up, hero: Sign Up, closing: Sign Up, footer: 2 links
-    expect(anchors).toHaveLength(6)
+    // header: 3 section links + Log in + Start a squad, hero: Start a squad +
+    // See how it works, closing: Start a squad, footer: 2 links
+    expect(anchors).toHaveLength(10)
 
     for (const anchor of anchors) {
       // A real anchor with a non-empty href is inherently keyboard-activatable
@@ -153,19 +164,25 @@ describe('LandingPage accessibility', () => {
     const { container } = renderLandingPage()
     const user = userEvent.setup()
 
-    const expectedOrder = interactiveAnchors(container)
-    // Sanity-check the reading order the DOM encodes: header CTAs, hero CTA,
-    // closing CTA, then footer links.
-    expect(expectedOrder.map((a) => a.getAttribute('href'))).toEqual([
+    const domOrder = interactiveAnchors(container)
+    // Sanity-check the reading order the DOM encodes: header section links and
+    // CTAs, the hero pair, the closing CTA, then footer links.
+    expect(domOrder.map((a) => a.getAttribute('href'))).toEqual([
+      '#how-it-works',
+      '#fair-teams',
+      '#stats',
       '/login',
       '/signup',
       '/signup',
+      '#how-it-works',
       '/signup',
       '/privacy',
       '/terms',
     ])
 
     // Tabbing forward visits the controls in exactly that order.
+    const expectedOrder = tabbableAnchors(container)
+    expect(expectedOrder).toHaveLength(7)
     for (const expected of expectedOrder) {
       await user.tab()
       expect(document.activeElement).toBe(expected)
@@ -177,7 +194,7 @@ describe('LandingPage accessibility', () => {
     const { container } = renderLandingPage()
     const user = userEvent.setup()
 
-    const anchors = interactiveAnchors(container)
+    const anchors = tabbableAnchors(container)
 
     // Advance through every control; focus must move each time (never stuck).
     const visited: Element[] = []
@@ -194,19 +211,20 @@ describe('LandingPage accessibility', () => {
   })
 
   // Validates: Requirements 6.5
-  it('declares a visible focus indicator via the --focus-ring token', () => {
+  it('declares a visible focus indicator via the --pm-focus-ring token', () => {
     // The shared control (rendered by every CTA and link) defines a
-    // :focus-visible outline built on the theme --focus-ring token, so focus is
+    // :focus-visible outline built on the --pm-focus-ring token, so focus is
     // shown for keyboard/programmatic focus and is distinct from the unfocused
     // state.
     expect(ctaCss).toMatch(/\.cta:focus-visible\s*\{/)
     expect(ctaCss).toMatch(/outline:/)
-    expect(ctaCss).toMatch(/var\(--focus-ring\)/)
+    expect(ctaCss).toMatch(/var\(--pm-focus-ring\)/)
 
-    // The focus-ring token is defined for both themes so the indicator exists
-    // whichever theme is active (contrast thresholds are asserted in task 6.3).
-    expect(themeCss).toMatch(/\[data-theme='dark'\][^}]*--focus-ring/s)
-    expect(themeCss).toMatch(/\[data-theme='light'\][^}]*--focus-ring/s)
+    // The design system defines the focus-ring token for both themes, so the
+    // indicator exists whichever theme is active (its contrast is asserted in
+    // `src/design/tokens.contrast.test.ts`).
+    expect(designTokensCss).toMatch(/\[data-theme='dark'\][^}]*--pm-focus-ring/s)
+    expect(designTokensCss).toMatch(/\[data-theme='light'\][^}]*--pm-focus-ring/s)
   })
 
   // Validates: Requirements 6.6, 6.7
@@ -223,43 +241,43 @@ describe('LandingPage accessibility', () => {
       expect(img.getAttribute('alt')).not.toBeNull()
     }
 
-    // The brand logo is informative with the exact alt text "PitchMate".
-    const logo = container.querySelector<HTMLImageElement>('.landing-header__logo')
+    // The brand logo is one informative image named exactly "PitchMate"; the
+    // marks inside it are decorative so the name is announced once.
+    const logo = container.querySelector<HTMLElement>('.landing-header__logo')
     expect(logo).not.toBeNull()
-    expect(logo?.getAttribute('alt')).toBe('PitchMate')
+    expect(logo?.getAttribute('role')).toBe('img')
+    expect(logo?.getAttribute('aria-label')).toBe('PitchMate')
+    for (const mark of Array.from(logo?.querySelectorAll('img') ?? [])) {
+      expect(mark.getAttribute('alt')).toBe('')
+    }
   })
 
   // Validates: Requirements 6.8
   it('distinguishes primary and secondary CTAs by more than colour', () => {
     const { container } = renderLandingPage()
 
-    const primary = container.querySelector<HTMLAnchorElement>(
-      "a.cta[data-cta-kind='primary']",
-    )
-    const secondary = container.querySelector<HTMLAnchorElement>(
-      "a.cta[data-cta-kind='secondary']",
-    )
+    const header = container.querySelector<HTMLElement>('.landing-header')
+    const primary = header?.querySelector<HTMLAnchorElement>("a.cta[data-cta-kind='primary']")
+    const quiet = header?.querySelector<HTMLAnchorElement>("a.cta[data-cta-kind='ghost']")
     expect(primary).not.toBeNull()
-    expect(secondary).not.toBeNull()
+    expect(quiet).not.toBeNull()
 
     // 1) Distinct, self-describing text labels (a non-colour cue in itself).
-    expect(primary?.textContent?.trim()).toBe('Sign Up')
-    expect(secondary?.textContent?.trim()).toBe('Log In')
-    expect(primary?.textContent).not.toBe(secondary?.textContent)
+    expect(primary?.textContent?.trim()).toBe('Start a squad')
+    expect(quiet?.textContent?.trim()).toBe('Log in')
 
     // 2) Distinct roles exposed as a non-colour attribute hook.
     expect(primary?.getAttribute('data-cta-kind')).toBe('primary')
-    expect(secondary?.getAttribute('data-cta-kind')).toBe('secondary')
+    expect(quiet?.getAttribute('data-cta-kind')).toBe('ghost')
 
-    // 3) The stylesheet differentiates them by shape/weight/border, not colour
-    //    alone: the primary is a filled, bolder button; the secondary carries a
-    //    visible border outline.
-    expect(landingCss).toMatch(
-      /\.cta\[data-cta-kind='primary'\][^}]*font-weight/s,
-    )
-    expect(landingCss).toMatch(
-      /\.cta\[data-cta-kind='secondary'\][^}]*border/s,
-    )
+    // 3) They are the design system's filled primary and unfilled ghost
+    //    buttons, so they differ by shape as well as colour; the hero's pair is
+    //    a filled primary beside an outlined secondary.
+    expect(primary).toHaveClass('pm-btn', 'pm-btn--primary')
+    expect(quiet).toHaveClass('pm-btn', 'pm-btn--ghost')
+    const heroActions = container.querySelectorAll<HTMLAnchorElement>('.hero__actions a')
+    expect(heroActions[0]).toHaveClass('pm-btn--primary')
+    expect(heroActions[1]).toHaveClass('pm-btn--secondary')
   })
 
   // Validates: Requirements 6.2 (supporting) / overall accessibility

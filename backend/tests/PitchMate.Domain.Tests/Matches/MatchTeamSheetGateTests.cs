@@ -101,7 +101,7 @@ public class MatchTeamSheetGateTests
         ]).IsSuccess);
         List<Guid> rerolledIds = [.. match.Teams.Select(static team => team.Id)];
         Assert.Empty(rerolledIds.Intersect(sheetIds));
-        Assert.True(match.Start().IsSuccess);
+        Assert.True(match.Start(DateTimeOffset.UnixEpoch).IsSuccess);
 
         Result byWorkingTeams = match.RecordResult(
             new MatchResult(ResultFidelity.Basic, [new TeamScore(rerolledIds[0], 1), new TeamScore(rerolledIds[1], 0)]),
@@ -187,7 +187,7 @@ public class MatchTeamSheetGateTests
                     Assert.True(match.Cancel().IsSuccess);
                     break;
                 case MatchState.InProgress or MatchState.Completed:
-                    Assert.True(match.Start().IsSuccess);
+                    Assert.True(match.Start(DateTimeOffset.UnixEpoch).IsSuccess);
                     if (state == MatchState.Completed)
                     {
                         List<MatchTeam> teams = [.. match.Teams];
@@ -205,7 +205,7 @@ public class MatchTeamSheetGateTests
 
         private static Dictionary<Guid, string> Confirm(Match match)
         {
-            Assert.True(match.Confirm(Now.AddDays(3), availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []).IsSuccess);
+            Assert.True(match.Confirm(Now.AddDays(3), activeMembers: []).IsSuccess);
 
             var names = new Dictionary<Guid, string>();
             for (int i = 0; i < 11; i++)

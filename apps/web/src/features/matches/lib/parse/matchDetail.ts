@@ -1,8 +1,10 @@
 /**
  * The parser for `GetMatchDetail` (`GET /matches/{matchId}`).
  *
- * All or nothing, like every parser here. `recordedResult` and `completedAt`
- * are null until a result is recorded and the match completed.
+ * All or nothing, like every parser here. `startedAt`, `recordedResult` and
+ * `completedAt` are null until the match kicks off, a result is recorded and the
+ * match completed. A match started before kickoff times were recorded keeps a
+ * null `startedAt`.
  */
 import {
   fail,
@@ -36,6 +38,12 @@ export interface CallerAvailability {
   readonly markedDaysMs: readonly number[];
 }
 
+/** The days an organiser marked for one guest, who has no account to answer with. */
+export interface GuestAvailability {
+  readonly membershipId: string;
+  readonly markedDaysMs: readonly number[];
+}
+
 /** One team's final score, keyed by the locked team it was given against. */
 export interface TeamScore {
   readonly teamId: string;
@@ -58,12 +66,16 @@ export interface MatchDetail {
   readonly confirmedDayMs: number | null;
   readonly participantCount: number;
   readonly participants: readonly Participant[];
-  /** The fewest available players a day needs before it can be confirmed. */
-  readonly minimumPlayerThreshold: number;
+  /** Whether the caller is one of the participants, so they can leave rather than join. */
+  readonly callerIsParticipant: boolean;
   readonly callerAvailability: CallerAvailability;
   readonly recordedResult: RecordedResult | null;
+  /** When the match kicked off, or `null` before then (or when it was never recorded). */
+  readonly startedAtMs: number | null;
   /** When the match was completed and ratings applied, or `null` before then. */
   readonly completedAtMs: number | null;
+  /** What was marked for each active guest; empty unless the caller is an owner or admin. */
+  readonly guestAvailability: readonly GuestAvailability[];
 }
 
 function parseParticipant(value: unknown): ParseResult<Participant> {
@@ -119,7 +131,27 @@ function parseCallerAvailability(value: unknown): ParseResult<CallerAvailability
   });
 }
 
-function parseTeamScore(value: unknown): ParseResult<TeamScore> {
+function parseGuestAvailability(value: unknown): ParseResult<GuestAvailability> {
+  const object = readObject(value, 'guest availability');
+  if (!object.ok) return object;
+
+  const membershipId = readUuid(
+    readProperty(object.value, 'squadMembershipId'),
+    'squadMembershipId',
+  );
+  if (!membershipId.ok) return membershipId;
+
+  const markedDays = readInstantList(
+    readProperty(object.value, 'markedDays'),
+    'markedDays',
+  );
+  if (!markedDays.ok) return markedDays;
+
+  return ok({ membershipId: membershipId.value, markedDaysMs: markedDays.value });
+}
+
+/** Parse one team's score, as a result or a running score carries it. */
+export function parseTeamScore(value: unknown): ParseResult<TeamScore> {
   const object = readObject(value, 'team score');
   if (!object.ok) return object;
 
@@ -208,11 +240,11 @@ export function parseMatchDetail(body: unknown): ParseResult<MatchDetail> {
     participants.push(participant.value);
   }
 
-  const threshold = readCount(
-    readProperty(source, 'effectiveMinimumPlayerThreshold'),
-    'effectiveMinimumPlayerThreshold',
+  const callerIsParticipant = readBoolean(
+    readProperty(source, 'callerIsParticipant'),
+    'callerIsParticipant',
   );
-  if (!threshold.ok) return threshold;
+  if (!callerIsParticipant.ok) return callerIsParticipant;
 
   const callerAvailability = parseCallerAvailability(
     readProperty(source, 'callerAvailability'),
@@ -226,12 +258,32 @@ export function parseMatchDetail(body: unknown): ParseResult<MatchDetail> {
   );
   if (!recordedResult.ok) return recordedResult;
 
+  const startedAt = readOptional(
+    readProperty(source, 'startedAt'),
+    'startedAt',
+    readInstantMs,
+  );
+  if (!startedAt.ok) return startedAt;
+
   const completedAt = readOptional(
     readProperty(source, 'completedAt'),
     'completedAt',
     readInstantMs,
   );
   if (!completedAt.ok) return completedAt;
+
+  const guestEntries = readArray(
+    readProperty(source, 'guestAvailability'),
+    'guestAvailability',
+  );
+  if (!guestEntries.ok) return guestEntries;
+
+  const guestAvailability: GuestAvailability[] = [];
+  for (const entry of guestEntries.value) {
+    const parsed = parseGuestAvailability(entry);
+    if (!parsed.ok) return fail(`guestAvailability element: ${parsed.reason}`);
+    guestAvailability.push(parsed.value);
+  }
 
   return ok({
     matchId: matchId.value,
@@ -242,9 +294,11 @@ export function parseMatchDetail(body: unknown): ParseResult<MatchDetail> {
     confirmedDayMs: confirmedDay.value,
     participantCount: participantCount.value,
     participants,
-    minimumPlayerThreshold: threshold.value,
+    callerIsParticipant: callerIsParticipant.value,
     callerAvailability: callerAvailability.value,
     recordedResult: recordedResult.value,
+    startedAtMs: startedAt.value,
     completedAtMs: completedAt.value,
+    guestAvailability,
   });
 }

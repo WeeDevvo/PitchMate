@@ -27,7 +27,8 @@ import {
 import type { SquadDetail, SquadMember } from '../lib/parse/squadDetail';
 import type { SquadSummary } from '../lib/parse/squadSummary';
 import type { SquadRole } from '../lib/wireEnums';
-import { SQUAD_ROUTE, squadPath } from '../lib/routePaths';
+import { SQUAD_ROUTE } from '../lib/routePaths';
+import { SQUAD_TABS, squadTabChildPath, squadTabPath, type SquadTab } from '../lib/squadTabs';
 
 /**
  * Example tests for the membership actions wired into the real Squad_Screen,
@@ -148,12 +149,22 @@ async function flush(): Promise<void> {
   });
 }
 
-async function renderScreen(api: SquadsApi): Promise<HTMLElement> {
+async function renderScreen(api: SquadsApi, tab: SquadTab = 'players'): Promise<HTMLElement> {
   const { container } = render(
     <AuthProvider manager={sessionManager()}>
-      <MemoryRouter initialEntries={[squadPath(SQUAD_ID)]}>
+      <MemoryRouter initialEntries={[squadTabPath(SQUAD_ID, tab)]}>
         <Routes>
-          <Route path={SQUAD_ROUTE} element={<SquadScreen api={api} />} />
+          {SQUAD_TABS.map((routeTab) => (
+            <Route
+              key={routeTab}
+              path={
+                routeTab === 'players'
+                  ? SQUAD_ROUTE
+                  : `${SQUAD_ROUTE}/${squadTabChildPath(routeTab)}`
+              }
+              element={<SquadScreen api={api} />}
+            />
+          ))}
           <Route path={HOME_ROUTE} element={<p>your squads home</p>} />
         </Routes>
       </MemoryRouter>
@@ -161,6 +172,21 @@ async function renderScreen(api: SquadsApi): Promise<HTMLElement> {
   );
   await flush();
   return container;
+}
+
+/** Move to another tab through the screen's own tab bar. */
+async function showTab(
+  user: ReturnType<typeof userEvent.setup>,
+  container: HTMLElement,
+  tab: SquadTab,
+): Promise<void> {
+  await user.click(container.querySelector(`a[href="${squadTabPath(SQUAD_ID, tab)}"]`) as HTMLElement);
+  await flush();
+}
+
+/** Open the "…" menu on the row for `name`. */
+async function openRowMenu(user: ReturnType<typeof userEvent.setup>, name: string): Promise<void> {
+  await user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
 }
 
 /** The dialog's confirm action, which shares its label with the trigger. */
@@ -182,6 +208,8 @@ describe('the Squad_Screen membership actions', () => {
 
     expect(container.querySelector(CALLER_ROLE_SELECTOR)?.textContent).toBe(OWNER_ROLE_LABEL);
     expect(container.querySelector(LEAVE_SQUAD_TRIGGER_SELECTOR)).toBeNull();
+    // Ownership is transferred from the Admin tab.
+    await showTab(user, container, 'admin');
     const listsBefore = listCalls();
 
     await user.selectOptions(
@@ -193,15 +221,18 @@ describe('the Squad_Screen membership actions', () => {
 
     expect(listCalls()).toBe(listsBefore + 1);
     expect(container.querySelector(CALLER_ROLE_SELECTOR)?.textContent).toBe(ADMIN_ROLE_LABEL);
-    expect(container.querySelector(LEAVE_SQUAD_TRIGGER_SELECTOR)).not.toBeNull();
     expect(container.querySelector(OWNERSHIP_TARGET_SELECTOR)).toBeNull();
     expect(screen.getByText(TRANSFER_OWNERSHIP_SUCCEEDED)).toBeTruthy();
+
+    // Leave is offered on the Players tab, now the caller is no longer the owner.
+    await showTab(user, container, 'players');
+    expect(container.querySelector(LEAVE_SQUAD_TRIGGER_SELECTOR)).not.toBeNull();
   });
 
   it('goes to the Squads_Home once leaving succeeds', async () => {
     const user = userEvent.setup();
     const { api } = statefulApi();
-    const container = await renderScreen(api);
+    const container = await renderScreen(api, 'admin');
 
     await user.selectOptions(
       container.querySelector(OWNERSHIP_TARGET_SELECTOR) as HTMLSelectElement,
@@ -210,6 +241,7 @@ describe('the Squad_Screen membership actions', () => {
     await user.click(container.querySelector(OWNERSHIP_TRANSFER_TRIGGER_SELECTOR) as HTMLElement);
     await confirm(user, TRANSFER_OWNERSHIP_LABEL);
 
+    await showTab(user, container, 'players');
     await user.click(screen.getByRole('button', { name: LEAVE_SQUAD_LABEL }));
     await confirm(user, LEAVE_SQUAD_LABEL);
 
@@ -221,6 +253,7 @@ describe('the Squad_Screen membership actions', () => {
     const { api } = statefulApi();
     const container = await renderScreen(api);
 
+    await openRowMenu(user, 'Mia');
     await user.click(screen.getByRole('button', { name: `${PROMOTE_TO_ADMIN_LABEL}: Mia` }));
     await confirm(user, PROMOTE_TO_ADMIN_LABEL);
     expect(screen.queryByText(PROMOTION_SUCCEEDED)).not.toBeNull();

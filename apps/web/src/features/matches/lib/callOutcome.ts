@@ -15,8 +15,8 @@
 export type RejectionReason =
   | 'validation'
   | 'invalid-state'
-  | 'threshold-not-met'
   | 'result-required'
+  | 'play-recorded'
   | 'conflict';
 
 export interface SettledCall {
@@ -45,14 +45,18 @@ const REJECTION_REASONS_BY_STATUS: Readonly<Record<number, RejectionReason>> = {
   409: 'conflict',
 };
 
-/** The `MatchErrorCode` names that carry a reason worth telling apart. */
+/** The `MatchErrorCode` and `LiveTrackingErrorCode` names that carry a reason worth telling apart. */
 const REJECTION_REASONS_BY_PROBLEM_CODE: Readonly<Record<string, RejectionReason>> =
   {
     ValidationFailed: 'validation',
     InvalidState: 'invalid-state',
-    ThresholdNotMet: 'threshold-not-met',
     ResultRequired: 'result-required',
+    PlayRecorded: 'play-recorded',
     LiveTrackingDisabled: 'validation',
+    NotEnabled: 'validation',
+    TargetNotFound: 'validation',
+    MatchNotStarted: 'invalid-state',
+    LogSealed: 'invalid-state',
     AlreadyParticipant: 'conflict',
     ConcurrencyConflict: 'conflict',
   };

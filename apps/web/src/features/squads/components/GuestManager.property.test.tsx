@@ -374,6 +374,14 @@ function Harness({
 
 /** The rendered rows, keyed by the membership identity each one carries. */
 function renderedRows(container: HTMLElement): Map<string, HTMLElement> {
+  // A row's admin controls are in its "…" menu: open every one, so each row's
+  // affordances are on the page to count.
+  for (const trigger of Array.from(container.querySelectorAll<HTMLElement>('.pm-actions__trigger'))) {
+    if (trigger.getAttribute('aria-expanded') !== 'true') {
+      fireEvent.click(trigger);
+    }
+  }
+
   const rows = new Map<string, HTMLElement>();
 
   for (const row of container.querySelectorAll<HTMLElement>(PLAYER_ROW_SELECTOR)) {

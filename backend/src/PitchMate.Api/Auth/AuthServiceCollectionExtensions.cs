@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using PitchMate.Api.Auth.Configuration;
 using PitchMate.Application.Auth.Abstractions;
@@ -5,6 +6,7 @@ using PitchMate.Application.Auth.EmailVerification;
 using PitchMate.Application.Auth.Gdpr;
 using PitchMate.Application.Auth.PasswordReset;
 using PitchMate.Application.Auth.UseCases;
+using PitchMate.Application.Common;
 using PitchMate.Infrastructure.Auth;
 using PitchMate.Infrastructure.Auth.Email;
 
@@ -45,6 +47,11 @@ public static class AuthServiceCollectionExtensions
         // AuthTokenOptions so middleware and token-service validation agree (Requirements 13.4, 13.5).
         // The middleware itself is added to the pipeline in Program.cs in the correct order.
         services.AddJwtBearerAuthentication();
+
+        // The signed-in caller, for handlers that read it from ICurrentUserAccessor and for audit
+        // stamping. Replaces the system default AddInfrastructure registered.
+        services.AddHttpContextAccessor();
+        services.Replace(ServiceDescriptor.Scoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>());
 
         return services;
     }

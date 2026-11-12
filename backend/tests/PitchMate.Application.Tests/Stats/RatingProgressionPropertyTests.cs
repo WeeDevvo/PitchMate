@@ -81,16 +81,17 @@ public class RatingProgressionPropertyTests
                 {
                     RatingState state = engine.GetState(new Rating(s.Mu, s.Sigma)).Value;
                     int? display = DisplayRatingCalculator.Compute(state, s.Mu, s.Sigma, parameters);
-                    return new RatingProgressionPoint(s.CompletedAt, s.Mu, s.Sigma, state, display);
+                    int? estimate = DisplayRatingCalculator.Estimate(state, s.Mu, s.Sigma, parameters);
+                    return new RatingProgressionPoint(s.CompletedAt, s.Mu, s.Sigma, state, display, estimate);
                 })
                 .ToList();
 
             bool orderedAndShaped = actual.SequenceEqual(expected);
 
-            // Each provisional point carries no display rating; each established point carries one.
+            // A provisional point carries only an estimate; an established point only a display rating.
             bool displayGating = actual.All(p =>
-                (p.State == RatingState.Provisional && p.DisplayRating is null)
-                || (p.State == RatingState.Established && p.DisplayRating is not null));
+                (p.State == RatingState.Provisional && p.DisplayRating is null && p.EstimatedRating is not null)
+                || (p.State == RatingState.Established && p.DisplayRating is not null && p.EstimatedRating is null));
 
             bool emptyWhenNoSnapshot = snapshots.Count != 0 || actual.Count == 0;
 

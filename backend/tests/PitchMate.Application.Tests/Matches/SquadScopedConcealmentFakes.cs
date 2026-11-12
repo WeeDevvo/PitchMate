@@ -72,8 +72,10 @@ internal sealed class ConcealmentMembershipRepository(params SquadMembership[] m
     public Task<SquadMembership?> GetByIdAsync(Guid membershipId, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Not exercised by the read handlers under test.");
 
+    // The match detail lists the squad's guests for an organiser.
     public Task<IReadOnlyList<SquadMembership>> ListForSquadAsync(Guid squadId, bool activeOnly, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Not exercised by the read handlers under test.");
+        Task.FromResult<IReadOnlyList<SquadMembership>>(
+            [.. _memberships.Where(m => m.SquadId == squadId && (!activeOnly || m.State == MembershipState.Active))]);
 
     public Task<SquadMembership?> GetOwnerAsync(Guid squadId, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Not exercised by the read handlers under test.");

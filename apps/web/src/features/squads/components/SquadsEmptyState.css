@@ -22,7 +22,7 @@
 .squads-empty__statement {
   margin: 0;
   max-width: var(--squads-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-body);
   font-weight: var(--squads-font-weight-body);
   line-height: var(--squads-line-height-body);

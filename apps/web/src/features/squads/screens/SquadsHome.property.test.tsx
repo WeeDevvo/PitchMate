@@ -191,9 +191,13 @@ function permutationArb(
 
 /** The wire body a generated case describes, with an absent field unwritten. */
 function bodyOf(summaryCase: SummaryCase): Record<string, unknown> {
+  // The card facts this property does not vary: no players, no next match, no
+  // form.
   const body: Record<string, unknown> = {
     squadId: summaryCase.squadId,
     name: summaryCase.name,
+    playerCount: 0,
+    recentForm: [],
   };
 
   if (summaryCase.role !== 'absent') {

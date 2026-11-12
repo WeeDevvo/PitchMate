@@ -167,7 +167,7 @@ public class FidelityGatingPropertyTests
 
             // Draft -> Confirm (empty seed, no threshold) -> add participants -> apply teams -> lock -> start.
             Match match = Match.CreateDraft(Guid.CreateVersion7(), squadId, Location, [ConfirmedDay], Anchor).Value!;
-            match.Confirm(ConfirmedDay, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+            match.Confirm(ConfirmedDay, activeMembers: []);
 
             var participantIds = new List<Guid>(ParticipantCount);
             for (var i = 0; i < ParticipantCount; i++)
@@ -186,7 +186,7 @@ public class FidelityGatingPropertyTests
             };
             match.ApplyTeamProposal(teams);
             match.Lock();
-            match.Start();
+            match.Start(DateTimeOffset.UnixEpoch);
 
             IReadOnlyList<Guid> teamIds = match.Teams.Select(t => t.Id).ToList();
             IReadOnlyDictionary<Guid, PlayerRating> ratings =

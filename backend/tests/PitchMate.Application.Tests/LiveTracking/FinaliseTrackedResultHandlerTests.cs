@@ -372,7 +372,7 @@ public class FinaliseTrackedResultHandlerTests
 
             if (state != MatchState.GatheringAvailability)
             {
-                match.Confirm(MatchDay, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+                match.Confirm(MatchDay, activeMembers: []);
                 foreach (SquadMembership player in players)
                 {
                     match.AddParticipant(player);
@@ -402,7 +402,7 @@ public class FinaliseTrackedResultHandlerTests
                             break;
 
                         default:
-                            match.Start();
+                            match.Start(DateTimeOffset.UnixEpoch);
                             if (state == MatchState.Completed)
                             {
                                 var basic = new MatchResult(ResultFidelity.Basic, new[]

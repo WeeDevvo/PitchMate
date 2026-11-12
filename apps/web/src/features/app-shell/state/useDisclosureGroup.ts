@@ -8,28 +8,24 @@
  * surfaces open at once. Instead there is **one** value naming which surface is
  * open, and "both open" is not a state this hook can represent — the requirement
  * holds by construction rather than by maintenance.
- *
- * The compact Primary_Navigation joins the same group. Requirements 1.6 and 1.11
- * do not demand that it be exclusive with the other two, but a narrow viewport is
- * precisely where two overlapping surfaces would collide, so it shares the value.
- *
+ * *
  * ### Where the state lives
  *
- * In the Shell_Header, which renders all three triggers. The value must sit above
+ * In the Shell_Header, which renders both triggers. The value must sit above
  * every surface for exclusivity to mean anything, and it must sit *inside* the
  * frame so that it is discarded when the frame unmounts — Requirement 8.1
  * requires the collapsed state on the first render of every shell route, which a
  * surface state held above the router would not give.
  *
- * ### Requirement 1.13 and the discarded navigation expansion
+ * ### A breakpoint crossing closes an open surface
  *
- * A breakpoint crossing must discard an expanded navigation disclosure while
- * leaving the Destination_Content mounted. The consumer gets that by keying the
- * header's use of this hook on the value from `useViewportLayout`, so the crossing
- * remounts the hook with a fresh `null` while the content, keyed on nothing,
- * stays put. Nothing in this module observes the viewport.
+ * A breakpoint crossing discards an open panel or menu while leaving the
+ * Destination_Content mounted. The consumer gets that by keying the header's use
+ * of this hook on the value from `useViewportLayout`, so the crossing remounts the
+ * hook with a fresh `null` while the content, keyed on nothing, stays put.
+ * Nothing in this module observes the viewport.
  *
- * Requirements: 1.13, 8.8
+ * Requirements: 8.8
  */
 import { useCallback, useMemo, useState } from 'react';
 
@@ -39,7 +35,7 @@ import { useCallback, useMemo, useState } from 'react';
  * `null` is part of the type rather than a separate flag because the closed state
  * is the same kind of thing as the open ones: one value, one answer.
  */
-export type ShellSurface = 'notifications' | 'account' | 'navigation' | null;
+export type ShellSurface = 'notifications' | 'account' | null;
 
 /** A surface that can be opened — the union above without its `null`. */
 export type OpenableShellSurface = Exclude<ShellSurface, null>;

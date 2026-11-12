@@ -145,11 +145,11 @@ public sealed class MatchPersistenceRoundTripIntegrationTests
             }
 
             var registeredMembers = registered
-                .Select(m => new RegisteredMember(m.Id, m.DisplayName))
+                .Select(m => new ConfirmableMember(m.Id, m.DisplayName, m.IsGuest))
                 .ToList();
 
             Assert.True(
-                match.Confirm(confirmedDay, availableCount: registeredMembers.Count, minimumThreshold: 9, registeredMembers)
+                match.Confirm(confirmedDay, registeredMembers)
                     .IsSuccess);
             Assert.Equal(9, match.Participants.Count);
 
@@ -176,7 +176,7 @@ public sealed class MatchPersistenceRoundTripIntegrationTests
             Assert.True(match.Lock().IsSuccess);
             Assert.NotNull(match.KickoffLineup);
 
-            Assert.True(match.Start().IsSuccess);
+            Assert.True(match.Start(DateTimeOffset.UnixEpoch).IsSuccess);
 
             var teamAId = match.Teams.First(t => t.TeamName == "Reds").Id;
             var teamBId = match.Teams.First(t => t.TeamName == "Blues").Id;

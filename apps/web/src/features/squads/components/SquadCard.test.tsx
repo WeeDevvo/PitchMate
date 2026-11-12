@@ -35,6 +35,9 @@ const summaryOf = (overrides: Partial<SquadSummary> = {}): SquadSummary => ({
   name: 'Thursday Ballers',
   role: 'Owner',
   state: 'Active',
+  playerCount: 14,
+  nextMatch: null,
+  recentForm: [],
   ...overrides,
 });
 

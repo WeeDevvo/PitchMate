@@ -29,6 +29,9 @@ public sealed class MatchReadModelsMigrationFreeTests
     [
         // Guest claims by claim link (ADR 0003).
         "20261023163741_AddGuestClaimLinks",
+
+        // The kickoff instant live tracking derives match minutes from (live-tracking recorder).
+        "20261103153315_AddMatchStartedAt",
     ];
 
     /// <summary>The aggregate's public operations before the chore, pinned so a new one fails by name.</summary>
@@ -38,6 +41,19 @@ public sealed class MatchReadModelsMigrationFreeTests
         "Confirm", "CreateDraft", "DeriveOutcome", "GetAvailabilityResponse", "Lock", "MoveParticipant",
         "ProduceTeamSheet", "RecordResult", "RemoveParticipant", "SetBibTeam", "SetTeamName", "Start",
         "SubmitAvailability",
+    ];
+
+    /// <summary>
+    /// Operations later features added after the chore, each named here by the feature that added it,
+    /// so an operation slipping in unannounced still fails this guard.
+    /// </summary>
+    private static readonly string[] LaterFeatureOperations =
+    [
+        // Unlocking teams before kickoff, to add or remove players (match-guest-availability).
+        "Unlock",
+
+        // Undoing a kickoff made by mistake, while nothing is recorded (undo-match-start).
+        "UndoStart",
     ];
 
     [Fact]
@@ -62,7 +78,9 @@ public sealed class MatchReadModelsMigrationFreeTests
             .Select(static method => method.Name)
             .Distinct();
 
-        Assert.Equal(MatchOperations.Order(StringComparer.Ordinal), operations.Order(StringComparer.Ordinal));
+        Assert.Equal(
+            MatchOperations.Concat(LaterFeatureOperations).Order(StringComparer.Ordinal),
+            operations.Order(StringComparer.Ordinal));
     }
 
     /// <summary>A production context over a connection string that is never opened.</summary>

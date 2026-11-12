@@ -19,8 +19,8 @@ namespace PitchMate.Api.Tests.Matches;
 /// failure: a caller who can tell "wrong squad" from "not your squad" has an oracle for which squad a match
 /// belongs to, and by sweeping squad identities, for which matches exist at all. So the guarantee is a fact
 /// about the bytes — the refusal must be the response the same operation <em>already</em> gives a caller
-/// holding no membership in the match's squad, which for the one concealing read of the six is the concealed
-/// <c>404</c> and for the other five is their existing authorisation failure.
+/// holding no membership in the match's squad, which for the one concealing read of the ten is the concealed
+/// <c>404</c> and for the other nine is their existing authorisation failure.
 /// </para>
 /// <para>
 /// Three things are therefore asserted together, because any one alone is satisfiable by a broken surface.
@@ -32,7 +32,7 @@ namespace PitchMate.Api.Tests.Matches;
 /// </para>
 /// <para>
 /// Everything runs through the application's real request pipeline against real PostgreSQL, with every
-/// parameter of each discovered route template supplied — which is also the end-to-end evidence that the six
+/// parameter of each discovered route template supplied — which is also the end-to-end evidence that the ten
 /// are reachable from a generated client rather than merely described by one (Requirement 13.17).
 /// </para>
 /// <para>
@@ -58,7 +58,7 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
     }
 
     /// <summary>
-    /// Every combination of the six operations, the three callers and the two kinds of wrong squad — the
+    /// Every combination of the ten operations, the three callers and the two kinds of wrong squad — the
     /// exhaustive cross product the generated sweep samples from.
     /// </summary>
     /// <returns>One case per combination.</returns>
@@ -80,7 +80,7 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
         return data;
     }
 
-    /// <summary>The six operations, for the success and sharp-case theories.</summary>
+    /// <summary>The squad-scoped operations, for the success and sharp-case theories.</summary>
     /// <returns>One case per operation.</returns>
     public static TheoryData<SquadScopedMatchOperation> EveryOperation()
     {
@@ -95,7 +95,7 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
     }
 
     // Feature: match-read-models, Property 18: A mismatched squad is refused exactly as a non-membership is,
-    // and grants nothing — for each of the six squad-scoped operations and any squadId that is not the
+    // and grants nothing — for each of the ten squad-scoped operations and any squadId that is not the
     // identity of the squad the aggregate records for the request's matchId, the response is byte-for-byte
     // identical to the response that operation returns to a caller holding no membership in the match's
     // squad.
@@ -115,7 +115,7 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
     }
 
     /// <summary>
-    /// The exhaustive companion to the generated sweep: the same rule over all thirty-six combinations at
+    /// The exhaustive companion to the generated sweep: the same rule over all sixty combinations at
     /// once, so a failure reports every offender as a worklist rather than the single shrunk counterexample
     /// a property failure yields.
     /// </summary>
@@ -168,7 +168,7 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
 
     /// <summary>
     /// Requirement 7.4's second half: the refusal mutates no persisted state. Asserted over the whole
-    /// thirty-six-case sweep at once, by comparing every column of every match, participant, team,
+    /// sixty-case sweep at once, by comparing every column of every match, participant, team,
     /// availability-response, squad and membership row before and after.
     /// <para>
     /// Comparing full rows rather than the handful of columns an operation would have written is what makes
@@ -200,8 +200,8 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
         // The sweep genuinely ran, and ran against a database holding the very rows these operations write
         // — otherwise "unchanged" would be a statement about nothing. The probe match and a participant of
         // it appear in the snapshot by identity, so the comparison is over populated tables. (match_team is
-        // legitimately empty: no seeded match has rolled its teams, and none of the six rolls them.)
-        Assert.Equal(36, refusals.Count);
+        // legitimately empty: no seeded match has rolled its teams, and none of the ten rolls them.)
+        Assert.Equal(Enum.GetValues<SquadScopedMatchOperation>().Length * 3 * 2, refusals.Count);
         Assert.DoesNotContain("match = []", before, StringComparison.Ordinal);
         Assert.DoesNotContain("match_participant = []", before, StringComparison.Ordinal);
         Assert.DoesNotContain("availability_response = []", before, StringComparison.Ordinal);
@@ -214,11 +214,11 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
 
     /// <summary>
     /// The other half of Requirement 7.8: a request carrying the match's <em>own</em> <c>squadId</c> reaches
-    /// the operation and returns its success response. Without this the refusal half would hold over six
+    /// the operation and returns its success response. Without this the refusal half would hold over ten
     /// operations that could never have succeeded, and the property would be measuring a fixture rather than
     /// a behaviour.
     /// <para>
-    /// It is also the end-to-end proof of Requirement 13.17 for these six: each is called through the real
+    /// It is also the end-to-end proof of Requirement 13.17 for these ten: each is called through the real
     /// pipeline with every path parameter of its own route pattern supplied, and produces the success status
     /// it produces today.
     /// </para>
@@ -254,10 +254,10 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
     /// precisely what a discovery regression produces: the guard goes green at the moment it stops having a
     /// subject.
     /// <para>
-    /// All six operations are found <em>on the running host</em> by the name each endpoint declares; each
+    /// All ten operations are found <em>on the running host</em> by the name each endpoint declares; each
     /// route template names both <c>squadId</c> and <c>matchId</c>; each has a captured baseline; and every
     /// baseline is a refusal, carrying the status Requirement 7.4 names for that operation — the concealed
-    /// <c>404</c> for the tally read, the existing authorisation failure for the other five — over a
+    /// <c>404</c> for the tally read, the existing authorisation failure for the other nine — over a
     /// non-empty problem body, so byte-equality is not holding because two bodies are both empty.
     /// </para>
     /// </summary>
@@ -265,7 +265,7 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
     public void TheDiscoveredOperationSetAndItsBaselinesAreNonVacuous()
     {
         Assert.Equal(Enum.GetValues<SquadScopedMatchOperation>().Length, _fixture.Routes.Count);
-        Assert.Equal(6, _fixture.Routes.Count);
+        Assert.Equal(10, _fixture.Routes.Count);
 
         foreach (SquadScopedMatchOperation operation in Enum.GetValues<SquadScopedMatchOperation>())
         {
@@ -289,8 +289,8 @@ public sealed class SquadMismatchIndistinguishabilityProperties : IClassFixture<
                     + "nothing.");
         }
 
-        // RemoveParticipant is the one of the six whose template names a third parameter; its presence
-        // confirms the sweep substitutes every parameter rather than only the two it shares.
+        // RemoveParticipant and the guest-availability writes are the ones whose template names a third
+        // parameter; its presence confirms the sweep substitutes every parameter rather than only the two it shares.
         Assert.Contains(
             "membershipId",
             _fixture.RouteFor(SquadScopedMatchOperation.RemoveParticipant).Parameters,

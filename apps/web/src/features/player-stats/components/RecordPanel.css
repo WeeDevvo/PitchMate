@@ -44,7 +44,7 @@
 .player-stats-record__no-matches {
   margin: 0;
   max-width: var(--player-stats-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
 }
@@ -71,7 +71,7 @@
 
 .player-stats-record__label {
   margin: 0;
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-meta);
   font-weight: var(--player-stats-font-weight-label);
   line-height: var(--player-stats-line-height-body);
@@ -79,8 +79,9 @@
 
 .player-stats-record__value {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-figure);
+  font-family: var(--pm-font-display);
   font-weight: var(--player-stats-font-weight-heading);
   line-height: var(--player-stats-line-height-heading);
 }
@@ -88,7 +89,7 @@
 /* A sentence in place of a figure. See the module note. */
 .player-stats-record__value--absent {
   max-width: var(--player-stats-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-body);
   font-weight: var(--player-stats-font-weight-body);
   line-height: var(--player-stats-line-height-body);

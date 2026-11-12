@@ -349,8 +349,6 @@ function guaranteedFloorPx(value: string): number | null {
 const FOCUSABLE_CONTROL_CLASSES = [
   'shell-skip-link',
   'shell-brand',
-  'shell-nav__toggle',
-  'shell-nav__link',
   'shell-notification-indicator',
   'shell-notification-panel',
   'shell-notification-panel__mark-all',
@@ -371,8 +369,6 @@ const FOCUSABLE_CONTROL_CLASSES = [
 const COMPACT_TARGET_CLASSES = [
   // Named by Requirement 13.13.
   'shell-skip-link',
-  'shell-nav__toggle',
-  'shell-nav__link',
   'shell-notification-indicator',
   'shell-account-menu__trigger',
   'shell-account-menu__item',
@@ -399,9 +395,7 @@ const ADJACENT_TARGET_CONTAINERS: readonly {
   readonly properties: readonly string[];
 }[] = [
   { className: 'shell-header', properties: ['gap', 'row-gap'] },
-  { className: 'shell-header__nav', properties: ['gap'] },
   { className: 'shell-header__actions', properties: ['gap'] },
-  { className: 'shell-nav__list', properties: ['gap'] },
   { className: 'shell-account-menu__list', properties: ['gap'] },
   { className: 'shell-notification-panel__list', properties: ['gap'] },
   { className: 'shell-notification-panel__header', properties: ['gap'] },
@@ -414,7 +408,6 @@ const FULL_WIDTH_REGION_CLASSES = [
   'shell-frame',
   'shell-header',
   'shell-content',
-  'shell-nav__list',
   'shell-notification-panel',
   'shell-notification-row',
   'shell-appearance',
@@ -444,11 +437,11 @@ describe('shell.css source scan', () => {
   });
 
   it('resolves the winning declaration by specificity, not by source order', () => {
-    // `.shell-nav__link` declares `min-width: 0` so it may shrink, and the compact
-    // block restores the target width at higher specificity. The winner is the
-    // latter, which is what a browser computes.
-    expect(declaredValues('shell-nav__link', 'min-width')).toContain('0');
-    expect(winningValue('shell-nav__link', 'min-width', { compactOnly: true })).toBe(
+    // `.shell-notification-row` declares `min-width: 0` so it may shrink, and the
+    // compact block restores the target width at higher specificity. The winner
+    // is the latter, which is what a browser computes.
+    expect(declaredValues('shell-notification-row', 'min-width')).toContain('0');
+    expect(winningValue('shell-notification-row', 'min-width', { compactOnly: true })).toBe(
       'var(--shell-touch-target)',
     );
   });
@@ -460,7 +453,7 @@ describe('shell.css source scan', () => {
 
 describe('focus indicators (Requirements 13.4, 12.10)', () => {
   it.each(FOCUSABLE_CONTROL_CLASSES)(
-    'declares a :focus-visible outline resolving var(--focus-ring) for .%s',
+    'declares a :focus-visible outline resolving var(--pm-focus-ring) for .%s',
     (className) => {
       const focusRules = rulesFor(className, { focus: 'with' }).filter((rule) =>
         subjectParts(rule.selector, className).some((part) =>
@@ -480,7 +473,7 @@ describe('focus indicators (Requirements 13.4, 12.10)', () => {
         `.${className} has a :focus-visible rule that declares no outline`,
       ).toBeGreaterThan(0);
       for (const outline of outlines) {
-        expect(outline).toContain('var(--focus-ring)');
+        expect(outline).toContain('var(--pm-focus-ring)');
         // A hairline ring is not a visible indicator at every zoom level.
         expect(Math.max(...absoluteLengthsPx(outline), 0)).toBeGreaterThanOrEqual(2);
       }

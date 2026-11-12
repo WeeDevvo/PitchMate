@@ -4,6 +4,10 @@ using PitchMate.Domain.Squads;
 // importing the whole PitchMate.Domain.Rating namespace, which this read model has no other need of.
 using RatingState = PitchMate.Domain.Rating.RatingState;
 
+// Alias the match state and the per-match result the squad card carries, for the same reason.
+using MatchState = PitchMate.Domain.Matches.MatchState;
+using PlayerResult = PitchMate.Domain.Stats.PlayerResult;
+
 namespace PitchMate.Application.Squads.UseCases;
 
 /// <summary>
@@ -61,14 +65,40 @@ public sealed record SquadFeatureView(SquadFeature Feature, bool IsEnabled);
 
 /// <summary>
 /// A summary of one squad in the authenticated user's squad list (Requirement 16.4): the squad's
-/// identity and name, together with the role and state of the user's own membership in it.
+/// identity and name, together with the role and state of the user's own membership in it, and the
+/// facts its squad card shows — the active player count, the next open match, and the user's recent
+/// form there.
 /// </summary>
 /// <param name="SquadId">The squad's identity.</param>
 /// <param name="Name">The squad's trimmed name.</param>
 /// <param name="Role">The user's role in the squad, or <see langword="null"/> if none.</param>
 /// <param name="State">The user's membership state in the squad, or <see langword="null"/> if unknown.</param>
+/// <param name="PlayerCount">The squad's active memberships, guests included.</param>
+/// <param name="NextMatch">The squad's next open match, or <see langword="null"/> when it has none.</param>
+/// <param name="RecentForm">
+/// The user's results in their most recent completed matches of the squad, at most five, oldest first;
+/// empty when they have none.
+/// </param>
 public sealed record MySquadSummary(
     Guid SquadId,
     string Name,
     SquadRole? Role,
-    MembershipState? State);
+    MembershipState? State,
+    int PlayerCount,
+    MySquadNextMatch? NextMatch,
+    IReadOnlyList<PlayerResult> RecentForm);
+
+/// <summary>
+/// A squad's next open match on its squad card: one not yet completed or cancelled.
+/// </summary>
+/// <param name="MatchId">The match's identity.</param>
+/// <param name="State">The match's lifecycle state; never completed or cancelled.</param>
+/// <param name="ScheduledAt">The confirmed day, or <see langword="null"/> while gathering availability.</param>
+/// <param name="Location">The match's location.</param>
+/// <param name="CandidateDayCount">How many candidate days the match was drafted with.</param>
+public sealed record MySquadNextMatch(
+    Guid MatchId,
+    MatchState State,
+    DateTimeOffset? ScheduledAt,
+    string Location,
+    int CandidateDayCount);

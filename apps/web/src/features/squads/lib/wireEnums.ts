@@ -41,7 +41,7 @@
  *
  * ### Scope: the enums this feature reads
  *
- * The seven unions below are the ones the squads Response_Parsers consume. Two
+ * The ten unions below are the ones the squads Response_Parsers consume. Two
  * deliberate omissions:
  *
  * - `NotificationType` and `ReadState` are the App_Shell's, and the structural
@@ -157,6 +157,26 @@ export function isInviteState(candidate: unknown): candidate is InviteState {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Match_State — `MatchState`                                                 */
+/* -------------------------------------------------------------------------- */
+
+/** A match's lifecycle state, as a squad card's next match carries it. */
+export type MatchState = Exclude<components['schemas']['MatchState'], null>;
+
+export const MATCH_STATE_NAMES = [
+  'GatheringAvailability',
+  'Confirmed',
+  'TeamsRolled',
+  'InProgress',
+  'Completed',
+  'Cancelled',
+] as const satisfies WireEnumNames<MatchState>;
+
+export function isMatchState(candidate: unknown): candidate is MatchState {
+  return isWireEnumName(MATCH_STATE_NAMES, candidate);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Membership_State — `MembershipState`                                       */
 /* -------------------------------------------------------------------------- */
 
@@ -182,6 +202,23 @@ export function isMembershipState(
   candidate: unknown,
 ): candidate is MembershipState {
   return isWireEnumName(MEMBERSHIP_STATE_NAMES, candidate);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Player_Result — `PlayerResult`                                             */
+/* -------------------------------------------------------------------------- */
+
+/** One result in a squad card's recent form. */
+export type PlayerResult = Exclude<components['schemas']['PlayerResult'], null>;
+
+export const PLAYER_RESULT_NAMES = [
+  'Win',
+  'Draw',
+  'Loss',
+] as const satisfies WireEnumNames<PlayerResult>;
+
+export function isPlayerResult(candidate: unknown): candidate is PlayerResult {
+  return isWireEnumName(PLAYER_RESULT_NAMES, candidate);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -329,7 +366,7 @@ export function isSquadRole(candidate: unknown): candidate is SquadRole {
  * exactly the "build failure rather than a runtime surprise" the requirement
  * asks for.
  *
- * It is one exported value rather than seven loose statements so that nothing
+ * It is one exported value rather than ten loose statements so that nothing
  * here is an unused binding, and so the set of unions this module declares can be
  * read at runtime: its keys are the vocabulary the Response_Parsers may use, and
  * the property test beside this module asserts its own table covers exactly them.
@@ -343,9 +380,14 @@ export const WIRE_ENUM_COVERAGE = {
     InviteState,
     typeof INVITE_STATE_NAMES
   >,
+  MatchState: {} satisfies UncoveredNames<MatchState, typeof MATCH_STATE_NAMES>,
   MembershipState: {} satisfies UncoveredNames<
     MembershipState,
     typeof MEMBERSHIP_STATE_NAMES
+  >,
+  PlayerResult: {} satisfies UncoveredNames<
+    PlayerResult,
+    typeof PLAYER_RESULT_NAMES
   >,
   RatingState: {} satisfies UncoveredNames<
     RatingState,

@@ -18,15 +18,16 @@
   width: 100%;
   max-width: 100%;
   padding: var(--squads-gutter);
-  border: var(--squads-border-width) solid var(--squads-card-border);
+  border: var(--squads-border-width) solid var(--pm-border-subtle);
   border-radius: var(--squads-radius);
-  background: var(--squads-card-surface);
-  color: var(--text);
+  background: var(--pm-surface);
+  color: var(--pm-text-primary);
 }
 
 .squads-placeholder__heading {
   margin: 0;
   font-size: var(--squads-font-size-section-heading);
+  font-family: var(--pm-font-display);
   font-weight: var(--squads-font-weight-heading);
   line-height: var(--squads-line-height-heading);
   overflow-wrap: break-word;
@@ -35,7 +36,7 @@
 .squads-placeholder__statement {
   margin: 0;
   max-width: var(--squads-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--squads-font-size-body);
   font-weight: var(--squads-font-weight-body);
   line-height: var(--squads-line-height-body);

@@ -195,10 +195,11 @@ const MATCH_DETAIL_BODY: unknown = {
   confirmedDay: null,
   participantCount: 0,
   participants: [],
-  effectiveMinimumPlayerThreshold: 10,
+  callerIsParticipant: false,
   callerAvailability: { hasStoredResponse: false, markedDays: [] },
   recordedResult: null,
   completedAt: null,
+  guestAvailability: [],
 };
 
 const MATCH_TALLY_BODY: unknown = {
@@ -248,6 +249,9 @@ const SQUAD_SUMMARIES_BODY: unknown = [
     name: SQUADS_FIXTURE.squadName,
     role: 'Member',
     state: 'Active',
+    playerCount: 1,
+    nextMatch: null,
+    recentForm: [],
   },
 ];
 

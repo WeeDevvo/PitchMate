@@ -137,29 +137,17 @@ function levelOneHeadings(): string[] {
     .map((heading) => heading.textContent?.trim() ?? '');
 }
 
-/** The Primary_Navigation control marked as the current page, if any. */
-function currentNavigationControl(): HTMLElement | null {
-  return within(screen.getByRole('navigation')).queryByRole('link', {
-    current: 'page',
-  });
-}
-
 /**
  * The Shell_Header's brand control.
  *
  * Found by what Requirement 1.4 makes it — the header's own control to the
  * Home_Destination — rather than by its visible name, which is a shell-internal
- * message this application wiring does not import. The navigation landmark's own
- * Home control shares the destination, so it is excluded by containment.
+ * message this application wiring does not import.
  */
 function brandControl(): HTMLElement {
-  const navigation = screen.getByRole('navigation');
   const [brand] = within(screen.getByRole('banner'))
     .getAllByRole('link')
-    .filter(
-      (link) =>
-        link.getAttribute('href') === HOME_ROUTE && !navigation.contains(link),
-    );
+    .filter((link) => link.getAttribute('href') === HOME_ROUTE);
 
   expect(brand).toBeDefined();
   return brand;
@@ -176,10 +164,9 @@ async function activate(control: HTMLElement): Promise<boolean> {
   return !notPrevented;
 }
 
-/** Assert the Shell_Frame's three landmarks are rendered. */
+/** Assert the Shell_Frame's two landmarks are rendered. */
 function expectShellFrame(): HTMLElement {
   expect(document.querySelector('.shell-frame')).not.toBeNull();
-  expect(screen.getByRole('navigation')).toBeInTheDocument();
   expect(screen.getByRole('main')).toBeInTheDocument();
   return screen.getByRole('banner');
 }
@@ -248,7 +235,6 @@ describe('a Destination address entered directly while authenticated', () => {
       // 3.6: the frame, that Destination's content, and no prior navigation.
       expectShellFrame();
       expect(levelOneHeadings()).toEqual([destinationHeading(destination)]);
-      expect(currentNavigationControl()).toHaveTextContent(destination.label);
       expect(router.state.location.pathname).toBe(destination.path);
     },
   );
@@ -256,13 +242,11 @@ describe('a Destination address entered directly while authenticated', () => {
   it('renders the shell not-found indication inside the frame for a path under /app', async () => {
     await renderAt(assembleRoutes(), '/app/nowhere');
 
-    // 3.10: still the frame, one heading, a control to Home, and no Destination
-    // marked current.
+    // 3.10: still the frame, one heading, and a control to Home.
     const main = within(screen.getByRole('main'));
     expectShellFrame();
     expect(levelOneHeadings()).toHaveLength(1);
     expect(main.getByRole('link')).toHaveAttribute('href', HOME_ROUTE);
-    expect(currentNavigationControl()).toBeNull();
 
     // The application catch-all did not claim this path. Neither the heading nor
     // the body wording tells the two surfaces apart — they say the same thing,
@@ -310,15 +294,26 @@ describe('a Destination address entered directly while unauthenticated', () => {
 // --- In-app navigation reloads no document ----------------------------------
 
 describe('in-app navigation', () => {
-  it('follows every Primary_Navigation control without reloading the document', async () => {
+  it('reaches every other Destination from the header without reloading the document', async () => {
     const router = await renderAt(assembleRoutes(), HOME_ROUTE);
 
     const documentElement = document.documentElement;
     const banner = expectShellFrame();
 
-    for (const destination of SHELL_DESTINATIONS) {
-      const control = within(screen.getByRole('navigation')).getByRole('link', {
-        name: destination.label,
+    // The design system's top bar has no row of destination links: Profile and
+    // Settings are in the Account_Menu, and the Notification_Panel links to the
+    // Notifications_Destination. Each surface is found by its trigger's name.
+    const openerName: Record<string, RegExp> = {
+      notifications: /^Notifications/,
+      settings: /^Account menu$/,
+      profile: /^Account menu$/,
+    };
+
+    for (const destination of SHELL_DESTINATIONS.filter((candidate) => candidate.id !== 'home')) {
+      fireEvent.click(within(banner).getByRole('button', { name: openerName[destination.id] }));
+      await flush();
+      const control = within(banner).getByRole('link', {
+        name: destination.id === 'notifications' ? /^See all notifications$/ : destination.label,
       });
 
       expect(await activate(control)).toBe(true);

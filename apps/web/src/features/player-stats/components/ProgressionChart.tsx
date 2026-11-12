@@ -46,7 +46,9 @@
  * reading exists at that position — a mark is a shape, visible in greyscale,
  * under a forced-colours mode, and to a reader who perceives no colour at all.
  * The stroked line between the marks states the direction of travel by its
- * slope. The two hues from the token table reinforce those cues and carry
+ * slope. A provisional reading's mark is a **dashed** ring and the line
+ * through it is dashed, so it stays distinct from a settled one without its
+ * amber, and the table states it as the "~" band in words. The two hues from the token table reinforce those cues and carry
  * nothing on their own, and every figure is also stated in words by the table.
  *
  * ### The two degenerate series are handled here as the geometry handles them
@@ -63,9 +65,21 @@
  *
  * Requirements: 8.2, 8.5, 8.6, 8.7, 15.6
  */
-import { type ReactElement } from 'react';
+import { type ReactElement, type SVGProps } from 'react';
+import { RatingChart } from '../../../ui';
 
-import { plotProgression, type ChartExtent } from '../lib/chartGeometry';
+import {
+  areaUnderLine,
+  plotProgression,
+  provisionalBands,
+  provisionalLines,
+  ratingTicks,
+  type ChartExtent,
+  type PlottedPoint,
+} from '../lib/chartGeometry';
+import { formatInstantMonth } from '../lib/instantFormat';
+import { PROVISIONAL_BAND_LABEL } from '../lib/messages';
+import { formatCount } from '../lib/numberFormat';
 import type { ProgressionPoint } from '../lib/parse/playerProfile';
 import '../styles/playerStatsTokens.css';
 import './ProgressionChart.css';
@@ -120,8 +134,22 @@ const CHART_EXTENT: ChartExtent = {
   padding: PROGRESSION_CHART_PADDING,
 };
 
-/** The `viewBox` the drawing is laid out in. */
-const VIEW_BOX = `0 0 ${String(PROGRESSION_CHART_WIDTH)} ${String(PROGRESSION_CHART_HEIGHT)}`;
+/** Test hooks on the line and on each mark, read by the chart's own tests. */
+const LINE_HOOK = { 'data-player-stats-progression-line': 'true' } as SVGProps<SVGPolylineElement>;
+
+function pointHook(index: number): SVGProps<SVGCircleElement> {
+  return { 'data-player-stats-progression-point': index } as SVGProps<SVGCircleElement>;
+}
+
+/** A month label at the first reading of each month, left to right. */
+function monthTicks(points: readonly PlottedPoint[]): { at: number; label: string }[] {
+  const ticks: { at: number; label: string }[] = [];
+  for (const plotted of points) {
+    const label = formatInstantMonth(plotted.point.completedAtMs);
+    if (label !== '' && ticks[ticks.length - 1]?.label !== label) ticks.push({ at: plotted.x, label });
+  }
+  return ticks;
+}
 
 export interface ProgressionChartProps {
   /**
@@ -156,62 +184,53 @@ export function ProgressionChart({
   // where every reading is the same and the line runs through its centre.
   const gridTop = PROGRESSION_CHART_PADDING;
   const gridBottom = PROGRESSION_CHART_HEIGHT - PROGRESSION_CHART_PADDING;
+  const gridX1 = PROGRESSION_CHART_PADDING;
+  const gridX2 = PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING;
+
+  // Round ratings up the side, each with a rule across the plot, placed on the
+  // same scale the line was drawn against.
+  const ticks = ratingTicks(plot.ratingFloor, plot.ratingCeiling, gridTop, gridBottom);
 
   return (
-    <svg
+    <RatingChart
       className="player-stats-progression-chart"
-      viewBox={VIEW_BOX}
-      preserveAspectRatio="none"
-      // 8.5: the Progression_Table is the accessible representation, so this
-      // drawing is hidden rather than described — the figures are announced
-      // once, by the table.
-      aria-hidden="true"
-      // Hidden *and* unfocusable: a focusable element in an `aria-hidden`
-      // subtree is a defect, and some engines focus an `svg` by default.
-      focusable="false"
+      width={PROGRESSION_CHART_WIDTH}
+      height={PROGRESSION_CHART_HEIGHT}
       data-player-stats-progression-chart="true"
-    >
-      {/* The bounds of the rating domain the line was scaled against. A frame
-          for the data, drawn only because there is data — never on its own
-          (Requirement 8.6). */}
-      <line
-        className="player-stats-progression-chart__grid"
-        x1={PROGRESSION_CHART_PADDING}
-        y1={gridTop}
-        x2={PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING}
-        y2={gridTop}
-      />
-      <line
-        className="player-stats-progression-chart__grid"
-        x1={PROGRESSION_CHART_PADDING}
-        y1={gridBottom}
-        x2={PROGRESSION_CHART_WIDTH - PROGRESSION_CHART_PADDING}
-        y2={gridBottom}
-      />
-
-      {/* 8.7: `polyline` is null for the one-point series, so a single reading
-          cannot be drawn as a trend. */}
-      {plot.polyline === null ? null : (
-        <polyline
-          className="player-stats-progression-chart__line"
-          points={plot.polyline}
-          data-player-stats-progression-line="true"
-        />
-      )}
-
-      {/* 15.6: a mark is a shape at a position. Both carry the reading without
-          reference to the hue. */}
-      {plot.points.map((plotted, index) => (
-        <circle
-          key={`${String(plotted.point.completedAtMs)}:${String(plotted.point.displayRating)}:${String(index)}`}
-          className="player-stats-progression-chart__point"
-          cx={plotted.x}
-          cy={plotted.y}
-          r={POINT_MARK_RADIUS}
-          data-player-stats-progression-point={index}
-        />
-      ))}
-    </svg>
+      // The bounds of the rating domain the line was scaled against. A frame for
+      // the data, drawn only because there is data — never on its own
+      // (Requirement 8.6).
+      gridLines={[
+        // The baseline, then a rule at each tick that isn't on it.
+        { x1: gridX1, x2: gridX2, y: gridBottom },
+        ...ticks
+          .filter((tick) => tick.y !== gridBottom)
+          .map((tick) => ({ x1: gridX1, x2: gridX2, y: tick.y })),
+      ]}
+      yTicks={ticks.map((tick) => ({ at: tick.y, label: formatCount(tick.rating) }))}
+      xTicks={monthTicks(plot.points)}
+      area={areaUnderLine(plot.points, gridBottom)}
+      // The band behind provisional readings, labelled once, as the design
+      // system draws a player's first matches.
+      provisionalBands={provisionalBands(plot.points)}
+      provisionalLabel={PROVISIONAL_BAND_LABEL}
+      // 8.7: `polyline` is null for the one-point series, so a single reading
+      // cannot be drawn as a trend.
+      polyline={plot.polyline}
+      lineProps={LINE_HOOK}
+      // The stretches through provisional readings, drawn dashed.
+      provisionalLines={provisionalLines(plot.points)}
+      // 15.6: a mark is a shape at a position. Both carry the reading without
+      // reference to the hue.
+      marks={plot.points.map((plotted, index) => ({
+        key: `${String(plotted.point.completedAtMs)}:${String(plotted.point.displayRating)}:${String(index)}`,
+        x: plotted.x,
+        y: plotted.y,
+        provisional: plotted.point.provisional,
+      }))}
+      pointRadius={POINT_MARK_RADIUS}
+      pointProps={pointHook}
+    />
   );
 }
 

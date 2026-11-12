@@ -47,7 +47,9 @@ public class GetWorkingTeamsHandlerTests
         Assert.Equal(f.Projection.Teams, view.Teams);
         Assert.Equal([unassigned], view.UnassignedParticipants);
         Assert.NotNull(view.Prediction);
-        Assert.Equal([0.6, 0.4], view.Prediction!.WinProbabilities);
+        // The engine's 0.6 / 0.4 wins and 0.1 draw, shown as shares of the whole outcome.
+        Assert.Equal(0.54, view.Prediction!.WinProbabilities[0], 1e-9);
+        Assert.Equal(0.36, view.Prediction.WinProbabilities[1], 1e-9);
         Assert.Equal(0.1, view.Prediction.DrawProbability);
         Assert.Single(engine.PredictCalls);
     }

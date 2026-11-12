@@ -8,7 +8,6 @@ const problemCodeArb = fc.option(
     fc.constantFrom(
       'ValidationFailed',
       'InvalidState',
-      'ThresholdNotMet',
       'AlreadyParticipant',
       'ConcurrencyConflict',
       'Unauthorized',
@@ -73,7 +72,6 @@ describe('classifyOutcome', () => {
     const cases = [
       [400, 'ValidationFailed', 'validation'],
       [409, 'InvalidState', 'invalid-state'],
-      [409, 'ThresholdNotMet', 'threshold-not-met'],
       [409, 'AlreadyParticipant', 'conflict'],
       [409, 'ConcurrencyConflict', 'conflict'],
     ] as const;

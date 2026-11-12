@@ -25,8 +25,10 @@
  *
  * ### Every figure comes from a `lib/` formatter
  *
- * The instant passes through `formatInstantDate` and the Display_Rating through
- * `formatCount`. Neither is formatted here, which is what makes Requirement
+ * The instant passes through `formatInstantDate`, a settled Display_Rating
+ * through `formatCount`, and a provisional estimate through `formatRatingBand`,
+ * so a still-settling rating is only ever stated as the design system's "~"
+ * band. Both render through the design system's `Rating`. Neither is formatted here, which is what makes Requirement
  * 8.9's determinism — "the same Progression_Series renders identically on two
  * loads" — a property of a tested pure function rather than of this markup:
  * `formatInstantDate` reads UTC calendar fields and a literal month table and
@@ -50,10 +52,11 @@
  * Requirements: 8.4, 8.5, 8.6, 8.9
  */
 import { type ReactElement } from 'react';
+import { Rating } from '../../../ui';
 
 import { formatInstantDate } from '../lib/instantFormat';
 import { NO_RATING_HISTORY } from '../lib/messages';
-import { formatCount } from '../lib/numberFormat';
+import { formatCount, formatRatingBand } from '../lib/numberFormat';
 import type { ProgressionPoint } from '../lib/parse/playerProfile';
 import '../styles/playerStatsTokens.css';
 import './ProgressionTable.css';
@@ -139,7 +142,7 @@ export function ProgressionTable({
           <tr
             // Two points can be identical in both fields — and are then
             // indistinguishable — so the index completes the key.
-            key={`${String(point.completedAtMs)}:${String(point.displayRating)}:${String(index)}`}
+            key={`${String(point.completedAtMs)}:${String(point.displayRating)}:${String(point.provisional)}:${String(index)}`}
             data-player-stats-progression-row={index}
           >
             {/* The date identifies the row, so it is the row's header. */}
@@ -154,7 +157,11 @@ export function ProgressionTable({
               className="player-stats-progression-table__rating"
               data-player-stats-progression-rating="true"
             >
-              {formatCount(point.displayRating)}
+              {point.provisional ? (
+                <Rating provisional band={formatRatingBand(point.displayRating)} />
+              ) : (
+                <Rating value={formatCount(point.displayRating)} />
+              )}
             </td>
           </tr>
         ))}

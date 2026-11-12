@@ -73,7 +73,7 @@
  * Validates: Requirements 13.10
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { axe } from 'jest-axe';
@@ -89,7 +89,6 @@ import {
 } from './lib/destinations';
 import {
   ACCOUNT_MENU_LABEL,
-  PRIMARY_NAVIGATION_TOGGLE,
   SESSION_ENDED_HEADING,
   SHELL_NOT_FOUND_HEADING,
   UNAVAILABLE_BODY,
@@ -150,7 +149,7 @@ const THEMES: readonly Theme[] = ['dark', 'light'];
 /** A Wide_Layout width: every Primary_Navigation control is rendered directly. */
 const WIDE_WIDTH = 1024;
 
-/** A Compact_Layout width: the navigation sits behind its disclosure control. */
+/** A Compact_Layout width, where the header's controls are held to touch-target size. */
 const COMPACT_WIDTH = 390;
 
 // --- The Notification_List the audits render --------------------------------
@@ -416,7 +415,7 @@ describe.each(THEMES)('the Shell_Frame in the %s theme', (theme) => {
   });
 
   // Validates: Requirements 13.10
-  it('has no WCAG 2.1 A or AA violations in the Compact_Layout with the navigation expanded', async () => {
+  it('has no WCAG 2.1 A or AA violations in the Compact_Layout with the account menu open', async () => {
     const user = userEvent.setup();
     const container = await renderShellAt(HOME_ROUTE, {
       theme,
@@ -425,13 +424,8 @@ describe.each(THEMES)('the Shell_Frame in the %s theme', (theme) => {
     });
     await screen.findByRole('heading', { level: 1, name: HOME_HEADING });
 
-    await user.click(
-      screen.getByRole('button', { name: PRIMARY_NAVIGATION_TOGGLE }),
-    );
-    const navigation = screen.getByRole('navigation');
-    await within(navigation).findByRole('link', {
-      name: destinationLabel('settings'),
-    });
+    await user.click(screen.getByRole('button', { name: ACCOUNT_MENU_LABEL }));
+    await screen.findByRole('link', { name: destinationLabel('settings') });
 
     await expectNoWcagViolations(container);
   });

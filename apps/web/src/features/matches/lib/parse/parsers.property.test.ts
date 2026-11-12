@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
+  DAY_ISO,
   DAY_MS,
   MATCH_ID,
   SQUAD_ID,
@@ -28,8 +29,9 @@ const REQUIRED_DETAIL_FIELDS = [
   'candidateDays',
   'participantCount',
   'participants',
-  'effectiveMinimumPlayerThreshold',
+  'callerIsParticipant',
   'callerAvailability',
+  'guestAvailability',
 ] as const;
 
 /** A value that is wrong for every field the parsers read. */
@@ -85,9 +87,11 @@ describe('parseMatchDetail', () => {
         fc.constantFrom(...REQUIRED_DETAIL_FIELDS),
         hostileArb,
         (field, value) => {
+          // `true` is a well-formed value for the one boolean field.
+          fc.pre(!(field === 'callerIsParticipant' && typeof value === 'boolean'));
           const body: Record<string, unknown> = { ...wireMatchDetail() };
           body[field] = value;
-          // Every hostile value is wrong for every required field: `{}` lacks
+          // Every other hostile value is wrong for every required field: `{}` lacks
           // callerAvailability's own fields, and `[{}]` holds a malformed element.
           expect(parseMatchDetail(body).ok).toBe(false);
         },
@@ -122,6 +126,59 @@ describe('parseMatchDetail', () => {
   });
 });
 
+describe('parseMatchDetail guest availability', () => {
+  const membershipIdArb = fc.uuid({ version: 4 });
+
+  it('reads what was marked for each guest, in order', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({ membershipId: membershipIdArb, days: fc.subarray([0, 1, 2]) }),
+          { maxLength: 6 },
+        ),
+        (guests) => {
+          const parsed = parseMatchDetail(
+            wireMatchDetail({
+              guestAvailability: guests.map(({ membershipId, days }) => ({
+                squadMembershipId: membershipId,
+                markedDays: days.map((index) => DAY_ISO[index]!),
+              })),
+            }),
+          );
+
+          expect(parsed).toEqual({
+            ok: true,
+            value: matchDetail({
+              guestAvailability: guests.map(({ membershipId, days }) => ({
+                membershipId,
+                markedDaysMs: days.map((index) => DAY_MS[index]!),
+              })),
+            }),
+          });
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it('fails the whole body for a malformed guest entry', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom<unknown>(
+          {},
+          { squadMembershipId: 'not-a-uuid', markedDays: [] },
+          { squadMembershipId: '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f01', markedDays: ['2030-03-02T20:15:00'] },
+          { squadMembershipId: '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f01' },
+        ),
+        (entry) => {
+          expect(parseMatchDetail({ ...wireMatchDetail(), guestAvailability: [entry] }).ok).toBe(false);
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
 describe('parseMatchDetail result and completion', () => {
   const teamScores = [
     { teamId: '0198e2a7-4444-7a5e-9c2f-6b1d4a5e7f01', score: 2 },
@@ -133,6 +190,7 @@ describe('parseMatchDetail result and completion', () => {
       wireMatchDetail({
         state: 'Completed',
         recordedResult: { fidelity: 'Basic', teamScores },
+        startedAt: '2030-03-02T19:00:00Z',
         completedAt: '2030-03-02T20:15:00Z',
       }),
     );
@@ -142,6 +200,7 @@ describe('parseMatchDetail result and completion', () => {
       value: matchDetail({
         state: 'Completed',
         recordedResult: { fidelity: 'Basic', teamScores },
+        startedAtMs: Date.parse('2030-03-02T19:00:00Z'),
         completedAtMs: Date.parse('2030-03-02T20:15:00Z'),
       }),
     });
@@ -215,7 +274,7 @@ describe('parseCreatedDraft and parseSquadStandings', () => {
     expect(parseCreatedDraft({ matchId: 'nope' }).ok).toBe(false);
   });
 
-  it('reads each squad standing, with role and state optional', () => {
+  it('reads each squad standing and its name, with role and state optional', () => {
     expect(
       parseSquadStandings([
         { squadId: SQUAD_ID, name: 'Tuesday 5s', role: 'Admin', state: 'Active' },
@@ -224,11 +283,11 @@ describe('parseCreatedDraft and parseSquadStandings', () => {
     ).toEqual({
       ok: true,
       value: [
-        { squadId: SQUAD_ID, role: 'Admin', state: 'Active' },
-        { squadId: MATCH_ID, role: null, state: null },
+        { squadId: SQUAD_ID, squadName: 'Tuesday 5s', role: 'Admin', state: 'Active' },
+        { squadId: MATCH_ID, squadName: 'Other', role: null, state: null },
       ],
     });
-    expect(parseSquadStandings([{ squadId: SQUAD_ID, role: 'Captain', state: 'Active' }]).ok).toBe(
+    expect(parseSquadStandings([{ squadId: SQUAD_ID, name: 'Tuesday 5s', role: 'Captain', state: 'Active' }]).ok).toBe(
       false,
     );
   });

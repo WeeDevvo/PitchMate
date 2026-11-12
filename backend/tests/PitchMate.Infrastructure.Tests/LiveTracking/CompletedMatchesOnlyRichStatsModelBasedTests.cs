@@ -303,7 +303,7 @@ public sealed class CompletedMatchesOnlyRichStatsModelBasedTests
         Match match = CreateOrThrow(
             Match.CreateDraft(matchId, squadId, "Poison Cancelled", new[] { day }, now), "create draft");
         CheckOrThrow(
-            match.Confirm(day, availableCount: 0, minimumThreshold: 0, Array.Empty<RegisteredMember>()), "confirm");
+            match.Confirm(day, Array.Empty<ConfirmableMember>()), "confirm");
         CheckOrThrow(match.Cancel(), "cancel");
 
         await using var context = CreateContext(connectionString);

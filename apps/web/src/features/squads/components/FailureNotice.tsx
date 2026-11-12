@@ -44,6 +44,7 @@
  */
 import { useCallback, type ReactElement, type ReactNode } from 'react';
 
+import { EmptyState, Icon, buttonClasses } from '../../../ui';
 import { GENERIC_SQUADS_FAILURE } from '../lib/messages';
 import './FailureNotice.css';
 
@@ -99,32 +100,40 @@ export function FailureNotice({
   }, [onRetry, retryBusy]);
 
   return (
-    <div className="squads-failure" data-squads-failure="true">
+    // The design system's error state, with no heading of its own: it sits
+    // under the heading of whatever failed to load.
+    <EmptyState
+      className="squads-failure"
+      data-squads-failure="true"
+      tone="error"
+      icon="cloudOff"
+      // 17.3: announced in place, with keyboard focus left where it was.
+      bodyProps={{
+        className: 'squads-failure__message',
+        role: 'status',
+        'aria-live': 'polite',
+        'aria-atomic': true,
+      }}
+      action={
+        <div className="squads-failure__actions">
+          {/* 2.6, 5.13, 17.4: the manual retry — the only thing that re-issues. */}
+          <button
+            type="button"
+            className={`squads-failure__retry ${buttonClasses({ variant: 'secondary' })}`}
+            aria-disabled={retryBusy ? true : undefined}
+            aria-busy={retryBusy ? true : undefined}
+            onClick={handleRetry}
+          >
+            <Icon name="sync" size={18} />
+            {retryLabel}
+          </button>
+          {children}
+        </div>
+      }
+    >
       {/* 17.1, 17.2: the one fixed message, carrying nothing of the response. */}
-      {/* 17.3: announced in place, with keyboard focus left where it was. */}
-      <p
-        className="squads-failure__message"
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        {GENERIC_SQUADS_FAILURE}
-      </p>
-
-      <div className="squads-failure__actions">
-        {/* 2.6, 5.13, 17.4: the manual retry — the only thing that re-issues. */}
-        <button
-          type="button"
-          className="squads-failure__retry"
-          aria-disabled={retryBusy ? true : undefined}
-          aria-busy={retryBusy ? true : undefined}
-          onClick={handleRetry}
-        >
-          {retryLabel}
-        </button>
-        {children}
-      </div>
-    </div>
+      {GENERIC_SQUADS_FAILURE}
+    </EmptyState>
   );
 }
 

@@ -23,6 +23,7 @@
 import { useId, useMemo, type ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+import { Icon, Logo, buttonClasses } from '../../../ui';
 import { HOME_ROUTE } from '../../app-shell';
 import { LOG_IN_ROUTE, REDIRECT_PARAM_NAME, SIGN_UP_ROUTE, useAuth } from '../../auth';
 import type { SquadsApi } from '../api/squadsApi';
@@ -79,7 +80,8 @@ function ClaimLandingBody({
   const machine = useClaimAcceptance(api, secret, authState);
 
   const home = (
-    <Link className="squads-invite-landing__home" to={HOME_ROUTE}>
+    <Link className={`squads-invite-landing__home ${buttonClasses({ variant: 'secondary', block: true })}`} to={HOME_ROUTE}>
+      <Icon name="home" size={18} />
       {SQUADS_HOME_CONTROL_LABEL}
     </Link>
   );
@@ -90,16 +92,10 @@ function ClaimLandingBody({
         <div className="squads-invite-landing__handover">
           <p className="squads-invite-landing__message">{CLAIM_SIGN_IN_INSTRUCTION}</p>
           <div className="squads-invite-landing__controls">
-            <Link
-              className="squads-invite-landing__control"
-              to={handoverTarget(SIGN_UP_ROUTE, requestedPath)}
-            >
+            <Link className={`squads-invite-landing__control ${buttonClasses({ size: 'lg', block: true })}`} to={handoverTarget(SIGN_UP_ROUTE, requestedPath)}>
               {CLAIM_SIGN_UP_LABEL}
             </Link>
-            <Link
-              className="squads-invite-landing__control"
-              to={handoverTarget(LOG_IN_ROUTE, requestedPath)}
-            >
+            <Link className={`squads-invite-landing__control ${buttonClasses({ variant: 'secondary', size: 'lg', block: true })}`} to={handoverTarget(LOG_IN_ROUTE, requestedPath)}>
               {CLAIM_LOG_IN_LABEL}
             </Link>
           </div>
@@ -125,10 +121,11 @@ function ClaimLandingBody({
           <div className="squads-invite-landing__controls">
             <button
               type="button"
-              className="squads-invite-landing__control"
+              className={`squads-invite-landing__control ${buttonClasses({ size: 'lg', block: true })}`}
               data-squads-claim-accept="true"
               onClick={machine.accept}
             >
+              <Icon name="check" size={18} />
               {ACCEPT_CLAIM_LABEL}
             </button>
           </div>
@@ -172,7 +169,11 @@ export function ClaimLandingScreen({ api }: ClaimLandingScreenProps): ReactEleme
 
   return (
     <div className="squads-invite-landing" data-squads-claim-landing="true">
+      <Logo size={34} />
       <section className="squads-invite-landing__surface" aria-labelledby={headingId}>
+        <span className="squads-invite-landing__art" aria-hidden="true">
+          <Icon name="guest" size={44} strokeWidth={1.8} />
+        </span>
         <h1 id={headingId} className="squads-invite-landing__heading">
           {CLAIM_LANDING_HEADING}
         </h1>
@@ -186,7 +187,8 @@ export function ClaimLandingScreen({ api }: ClaimLandingScreenProps): ReactEleme
         ) : (
           <div className="squads-invite-landing__outcome">
             <p className="squads-invite-landing__message">{CLAIM_LINK_INCOMPLETE}</p>
-            <Link className="squads-invite-landing__home" to={HOME_ROUTE}>
+            <Link className={`squads-invite-landing__home ${buttonClasses({ variant: 'secondary', block: true })}`} to={HOME_ROUTE}>
+              <Icon name="home" size={18} />
               {SQUADS_HOME_CONTROL_LABEL}
             </Link>
           </div>

@@ -6,8 +6,8 @@ namespace PitchMate.Api.LiveTracking.Endpoints;
 /// <summary>
 /// Maps the minimal-API live-tracking endpoints (Requirement 11, 13.1) under the match-scoped
 /// <c>/matches/{matchId:guid}</c> route group: recording an <c>Event_Batch</c>
-/// (<c>POST /events</c>), finalising the tracked result (<c>POST /tracked-result</c>), and reading the
-/// current running score (<c>GET /running-score</c>). Every endpoint is a thin adapter: it binds the
+/// (<c>POST /events</c>), finalising the tracked result (<c>POST /tracked-result</c>), reading the
+/// current running score (<c>GET /running-score</c>), and reading the event log (<c>GET /events</c>). Every endpoint is a thin adapter: it binds the
 /// route and (for recording) the request body, delegates the whole decision to an Application use-case
 /// handler, and translates the returned <see cref="Result{T}"/> to an HTTP result through the single
 /// <see cref="LiveTrackingErrorResults"/> seam — so the Api holds no live-tracking recording,
@@ -102,6 +102,22 @@ public static class LiveTrackingEndpoints
             .WithName("GetMatchRunningScore")
             // Existence-sensitive, as the whole seam is: 404 in place of 403 (Requirements 2.3, 5.3).
             .Produces<RunningScoreResponse>(StatusCodes.Status200OK)
+            .WithLiveTrackingConcealedProblemResponses();
+
+        // Read the match's event log, retractions included and oldest first, gated to active squad
+        // members like the running score, so a tracker can rebuild what it recorded after a reload.
+        group.MapGet("/events", static async (
+            Guid matchId,
+            GetMatchEventsHandler handler,
+            CancellationToken ct) =>
+        {
+            var command = new GetMatchEventsCommand(matchId);
+            return ToHttpResult(await handler.HandleAsync(command, ct), MatchEventLogResponse.From);
+        })
+            .RequireAuthorization()
+            .WithName("GetMatchEvents")
+            // Existence-sensitive, as the whole seam is: 404 in place of 403.
+            .Produces<MatchEventLogResponse>(StatusCodes.Status200OK)
             .WithLiveTrackingConcealedProblemResponses();
     }
 

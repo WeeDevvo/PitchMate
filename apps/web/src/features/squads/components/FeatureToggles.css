@@ -47,14 +47,14 @@
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-body);
   line-height: var(--squads-line-height-body);
 }
 
 .squads-feature-toggles__statement {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
 }
 
 .squads-feature-toggles__list {
@@ -88,27 +88,22 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   box-sizing: border-box;
   min-width: var(--squads-touch-target);
   min-height: var(--squads-touch-target);
-  padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--control-border);
+  padding: 0;
+  border: 0;
   border-radius: var(--squads-radius-chip);
-  background: var(--control-bg);
-  color: var(--control-text);
+  background: transparent;
+  color: var(--pm-text-primary);
   font: inherit;
   cursor: pointer;
 }
 
 .squads-feature-toggles__switch:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
-}
-
-/* 19.3: the accent is emphasis over the word and the knob position, never the only
-   carrier of the state. */
-.squads-feature-toggles__switch[aria-checked='true'] {
-  border-color: var(--accent-text);
 }
 
 .squads-feature-toggles__switch[aria-disabled='true'] {
@@ -116,35 +111,41 @@
   opacity: 0.7;
 }
 
-/* The track and its knob — the position cue. Decorative, so it is `aria-hidden`
-   where it is rendered. */
+/* The design system's toggle: a 52x32 track and a 23px thumb. On, the track
+   fills with Pitch Green and the thumb turns Ink and moves across, so the state
+   is position and shape as well as colour, beside the On/Off word. */
 .squads-feature-toggles__track {
   position: relative;
   display: inline-block;
   box-sizing: border-box;
-  width: 1.75rem;
-  height: 0.875rem;
-  border: var(--squads-border-width) solid var(--control-border);
+  width: 52px;
+  height: 32px;
+  border: 1.5px solid var(--pm-border-control);
   border-radius: var(--squads-radius-chip);
+  background: var(--pm-surface-sunken);
+  transition: background var(--pm-duration-fast);
 }
 
 .squads-feature-toggles__track::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: var(--squads-gap-hairline);
-  transform: translateY(-50%);
-  width: 0.5rem;
-  height: 0.5rem;
+  top: 3px;
+  left: 3px;
+  width: 23px;
+  height: 23px;
   border-radius: 50%;
-  background: var(--control-text);
+  background: var(--pm-text-secondary);
+  transition: transform var(--pm-duration-fast) var(--pm-ease-standard);
 }
 
-.squads-feature-toggles__switch[aria-checked='true']
-  .squads-feature-toggles__track::after {
-  left: auto;
-  right: var(--squads-gap-hairline);
-  background: var(--accent-text);
+.squads-feature-toggles__switch[aria-checked='true'] .squads-feature-toggles__track {
+  border-color: var(--pm-accent-fill);
+  background: var(--pm-accent-fill);
+}
+
+.squads-feature-toggles__switch[aria-checked='true'] .squads-feature-toggles__track::after {
+  transform: translateX(20px);
+  background: var(--pm-brand-ink);
 }
 
 .squads-feature-toggles__state {

@@ -36,6 +36,10 @@ internal sealed class ActiveMemberOnlyMembershipRepository : ISquadMembershipRep
     public Task<SquadMembership?> GetByUserAndSquadAsync(Guid userId, Guid squadId, CancellationToken cancellationToken) =>
         Task.FromResult(userId == _userId && squadId == _squadId ? _membership : null);
 
+    /// <inheritdoc />
+    public Task<bool> IsSquadPendingDeletionAsync(Guid squadId, CancellationToken cancellationToken) =>
+        Task.FromResult(false);
+
     // --- Every other member is outside the surface this test drives. ---
 
     /// <inheritdoc />
@@ -50,9 +54,6 @@ internal sealed class ActiveMemberOnlyMembershipRepository : ISquadMembershipRep
 
     /// <inheritdoc />
     public Task<SquadMembership?> GetOwnerAsync(Guid squadId, CancellationToken cancellationToken) => throw Unsupported();
-
-    /// <inheritdoc />
-    public Task<bool> IsSquadPendingDeletionAsync(Guid squadId, CancellationToken cancellationToken) => throw Unsupported();
 
     /// <inheritdoc />
     public Task<bool> DisplayNameTakenAsync(

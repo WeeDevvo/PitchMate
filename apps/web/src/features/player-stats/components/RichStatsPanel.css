@@ -48,7 +48,7 @@
 .player-stats-rich__statement {
   margin: 0;
   max-width: var(--player-stats-measure);
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-body);
   font-weight: var(--player-stats-font-weight-body);
   line-height: var(--player-stats-line-height-body);
@@ -80,7 +80,7 @@
 
 .player-stats-rich__label {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-meta);
   font-weight: var(--player-stats-font-weight-label);
   line-height: var(--player-stats-line-height-body);
@@ -89,8 +89,9 @@
 .player-stats-rich__value {
   /* A `dd` carries a user-agent indent; the entry's column is the layout here. */
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--player-stats-font-size-figure);
+  font-family: var(--pm-font-display);
   font-weight: var(--player-stats-font-weight-heading);
   line-height: var(--player-stats-line-height-heading);
 }
@@ -98,7 +99,7 @@
 /* A statement about a statistic, not a figure — so it is sized and weighted as
    prose and toned down, while the words carry the meaning (Requirement 11.4). */
 .player-stats-rich__value--absent {
-  color: var(--muted-text);
+  color: var(--pm-text-secondary);
   font-size: var(--player-stats-font-size-body);
   font-weight: var(--player-stats-font-weight-body);
   line-height: var(--player-stats-line-height-body);

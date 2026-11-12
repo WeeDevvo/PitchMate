@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Routing;
 namespace PitchMate.Api.Tests.Matches;
 
 /// <summary>
-/// One of the six operations as the running host actually mapped it: its HTTP method, its route template,
+/// One of the ten operations as the running host actually mapped it: its HTTP method, its route template,
 /// and every parameter that template names.
 /// <para>
 /// The template is <b>read off the host's own <see cref="EndpointDataSource"/></b> rather than written
@@ -30,7 +30,7 @@ public sealed record SquadScopedMatchRoute(
     public override string ToString() => $"{Method} {Template}";
 
     /// <summary>
-    /// Finds each of the six operations on the running host by the name its <c>WithName(...)</c> declares.
+    /// Finds each of the ten operations on the running host by the name its <c>WithName(...)</c> declares.
     /// </summary>
     /// <param name="endpoints">The running host's endpoint data source.</param>
     /// <returns>One route per operation found, in enum order; an operation not found is simply absent, which the non-vacuity floor reports.</returns>
@@ -76,7 +76,7 @@ public sealed record SquadScopedMatchRoute(
     /// <para>
     /// A parameter the template names for which no value was supplied throws rather than being left as a
     /// literal <c>{name}</c> segment. That is deliberate: a silently unsubstituted segment would route to
-    /// nothing and answer <c>404</c>, which for the one concealing operation of the six is
+    /// nothing and answer <c>404</c>, which for the one concealing operation of the ten is
     /// indistinguishable from the refusal under test — the property would pass having proved nothing.
     /// </para>
     /// </summary>

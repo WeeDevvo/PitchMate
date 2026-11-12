@@ -80,7 +80,8 @@ import type { FeatureFlag } from '../lib/parse/featureFlags';
 import type { DisplayRatingLeaderboard } from '../lib/parse/leaderboard';
 import type { SquadDetail, SquadMember } from '../lib/parse/squadDetail';
 import type { SquadSummary } from '../lib/parse/squadSummary';
-import { PLAYER_STATS_ROUTE, SQUAD_ROUTE, squadPath } from '../lib/routePaths';
+import { PLAYER_STATS_ROUTE, SQUAD_ROUTE } from '../lib/routePaths';
+import { SQUAD_TABS, squadTabChildPath, squadTabPath } from '../lib/squadTabs';
 import {
   PLAYERS_SECTION_SELECTOR,
   SQUAD_DETAIL_SECTION_SELECTOR,
@@ -421,13 +422,28 @@ async function flush(): Promise<void> {
   });
 }
 
-/** The screen at its real route, with the Player_Stats_Route registered as a stub. */
+/**
+ * The screen at its real routes — one per tab — opened on the Admin tab, the one
+ * page whose calls depend on authority: the Admin_Section and its invite and
+ * claim listings for an admin, the Not_Found_Treatment and nothing more for
+ * anyone else. The Player_Stats_Route is registered as a stub.
+ */
 function screenTree(api: SquadsApi): ReactElement {
   return (
     <AuthProvider manager={sessionManager()}>
-      <MemoryRouter initialEntries={[squadPath(SQUAD_ID)]}>
+      <MemoryRouter initialEntries={[squadTabPath(SQUAD_ID, 'admin')]}>
         <Routes>
-          <Route path={SQUAD_ROUTE} element={<SquadScreen api={api} />} />
+          {SQUAD_TABS.map((routeTab) => (
+            <Route
+              key={routeTab}
+              path={
+                routeTab === 'players'
+                  ? SQUAD_ROUTE
+                  : `${SQUAD_ROUTE}/${squadTabChildPath(routeTab)}`
+              }
+              element={<SquadScreen api={api} />}
+            />
+          ))}
           {/* A stub, because this feature registers no screen there (9.6). It
               issues nothing, so a navigation cannot add a call of its own. */}
           <Route path={PLAYER_STATS_ROUTE} element={<p>player stats</p>} />

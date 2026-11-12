@@ -3,7 +3,7 @@ using PitchMate.Domain.Common;
 namespace PitchMate.Domain.Matches;
 
 /// <summary>
-/// A registered, active squad membership's marking, for a single <see cref="Match"/> while it is
+/// An active squad membership's marking (a registered member's own, or a guest's marked by an admin), for a single <see cref="Match"/> while it is
 /// in <see cref="MatchState.GatheringAvailability"/>, of the subset of the match's candidate days on
 /// which that member is available (Requirement 4.1). A member holds at most one response per match:
 /// resubmitting replaces the prior response, and clearing removes it entirely (Requirement 4.2, 4.3).

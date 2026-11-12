@@ -99,7 +99,7 @@ describe('reads', () => {
 
     expect(await api.getSquadStanding(SQUAD_ID)).toEqual({
       kind: 'success',
-      value: { squadId: SQUAD_ID.toUpperCase(), role: 'Owner', state: 'Active' },
+      value: { squadId: SQUAD_ID.toUpperCase(), squadName: 'Tuesday 5s', role: 'Owner', state: 'Active' },
     });
   });
 
@@ -169,29 +169,35 @@ describe('organiser writes', () => {
 
     const results = [
       await api.confirmMatch(SQUAD_ID, MATCH_ID, DAY_ISO[0]),
-      await api.addGuest(SQUAD_ID, MATCH_ID, GUEST_ID),
+      await api.addParticipant(SQUAD_ID, MATCH_ID, GUEST_ID),
       await api.removeParticipant(SQUAD_ID, MATCH_ID, GUEST_ID),
+      await api.joinMatch(SQUAD_ID, MATCH_ID),
+      await api.leaveMatch(SQUAD_ID, MATCH_ID),
       await api.rerollTeams(MATCH_ID),
       await api.moveParticipant(MATCH_ID, GUEST_ID, TEAM_ID),
       await api.setTeamName(MATCH_ID, TEAM_ID, null),
       await api.setBibTeam(MATCH_ID, TEAM_ID),
       await api.lockTeams(MATCH_ID),
+      await api.unlockTeams(MATCH_ID),
     ];
 
     expect(results.every((result) => result.kind === 'success')).toBe(true);
     expect(requests.map(({ method, url, body }) => [method, url.slice(BASE_URL.length), body])).toEqual([
       ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/confirm`, { day: DAY_ISO[0] }],
-      ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants`, { guestMembershipId: GUEST_ID }],
+      ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants`, { membershipId: GUEST_ID }],
       ['DELETE', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants/${GUEST_ID}`, undefined],
+      ['POST', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants/me`, undefined],
+      ['DELETE', `/squads/${SQUAD_ID}/matches/${MATCH_ID}/participants/me`, undefined],
       ['POST', `/matches/${MATCH_ID}/teams/reroll`, undefined],
       ['POST', `/matches/${MATCH_ID}/teams/moves`, { squadMembershipId: GUEST_ID, toTeamId: TEAM_ID }],
       ['PUT', `/matches/${MATCH_ID}/teams/${TEAM_ID}/name`, { teamName: null }],
       ['PUT', `/matches/${MATCH_ID}/teams/${TEAM_ID}/bib`, undefined],
       ['POST', `/matches/${MATCH_ID}/teams/lock`, undefined],
+      ['POST', `/matches/${MATCH_ID}/teams/unlock`, undefined],
     ]);
   });
 
-  it('reads the working teams and the squad’s guests', async () => {
+  it('reads the working teams and the squad’s players', async () => {
     const { api, requests } = harness((request) =>
       request.url.endsWith('/teams')
         ? json({ teams: [], prediction: null, unassignedParticipants: [] })
@@ -202,7 +208,7 @@ describe('organiser writes', () => {
       kind: 'success',
       value: { teams: [], prediction: null, unassigned: [] },
     });
-    expect(await api.getSquadGuests(SQUAD_ID)).toEqual({ kind: 'success', value: [] });
+    expect(await api.getSquadPlayers(SQUAD_ID)).toEqual({ kind: 'success', value: [] });
     expect(requests.map(({ url }) => url.slice(BASE_URL.length))).toEqual([
       `/matches/${MATCH_ID}/teams`,
       `/squads/${SQUAD_ID}`,
@@ -222,10 +228,10 @@ describe('organiser writes', () => {
   });
 
   it('names a refused confirm by its problem code', async () => {
-    const { api } = harness(() => problem(409, 'ThresholdNotMet'));
+    const { api } = harness(() => problem(409, 'InvalidState'));
     expect(await api.confirmMatch(SQUAD_ID, MATCH_ID, DAY_ISO[0])).toEqual({
       kind: 'rejected',
-      reason: 'threshold-not-met',
+      reason: 'invalid-state',
     });
   });
 
@@ -284,8 +290,160 @@ describe('the match lifecycle', () => {
     });
   });
 
+  it('undoes a kickoff at its contract path, and names a refusal because play was recorded', async () => {
+    const { api, requests } = harness(() => json({ matchId: MATCH_ID }));
+
+    expect(await api.undoMatchStart(MATCH_ID)).toEqual({ kind: 'success', value: undefined });
+    expect(requests.map(({ method, url, body }) => [method, url.slice(BASE_URL.length), body])).toEqual([
+      ['POST', `/matches/${MATCH_ID}/undo-start`, undefined],
+    ]);
+
+    expect(await harness(() => problem(409, 'PlayRecorded')).api.undoMatchStart(MATCH_ID)).toEqual({
+      kind: 'rejected',
+      reason: 'play-recorded',
+    });
+    expect(await harness(() => problem(409, 'InvalidState')).api.undoMatchStart(MATCH_ID)).toEqual({
+      kind: 'rejected',
+      reason: 'invalid-state',
+    });
+    expect(await harness(() => problem(403, 'Unauthorized')).api.undoMatchStart(MATCH_ID)).toEqual({
+      kind: 'not-found',
+    });
+  });
+
   it('conceals a lifecycle step by a non-organiser as not found', async () => {
     expect(await harness(() => problem(403, 'NotAnOrganiser')).api.cancelMatch(MATCH_ID)).toEqual({
+      kind: 'not-found',
+    });
+  });
+});
+
+describe('live tracking', () => {
+  const GOAL_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f01';
+  const KEEPER_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f02';
+  const UNDO_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f03';
+  const SCORER = '0198e2a7-5555-7a5e-9c2f-000000000000';
+
+  it('reads the flag, sends each event kind, reads the score and finalises', async () => {
+    const { api, requests } = harness(({ url }) => {
+      if (url.endsWith('/features')) return json([{ feature: 'LiveMatchTracking', isEnabled: true }]);
+      if (url.endsWith('/events')) {
+        return json({
+          outcomes: [
+            { eventId: GOAL_ID, outcome: 'Applied', rejectionCode: null, rejectionReason: null },
+            { eventId: KEEPER_ID, outcome: 'Duplicate', rejectionCode: null, rejectionReason: null },
+            { eventId: UNDO_ID, outcome: 'Rejected', rejectionCode: 'TargetNotFound', rejectionReason: 'internal text' },
+          ],
+        });
+      }
+      return json({
+        matchId: MATCH_ID,
+        teamScores: [
+          { teamId: TEAM_IDS[0], score: 2 },
+          { teamId: TEAM_IDS[1], score: 1 },
+        ],
+        alreadyCompleted: false,
+      });
+    });
+
+    expect(await api.getLiveTracking(SQUAD_ID)).toEqual({ kind: 'success', value: true });
+    expect(
+      await api.recordEvents(MATCH_ID, [
+        { kind: 'goal', eventId: GOAL_ID, minute: 12, teamId: TEAM_IDS[0], scorerId: SCORER, ownGoal: false },
+        { kind: 'keeper', eventId: KEEPER_ID, minute: 13, teamId: TEAM_IDS[1], keeperId: SCORER },
+        { kind: 'goal-undo', eventId: UNDO_ID, minute: 14, targetEventId: GOAL_ID },
+      ]),
+    ).toEqual({
+      kind: 'success',
+      value: [
+        { eventId: GOAL_ID, outcome: 'Applied' },
+        { eventId: KEEPER_ID, outcome: 'Duplicate' },
+        { eventId: UNDO_ID, outcome: 'Rejected' },
+      ],
+    });
+    const scores = [
+      { teamId: TEAM_IDS[0], score: 2 },
+      { teamId: TEAM_IDS[1], score: 1 },
+    ];
+    expect(await api.getRunningScore(MATCH_ID)).toEqual({ kind: 'success', value: scores });
+    expect(await api.finaliseTrackedResult(MATCH_ID)).toEqual({ kind: 'success', value: scores });
+
+    expect(requests.map(({ method, url, body }) => [method, url.slice(BASE_URL.length), body])).toEqual([
+      ['GET', `/squads/${SQUAD_ID}/features`, undefined],
+      [
+        'POST',
+        `/matches/${MATCH_ID}/events`,
+        {
+          events: [
+            { eventId: GOAL_ID, kind: 'GoalScored', minute: 12, scoringTeamId: TEAM_IDS[0], scorerMembershipId: SCORER, ownGoal: false },
+            { eventId: KEEPER_ID, kind: 'KeeperStintStarted', minute: 13, keeperMembershipId: SCORER, keptTeamId: TEAM_IDS[1], ownGoal: false },
+            { eventId: UNDO_ID, kind: 'GoalRetracted', minute: 14, targetEventId: GOAL_ID, ownGoal: false },
+          ],
+        },
+      ],
+      ['GET', `/matches/${MATCH_ID}/running-score`, undefined],
+      ['POST', `/matches/${MATCH_ID}/tracked-result`, undefined],
+    ]);
+  });
+
+  it('reads the event log as the tracker\'s own events, in order', async () => {
+    const STINT_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f04';
+    const STINT_UNDO_ID = '0198e2a7-aaaa-7a5e-9c2f-6b1d4a5e7f05';
+    const { api, requests } = harness(() =>
+      json({
+        matchId: MATCH_ID,
+        events: [
+          { eventId: GOAL_ID, kind: 'GoalScored', minute: 3, scoringTeamId: TEAM_IDS[0], scorerMembershipId: null, ownGoal: false, keeperMembershipId: null, keptTeamId: null, targetEventId: null },
+          { eventId: STINT_ID, kind: 'KeeperStintStarted', minute: 4, scoringTeamId: null, scorerMembershipId: null, ownGoal: false, keeperMembershipId: SCORER, keptTeamId: TEAM_IDS[1], targetEventId: null },
+          { eventId: UNDO_ID, kind: 'GoalRetracted', minute: 5, scoringTeamId: null, scorerMembershipId: null, ownGoal: false, keeperMembershipId: null, keptTeamId: null, targetEventId: GOAL_ID },
+          { eventId: STINT_UNDO_ID, kind: 'KeeperStintRetracted', minute: 6, scoringTeamId: null, scorerMembershipId: null, ownGoal: false, keeperMembershipId: null, keptTeamId: null, targetEventId: STINT_ID },
+        ],
+      }),
+    );
+
+    expect(await api.getMatchEvents(MATCH_ID)).toEqual({
+      kind: 'success',
+      value: [
+        { kind: 'goal', eventId: GOAL_ID, minute: 3, teamId: TEAM_IDS[0], scorerId: null, ownGoal: false },
+        { kind: 'keeper', eventId: STINT_ID, minute: 4, teamId: TEAM_IDS[1], keeperId: SCORER },
+        { kind: 'goal-undo', eventId: UNDO_ID, minute: 5, targetEventId: GOAL_ID },
+        { kind: 'keeper-undo', eventId: STINT_UNDO_ID, minute: 6, targetEventId: STINT_ID },
+      ],
+    });
+    expect(requests.map(({ method, url }) => [method, url.slice(BASE_URL.length)])).toEqual([
+      ['GET', `/matches/${MATCH_ID}/events`],
+    ]);
+  });
+
+  it('refuses an event log with an event it cannot read', async () => {
+    const { api } = harness(() =>
+      json({ matchId: MATCH_ID, events: [{ eventId: GOAL_ID, kind: 'GoalScored', minute: 3, ownGoal: false }] }),
+    );
+    expect(await api.getMatchEvents(MATCH_ID)).toEqual({ kind: 'parse-failure' });
+  });
+
+  it('reads a squad with tracking off, or with no flags at all, as off', async () => {
+    expect(
+      await harness(() => json([{ feature: 'LiveMatchTracking', isEnabled: false }])).api.getLiveTracking(SQUAD_ID),
+    ).toEqual({ kind: 'success', value: false });
+    expect(await harness(() => json([])).api.getLiveTracking(SQUAD_ID)).toEqual({ kind: 'success', value: false });
+  });
+
+  it('reads a sealed log or a match not yet started as a match that has moved on', async () => {
+    for (const code of ['LogSealed', 'MatchNotStarted']) {
+      expect(await harness(() => problem(409, code)).api.recordEvents(MATCH_ID, [])).toEqual({
+        kind: 'rejected',
+        reason: 'invalid-state',
+      });
+    }
+    expect(await harness(() => problem(409, 'NotEnabled')).api.finaliseTrackedResult(MATCH_ID)).toEqual({
+      kind: 'rejected',
+      reason: 'validation',
+    });
+  });
+
+  it('conceals a non-organiser tracking a match as not found', async () => {
+    expect(await harness(() => problem(404, 'Unauthorized')).api.recordEvents(MATCH_ID, [])).toEqual({
       kind: 'not-found',
     });
   });

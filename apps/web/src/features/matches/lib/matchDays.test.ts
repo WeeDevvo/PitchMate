@@ -1,11 +1,13 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { anyDayAtThreshold, countsByDay } from './availability';
+import { countsByDay, mostAvailableDays } from './availability';
 import {
   CANDIDATE_DAY_MAX_COUNT,
   LOCATION_MAX_LENGTH,
   chronological,
+  dayParts,
+  formatDay,
   headlineDayMs,
   localInputToInstantMs,
   validateDraft,
@@ -149,9 +151,27 @@ describe('countsByDay', () => {
     ]);
   });
 
-  it('knows when any day has reached the threshold', () => {
-    expect(anyDayAtThreshold([{ dayMs: 1, count: 9 }], 10)).toBe(false);
-    expect(anyDayAtThreshold([{ dayMs: 1, count: 9 }, { dayMs: 2, count: 10 }], 10)).toBe(true);
-    expect(anyDayAtThreshold([], 10)).toBe(false);
+  it('marks the best-attended days, ties included, and none when nobody has marked any', () => {
+    expect([...mostAvailableDays([{ dayMs: 1, count: 3 }, { dayMs: 2, count: 1 }])]).toEqual([1]);
+    expect([...mostAvailableDays([{ dayMs: 1, count: 2 }, { dayMs: 2, count: 2 }])]).toEqual([1, 2]);
+    expect([...mostAvailableDays([{ dayMs: 1, count: 0 }, { dayMs: 2, count: 0 }])]).toEqual([]);
+    expect([...mostAvailableDays([])]).toEqual([]);
+  });
+});
+
+describe('dayParts', () => {
+  it('splits a day into the pieces formatDay writes', () => {
+    const format = new Intl.DateTimeFormat('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'UTC',
+    });
+    const instant = Date.UTC(2026, 9, 24, 19, 0);
+
+    expect(dayParts(instant, format)).toEqual({ dow: 'Sat', num: '24', mon: 'Oct', time: '19:00' });
+    expect(formatDay(instant, format)).toBe('Sat 24 Oct, 19:00');
   });
 });

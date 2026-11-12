@@ -1,0 +1,24 @@
+.pm-actions {
+  position: relative;
+  display: inline-flex;
+}
+
+/* The panel hangs from the trigger's trailing edge, over the rows below. */
+.pm-actions__panel {
+  position: absolute;
+  top: calc(100% + var(--pm-space-1));
+  right: 0;
+  z-index: var(--pm-z-menu);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--pm-space-1);
+  min-width: 14rem;
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: var(--pm-space-2);
+  border: 1px solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-md);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
+  box-shadow: var(--pm-shadow-2);
+}

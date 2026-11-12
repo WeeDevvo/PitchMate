@@ -133,13 +133,11 @@ public sealed class ConcurrentCompletionIntegrationTests
             }
 
             var registeredMembers = registered
-                .Select(m => new RegisteredMember(m.Id, m.DisplayName))
+                .Select(m => new ConfirmableMember(m.Id, m.DisplayName, m.IsGuest))
                 .ToList();
 
             Assert.True(match.Confirm(
                 confirmedDay,
-                availableCount: registeredMembers.Count,
-                minimumThreshold: ParticipantCount,
                 registeredMembers).IsSuccess);
             Assert.Equal(ParticipantCount, match.Participants.Count);
 
@@ -158,7 +156,7 @@ public sealed class ConcurrentCompletionIntegrationTests
             ]).IsSuccess);
 
             Assert.True(match.Lock().IsSuccess);
-            Assert.True(match.Start().IsSuccess);
+            Assert.True(match.Start(DateTimeOffset.UnixEpoch).IsSuccess);
 
             var teamAId = match.Teams.First(t => t.TeamName == "Reds").Id;
             var teamBId = match.Teams.First(t => t.TeamName == "Blues").Id;

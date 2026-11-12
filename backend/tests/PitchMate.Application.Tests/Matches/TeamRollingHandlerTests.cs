@@ -153,7 +153,7 @@ public class TeamRollingHandlerTests
 
             // A Confirmed match seeded with an empty pool, then filled with the requested participants.
             Match match = Match.CreateDraft(Guid.CreateVersion7(), squadId, Location, [ConfirmedDay], Anchor).Value!;
-            match.Confirm(ConfirmedDay, availableCount: 0, minimumThreshold: 0, activeRegisteredMembers: []);
+            match.Confirm(ConfirmedDay, activeMembers: []);
 
             var members = new List<SquadMembership> { owner };
             var participantIds = new List<Guid>(participantCount);

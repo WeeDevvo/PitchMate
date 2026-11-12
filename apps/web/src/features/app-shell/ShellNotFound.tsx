@@ -4,17 +4,7 @@
  *
  * Requirement 3.10 keeps the person inside the shell for this outcome: the frame
  * renders as usual, the region carries exactly one level-one heading and a control
- * to the Home_Destination, no Primary_Navigation control is marked as the current
- * page, and no Destination_Content is rendered.
- *
- * ### How "no control marked current" is achieved
- *
- * Not here. {@link resolveDestination} yields the not-found outcome for such a
- * path, and {@link PrimaryNavigation} attaches `aria-current` only to a control
- * whose identifier the resolver returned — so with no identifier returned, no
- * control carries it. This component renders nothing that touches the navigation,
- * which is exactly why the guarantee holds structurally rather than by this
- * component remembering to clear something.
+ * to the Home_Destination, and no Destination_Content is rendered.
  *
  * ### Not an error state
  *
@@ -31,6 +21,7 @@
  */
 import { type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
+import { EmptyState } from '../../ui';
 import { HOME_ROUTE } from './lib/destinations';
 import {
   HOME_CONTROL_LABEL,
@@ -47,15 +38,23 @@ import {
  */
 export function ShellNotFound(): ReactElement {
   return (
-    <div className="shell-boundary">
-      {/* 3.10, 13.2: the route's single level-one heading. */}
-      <h1>{SHELL_NOT_FOUND_HEADING}</h1>
-      <p className="shell-boundary__body">{SHELL_NOT_FOUND_BODY}</p>
-      {/* 3.10, 3.4: a way onward, client-side. */}
-      <Link className="shell-boundary__home" to={HOME_ROUTE}>
-        {HOME_CONTROL_LABEL}
-      </Link>
-    </div>
+    // The design system's not-found state, the same page every screen shows.
+    <EmptyState
+      className="shell-boundary"
+      icon="search"
+      // 3.10, 13.2: the route's single level-one heading.
+      headingLevel={1}
+      title={SHELL_NOT_FOUND_HEADING}
+      bodyProps={{ className: 'shell-boundary__body' }}
+      action={
+        // 3.10, 3.4: a way onward, client-side.
+        <Link className="shell-boundary__home" to={HOME_ROUTE}>
+          {HOME_CONTROL_LABEL}
+        </Link>
+      }
+    >
+      {SHELL_NOT_FOUND_BODY}
+    </EmptyState>
   );
 }
 

@@ -40,7 +40,7 @@
 
 /* 19.9: a persistently visible label, beside or above the control it names. */
 .squads-guest-form__label {
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-meta);
   font-weight: var(--squads-font-weight-label);
   line-height: var(--squads-line-height-body);
@@ -52,15 +52,15 @@
   max-width: 100%;
   min-height: var(--squads-touch-target);
   padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--control-border);
+  border: var(--squads-border-width) solid var(--pm-border-control);
   border-radius: var(--squads-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
   font: inherit;
 }
 
 .squads-guest-form__select:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }
 
@@ -82,11 +82,11 @@
   width: 1.25rem;
   height: 1.25rem;
   margin: 0;
-  accent-color: var(--accent-text);
+  accent-color: var(--pm-accent-text);
 }
 
 .squads-guest-form__checkbox-input:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }
 
@@ -105,7 +105,7 @@
 .squads-guest-form__error {
   margin: 0;
   max-width: var(--squads-measure);
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-meta);
   line-height: var(--squads-line-height-body);
   overflow-wrap: break-word;

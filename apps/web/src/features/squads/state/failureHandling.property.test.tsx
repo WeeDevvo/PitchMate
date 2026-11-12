@@ -472,6 +472,9 @@ const fixtureArb: fc.Arbitrary<Fixture> = fc
           name: raw.squadName,
           role: raw.role,
           state: raw.state,
+          playerCount: 0,
+          nextMatch: null,
+          recentForm: [],
         },
       ],
       detail: {

@@ -500,9 +500,21 @@ function renderedRatings(): readonly RenderedRating[] {
   );
 }
 
-/** The text of the players section, where every rating on screen lives. */
+/**
+ * The text of the players section, where every rating on screen lives — less the
+ * two places that carry numbers which are not ratings: the filter chips' counts
+ * and each row's appearance count ("12 played").
+ */
 function playersSectionText(): string {
-  return document.querySelector(PLAYERS_SECTION_SELECTOR)?.textContent ?? '';
+  const section = document.querySelector(PLAYERS_SECTION_SELECTOR);
+  if (section === null) return '';
+  const copy = section.cloneNode(true) as HTMLElement;
+  for (const counted of Array.from(
+    copy.querySelectorAll('.squads-players-panel__filters, .pm-player__meta'),
+  )) {
+    counted.remove();
+  }
+  return copy.textContent ?? '';
 }
 
 /**

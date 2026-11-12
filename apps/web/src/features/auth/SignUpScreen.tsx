@@ -44,6 +44,7 @@ import { PasswordField } from './components/PasswordField'
 import { SubmitButton } from './components/SubmitButton'
 import { LiveRegion } from './components/LiveRegion'
 import { GoogleSignInControl } from './components/GoogleSignInControl'
+import { LinkButton } from './components/LinkButton'
 import {
   validateEmail,
   type EmailValidation,
@@ -62,7 +63,17 @@ import type {
 } from './api/authApi'
 
 /** The screen heading (the single `h1`, rendered by AuthLayout). */
-export const SIGN_UP_HEADING = 'Create your account'
+export const SIGN_UP_HEADING = 'Join PitchMate'
+
+/** The line under the heading. */
+export const SIGN_UP_SUBHEADING = 'Free. Takes about 20 seconds.'
+
+/** Where "Already in? Log in" leads. */
+export const LOG_IN_PATH = '/login'
+
+/** The legal pages the sign-up agreement names. */
+export const TERMS_PATH = '/terms'
+export const PRIVACY_PATH = '/privacy'
 
 // --- Client-side validation copy (UX only; the server result always wins) ---
 
@@ -214,7 +225,24 @@ export function SignUpScreen({
   }
 
   return (
-    <AuthLayout heading={SIGN_UP_HEADING}>
+    <AuthLayout
+      heading={SIGN_UP_HEADING}
+      subheading={SIGN_UP_SUBHEADING}
+      footer={
+        <span>
+          Already in? <LinkButton to={LOG_IN_PATH}>Log in</LinkButton>
+        </span>
+      }
+    >
+      <GoogleSignInControl
+        requestGoogleAssertion={requestGoogleAssertion}
+        authApi={authApi}
+        onSession={onGoogleSession}
+        onFailure={onGoogleFailure}
+      />
+
+      <p className="auth-divider">or</p>
+
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         <EmailField
           value={email}
@@ -230,6 +258,7 @@ export function SignUpScreen({
           error={passwordError}
           inputRef={passwordRef}
           autoComplete="new-password"
+          hint={`At least ${PASSWORD_MIN} characters`}
           required
         />
         <SubmitButton pending={pending} pendingLabel="Creating your account…">
@@ -242,12 +271,10 @@ export function SignUpScreen({
         politeness={status.kind === 'error' ? 'assertive' : 'polite'}
       />
 
-      <GoogleSignInControl
-        requestGoogleAssertion={requestGoogleAssertion}
-        authApi={authApi}
-        onSession={onGoogleSession}
-        onFailure={onGoogleFailure}
-      />
+      <p className="auth-fine-print">
+        By joining you agree to the <LinkButton to={TERMS_PATH}>Terms</LinkButton> and{' '}
+        <LinkButton to={PRIVACY_PATH}>Privacy policy</LinkButton>.
+      </p>
     </AuthLayout>
   )
 }

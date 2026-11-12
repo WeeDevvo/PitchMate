@@ -192,8 +192,6 @@ internal sealed class MatchListDatasetSeeder
         Check(
             match.Confirm(
                 candidateDays[spec.ConfirmedDayIndex],
-                availableCount: 0,
-                minimumThreshold: 0,
                 []),
             "confirm");
 
@@ -239,7 +237,7 @@ internal sealed class MatchListDatasetSeeder
             return match;
         }
 
-        Check(match.Start(), "start");
+        Check(match.Start(DateTimeOffset.UnixEpoch), "start");
 
         if (spec.State == MatchState.InProgress)
         {

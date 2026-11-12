@@ -35,6 +35,7 @@
  * Requirements: 9.7, 13.2
  */
 import { type ReactElement } from 'react';
+import { EmptyState } from '../../ui';
 import { SESSION_ENDED_BODY, SESSION_ENDED_HEADING } from './lib/messages';
 
 /**
@@ -45,12 +46,18 @@ import { SESSION_ENDED_BODY, SESSION_ENDED_HEADING } from './lib/messages';
  */
 export function SessionEndedNotice(): ReactElement {
   return (
-    <div className="shell-boundary">
-      {/* 9.7, 13.2: the route's single level-one heading during the handover. */}
-      <h1>{SESSION_ENDED_HEADING}</h1>
-      {/* 9.7: what is happening next, stated neutrally. */}
-      <p className="shell-boundary__body">{SESSION_ENDED_BODY}</p>
-    </div>
+    // 9.7: what is happening next, stated neutrally, in the design system's
+    // empty state.
+    <EmptyState
+      className="shell-boundary"
+      icon="logout"
+      // 9.7, 13.2: the route's single level-one heading during the handover.
+      headingLevel={1}
+      title={SESSION_ENDED_HEADING}
+      bodyProps={{ className: 'shell-boundary__body' }}
+    >
+      {SESSION_ENDED_BODY}
+    </EmptyState>
   );
 }
 

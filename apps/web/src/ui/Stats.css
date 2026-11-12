@@ -1,0 +1,258 @@
+/* StatTile ----------------------------------------------------------- */
+
+.pm-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: var(--pm-space-4);
+  border: 1px solid var(--pm-border-subtle);
+  border-radius: var(--pm-radius-lg);
+  background: var(--pm-surface);
+}
+
+.pm-stat__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pm-text-secondary);
+}
+
+.pm-stat__value {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-1);
+  margin: 0;
+}
+
+.pm-stat__figure {
+  font: var(--pm-type-stat);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.pm-stat__sub {
+  font-size: 14px;
+  color: var(--pm-text-muted);
+}
+
+.pm-stat--accent {
+  border-color: transparent;
+  background: var(--pm-accent-fill);
+  color: var(--pm-on-accent);
+}
+
+.pm-stat--accent .pm-stat__label,
+.pm-stat--accent .pm-stat__sub {
+  color: var(--pm-on-accent);
+}
+
+.pm-stat--bib {
+  background: var(--pm-bib-subtle);
+}
+
+.pm-stat--bib .pm-stat__label {
+  color: var(--pm-bib-text);
+}
+
+.pm-stat--empty .pm-stat__figure {
+  color: var(--pm-text-muted);
+  font: var(--pm-type-body-strong);
+}
+
+/* LeaderboardRow ----------------------------------------------------- */
+
+.pm-lb {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--pm-space-3);
+  min-height: 60px;
+  padding: var(--pm-space-2) var(--pm-space-3);
+}
+
+.pm-lb + .pm-lb {
+  border-top: 1px solid var(--pm-border-subtle);
+}
+
+.pm-lb__rank {
+  justify-self: center;
+  font-family: var(--pm-font-display);
+  font-weight: 800;
+  font-size: 22px;
+  text-align: center;
+  color: var(--pm-text-secondary);
+}
+
+.pm-lb--top1 .pm-lb__rank {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--pm-highlight);
+  color: var(--pm-on-accent);
+  font-size: 20px;
+}
+
+.pm-lb--me {
+  background: var(--pm-accent-subtle);
+}
+
+.pm-lb__who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pm-space-2);
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.pm-lb__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pm-lb__sub {
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--pm-text-muted);
+}
+
+.pm-lb__value {
+  font-family: var(--pm-font-display);
+  font-weight: 800;
+  font-size: 24px;
+  text-align: right;
+}
+
+.pm-lb__value small {
+  display: block;
+  font-family: var(--pm-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 14px;
+  color: var(--pm-text-muted);
+}
+
+/* RatingChart -------------------------------------------------------- */
+
+.pm-chart {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.pm-chart__grid {
+  stroke: var(--pm-chart-grid);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.pm-chart__line {
+  fill: none;
+  stroke: var(--pm-chart-line);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.pm-chart__dot {
+  fill: var(--pm-surface);
+  stroke: var(--pm-chart-line);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.pm-chart__dot--last {
+  fill: var(--pm-chart-line);
+}
+
+.pm-chart__line--prov-cover {
+  stroke: var(--pm-surface);
+  stroke-width: 4;
+}
+
+.pm-chart__line--prov {
+  stroke: var(--pm-provisional);
+  stroke-dasharray: 6 5;
+}
+
+.pm-chart__dot--prov {
+  stroke: var(--pm-provisional);
+  stroke-dasharray: 2 2;
+}
+
+.pm-chart__dot--prov.pm-chart__dot--last {
+  fill: var(--pm-provisional);
+  stroke-dasharray: none;
+}
+
+.pm-chart__area {
+  fill: color-mix(in srgb, var(--pm-chart-line) 14%, transparent);
+  stroke: none;
+}
+
+.pm-chart__band {
+  fill: var(--pm-result-draw-subtle);
+}
+
+/* The chart with its axis labels: ratings up the left, labels along the bottom. */
+.pm-chart-frame {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 6px;
+}
+
+.pm-chart-frame__y {
+  position: relative;
+  min-width: 2.75rem;
+}
+
+.pm-chart-frame__plot {
+  position: relative;
+  min-width: 0;
+}
+
+.pm-chart-frame__x {
+  grid-column: 2;
+  position: relative;
+  height: 20px;
+}
+
+.pm-chart-frame__tick {
+  position: absolute;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--pm-text-muted);
+  white-space: nowrap;
+}
+
+.pm-chart-frame__y .pm-chart-frame__tick {
+  right: 0;
+  transform: translateY(-50%);
+}
+
+.pm-chart-frame__x .pm-chart-frame__tick {
+  top: 4px;
+  transform: translateX(-50%);
+}
+
+.pm-chart-frame__band-label {
+  position: absolute;
+  top: 6px;
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--pm-provisional-text);
+  white-space: nowrap;
+}

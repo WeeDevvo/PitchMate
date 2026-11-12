@@ -46,8 +46,7 @@
  *
  * Activating Profile or Settings closes the menu and navigates. `Disclosure`
  * moves no focus for an `'activate'` close, because the caller knows what is
- * about to happen to the element holding focus — so, exactly as
- * {@link PrimaryNavigation} does, focus is returned to the trigger *before* the
+ * about to happen to the element holding focus — so focus is returned to the trigger *before* the
  * close is requested: the activated `Link` unmounts with the surface, and moving
  * focus first means it never lands on `<body>` in between. The navigation itself
  * is the `Link`'s own business and happens either way, client-side and without a
@@ -86,6 +85,7 @@
  */
 import { useCallback, useId, useRef, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
+import { Icon } from '../../../ui';
 
 import {
   PROFILE_ROUTE,
@@ -179,7 +179,10 @@ export function AccountMenu({
         >
           {/* 8.1, 8.4: fixed text naming the menu, and no value from the Session.
               Name-from-content, so the visible label *is* the accessible name. */}
-          {ACCOUNT_MENU_LABEL}
+          <Icon name="user" size={20} />
+          {/* Visually hidden: the design system's top bar shows the icon alone,
+              and this stays the accessible name. */}
+          <span className="shell-account-menu__trigger-label">{ACCOUNT_MENU_LABEL}</span>
         </button>
       )}
     >
@@ -199,6 +202,7 @@ export function AccountMenu({
           >
             {/* Read from the registry, so this label and the Profile_Destination's
                 Primary_Navigation control can never disagree. */}
+            <Icon name="user" size={20} />
             {destinationLabel('profile')}
           </Link>
         </li>
@@ -209,6 +213,7 @@ export function AccountMenu({
             data-account-control="settings"
             onClick={handleNavigate}
           >
+            <Icon name="settings" size={20} />
             {destinationLabel('settings')}
           </Link>
         </li>
@@ -229,6 +234,7 @@ export function AccountMenu({
           >
             {/* 8.2: the visible label, unchanged in every state, so the control a
                 person names by speech stays the same control. */}
+            <Icon name="logout" size={20} />
             <span className="shell-account-menu__item-label">{SIGN_OUT_LABEL}</span>
             {/* 8.10, 8.12: progress as words beside the label, and no element at
                 all while nothing is in progress. */}

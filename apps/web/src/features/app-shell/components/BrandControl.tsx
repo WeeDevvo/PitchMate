@@ -12,19 +12,18 @@
  *   Home_Destination path — the same value as the Auth_Feature's
  *   `DEFAULT_AUTHENTICATED_ROUTE` — rather than a literal repeated here
  *   (Requirement 3.2).
- * - **The name comes from visible text.** The logo image carries an empty text
- *   alternative and the brand name sits beside it as real text, which is exactly
- *   what Requirement 13.9 asks for: an icon whose meaning is already conveyed by
- *   adjacent text takes an empty alternative, so assistive technology announces
- *   "PitchMate" once rather than twice. The name also survives an image that
- *   fails to load.
+ * - **The name comes from visible text.** The design-system `Logo` lockup is
+ *   rendered with `textName`: the shield mark carries an empty text alternative
+ *   and the "PitchMate" wordmark is real text, which is what Requirement 13.9
+ *   asks for. Assistive technology announces "PitchMate" once, and the name
+ *   survives a mark that fails to load.
  *
  * Requirements: 1.4, 13.9
  */
 import { type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { HOME_ROUTE } from '../lib/destinations';
-import brandLogoUrl from '../../../assets/PitchMate_Logo.png';
+import { Logo } from '../../../ui';
 
 /** The brand name, which is also the control's accessible name (Requirement 1.4). */
 export const BRAND_NAME = 'PitchMate';
@@ -45,15 +44,7 @@ export function BrandControl({ className }: BrandControlProps): ReactElement {
       to={HOME_ROUTE}
       className={className === undefined ? 'shell-brand' : `shell-brand ${className}`}
     >
-      <img
-        className="shell-brand__logo"
-        src={brandLogoUrl}
-        // 13.9: empty alternative — the name beside it carries the meaning.
-        alt=""
-        width={160}
-        height={40}
-      />
-      <span className="shell-brand__name">{BRAND_NAME}</span>
+      <Logo size={30} textName />
     </Link>
   );
 }

@@ -31,6 +31,26 @@ public static class DisplayRatingCalculator
             return null;
         }
 
+        return Map(mu, sigma, parameters);
+    }
+
+    /// <summary>
+    /// Computes the approximate number for a <see cref="RatingState.Provisional"/> rating, using the
+    /// same mapping as <see cref="Compute"/>. Clients show it only as a rough "~" band, never as a
+    /// precise figure, so a still-settling player can see the trend of their rating. Returns
+    /// <see langword="null"/> when <paramref name="state"/> is <see cref="RatingState.Established"/>,
+    /// whose number is <see cref="Compute"/>'s, so exactly one of the two is ever present.
+    /// </summary>
+    /// <param name="state">The rating's provisional/established classification.</param>
+    /// <param name="mu">The mean skill estimate (μ).</param>
+    /// <param name="sigma">The uncertainty of the estimate (σ).</param>
+    /// <param name="parameters">The squad's display-rating scale, offset, and floor.</param>
+    /// <returns>The floored, rounded estimate, or <see langword="null"/> when established.</returns>
+    public static int? Estimate(RatingState state, double mu, double sigma, DisplayRatingParameters parameters) =>
+        state == RatingState.Provisional ? Map(mu, sigma, parameters) : null;
+
+    private static int Map(double mu, double sigma, DisplayRatingParameters parameters)
+    {
         var mapped = ((mu - (3.0 * sigma)) * parameters.K) + parameters.C;
         var rounded = Math.Round(mapped, MidpointRounding.AwayFromZero);
         return (int)Math.Max(parameters.Floor, rounded);

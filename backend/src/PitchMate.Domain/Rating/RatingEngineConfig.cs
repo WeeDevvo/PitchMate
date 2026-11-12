@@ -19,8 +19,13 @@ public sealed record RatingEngineConfig
     /// <summary>Dynamics factor (τ). Not applied inside the match update; reserved for tuning.</summary>
     public double Tau { get; init; } = 25.0 / 300.0;
 
-    /// <summary>σ threshold above which a rating is Provisional and at/below which it is Established.</summary>
-    public double ProvisionalThreshold { get; init; } = 25.0 / 6.0;
+    /// <summary>
+    /// σ threshold above which a rating is Provisional and at/below which it is Established. A
+    /// player's σ falls only about 0.03-0.07 per small-sided match from σ₀ ≈ 8.33, so 8.19 settles a
+    /// newcomer within 5 matches at every size from 5v5 to 8v8 (3 at 5v5, 4-5 at 8v8, depending on
+    /// results). The previous 7.75 took 10 to 15 matches, too long for casual weekly games.
+    /// </summary>
+    public double ProvisionalThreshold { get; init; } = 8.19;
 
     /// <summary>Number of inactive days that elapse before uncertainty decay begins (~6 weeks).</summary>
     public int DecayFreePeriodDays { get; init; } = 42;

@@ -20,15 +20,16 @@
   gap: var(--squads-gap);
   box-sizing: border-box;
   width: 100%;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-body);
   line-height: var(--squads-line-height-body);
 }
 
 .squads-admin__heading {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-section-heading);
+  font-family: var(--pm-font-display);
   font-weight: var(--squads-font-weight-heading);
   line-height: var(--squads-line-height-heading);
 }
@@ -41,7 +42,7 @@
 
 .squads-admin__subheading {
   margin: 0;
-  color: var(--text);
+  color: var(--pm-text-primary);
   font-size: var(--squads-font-size-subsection-heading);
   font-weight: var(--squads-font-weight-label);
   line-height: var(--squads-line-height-heading);

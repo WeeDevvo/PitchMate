@@ -71,7 +71,8 @@ import {
   type RefObject,
 } from 'react';
 
-import { FormField, LiveRegion } from '../../auth';
+import { LiveRegion } from '../../auth';
+import { TextField } from '../../../ui';
 import {
   ADD_GUEST_HEADING,
   ADD_GUEST_SUBMIT_LABEL,
@@ -372,10 +373,10 @@ function OpenGuestForm({
     >
       {/* 12.1, 12.8: a persistently visible label, prefilled for an edit, with
           its validation message programmatically associated with the field. */}
-      <FormField
+      <TextField
         label={GUEST_DISPLAY_NAME_LABEL}
         value={displayName}
-        onValueChange={handleDisplayNameChange}
+        onChange={(event) => handleDisplayNameChange(event.target.value)}
         error={displayNameError}
         name="guestDisplayName"
         autoComplete="off"

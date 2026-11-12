@@ -163,7 +163,7 @@ public sealed class WorkingTeamsEndpointIntegrationTests : IClassFixture<Routing
         SquadMembership membership = SquadMembership.CreateRegistered(squad.Id, member.Id, "Teams Member").Value!;
 
         Match match = Match.CreateDraft(Guid.CreateVersion7(), squad.Id, "Mabley Green", [now.AddDays(7)], now).Value!;
-        Assert.True(match.Confirm(now.AddDays(7), availableCount: 0, minimumThreshold: 0, []).IsSuccess);
+        Assert.True(match.Confirm(now.AddDays(7), []).IsSuccess);
         Assert.True(match.AddParticipant(ownership).IsSuccess);
         Assert.True(match.AddParticipant(membership).IsSuccess);
         Assert.True(match.ApplyTeamProposal(

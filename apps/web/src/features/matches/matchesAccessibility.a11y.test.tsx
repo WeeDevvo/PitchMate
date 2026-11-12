@@ -14,18 +14,36 @@ import { SQUAD_ROUTE, squadPath } from '../squads';
 import { THEME_ATTRIBUTE, applyThemeAttribute, type Theme } from '../../theme';
 import { MatchesSection } from './components/MatchesSection';
 import {
+  BACK_LABEL,
   CANCEL_MATCH_LABEL,
+  CONFIRM_DAY_BUTTON_LABEL,
+  CONFIRM_UNDO_START_LABEL,
   COMPLETE_MATCH_LABEL,
+  REJECTION_MESSAGES,
+  UNDO_START_LABEL,
   FINAL_RESULT_LABEL,
   LOCATION_LABEL,
   PROVISIONAL_RESULT_LABEL,
   RESULT_FORM_HEADING,
   SAVE_RESULT_LABEL,
   SUBMIT_DRAFT_LABEL,
+  addTimeLabel,
   scoreLabel,
+  END_MATCH_LABEL,
+  GOAL_LABEL,
+  KEEPER_LABEL,
+  LIVE_SCORE_HEADING,
+  OWN_GOAL_LABEL,
+  REMOVE_GOAL_LABEL,
+  TIMELINE_LABEL,
+  teamGoalButtonLabel,
+  timelineActionsLabel,
+  timelineGoalText,
 } from './lib/messages';
-import { MATCH_ROUTE, NEW_MATCH_ROUTE, matchPath, newMatchPath } from './lib/routePaths';
+import { MATCH_LIVE_ROUTE, MATCH_ROUTE, NEW_MATCH_ROUTE, liveTrackerPath, matchPath, newMatchPath } from './lib/routePaths';
+import { upcomingDates } from './lib/candidateSlots';
 import { CreateMatchScreen } from './screens/CreateMatchScreen';
+import { LiveTrackerScreen } from './screens/LiveTrackerScreen';
 import { MatchScreen } from './screens/MatchScreen';
 import {
   DAY_MS,
@@ -81,12 +99,27 @@ describe.each(THEMES)('in the %s theme', (theme) => {
 
     await userEvent.click(screen.getByRole('button', { name: SUBMIT_DRAFT_LABEL }));
     await expectNoWcagViolations(document.body);
+
+    // A picked day with two kick-offs, neither set: each time field is flagged.
+    const [, tomorrow] = upcomingDates(NOW_MS);
+    await userEvent.click(screen.getByRole('checkbox', { name: tomorrow.label }));
+    await userEvent.click(screen.getByRole('button', { name: addTimeLabel(tomorrow.label) }));
+    await userEvent.click(screen.getByRole('button', { name: SUBMIT_DRAFT_LABEL }));
+    await expectNoWcagViolations(document.body);
   });
 
   it('the match screen while gathering availability', async () => {
     applyThemeAttribute(theme);
     renderAtRoute(<MatchScreen api={fakeMatchesApi()} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
-    await screen.findAllByText(/needed$/);
+    await screen.findAllByText(/^\d+ can play$/);
+    // The organiser's grid, with a guest's row loaded and a day ticked since the last save.
+    const [guestDay] = await screen.findAllByRole('checkbox', { name: /^Guest Gary, / });
+    await userEvent.click(guestDay);
+    await expectNoWcagViolations(document.body);
+
+    // The confirm dialog, open on the chosen day with its short-of-players warning.
+    await userEvent.click(screen.getByRole('button', { name: CONFIRM_DAY_BUTTON_LABEL }));
+    await screen.findByRole('dialog');
     await expectNoWcagViolations(document.body);
   });
 
@@ -106,7 +139,7 @@ describe.each(THEMES)('in the %s theme', (theme) => {
         ),
     });
     renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
-    await screen.findByText('Alex');
+    await screen.findByRole('checkbox', { name: 'Alex' });
     await expectNoWcagViolations(document.body);
   });
 
@@ -126,7 +159,7 @@ describe.each(THEMES)('in the %s theme', (theme) => {
         ),
     });
     renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
-    await screen.findByRole('heading', { name: 'Team sheet' });
+    await screen.findByRole('heading', { name: /^Team sheet/ });
     await screen.findByRole('heading', { name: 'Predicted result' });
     await expectNoWcagViolations(document.body);
   });
@@ -158,6 +191,22 @@ describe.each(THEMES)('in the %s theme', (theme) => {
     await userEvent.clear(screen.getByLabelText(scoreLabel(red.teamName, red.bibFlag)));
     await userEvent.click(screen.getByRole('button', { name: SAVE_RESULT_LABEL }));
     await userEvent.click(screen.getByRole('button', { name: COMPLETE_MATCH_LABEL }));
+    await expectNoWcagViolations(document.body);
+  });
+
+  it('the match screen in play with nothing recorded, and the undo-kickoff confirmation and its refusal', async () => {
+    applyThemeAttribute(theme);
+    const api = fakeMatchesApi({
+      getMatch: async () => success(matchDetail({ state: 'InProgress', confirmedDayMs: DAY_MS[0] })),
+      undoMatchStart: async () => ({ kind: 'rejected', reason: 'play-recorded' }),
+    });
+    renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
+    await userEvent.click(await screen.findByRole('button', { name: UNDO_START_LABEL }));
+    await screen.findByRole('dialog');
+    await expectNoWcagViolations(document.body);
+
+    await userEvent.click(screen.getByRole('button', { name: CONFIRM_UNDO_START_LABEL }));
+    await screen.findByText(REJECTION_MESSAGES['play-recorded']);
     await expectNoWcagViolations(document.body);
   });
 
@@ -202,6 +251,60 @@ describe.each(THEMES)('in the %s theme', (theme) => {
     );
     await userEvent.click(await screen.findByRole('button', { name: CANCEL_MATCH_LABEL }));
     await expectNoWcagViolations(document.body);
+  });
+
+  it('the live score on a tracked match in play', async () => {
+    applyThemeAttribute(theme);
+    const api = fakeMatchesApi({
+      getMatch: async () => success(matchDetail({ state: 'InProgress', confirmedDayMs: DAY_MS[0] })),
+      getLiveTracking: async () => success(true),
+    });
+    renderAtRoute(<MatchScreen api={api} />, MATCH_ROUTE, matchPath(SQUAD_ID, MATCH_ID));
+    await screen.findByRole('heading', { name: LIVE_SCORE_HEADING });
+    await expectNoWcagViolations(document.body);
+  });
+
+  it('the live tracker, each goal step, and its keeper and full-time dialogs', async () => {
+    applyThemeAttribute(theme);
+    const [red, blue] = teamSheet().teams;
+    const api = fakeMatchesApi({
+      getMatch: async () =>
+        success(matchDetail({ state: 'InProgress', confirmedDayMs: DAY_MS[0], startedAtMs: DAY_MS[0] })),
+      getLiveTracking: async () => success(true),
+    });
+    const tracker = renderAtRoute(<LiveTrackerScreen api={api} />, MATCH_LIVE_ROUTE, liveTrackerPath(SQUAD_ID, MATCH_ID));
+    await userEvent.click(await screen.findByRole('button', { name: GOAL_LABEL }));
+    await expectNoWcagViolations(document.body);
+
+    await userEvent.click(screen.getByRole('button', { name: teamGoalButtonLabel(red.teamName, red.bibFlag) }));
+    await userEvent.click(screen.getByRole('button', { name: OWN_GOAL_LABEL }));
+    await expectNoWcagViolations(document.body);
+
+    // An own goal for Red is put in by a Blue player.
+    await userEvent.click(screen.getByRole('button', { name: blue.roster[0].displayName }));
+    await screen.findByRole('button', { name: GOAL_LABEL });
+    await expectNoWcagViolations(document.body);
+
+    await userEvent.click(screen.getByRole('button', { name: KEEPER_LABEL }));
+    await screen.findByRole('dialog');
+    await expectNoWcagViolations(document.body);
+    await userEvent.keyboard('{Escape}');
+
+    // The timeline, with a goal's fix menu open, then the goal taken back.
+    await userEvent.click(screen.getByRole('button', { name: TIMELINE_LABEL }));
+    // The goal's minute depends on the clock, so match its menu by the words before it.
+    const menuPrefix = timelineActionsLabel(timelineGoalText(blue.roster[0].displayName, true), 0).replace(/, \d+′$/, '');
+    const menuName = { name: (name: string) => name.startsWith(menuPrefix) };
+    await userEvent.click(screen.getByRole('button', menuName));
+    await expectNoWcagViolations(document.body);
+    await userEvent.click(screen.getByRole('button', { name: REMOVE_GOAL_LABEL }));
+    await expectNoWcagViolations(document.body);
+    await userEvent.click(screen.getByRole('button', { name: BACK_LABEL }));
+
+    await userEvent.click(screen.getByRole('button', { name: END_MATCH_LABEL }));
+    await screen.findByRole('dialog');
+    await expectNoWcagViolations(document.body);
+    tracker.unmount();
   });
 
   it('the not-found treatment', async () => {

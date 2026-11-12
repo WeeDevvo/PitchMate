@@ -27,14 +27,14 @@
   max-width: 100%;
   min-height: var(--squads-touch-target);
   padding: 0 var(--squads-gap-tight);
-  border: var(--squads-border-width) solid var(--control-border);
+  border: var(--squads-border-width) solid var(--pm-border-control);
   border-radius: var(--squads-radius);
-  background: var(--control-bg);
-  color: var(--control-text);
+  background: var(--pm-surface-raised);
+  color: var(--pm-text-primary);
   font: inherit;
 }
 
 .squads-ownership__select:focus-visible {
-  outline: var(--squads-focus-width) solid var(--focus-ring);
+  outline: var(--squads-focus-width) solid var(--pm-focus-ring);
   outline-offset: var(--squads-focus-offset);
 }

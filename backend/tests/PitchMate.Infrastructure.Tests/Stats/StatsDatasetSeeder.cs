@@ -156,7 +156,7 @@ public sealed class StatsDatasetSeeder
             return TeamlessMatch(match, matchId, MatchState.GatheringAvailability, spec.Fidelity);
         }
 
-        Check(match.Confirm(candidateDay, availableCount: 0, minimumThreshold: 0, Array.Empty<RegisteredMember>()), "confirm");
+        Check(match.Confirm(candidateDay, Array.Empty<ConfirmableMember>()), "confirm");
 
         if (spec.State == MatchState.Confirmed)
         {
@@ -202,7 +202,7 @@ public sealed class StatsDatasetSeeder
             return new BuiltMatch(match, [], RolledMatchData(matchId, MatchState.TeamsRolled, null, spec.Fidelity, teamEntities, scores: null));
         }
 
-        Check(match.Start(), "start");
+        Check(match.Start(DateTimeOffset.UnixEpoch), "start");
 
         if (spec.State == MatchState.InProgress)
         {

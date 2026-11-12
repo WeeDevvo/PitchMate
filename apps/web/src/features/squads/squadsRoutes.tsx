@@ -15,7 +15,7 @@
  *
  * | Path | Table | Behind the Route_Guard | Inside the shell frame |
  * | --- | --- | --- | --- |
- * | `/app/squads/:squadId` | {@link createSquadsShellRoutes} | yes | yes |
+ * | `/app/squads/:squadId` and its `/matches`, `/leaderboards` and `/admin` tabs | {@link createSquadsShellRoutes} | yes | yes |
  * | `/join/:code` | {@link createSquadsPublicRoutes} | **no** | **no** |
  *
  * The Squad_Route is returned as **children of the shell's `/app` layout route**,
@@ -57,6 +57,7 @@ import type { RouteObject } from 'react-router-dom';
 import { HOME_ROUTE } from '../app-shell';
 import type { SquadsApi } from './api/squadsApi';
 import { CLAIM_LANDING_ROUTE, INVITE_LANDING_ROUTE, SQUAD_ROUTE } from './lib/routePaths';
+import { SQUAD_TABS, squadTabChildPath, type SquadTab } from './lib/squadTabs';
 import { ClaimLandingScreen } from './screens/ClaimLandingScreen';
 import { InviteLandingScreen } from './screens/InviteLandingScreen';
 import { SquadScreen } from './screens/SquadScreen';
@@ -130,38 +131,23 @@ export function createSquadsShellRoutes({
   matchesContent,
   statsContent,
 }: SquadsRoutesOptions): RouteObject[] {
-  return [
-    {
-      path: SQUAD_ROUTE_CHILD_PATH,
-      element: (
-        <SquadScreen
-          api={api}
-          matchesContent={matchesContent}
-          statsContent={statsContent}
-        />
-      ),
-    },
-  ];
+  const screen = (
+    <SquadScreen api={api} matchesContent={matchesContent} statsContent={statsContent} />
+  );
+
+  // One route per tab. Players is the squad's own address; each other tab adds
+  // its segment. Every route renders the same screen element, so moving between
+  // tabs keeps the one Squad_Screen (and the squad it has read) mounted, and the
+  // screen picks the tab from the address.
+  return SQUAD_TABS.map((tab: SquadTab) => ({
+    path:
+      tab === 'players'
+        ? SQUAD_ROUTE_CHILD_PATH
+        : `${SQUAD_ROUTE_CHILD_PATH}/${squadTabChildPath(tab)}`,
+    element: screen,
+  }));
 }
 
-/**
- * Build the feature's routes that belong **outside** both the Route_Guard and the
- * shell frame — the Invite_Landing_Route (Requirement 18.5).
- *
- * Spread the result into the application router's top-level route list, ahead of
- * the application catch-all and alongside the landing and auth subtrees.
- *
- * @example
- *   const router = createBrowserRouter([
- *     { path: '/', element: <LandingPage /> },
- *     ...createAuthRoutes(authOptions),
- *     ...shellRoutes,
- *     ...createSquadsPublicRoutes({ api }),
- *     { path: '*', element: <AppNotFound /> },
- *   ]);
- *
- * Requirements: 18.4, 18.5
- */
 export function createSquadsPublicRoutes({
   api,
 }: SquadsRoutesOptions): RouteObject[] {

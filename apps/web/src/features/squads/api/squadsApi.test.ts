@@ -323,12 +323,40 @@ const OPERATIONS: readonly OperationCase[] = [
     search: '',
     requestBodyText: '',
     successBody: [
-      { squadId: SQUAD_ID, name: 'Thursday Nights', role: 'Admin', state: 'Active' },
+      {
+        squadId: SQUAD_ID,
+        name: 'Thursday Nights',
+        role: 'Admin',
+        state: 'Active',
+        playerCount: 14,
+        nextMatch: {
+          matchId: SQUAD_ID,
+          state: 'TeamsRolled',
+          scheduledAt: '2026-11-09T10:00:00Z',
+          location: 'Hackney Marshes',
+          candidateDayCount: 3,
+        },
+        recentForm: ['Win', 'Draw', 'Loss'],
+      },
     ],
     expected: {
       kind: 'success',
       value: [
-        { squadId: SQUAD_ID, name: 'Thursday Nights', role: 'Admin', state: 'Active' },
+        {
+          squadId: SQUAD_ID,
+          name: 'Thursday Nights',
+          role: 'Admin',
+          state: 'Active',
+          playerCount: 14,
+          nextMatch: {
+            matchId: SQUAD_ID,
+            state: 'TeamsRolled',
+            scheduledAtMs: Date.UTC(2026, 10, 9, 10, 0, 0),
+            place: 'Hackney Marshes',
+            candidateDayCount: 3,
+          },
+          recentForm: ['Win', 'Draw', 'Loss'],
+        },
       ],
     },
     invoke: (api, signal) => api.listMySquads(signal),

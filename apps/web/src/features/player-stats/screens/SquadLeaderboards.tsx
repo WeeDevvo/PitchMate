@@ -22,6 +22,7 @@
 
 import { useId, useState, type ReactElement } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { LeaderboardRow } from '../../../ui';
 
 import { SQUAD_SCOPE_ROUTE_PARAMETER } from '../../app-shell';
 import { useAuth } from '../../auth';
@@ -80,25 +81,29 @@ function BoardList({
       data-player-stats-leaderboard-list="true"
     >
       {board.entries.map((entry, index) => (
-        <li key={entry.membershipId} className="player-stats-leaderboard__entry">
-          <span className="player-stats-leaderboard__position">{positions[index]}</span>
-          <span className="player-stats-leaderboard__name">
-            <Link
-              className="player-stats-leaderboard__link"
-              to={playerStatsPath(squadId, entry.membershipId)}
-            >
-              {entry.displayName}
-            </Link>
-            {isAnonymisedPlaceholder(entry.displayName) ? (
-              <span className="player-stats-leaderboard__former-player">
-                {FORMER_PLAYER_LABEL}
-              </span>
-            ) : null}
-          </span>
-          <span className="player-stats-leaderboard__value">
-            {formatLeaderboardValue(board.statistic, entry.value)}
-          </span>
-        </li>
+        <LeaderboardRow
+          key={entry.membershipId}
+          className="player-stats-leaderboard__entry"
+          rank={positions[index]}
+          // First place, shared by every entry tied for it.
+          first={positions[index] === 1}
+          name={
+            <>
+              <Link
+                className="player-stats-leaderboard__link"
+                to={playerStatsPath(squadId, entry.membershipId)}
+              >
+                {entry.displayName}
+              </Link>
+              {isAnonymisedPlaceholder(entry.displayName) ? (
+                <span className="player-stats-leaderboard__former-player">
+                  {FORMER_PLAYER_LABEL}
+                </span>
+              ) : null}
+            </>
+          }
+          value={formatLeaderboardValue(board.statistic, entry.value)}
+        />
       ))}
     </ol>
   );

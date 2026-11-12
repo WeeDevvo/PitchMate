@@ -52,7 +52,8 @@
  */
 import { useCallback, useState, type ReactElement, type RefObject } from 'react';
 
-import { FormField, LiveRegion } from '../../auth';
+import { LiveRegion } from '../../auth';
+import { TextField } from '../../../ui';
 import type { RedeemInviteRequest } from '../api/squadsApi';
 import { redeemableValueFrom } from '../lib/inviteSecret';
 import {
@@ -186,10 +187,10 @@ export function JoinSquadForm({
       {/* 4.1: a persistently visible label naming both shapes of invite. 4.10:
           the value is the only attribute of this input carrying the secret —
           no placeholder, no title, no data attribute, and nothing derived. */}
-      <FormField
+      <TextField
         label={INVITE_SECRET_LABEL}
         value={secret}
-        onValueChange={handleSecretChange}
+        onChange={(event) => handleSecretChange(event.target.value)}
         error={secretError}
         name="presentedSecret"
         // A secret is not a saved credential and is not a word: keeping the
@@ -202,10 +203,10 @@ export function JoinSquadForm({
       />
 
       {/* 4.1: the optional display name, with its optionality in the label. */}
-      <FormField
+      <TextField
         label={JOIN_DISPLAY_NAME_LABEL}
         value={displayName}
-        onValueChange={handleDisplayNameChange}
+        onChange={(event) => handleDisplayNameChange(event.target.value)}
         error={displayNameError}
         name="displayName"
         autoComplete="off"

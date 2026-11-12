@@ -12,16 +12,15 @@
  *     supplies itself (Requirement 3.9) and the Settings_Destination's injected
  *     section (Requirements 3.7, 12.4);
  *   - a Destination with no content supplied renders the Unavailable_State with
- *     its registered label as the one level-one heading, and keeps its
- *     Primary_Navigation control marked as the current page (Requirements 3.7,
- *     3.8);
+ *     its registered label as the one level-one heading, inside the frame
+ *     (Requirements 3.7, 3.8);
  *   - a path under `/app` that resolves to no Destination renders the not-found
- *     indication inside the frame with no control marked current
- *     (Requirement 3.10);
+ *     indication inside the frame (Requirement 3.10);
  *   - a path differing only in letter case or by a trailing separator reaches the
  *     same Destination (Requirement 3.13); and
- *   - an in-app navigation swaps only the Content_Region: the banner keeps its DOM
- *     node, so nothing reloads the document (Requirements 1.3, 3.4).
+ *   - an in-app navigation (here from the Account_Menu) swaps only the
+ *     Content_Region: the banner keeps its DOM node, so nothing reloads the
+ *     document (Requirements 1.3, 3.4).
  *
  * The table is exercised through a real client-side router and a real
  * `AuthProvider`, so the Auth_State and the requested path arrive the way they do
@@ -55,7 +54,7 @@ import {
   SETTINGS_ROUTE,
   destinationLabel,
 } from './lib/destinations';
-import { HOME_CONTROL_LABEL, SHELL_NOT_FOUND_HEADING } from './lib/messages';
+import { ACCOUNT_MENU_LABEL, HOME_CONTROL_LABEL, SHELL_NOT_FOUND_HEADING } from './lib/messages';
 import {
   installViewport,
   restoreViewport,
@@ -145,15 +144,8 @@ function injectedContent(): ShellDestinationContent {
   };
 }
 
-/** The Primary_Navigation control marked as the current page, if any. */
-function currentNavigationControl(): HTMLElement | null {
-  const navigation = screen.getByRole('navigation');
-  return within(navigation).queryByRole('link', { current: 'page' });
-}
-
 beforeEach(() => {
-  // The Wide_Layout, so every Primary_Navigation control is rendered directly
-  // rather than behind the Compact_Layout disclosure (Requirement 1.7).
+  // The Wide_Layout, as most of the app's visitors see it.
   installViewport(1024);
 });
 
@@ -211,19 +203,14 @@ describe('shell routes rendered by direct address entry', () => {
     await renderShell(HOME_ROUTE, injectedContent());
 
     expect(screen.getByRole('banner')).toBeInTheDocument();
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
     expect(screen.getByRole('main')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(HOME_HEADING);
-    expect(currentNavigationControl()).toHaveTextContent(destinationLabel('home'));
   });
 
   it('renders the Notifications_Destination the shell supplies itself', async () => {
     await renderShell(NOTIFICATIONS_ROUTE, injectedContent());
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      destinationLabel('notifications'),
-    );
-    expect(currentNavigationControl()).toHaveTextContent(
       destinationLabel('notifications'),
     );
   });
@@ -261,16 +248,15 @@ describe('shell routes rendered by direct address entry', () => {
 // --- Unsupplied Destination content (Requirements 3.7, 3.8) ----------------
 
 describe('shell routes with no Destination_Content supplied', () => {
-  it('renders the Unavailable_State for Home, keeping its control marked current', async () => {
+  it('renders the Unavailable_State for Home inside the frame', async () => {
     await renderShell(HOME_ROUTE);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       destinationLabel('home'),
     );
     expect(screen.getByRole('link', { name: HOME_CONTROL_LABEL })).toBeInTheDocument();
-    // 3.8: the frame and the navigation stay as they are.
+    // 3.8: the frame stays as it is.
     expect(screen.getByRole('banner')).toBeInTheDocument();
-    expect(currentNavigationControl()).toHaveTextContent(destinationLabel('home'));
   });
 
   it('renders the Unavailable_State for Profile', async () => {
@@ -286,7 +272,7 @@ describe('shell routes with no Destination_Content supplied', () => {
 // --- The `/app` not-found child (Requirement 3.10) -------------------------
 
 describe('a path under /app resolving to no Destination', () => {
-  it('renders the not-found indication inside the frame with no control marked current', async () => {
+  it('renders the not-found indication inside the frame', async () => {
     await renderShell('/app/nowhere', injectedContent());
 
     expect(screen.getByRole('banner')).toBeInTheDocument();
@@ -294,9 +280,8 @@ describe('a path under /app resolving to no Destination', () => {
       SHELL_NOT_FOUND_HEADING,
     );
     expect(screen.getByRole('link', { name: HOME_CONTROL_LABEL })).toBeInTheDocument();
-    // 3.10: no Destination_Content, and nothing marked as the current page.
+    // 3.10: no Destination_Content.
     expect(screen.queryByText(HOME_HEADING)).toBeNull();
-    expect(currentNavigationControl()).toBeNull();
   });
 });
 
@@ -308,11 +293,9 @@ describe('navigating between Destinations', () => {
     await renderShell(HOME_ROUTE, injectedContent());
 
     const banner = screen.getByRole('banner');
-    const navigation = screen.getByRole('navigation');
 
-    await user.click(
-      within(navigation).getByRole('link', { name: destinationLabel('settings') }),
-    );
+    await user.click(within(banner).getByRole('button', { name: ACCOUNT_MENU_LABEL }));
+    await user.click(screen.getByRole('link', { name: destinationLabel('settings') }));
     await flush();
 
     // 1.3: the same header element, not a re-created one.

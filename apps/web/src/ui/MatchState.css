@@ -1,0 +1,96 @@
+.pm-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px 0 10px;
+  border-radius: var(--pm-radius-pill);
+  font-family: var(--pm-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pm-state--gathering {
+  background: var(--pm-info-subtle);
+  color: var(--pm-info-text);
+}
+
+.pm-state--confirmed {
+  background: var(--pm-accent-subtle);
+  color: var(--pm-accent-on-subtle);
+}
+
+.pm-state--rolled {
+  background: var(--pm-surface-inverse);
+  color: var(--pm-text-inverse);
+}
+
+.pm-state--live {
+  background: var(--pm-result-loss-subtle);
+  color: var(--pm-result-loss-text);
+}
+
+.pm-state--completed {
+  background: var(--pm-surface-hover);
+  color: var(--pm-text-primary);
+  box-shadow: inset 0 0 0 1px var(--pm-border-control);
+}
+
+.pm-state--cancelled {
+  background: transparent;
+  color: var(--pm-text-muted);
+  box-shadow: inset 0 0 0 1.5px var(--pm-border-control);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.pm-progress {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.pm-progress__step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pm-progress__bar {
+  height: 6px;
+  border-radius: var(--pm-radius-pill);
+  background: var(--pm-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--pm-border-subtle);
+}
+
+.pm-progress__step.is-done .pm-progress__bar {
+  background: var(--pm-accent-fill);
+  box-shadow: none;
+}
+
+.pm-progress__step.is-current .pm-progress__bar {
+  background: linear-gradient(90deg, var(--pm-accent-fill) 50%, var(--pm-surface-sunken) 50%);
+}
+
+.pm-progress__label {
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 600;
+  color: var(--pm-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-progress__step.is-current .pm-progress__label {
+  color: var(--pm-text-primary);
+}
+
+.pm-progress__step.is-done .pm-progress__label {
+  color: var(--pm-text-secondary);
+}

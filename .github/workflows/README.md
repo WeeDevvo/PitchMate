@@ -42,8 +42,8 @@ The deploy structure already encodes the project's rules:
 
 ### Turning CD on (checklist)
 
-1. **Provision Azure** — App Service/Container Apps (API), Postgres Flexible
-   Server, Static Web Apps (web), Key Vault. (`tech.md` → Hosting.)
+1. **Provision Azure** — Container Apps + Container Registry (API), Postgres
+   Flexible Server, Static Web Apps (web), Key Vault (`infra/deploy-qa.ps1`).
 2. **Set up GitHub OIDC federation** — an Entra app registration / managed
    identity with federated credentials trusting this repo's `qa` and
    `production` environments.
@@ -52,13 +52,19 @@ The deploy structure already encodes the project's rules:
 4. **Add secrets** (per environment): `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
    `AZURE_SUBSCRIPTION_ID`, `DB_CONNECTION_STRING`, plus the Static Web Apps
    deployment token.
-5. **Fill in the `TODO` deploy steps** (App Service/Container Apps + Static Web
-   Apps actions).
-6. **Set the API URL variables** `API_BASE_URL_QA` / `API_BASE_URL_PROD`
-   (e.g. `https://<api-app>.azurewebsites.net`). The web build bakes this in as
+5. **Set the API image variables** `AZURE_ACR_NAME_QA` /
+   `AZURE_CONTAINERAPP_NAME_QA` (and the `_PROD` pair). The deploy builds
+   `backend/Dockerfile`, pushes it to that registry and runs
+   `az containerapp update --image`.
+6. **Set the migration firewall variables** `AZURE_RESOURCE_GROUP_QA` /
+   `AZURE_PG_SERVER_QA` (and the `_PROD` pair). The deploy opens the Postgres
+   firewall to the runner's IP for the `efbundle` step only and always closes
+   it afterwards. `infra/configure-qa.ps1` sets the QA pair.
+7. **Set the API URL variables** `API_BASE_URL_QA` / `API_BASE_URL_PROD`
+   (e.g. `https://<api-app>.<env-domain>.uksouth.azurecontainerapps.io`). The web build bakes this in as
    `VITE_API_BASE_URL` and fails without it, because the Static Web App and the
    API are on different origins. The API's matching CORS allow-list
    (`Cors__AllowedOrigins__0`) is set from the Static Web App hostname by
    `infra/main.bicep`. `infra/configure-qa.ps1` sets the QA variable.
-7. **Create the `develop` branch** for QA deploys.
-8. **Set repo variable `AZURE_DEPLOY_ENABLED = true`** to activate the jobs.
+8. **Create the `develop` branch** for QA deploys.
+9. **Set repo variable `AZURE_DEPLOY_ENABLED = true`** to activate the jobs.

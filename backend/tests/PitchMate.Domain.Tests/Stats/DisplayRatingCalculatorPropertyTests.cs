@@ -74,6 +74,29 @@ public class DisplayRatingCalculatorPropertyTests
             return value == expected && neverBelowFloor;
         });
 
+    // For any rating and parameters, exactly one of Compute and Estimate yields a number: Estimate
+    // while provisional and Compute once established. Estimate uses the same floored, rounded
+    // μ − 3σ mapping, so a progression's line keeps the same scale when the rating settles.
+    [Property(MaxTest = 100)]
+    public Property EstimateIsTheSameMappingAndOnlyWhileProvisional() =>
+        Prop.ForAll(Arb.From(ScenarioGen()), scenario =>
+        {
+            var parameters = DisplayRatingParameters.Create(scenario.K, scenario.C, scenario.Floor);
+            var engine = new ThresholdRatingEngine(scenario.ProvisionalThreshold);
+            var state = engine.GetState(new PlayerRating(scenario.Mu, scenario.Sigma)).Value;
+
+            var displayRating = DisplayRatingCalculator.Compute(state, scenario.Mu, scenario.Sigma, parameters);
+            var estimate = DisplayRatingCalculator.Estimate(state, scenario.Mu, scenario.Sigma, parameters);
+
+            var mapped = ((scenario.Mu - (3.0 * scenario.Sigma)) * parameters.K) + parameters.C;
+            var sign = mapped < 0 ? -1.0 : 1.0;
+            var expected = (int)Math.Max(parameters.Floor, sign * Math.Floor(Math.Abs(mapped) + 0.5));
+
+            return state == RatingState.Provisional
+                ? displayRating is null && estimate == expected
+                : estimate is null && displayRating == expected;
+        });
+
     // ---- Generators -----------------------------------------------------------------------------
 
     /// <summary>A generated display-rating scenario: a rating, a classification threshold, and (optional) parameters.</summary>

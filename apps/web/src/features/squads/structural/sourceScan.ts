@@ -105,6 +105,12 @@ export const themeRoot: string = join(srcRoot, 'theme');
  */
 export const wireRoot: string = join(srcRoot, 'wire');
 
+/** The shared component library, admitted at its barrel only (ADR 0004). */
+export const uiRoot: string = join(srcRoot, 'ui');
+
+/** The design-system tokens every stylesheet of the feature reads its colours from. */
+export const designTokensPath: string = join(srcRoot, 'design', 'tokens.css');
+
 /** This directory: scan support, not part of the shipped feature. */
 export const scanSupportRoot: string = join(squadsRoot, 'structural');
 

@@ -5,7 +5,8 @@ namespace PitchMate.Api.LiveTracking;
 /// <summary>
 /// The live-tracking composition root (<c>AddLiveTracking</c>). It registers the Application
 /// live-tracking use-case handlers — <see cref="RecordEventBatchHandler"/>,
-/// <see cref="FinaliseTrackedResultHandler"/>, and <see cref="GetRunningScoreHandler"/> — so every
+/// <see cref="FinaliseTrackedResultHandler"/>, <see cref="GetRunningScoreHandler"/>, and
+/// <see cref="GetMatchEventsHandler"/> — so every
 /// endpoint in <c>LiveTrackingEndpoints</c> can resolve its handler (Requirement 14.4).
 /// <para>
 /// Like <c>AddMatches</c> and <c>AddStats</c>, this root wires no Infrastructure implementations: the
@@ -35,6 +36,7 @@ public static class LiveTrackingServiceCollectionExtensions
         services.AddScoped<RecordEventBatchHandler>();
         services.AddScoped<FinaliseTrackedResultHandler>();
         services.AddScoped<GetRunningScoreHandler>();
+        services.AddScoped<GetMatchEventsHandler>();
 
         return services;
     }

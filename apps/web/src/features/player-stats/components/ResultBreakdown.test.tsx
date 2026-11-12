@@ -114,7 +114,7 @@ describe('ResultBreakdown carriers (Req 6.2, 16.6)', () => {
       // Pins the four carriers and their order in one assertion: the hue is the
       // only thing left that is not asserted, which is the point of the design.
       expect(itemFor(container, kind).textContent).toBe(
-        `${icon}${letter}${label}${formatCount(counts[kind])}`,
+        `${icon}${formatCount(counts[kind])}${letter}${label}`,
       );
     },
   );

@@ -3,7 +3,9 @@
  * to, and the pair of membership enum readers the Squad_Detail parser reuses.
  *
  * The wire shape, read from `MySquadSummary` in the backend rather than assumed,
- * is `{ squadId, name, role: name | null, state: name | null }`. Both enum fields
+ * is `{ squadId, name, role: name | null, state: name | null, playerCount,
+ * nextMatch: { matchId, state, scheduledAt: instant | null, location,
+ * candidateDayCount } | null, recentForm: name[] }`. Both membership enum fields
  * are nullable at the source — the handler projects `membership?.Role` and
  * `membership?.State` — which is exactly the case Requirement 16.8 makes a valid
  * parsed **absence** rather than a failure. Getting that wrong in either
@@ -32,18 +34,33 @@
  * is only whether an absence is tolerated, and that decision stays with each
  * field: a summary's `state` may be absent, a member's may not.
  *
+ * ### The squad card's facts
+ *
+ * `playerCount`, `nextMatch` and `recentForm` are what the design system's squad
+ * card shows beyond the name and role. The count is a count and the form a list
+ * of `PlayerResult` names, oldest first; a squad with no open match carries a
+ * `null` next match, which is an absence, not a failure. A next match still
+ * gathering availability has no day yet, so its `scheduledAt` is `null`.
+ *
  * Requirements: 12.1, 12.5, 12.7, 12.8, 16.4, 16.5, 16.8, 16.9, 16.10
  */
 
 import {
+  isMatchState,
   isMembershipState,
+  isPlayerResult,
   isSquadRole,
+  type MatchState,
   type MembershipState,
+  type PlayerResult,
   type SquadRole,
 } from '../wireEnums';
 import {
   ok,
+  printInstant,
   readArray,
+  readCount,
+  readInstantMs,
   readObject,
   readOptional,
   readProperty,
@@ -58,11 +75,27 @@ import {
  * One squad in the caller's own squad listing. `role` and `state` are `null`
  * whenever the backend sent no membership for the caller (Requirement 16.8).
  */
+/** A squad's next open match, as its squad card shows it. */
+export interface SquadNextMatch {
+  readonly matchId: string;
+  readonly state: MatchState;
+  /** The confirmed day, or `null` while the match is still gathering availability. */
+  readonly scheduledAtMs: number | null;
+  /** Where it is played (the wire's `location`). */
+  readonly place: string;
+  readonly candidateDayCount: number;
+}
+
 export interface SquadSummary {
   readonly squadId: string;
   readonly name: string;
   readonly role: SquadRole | null;
   readonly state: MembershipState | null;
+  /** The squad's active players, guests included. */
+  readonly playerCount: number;
+  readonly nextMatch: SquadNextMatch | null;
+  /** The caller's last results in the squad, at most five, oldest first. */
+  readonly recentForm: readonly PlayerResult[];
 }
 
 /**
@@ -96,6 +129,89 @@ export const readMembershipStateValue: ValueReader<MembershipState> = (
  *
  * Requirements: 16.4, 16.8, 16.9
  */
+const readMatchStateValue: ValueReader<MatchState> = (value, label) =>
+  readWireEnumName(value, label, isMatchState);
+
+const readPlayerResultValue: ValueReader<PlayerResult> = (value, label) =>
+  readWireEnumName(value, label, isPlayerResult);
+
+/** Read a squad card's next match: the match, its state, its day and place. */
+const readNextMatchValue: ValueReader<SquadNextMatch> = (value, label) => {
+  const source = readObject(value, label);
+
+  if (!source.ok) {
+    return source;
+  }
+
+  const matchId = readUuid(readProperty(source.value, 'matchId'), `${label} matchId`);
+
+  if (!matchId.ok) {
+    return matchId;
+  }
+
+  const state = readMatchStateValue(readProperty(source.value, 'state'), `${label} state`);
+
+  if (!state.ok) {
+    return state;
+  }
+
+  const scheduledAt = readOptional(
+    readProperty(source.value, 'scheduledAt'),
+    `${label} scheduledAt`,
+    readInstantMs,
+  );
+
+  if (!scheduledAt.ok) {
+    return scheduledAt;
+  }
+
+  const place = readString(readProperty(source.value, 'location'), `${label} location`);
+
+  if (!place.ok) {
+    return place;
+  }
+
+  const candidateDayCount = readCount(
+    readProperty(source.value, 'candidateDayCount'),
+    `${label} candidateDayCount`,
+  );
+
+  if (!candidateDayCount.ok) {
+    return candidateDayCount;
+  }
+
+  return ok({
+    matchId: matchId.value,
+    state: state.value,
+    scheduledAtMs: scheduledAt.value,
+    place: place.value,
+    candidateDayCount: candidateDayCount.value,
+  });
+};
+
+/** Read the recent form: a list of result names, every one of which must parse. */
+function readRecentForm(value: unknown, label: string): ParseResult<readonly PlayerResult[]> {
+  const elements = readArray(value, label);
+
+  if (!elements.ok) {
+    return elements;
+  }
+
+  const results: PlayerResult[] = [];
+
+  for (const element of elements.value) {
+    const result = readPlayerResultValue(element, `${label} result`);
+
+    if (!result.ok) {
+      return result;
+    }
+
+    results.push(result.value);
+  }
+
+  return ok(results);
+}
+
 export function parseSquadSummary(body: unknown): ParseResult<SquadSummary> {
   const source = readObject(body, 'squad summary');
 
@@ -139,11 +255,43 @@ export function parseSquadSummary(body: unknown): ParseResult<SquadSummary> {
     return state;
   }
 
+  const playerCount = readCount(
+    readProperty(source.value, 'playerCount'),
+    'squad summary playerCount',
+  );
+
+  if (!playerCount.ok) {
+    return playerCount;
+  }
+
+  // A squad with no open match: an absence, like the nullable enums above.
+  const nextMatch = readOptional(
+    readProperty(source.value, 'nextMatch'),
+    'squad summary nextMatch',
+    readNextMatchValue,
+  );
+
+  if (!nextMatch.ok) {
+    return nextMatch;
+  }
+
+  const recentForm = readRecentForm(
+    readProperty(source.value, 'recentForm'),
+    'squad summary recentForm',
+  );
+
+  if (!recentForm.ok) {
+    return recentForm;
+  }
+
   return ok({
     squadId: squadId.value,
     name: name.value,
     role: role.value,
     state: state.value,
+    playerCount: playerCount.value,
+    nextMatch: nextMatch.value,
+    recentForm: recentForm.value,
   });
 }
 
@@ -192,6 +340,22 @@ export function printSquadSummary(summary: SquadSummary): unknown {
     name: summary.name,
     role: summary.role,
     state: summary.state,
+    playerCount: summary.playerCount,
+    nextMatch:
+      summary.nextMatch === null
+        ? null
+        : {
+            matchId: summary.nextMatch.matchId,
+            state: summary.nextMatch.state,
+            scheduledAt:
+              summary.nextMatch.scheduledAtMs === null
+                ? null
+                : printInstant(summary.nextMatch.scheduledAtMs),
+            // The wire's name for the place, quoted so it reads as the key it is.
+            'location': summary.nextMatch.place,
+            candidateDayCount: summary.nextMatch.candidateDayCount,
+          },
+    recentForm: [...summary.recentForm],
   };
 }
 

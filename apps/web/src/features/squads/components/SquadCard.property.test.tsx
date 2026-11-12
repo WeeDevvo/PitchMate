@@ -189,9 +189,13 @@ const summaryCaseArb: fc.Arbitrary<SummaryCase> = fc.record({
 
 /** The wire body a generated case describes, with absent fields left unwritten. */
 function bodyOf(testCase: SummaryCase): Record<string, unknown> {
+  // The card facts this property does not vary: no players, no next match, no
+  // form.
   const body: Record<string, unknown> = {
     squadId: testCase.squadId,
     name: testCase.name,
+    playerCount: 0,
+    recentForm: [],
   };
 
   if (testCase.role.kind === 'present') {

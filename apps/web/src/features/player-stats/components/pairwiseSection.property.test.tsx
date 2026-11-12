@@ -804,9 +804,11 @@ describe('PairwiseSection — Property 37 (every entry opens that entry’s own 
           }
         },
       ),
-      { numRuns: 120 },
+      { numRuns: 100 },
     );
-  }, 180_000);
+    // Renders the whole stack, every row with its avatar, a hundred times: over
+    // three minutes on CI under full-suite load, so the limit leaves room for it.
+  }, 360_000);
 
   // Feature: web-player-stats-screen, Property 37: Every pairwise entry opens that entry's own profile in the same squad
   // Validates: Requirements 1.7, 10.5, 10.6

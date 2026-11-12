@@ -13,7 +13,7 @@ Lines marked **Today** say where the shipped code falls short of the intent, so 
 - **Display names are unique within a squad**, for guests and members alike.
 - An admin can **claim** a guest for a registered user by creating a one-time **claim link** (valid 7 days; a new link cancels the old one). The player opens it while signed in and accepts, which binds their account; the admin then sees who accepted and completes the claim. A player who already belongs to the squad can't accept. The claim is audited and reversible, and it preserves the guest's rating and stats, because ratings belong to the membership, not the account.
 - **Leaving or removal** makes a membership inactive (out of selection) but keeps its rating, stats and history. Re-joining reactivates the same membership.
-- **Deleting a squad** is owner-only: soft delete, grace period (30 days by default), then purge, with an export offered first and a typed-name confirmation. A squad in its grace period should be invisible to every read except the owner's own list of deleted squads, where the owner can restore it until the purge. **Today** the squad leaderboard and player profile reads still answer for it (logged in the backlog).
+- **Deleting a squad** is owner-only: soft delete, grace period (30 days by default), then purge, with an export offered first and a typed-name confirmation. A squad in its grace period should be invisible to every read except the owner's own list of deleted squads, where the owner can restore it until the purge.
 
 ## Optional features
 
@@ -22,12 +22,12 @@ Features are opt-in per squad (admin toggle). **Live match tracking** is the mai
 ## Match lifecycle and availability
 
 1. An admin creates a **match draft** with a location and 1–14 candidate days; members are notified.
-2. **Gathering availability**: registered members mark the candidate days they can make, changeable until confirmation. Guests can't respond; admins add them later.
-3. **Confirm**: once a day meets the squad's **minimum player threshold**, an admin confirms the match on that day. **Today** the threshold is a fixed 10, read through `ConfirmMatchHandler.ResolveMinimumThreshold`. The squad setting isn't built yet.
-4. **Add guests**, then **roll teams**: the balancer proposes, the admin tweaks, sets team names (or uses the silly-name generator) and bibs, then **locks**. The lock captures the immutable **kickoff lineup**.
-5. **Play, then record** the result (basic or rich), then **complete**, which updates ratings.
+2. **Gathering availability**: registered members mark the candidate days they can make, changeable until confirmation. Guests have no account, so an admin marks the days each guest can make. Availability is a **guide** to the best day, not a requirement: there is no minimum number of players to confirm.
+3. **Confirm**: an admin confirms the match on any candidate day, seeing how many can make each. Everyone marked for that day, guests included, becomes a player.
+4. **Fill the match**: until teams are locked, members **join or leave** it themselves, and an admin **adds or removes** anyone, member or guest, whether or not they marked the day. Then **roll teams** (needs 10–16 players): the balancer proposes, the admin tweaks, sets team names (or uses the silly-name generator) and bibs, then **locks**. Anyone who joined after the roll must be put on a team before locking. The lock captures the **kickoff lineup**. Until the match starts, an admin can **unlock** the teams (back to Confirmed, teams kept, lineup discarded) to add or remove players, then lock again. Once play starts the lineup is immutable.
+5. **Play, then record** the result (basic or rich), then **complete**, which updates ratings. A match started by mistake can be put back: while it is in play and **nothing has been recorded for it yet** (no live-tracking events, corrected ones included, and no result), an admin can **undo kickoff**. The match returns to TeamsRolled with the teams still locked and the kickoff lineup kept, and the kickoff instant is cleared, so starting again restarts the clock. Once anything is recorded, undo is refused: the event log is append-only, so nothing is discarded.
 
-States: `GatheringAvailability → Confirmed → TeamsRolled → InProgress → Completed`, plus `Cancelled` (from GatheringAvailability, Confirmed or TeamsRolled). There is no separate Draft state: creating a draft starts at GatheringAvailability.
+States: `GatheringAvailability → Confirmed → TeamsRolled → InProgress → Completed`, plus `Cancelled` (from GatheringAvailability, Confirmed or TeamsRolled). Unlocking returns `TeamsRolled → Confirmed`; undoing kickoff returns `InProgress → TeamsRolled`. There is no separate Draft state: creating a draft starts at GatheringAvailability.
 
 **Every match is recorded**, uneven ones included. Matches run about an hour, from 5v5 to 8v8, and may be uneven (e.g. 7v6).
 
@@ -42,7 +42,7 @@ States: `GatheringAvailability → Confirmed → TeamsRolled → InProgress → 
 ## Ratings
 
 - **Squad-scoped**, attached to the `SquadMembership`. Any cross-squad number is a vanity stat that never feeds balancing.
-- Each player has **μ (skill)** and **σ (uncertainty)**. New players start with high σ and are **provisional**. σ decays back up after about 4–6 weeks inactive (**today** the engine supports decay but no scheduled job runs it).
+- Each player has **μ (skill)** and **σ (uncertainty)**. New players start with high σ and are **provisional** until σ ≤ 8.19 (`RatingEngineConfig.ProvisionalThreshold`), which takes **at most 5 matches** (3 at 5v5, 4–5 at 8v8). The badge drops while σ is still high, so balancing keeps treating the player as uncertain. σ decays back up after about 4–6 weeks inactive, and with the threshold this close to σ₀ a short lay-off can make a player provisional again (**today** the engine supports decay but no scheduled job runs it).
 - **Cold start:** an admin may seed a starting **skill tier** (Beginner / Average / Strong), which sets the initial μ while σ stays high. The tier is an input only.
 - Ratings move on **outcome rank** (win/loss/draw, draws first-class). The score is always stored, but margin doesn't count by default: a capped margin-of-victory weight and a participation weight exist as switchable levers, both **off**.
 - **One match = one kickoff lineup = one outcome = one rating update.** Late arrivals, early leavers and substitutions count for stats only. Re-mixing teams mid-session makes a new match.
@@ -57,6 +57,8 @@ Two fidelities, and both must produce a valid outcome so ratings always update:
 
 Stats views degrade gracefully when only basic results exist.
 
+In a squad with live tracking on, an admin records a match in play from the **live tracker** (GOAL → team → scorer, own goals, keeper changes, undo the last goal), and members see the live score on the match page. Each event's minute counts from the kickoff instant recorded when the match starts. **Ending** the match makes the tracked score its result and completes it. The tracker starts from the match's event log, so a reload keeps the keeper and the goals an undo can name. **Today:** the tracker needs a connection (a failed send is kept and resent only while the page stays open), and corrections go no further than undoing the last goal.
+
 ## Presentation
 
 - The **team sheet** shows match time and location, both teams with names and players, and a clear flag for the bib-wearing team. It is shown once teams are locked.
@@ -66,7 +68,7 @@ Stats views degrade gracefully when only basic results exist.
 
 Squad-scoped leaderboards and per-player profiles. A player's screen shows only the stats from the squad it was opened from.
 
-- **Always available:** appearances, W/L/D and win %, current rating and provisional state, rating progression (from μ/σ snapshots), longest win/unbeaten streak, most played with/against, best partnerships and bogey opponents, bib appearances.
+- **Always available:** appearances, W/L/D and win %, current rating and provisional state, rating progression (from μ/σ snapshots; provisional points are plotted at their estimate and shown only as the "~" band), longest win/unbeaten streak, most played with/against, best partnerships and bogey opponents, bib appearances.
 - **Rich tracking only:** goals and top scorer, clean sheets, goals conceded as keeper, keeper time.
 
 New "fun stat" ideas go in the backlog.
