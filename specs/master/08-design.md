@@ -71,12 +71,15 @@ What is wanted, from [decisions](decisions.md). No decision changed the brand ru
 
 | Line | Status | Decision |
 |---|---|---|
-| **The mobile mockups in the design-system artifact become build targets**, for the Android and iOS apps | **Gap** | [Q4](decisions.md#q4) |
+| **The mobile mockups in the design-system artifact become build targets**, for the Android and iOS apps the launch waits for | **Gap** | [Q4](decisions.md#q4), [R3](decisions.md#r3) |
+| **The design tokens are shared with the apps**: `tokens.json` gains a React Native output beside the CSS one, so web and apps cannot drift | **Gap** | [R4](decisions.md#r4) |
 | **The watch mockups become the target for the main live tracker**, after a phone tracker design | **Gap** | [Q5](decisions.md#q5) |
-| **One account screen** needs a design: name, email, avatar, password, export, delete. It replaces the profile placeholder | **Gap** | [Q17](decisions.md#q17) |
+| **One account screen** needs a design: name, email (changeable), avatar, password, linked sign-in methods, export, delete. It replaces the profile placeholder | **Gap** | [Q17](decisions.md#q17), [R12](decisions.md#r12) |
 | **Stats presentation**: every available stat shown usefully means a designed layout for the leaderboards and the player screen, not a longer list | **Gap** | [Q18](decisions.md#q18) |
-| **A locked-feature state** for a feature the squad is not entitled to, distinct from "the admin has turned this off" | **Gap** | [Q2](decisions.md#q2) |
-| **A score-confirmation prompt** for the opposing player, and a "waiting for confirmation" state on the match | **Gap** | [Q11](decisions.md#q11) |
+| **A locked-feature state** for a Pro feature the squad does not have, distinct from "the admin has turned this off", with a way to upgrade | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5) |
+| **Score confirmation screens**: enter the score, confirm or dispute it, "waiting for confirmation", and the admin's decision on a dispute | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6) |
+| **The tracker without keeper changes**, on phone and watch, and the stats screens without the keeper-only stats | **Gap** | [R13](decisions.md#r13) |
+| **Picking a tracker** for a match, and what the tracker sees | **Gap** | [R1](decisions.md#r1) |
 | **Privacy policy and terms pages** follow the brand's plain voice (no cheek in privacy copy) | **Gap** | [Q8](decisions.md#q8) |
 
 ## Rules
@@ -94,13 +97,12 @@ Rules that rest on review rather than a test: voice (friendly, a bit cheeky, sen
 
 ## Open questions
 
-1. **Is the artifact still ahead of, level with, or behind the code?** Nothing in the repo records when the token export was last taken. Worth a one-off comparison now that the mobile and watch mockups are build targets ([Q4](decisions.md#q4), [Q5](decisions.md#q5)).
-2. **Which mobile and watch mockups are current**, and do they cover the tracker without goalkeeper changes if that idea is adopted?
-3. **Does the account screen have a design?** The artifact was not opened, so this is unknown.
-4. **Do the tokens carry over to native?** `tokens.json` generates CSS only; the apps need the same values in their own form.
-5. **Should the unused components stay** (ready for future screens) or be pruned?
-6. **Remove the template leftovers** (`App.tsx`, `App.css`, the stock README)? The README part falls under [Q22](decisions.md#q22).
-7. **The brand rule's component list and the kit have drifted slightly** (the kit also has ActionsMenu, AvailabilityGrid, Checkbox, EventTimeline, OptionCard, Steps, TabNav, TeamSheet). Update the rule's list?
+1. **Is the artifact still ahead of, level with, or behind the code?** Nothing in the repo records when the token export was last taken. Worth a one-off comparison now that the mobile and watch mockups are build targets.
+2. **Do the mobile and watch mockups match the decisions?** They predate them: keeper changes are gone from the tracker ([R13](decisions.md#r13)), and the account, score-confirmation and tracker-picking screens are new. The artifact was not opened, so what it holds is unknown.
+3. **Should the unused components stay** (ready for future screens) or be pruned?
+4. **Remove the template leftovers** (`App.tsx`, `App.css`, the stock README)? The README part falls under [Q22](decisions.md#q22).
+5. **The brand rule's component list and the kit have drifted slightly** (the kit also has ActionsMenu, AvailabilityGrid, Checkbox, EventTimeline, OptionCard, Steps, TabNav, TeamSheet). Update the rule's list?
+6. **Is there a shared component layer for the apps**, mirroring `src/ui`, or do the apps build their own from the tokens?
 
 ## Ideas
 
@@ -109,4 +111,3 @@ Rules that rest on review rather than a test: voice (friendly, a bit cheeky, sen
 - **Idea** · Squad colours or a crest chosen by the owner, within the palette's contrast rules.
 - **Idea** · A shareable team-sheet image in brand style for the group chat.
 - **Idea** · Motion guidelines (goal celebration, "Dead even" delight) with reduced-motion fallbacks.
-- **Idea** · Generate native token files (for the app stack chosen) from the same `tokens.json`.

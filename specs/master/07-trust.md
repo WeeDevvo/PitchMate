@@ -83,12 +83,16 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | TR-08 | **A guest can be erased** by an admin, by the same rule | **Gap** | Yes | [Q7](decisions.md#q7) |
 | TR-09 | **Delete my account** is on the account screen (AC-11) | **Gap** | Yes | [Q17](decisions.md#q17) |
 | TR-10 | **The user's export is everything held about them**, as one JSON file: account, memberships, matches, rating history and stats | **Gap** | Yes | [Q8](decisions.md#q8) |
-| TR-12 | **Deleted squads are purged** when the grace period ends, by the scheduled job (PL-01 in [06](06-platform.md#to-be)) | **Gap** | Yes | [Q7](decisions.md#q7) |
-| TR-13 | **Expired tokens are cleaned up** by the same job. Follows from Q7; not separately decided | **Gap** | | [Q7](decisions.md#q7) |
-| TR-14 | **A privacy policy and terms exist** and are linked: drafted by Claude, reviewed by a solicitor before launch | **Gap** | Yes | [Q8](decisions.md#q8) |
+| TR-12 | **Deleted squads are purged** after their 30-day grace, by the nightly job (PL-01 in [06](06-platform.md#to-be)) | **Gap** | Yes | [Q7](decisions.md#q7), [R11](decisions.md#r11) |
+| TR-13 | **Expired tokens are cleaned up daily** by the same job | **Gap** | Yes | [R11](decisions.md#r11), [R15](decisions.md#r15) |
+| TR-14 | **A privacy policy and terms exist** and are linked: drafted by Claude, reviewed by a solicitor before launch. The policy names the user, as the person who operates PitchMate, as the data controller, and states the retention rules | **Gap** | Yes | [Q8](decisions.md#q8), [R11](decisions.md#r11) |
 | TR-15 | **Reset codes and verification links never reach a log**: real email in every cloud environment (NO-03) | **Gap** | Yes | [Q9](decisions.md#q9) |
 | TR-04 | **The guest lawful-basis acknowledgement stays**, asked once per admin (GU-02). It is the UK GDPR cover for storing a profile of someone with no account | **Gap** | | [Q14](decisions.md#q14) |
-| TR-17 | **Report a squad**: someone who can see a squad can report it to PitchMate, and the report reaches a person who can act | **Gap** | Yes | [Q3](decisions.md#q3) |
+| TR-11 | **The squad export is a small CSV of players, matches and stats** (SQ-15) | **Gap** | | [R14](decisions.md#r14) |
+| TR-17 | Withdrawn: reporting a squad was dropped | | | [R10](decisions.md#r10) |
+| TR-18 | **PitchMate's operator is registered with the ICO** as a data controller (a small annual fee) | **Gap** | Yes | [R11](decisions.md#r11) |
+| TR-19 | **Data is kept no longer than needed**: deleted squads go after 30 days (TR-12), expired tokens daily (TR-13), logs after 90 days (PL-11). Periods for inactive accounts, inactive memberships and old notifications are not set | **Gap** | Yes | [R11](decisions.md#r11) |
+| TR-20 | **Changing an email is safe**: the new address is verified before it takes effect and the old address is told (AC-15) | **Gap** | Yes | [R12](decisions.md#r12) |
 
 ### Security
 
@@ -97,14 +101,15 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | SE-13 | **Lockout on: 5 failed attempts, then 15 minutes**, with the count shared between API replicas (AC-13) | **Gap** | Yes | [Q9](decisions.md#q9) |
 | SE-14 | **Rate limits on the API**, at least on the anonymous endpoints (register, sign-in, reset, invite preview and redeem) | **Gap** | Yes | [Q3](decisions.md#q3) |
 | SE-15 | **A verified email is required to sign in** | **Gap** | Yes | [Q9](decisions.md#q9) |
-| SE-18 | **Web session: the refresh token in an httpOnly, Secure, SameSite cookie; the access token in memory only.** Nothing in `localStorage`. This needs the web and API on the same site (PL-09), CORS that allows credentials for the web origin only, and a defence against cross-site requests on the refresh endpoint | **Gap** | Yes | [Q10](decisions.md#q10) |
-| SE-22 | **Native session: tokens in the Keychain (iOS) and the Keystore (Android).** The API keeps accepting the refresh token in the request body for these clients | **Gap** | With apps | [Q10](decisions.md#q10) |
+| SE-18 | **Web session: the refresh token in an httpOnly, Secure, SameSite cookie; the access token in memory only.** Nothing in `localStorage`. This needs the web and API on the same site (PL-09), a cookie scoped to its own API host so QA's never reaches production, CORS that allows credentials for the web origin only, and a defence against cross-site requests on the refresh endpoint | **Gap** | Yes | [Q10](decisions.md#q10), [R16](decisions.md#r16) |
+| SE-22 | **Native session: tokens in the Keychain (iOS) and the Keystore (Android).** The API keeps accepting the refresh token in the request body for these clients | **Gap** | Yes | [Q10](decisions.md#q10), [R3](decisions.md#r3) |
 | SE-23 | **Auth stays in the PitchMate API.** No move to Firebase or another hosted identity provider. Email and password and Google verification are built (`backend/src/PitchMate.Application/Auth/UseCases/SignInWithPasswordHandler.cs`, `backend/src/PitchMate.Infrastructure/Auth/GoogleProviderVerifier.cs`); Sign in with Apple is added for iOS (AC-05) | **Partial** | | [A1](decisions.md#a1) |
-| SE-24 | **Trust is squad-scoped.** Inside a squad members see each other's ratings and admins add anyone; this is already how the code works (`backend/src/PitchMate.Application/Squads/SquadAuthorization.cs`). The controls in SE-14, SE-15 and TR-17 are what is added between squads | **Built** | | [Q3](decisions.md#q3) |
+| SE-24 | **Trust is squad-scoped.** Inside a squad members see each other's ratings and admins add anyone; this is already how the code works (`backend/src/PitchMate.Application/Squads/SquadAuthorization.cs`). The controls in SE-14 and SE-15 are what is added between squads | **Built** | | [Q3](decisions.md#q3), [R10](decisions.md#r10) |
+| SE-25 | **The per-match tracker is authorised by the API**, for that match only, and loses the power when the match ends or the admin picks someone else (RO-07) | **Gap** | | [R1](decisions.md#r1) |
 
 ### Accessibility
 
-No decision touched accessibility. AX-08 to AX-10 stay Gap, and the native apps ([Q4](decisions.md#q4)) will need their own accessibility checks, which nothing defines yet.
+No decision touched accessibility. AX-08 to AX-10 stay Gap. The launch now waits for the native apps ([R3](decisions.md#r3)), which need their own accessibility checks (screen readers, text scaling, contrast in both themes); nothing defines these yet.
 
 ## Rules
 
@@ -116,16 +121,15 @@ No decision touched accessibility. AX-08 to AX-10 stay Gap, and the native apps 
 
 ## Open questions
 
-Answered: erasure, purge and where scheduled work runs ([Q7](decisions.md#q7)); the export and who writes the policies ([Q8](decisions.md#q8)); email, verification and lockout ([Q9](decisions.md#q9)); token storage ([Q10](decisions.md#q10)). Still open:
+Answered in round two: reporting a squad is dropped ([R10](decisions.md#r10)), the data controller and the first retention rules ([R11](decisions.md#r11)), the squad export ([R14](decisions.md#r14)). Still open:
 
-1. **Report a squad (TR-17).** A squad is invisible to non-members, so who can report: members, and people holding an invite or claim link? Where does a report go, who reads it, and what can they do (suspend a squad, remove a member)? There is no operator role or back-office today.
-2. **Who is the data controller** named in the privacy policy, and what contact address does it give? The solicitor review ([Q8](decisions.md#q8)) will need this.
-3. **How long is personal data kept** for inactive accounts, inactive memberships and old notifications? Nothing expires today, and the policy has to state a period.
-4. **Verified email and Google.** Is a Google sign-in treated as already verified? What happens to accounts created on QA before verification became required?
-5. **Lockout and existence concealment.** Locking a known email must not reveal that the account exists; the response for a locked account and an unknown one should stay the same.
-6. **The squad export** (TR-11) was not covered by Q8. Does it gain matches, results and ratings?
-7. **Typed-name confirmation on the API** (SE-20), **API security headers** (SE-17) and **dependency scanning** (SE-21) were not discussed. Launch requirements for a public launch, or later?
-8. **Cookies change the consent picture slightly** (TR-16): the refresh cookie is strictly necessary, so no banner is needed, but the privacy policy must describe it.
+1. **Retention periods that were not given.** "The recommended time" has no number yet for inactive accounts, inactive memberships and old notifications. The policy has to state one for each.
+2. **The controller's contact details.** The policy needs a contact address for the controller, and the ICO registration needs a named person or business. Does the user register as an individual or set up a company first?
+3. **Verified email and Google or Apple.** Is a Google or Apple sign-in treated as already verified? What happens to accounts created on QA before verification became required?
+4. **Lockout and existence concealment.** Locking a known email must not reveal that the account exists; the response for a locked account and an unknown one should stay the same.
+5. **Typed-name confirmation on the API** (SE-20), **API security headers** (SE-17) and **dependency scanning** (SE-21) were not discussed. Launch requirements for a public launch, or later?
+6. **Cookies and the policy** (TR-16): the refresh cookie is strictly necessary, so no banner is needed, but the privacy policy must describe it. Do the apps collect anything else (crash reports, push tokens) that the policy and the store privacy labels must list?
+7. **Payments and personal data** (OF-05): a subscription adds a payer and a payment provider to the policy.
 
 ## Ideas
 
@@ -134,4 +138,3 @@ Answered: erasure, purge and where scheduled work runs ([Q7](decisions.md#q7)); 
 - **Idea** · Passkeys as a sign-in method.
 - **Idea** · Add `eslint-plugin-jsx-a11y` and a keyboard-only end-to-end pass to CI.
 - **Idea** · A per-member privacy choice to hide their rating number from other members.
-- **Idea** · A small operator console for handling squad reports and erasure requests, if reports turn out to need more than an inbox.

@@ -156,6 +156,7 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | The **invite survives verification**: a person who signs up from an invite link, verifies in another tab and signs in still lands in the squad without opening the link again (SQ-07) | **Gap** | [Q9](decisions.md#q9) |
 | Verification, reset and notification **emails are really sent** (NO-03) | **Gap** | [Q9](decisions.md#q9) |
 | **Google sign-in works on the web**, and the iOS app adds **Sign in with Apple** (AC-04, AC-05) | **Gap** | [A1](decisions.md#a1) |
+| The same journey exists **in the Android and iOS apps**, which the launch waits for (DV-01, DV-02) | **Gap** | [R3](decisions.md#r3) |
 | The **privacy policy and terms** linked from sign-up exist (WE-05) | **Gap** | [Q8](decisions.md#q8) |
 | Repeated failed sign-ins **lock the account for 15 minutes after 5 attempts** (AC-13) | **Gap** | [Q9](decisions.md#q9) |
 
@@ -163,20 +164,26 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 
 | Change | Status | Decision |
 |---|---|---|
-| **Teams can be rolled and locked at any team-v-team size**, uneven allowed; the 10–16 and 5–8-a-side limits go (TB-09, TB-11) | **Gap** | [Q12](decisions.md#q12) |
-| The admin can mark players to **keep together or keep apart** before rolling (TB-10) | **Gap** | [Q13](decisions.md#q13) |
+| **Teams can be rolled and locked from 4v4 to 11v11**, uneven allowed; the 10–16 and 5–8-a-side limits go (TB-09, TB-11) | **Gap** | [Q12](decisions.md#q12), [R7](decisions.md#r7) |
+| The balancer always obeys the squad's standing **keep-together and keep-apart rules**, which only admins see (TB-10) | **Gap** | [Q13](decisions.md#q13), [R8](decisions.md#r8) |
+| The lock sends **"Teams locked" with the team sheet**; the roll sends nothing (NO-07) | **Gap** | [R2](decisions.md#r2) |
+| The admin can **pick a tracker** for the match, who can then start it (RE-09) | **Gap** | [R1](decisions.md#r1) |
+| In a Pro squad the admin can **shorten or extend the match-day flow** (MA-11); the options are not designed | **Gap** | [R5](decisions.md#r5) |
 | **Cancelling a match notifies members** (NO-06) | **Gap** | [Q16](decisions.md#q16) |
 | **A completed result is never corrected** (RE-07 is decided against). This is already how the code behaves: a completed match is immutable (`backend/src/PitchMate.Domain/Matches/Match.cs:1188`) | **Built** | [Q11](decisions.md#q11) |
-| In a squad with **score confirmation** on, a player from the opposing team confirms the score before the match completes (RE-08) | **Gap** | [Q11](decisions.md#q11) |
+| In a squad with **score confirmation** on, one team enters the score and a user on the other team confirms it before the match completes. Unconfirmed after 48 hours, it confirms itself; a dispute goes to an admin (RE-08) | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6) |
 
 The proposed end of the lifecycle with score confirmation on. The extra step and its name are a sketch for the feature spec, not a decided state machine:
 
 ```mermaid
 stateDiagram-v2
-  InProgress --> AwaitingConfirmation: admin records the score (confirmation on)
-  InProgress --> Completed: admin records and completes (confirmation off)
-  AwaitingConfirmation --> Completed: opposing-team player confirms
+  InProgress --> AwaitingConfirmation: score entered (confirmation on)
+  InProgress --> Completed: score recorded and completed (confirmation off)
+  AwaitingConfirmation --> Completed: a user on the other team confirms
+  AwaitingConfirmation --> Completed: 48 hours pass (nightly job)
   AwaitingConfirmation --> Completed: nobody on the other side can confirm, so the admin's confirmation stands
+  AwaitingConfirmation --> Disputed: the other team disputes
+  Disputed --> Completed: an admin decides the score
   Completed --> [*]: ratings update once, result final
 ```
 
@@ -187,13 +194,16 @@ stateDiagram-v2
 | The **phone app** is the first new tracker, and it **keeps working offline** with an outbox that survives a restart (DV-03) | **Gap** | [Q5](decisions.md#q5) |
 | The **watch app** follows and becomes the main way to track (DV-04) | **Gap** | [Q5](decisions.md#q5) |
 | Members keep seeing the **live score by polling** every 20 seconds (`apps/web/src/features/matches/components/LiveScorePanel.tsx:30`) | **Built** | [Q6](decisions.md#q6) |
-| Live tracking sits behind an **entitlement** as well as the squad's toggle (OF-04) | **Gap** | [Q2](decisions.md#q2) |
+| The match's **tracker**, not only an admin, starts the match and runs the tracker (RE-09) | **Gap** | [R1](decisions.md#r1) |
+| **Keeper changes leave the tracker**: GOAL → team → scorer, own goals and corrections remain (RE-10) | **Gap** | [R13](decisions.md#r13) |
+| Whether live tracking sits behind a **Pro entitlement** as well as the squad's toggle is open (OF-04) | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5) |
 
 ### Journey 4 · Stats
 
 | Change | Status | Decision |
 |---|---|---|
-| **Every available stat is shown**, including leaderboards for the rich stats (ST-08, ST-11) | **Gap** | [Q18](decisions.md#q18) |
+| **Every available stat is shown**, including a top-scorer leaderboard (ST-08, ST-11) | **Gap** | [Q18](decisions.md#q18) |
+| **Keeper-only stats leave the player screen**: clean sheets, goals conceded as keeper, keeper time (RE-10) | **Gap** | [R13](decisions.md#r13) |
 | The signed-in user's "profile" destination becomes the **account screen** (WE-04) | **Gap** | [Q17](decisions.md#q17) |
 
 ## Rules
@@ -207,17 +217,18 @@ stateDiagram-v2
 
 ## Open questions
 
-Answered: result correction ([Q11](decisions.md#q11)), cancellation notices ([Q16](decisions.md#q16)), polling ([Q6](decisions.md#q6)), verification before joining ([Q9](decisions.md#q9)). Still open:
+Answered in round two: the "teams rolled" notice ([R2](decisions.md#r2)), how score confirmation works ([R6](decisions.md#r6)), non-admin tracking ([R1](decisions.md#r1)), keeper tracking ([R13](decisions.md#r13)). Still open:
 
-1. **`product.md` understates the tracker's corrections.** It says corrections "go no further than undoing the last goal", but the tracker can change a scorer and remove any goal or keeper change (`apps/web/src/features/matches/screens/LiveTrackerScreen.tsx:323`). A reworded Today note is proposed in [decisions](decisions.md#proposed-productmd-changes).
-2. **"Teams rolled" is announced at the lock, not at the roll** (`backend/src/PitchMate.Application/Matches/UseCases/LockTeamsHandler.cs`). Left open in [Q16](decisions.md#q16): rename it to "Teams are set", or move it?
+1. **Score confirmation, what is left** (RE-08):
+   - Who may enter the score: any registered player in the lineup, or only an admin or the tracker?
+   - Who confirms when the person who entered it played on neither team (an admin or tracker on the sideline)?
+   - Does a live-tracked result need confirming, or only a basic one?
+   - Ratings wait for the result to be final, so a match can be balanced on ratings up to 48 hours stale. Acceptable when matches are weekly?
+   - With confirmation off, should recording a basic result complete the match in one action, as ending a tracked match does?
+2. **`product.md` understates the tracker's corrections.** It says corrections "go no further than undoing the last goal", but the tracker can change a scorer and remove any goal (`apps/web/src/features/matches/screens/LiveTrackerScreen.tsx:323`). A reworded Today note is proposed in [decisions](decisions.md#proposed-productmd-changes).
 3. **A member can only join or leave while the match is `Confirmed`.** After the lock they need an admin to unlock. Intended?
-4. **Score confirmation, the details** (RE-08):
-   - Who is "the opposing team" when the admin who recorded the score did not play?
-   - What happens if the opposing player disputes the score, or nobody responds? Is there a time limit after which the admin's score stands?
-   - Does it apply to a live-tracked result, or only to a basic one?
-   - With confirmation off, should recording a basic result complete the match in one action, as ending a tracked match does? Today they are two steps and the score can be overwritten in between.
-5. **Does the web tracker stay connection-only** once the phone app tracks offline, or does it get a persisted outbox too (RE-06)?
+4. **Which match-day options exist** (MA-11)? Skipping availability and tracking who has paid are the examples given. Which steps can a squad switch off, and which stay fixed?
+5. **Does the web tracker stay connection-only** once the phone app tracks offline (RE-06)?
 6. **Does a claim link survive verification too**, as the invite must?
 
 ## Ideas
@@ -228,5 +239,4 @@ Answered: result correction ([Q11](decisions.md#q11)), cancellation notices ([Q1
 - **Idea** · A waiting list when a match is full at 16.
 - **Idea** · Recurring matches (same place, same weekday) so the admin doesn't recreate the draft each week.
 - **Idea** · Assists and a man-of-the-match vote as new event kinds or post-match inputs.
-- **Idea** · **Drop goalkeeper tracking** from the live tracker: no keeper dialog and no keeper stints, leaving GOAL → team → scorer. The user has tracked matches with it and finds it adds nothing for now. Conflicts with `product.md`'s rich results; see [decisions](decisions.md#proposed-productmd-changes).
-- **Idea** · A **customisable match-day flow per squad**: the short version is pick a day, invite players, record the result; the long version adds availability, payment tracking and more. Each step would be a squad choice rather than fixed.
+- **Idea** · Options for the **customisable match-day flow** (MA-11, now intended): a short flow of pick a day, invite players, record the result; a long one adding availability and payment tracking.

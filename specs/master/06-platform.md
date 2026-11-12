@@ -116,16 +116,20 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 
 | Id | Requirement | Status | Launch | Decision |
 |---|---|---|---|---|
-| PL-01 | **A scheduled job beside the API**, on a timer, that does not depend on the API being awake (the API scales to zero). It runs the squad purge and the erasure work first; σ decay (RA-06) and expired-token clean-up (TR-13) are the other two pieces of scheduled work and would share it | **Gap** | Yes | [Q7](decisions.md#q7) |
+| PL-01 | **One scheduled job beside the API: an Azure Functions timer, run nightly**, that does not depend on the API being awake (the API scales to zero). It runs the squad purge, the erasure work, score auto-confirm (RE-08), expired-token clean-up (TR-13) and σ decay (RA-06) | **Gap** | Yes | [Q7](decisions.md#q7), [R15](decisions.md#r15) |
 | PL-02 | **Production is provisioned**, with its own Postgres Flexible Server on a burstable tier and 7-day point-in-time restore. The template already declares this server when `useExternalDatabase` is false (`infra/main.bicep:119`, `infra/main.bicep:133`); what is missing is the deployment, the production identity's roles, and the production secrets and variables | **Gap** | Yes | [Q19](decisions.md#q19) |
-| PL-03 | **Custom domains**: `pitch-mate.co.uk` for production and a `qa.` subdomain for QA, with DNS and certificates, and CORS and the token issuer following the new hostnames | **Gap** | Yes | [Q20](decisions.md#q20) |
+| PL-03 | **Custom domains**: the app at `pitch-mate.co.uk` and, for QA, at `qa.pitch-mate.co.uk`, with DNS and certificates, and CORS and the token issuer following the new hostnames | **Gap** | Yes | [Q20](decisions.md#q20), [R16](decisions.md#r16) |
 | PL-04 | **Infrastructure deploys through CD**: a what-if preview of the Bicep change, then a manual approval, then the deployment. The workstation script stops being the only way | **Gap** | | [Q20](decisions.md#q20) |
 | PL-05 | **Production deploys are off until production exists, then on behind the approval.** QA and production get separate switches; today the single `AZURE_DEPLOY_ENABLED` variable arms both (`.github/workflows/cd-qa.yml:28`, `.github/workflows/cd-production.yml:31`) | **Gap** | Yes | [Q21](decisions.md#q21) |
 | PL-06 | **The docs match the platform**: `CLAUDE.md`, `README.md`, the workflow README and the device READMEs describe Container Apps, the external QA database and a live CD, and no longer mention `.kiro` or `docs/` | **Gap** | | [Q22](decisions.md#q22) |
 | PL-07 | **Azure Communication Services email** in the template and configured for QA and production, with a verified sender domain. The ACS sender is implemented in the API; the cloud is on the Console transport (`infra/README.md:55`) | **Gap** | Yes | [Q9](decisions.md#q9) |
 | PL-08 | **Somewhere to keep avatars**, for the account screen (AC-10). Nothing stores files today | **Gap** | | [Q17](decisions.md#q17) |
-| PL-09 | **The API on the same site as the web** (for example an `api.` subdomain), so the refresh-token cookie can be SameSite. Follows from PL-03 and is required by SE-18 in [07](07-trust.md#to-be) | **Gap** | Yes | [Q10](decisions.md#q10), [Q20](decisions.md#q20) |
+| PL-09 | **The API at `api.pitch-mate.co.uk`, and at `api.qa.pitch-mate.co.uk` for QA**, on the same site as the web so the refresh-token cookie can be SameSite (SE-18 in [07](07-trust.md#to-be)). QA and production share that site too, so each cookie is scoped to its own API host, never to the whole domain | **Gap** | Yes | [Q10](decisions.md#q10), [R16](decisions.md#r16) |
 | PL-10 | **Geo-redundant database backup** once there are paying users | **Idea** | | [Q19](decisions.md#q19) |
+| PL-11 | **Logs are kept for 90 days.** The template sets 30 (`infra/main.bicep:104`) | **Gap** | Yes | [R11](decisions.md#r11) |
+| PL-12 | **QA stays on the external database while the user is the only tester**, which is how it is set today (`infra/main.qa.bicepparam:16`). The setting is switched before anyone else tests on QA | **Built** | | [R17](decisions.md#r17) |
+| PL-13 | **App distribution**: store accounts, signing, and a build and release pipeline for the Expo apps, since the launch waits for them. None exists | **Gap** | Yes | [R3](decisions.md#r3), [R4](decisions.md#r4) |
+| PL-14 | **Push delivery** for the apps: the platform credentials and a sender the API or the job can call (NO-05) | **Gap** | Yes | [R3](decisions.md#r3) |
 
 ## Rules
 
@@ -137,16 +141,16 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 
 ## Open questions
 
-Answered: the docs ([Q22](decisions.md#q22)), arming production ([Q21](decisions.md#q21)), the production database ([Q19](decisions.md#q19)), the domain and infrastructure in CD ([Q20](decisions.md#q20)). Still open:
+Answered in round two: what the job runs on and how often ([R15](decisions.md#r15)), the hostnames ([R16](decisions.md#r16)), QA's database ([R17](decisions.md#r17)). Still open:
 
 1. **A production deploy was waiting for approval** when the as-is spec was written (seen with `gh` on 2026-11-11; live repository state, not in the repo), and `AZURE_DEPLOY_ENABLED` was `true` for both environments. Under [Q21](decisions.md#q21) that run should be rejected, not approved, and production disarmed until PL-02 is done. This is an action for the user in GitHub, not a code change.
-2. **What does the scheduled job run on** (PL-01)? A Container Apps job on a cron schedule fits the existing environment and image; an Azure Function on a timer is the alternative. How often does each task run?
-3. **Does QA stay on the external Supabase database**, which pauses after 7 idle days, while a real squad tests on it ([Q1](decisions.md#q1))?
-4. **Which hostnames exactly** (PL-03, PL-09)? The suggestion is `pitch-mate.co.uk` and `api.pitch-mate.co.uk`, with `qa.pitch-mate.co.uk` and `api.qa.pitch-mate.co.uk`. Who holds the DNS zone?
+2. **How does the Functions job reach the use cases** (PL-01)? Run the Application and Infrastructure code itself with its own database access, or call an API endpoint, which wakes the API? The first keeps the API asleep and needs the job to have the database secret.
+3. **When QA moves off the pausing database** (PL-12), does it get its own Flexible Server, and who triggers the switch?
+4. **Who holds the DNS zone** for `pitch-mate.co.uk`, and is it managed in the template or by hand?
 5. **Should the web deploy wait for the API?** The jobs are unordered, so a web build can briefly call an API that has not rolled out.
 6. **Observability.** Application Insights is provisioned but unused. Wire the SDK before a public launch, or remove the resource?
 7. **Secret rotation.** `DB_CONNECTION_STRING` in GitHub is a one-time copy of the Key Vault secret, and rotating `Auth-SigningKey` signs everyone out. Is a rotation procedure needed before launch?
-8. **App distribution.** Native apps ([Q4](decisions.md#q4)) need store accounts, signing and a build pipeline; none exists.
+8. **Payments** (OF-05): which provider, and does it need its own webhook endpoint and secrets?
 
 ## Ideas
 

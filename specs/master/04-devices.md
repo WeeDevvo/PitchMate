@@ -55,14 +55,15 @@ Which devices PitchMate runs on and what each client can do. The honest summary:
 
 ## To be
 
-What is wanted, from [decisions](decisions.md). **None of this is built** except the polling line. `apps/mobile` and `apps/watch` are still one README each.
+What is wanted, from [decisions](decisions.md). **None of this is built** except the polling line. `apps/mobile` and `apps/watch` are still one README each. The public launch waits for DV-01 to DV-03 and DV-05 to DV-07 ([R3](decisions.md#r3)).
 
 | Id | Requirement | Status | Decision |
 |---|---|---|---|
-| DV-01 | **An Android app** covering what a player and an admin do on the web: squads, availability, matches, teams, the team sheet, results, stats, notifications | **Gap** | [Q4](decisions.md#q4) |
-| DV-02 | **An iOS app** with the same scope | **Gap** | [Q4](decisions.md#q4) |
+| DV-01 | **An Android app**, built with React Native + Expo in one TypeScript codebase shared with iOS, using `@pitchmate/api-client` and the design tokens. It covers what a player and an admin do on the web: squads, availability, matches, teams, the team sheet, results, stats, notifications | **Gap** | [Q4](decisions.md#q4), [R4](decisions.md#r4) |
+| DV-02 | **An iOS app** from the same codebase, with the same scope | **Gap** | [Q4](decisions.md#q4), [R4](decisions.md#r4) |
 | DV-03 | **Live tracking in the phone app, offline-first**: events are queued on the device, survive the app closing, and are sent when a connection returns. The API already accepts this (client event ids, batches, per-event outcomes) | **Gap** | [Q5](decisions.md#q5) |
-| DV-04 | **A watch app that becomes the main way to live-track**, built after the phone tracker | **Gap** | [Q5](decisions.md#q5) |
+| DV-04 | **An Apple Watch app in SwiftUI that becomes the main way to live-track**, built after the phone tracker | **Gap** | [Q5](decisions.md#q5), [R4](decisions.md#r4) |
+| DV-09 | **A Wear OS tracker**, later, after the Apple Watch app | **Gap** | [R4](decisions.md#r4) |
 | DV-05 | **Push notifications** from the apps, for the events that are emailed today (NO-05) | **Gap** | [Q4](decisions.md#q4) |
 | DV-06 | **Tokens in the device's secure store**: the Keychain on iOS, the Keystore on Android (SE-22) | **Gap** | [Q10](decisions.md#q10) |
 | DV-07 | **Sign in with Apple** in the iOS app, required by Apple because Google sign-in is offered (AC-05) | **Gap** | [A1](decisions.md#a1) |
@@ -79,13 +80,13 @@ What is wanted, from [decisions](decisions.md). **None of this is built** except
 
 ## Open questions
 
-Answered: native apps ([Q4](decisions.md#q4)), phone first then watch ([Q5](decisions.md#q5)), polling ([Q6](decisions.md#q6)). Still open:
+Answered in round two: the launch waits for the apps ([R3](decisions.md#r3)) and the stack ([R4](decisions.md#r4)). Still open:
 
-1. **Do the apps ship with the public launch, or after it?** See [01](01-vision.md#open-questions).
-2. **Which stack?** The READMEs say React Native + Expo for the phones and SwiftUI for the watch, citing `.kiro/steering/`, which is no longer used ([Q22](decisions.md#q22)). Are those choices still current? "The watch" there means Apple Watch only; is a Wear OS tracker wanted for Android?
-3. **How does the watch sign in and sync?** Through the paired phone, as the README says, or on its own?
-4. **Two people tracking the same match.** Nothing reconciles two clients recording the same goal under different ids (`backend/src/PitchMate.Application/LiveTracking/UseCases/RecordEventBatchHandler.cs`). With a phone and a watch both able to track, is one tracker per match enforced?
-5. **Does the web tracker get an offline outbox**, or is offline tracking an app-only feature?
+1. **Is the Apple Watch app part of the launch**, or the first thing after it? [R3](decisions.md#r3) names the native apps; [Q5](decisions.md#q5) puts the phone tracker first.
+2. **How does the watch sign in and sync?** Through the paired phone, as the README says, or on its own?
+3. **Two devices tracking the same match.** Nothing reconciles two clients recording the same goal under different ids (`backend/src/PitchMate.Application/LiveTracking/UseCases/RecordEventBatchHandler.cs`). The per-match tracker ([R1](decisions.md#r1)) narrows who can record, but admins still can. Is it one recording device at a time?
+4. **Does the web tracker get an offline outbox**, or is offline tracking an app-only feature?
+5. **Does the web keep every feature the apps have**, or does it become the lesser client now that the apps are the main way in?
 
 ## Ideas
 
@@ -94,4 +95,3 @@ Answered: native apps ([Q4](decisions.md#q4)), phone first then watch ([Q5](deci
 - **Idea** · A lock-screen or home-screen widget showing the next match and whether you have marked your days.
 - **Idea** · A watch companion that only does GOAL → team → scorer, with everything else on the phone.
 - **Idea** · A big-screen "team sheet" mode for a tablet or a phone propped at the side of the pitch.
-- **Idea** · A Wear OS tracker, if Android users want to track from the wrist.

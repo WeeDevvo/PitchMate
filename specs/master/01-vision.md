@@ -43,12 +43,13 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | Line | Status | Decision |
 |---|---|---|
 | **The first launch is public**, on pitch-mate.co.uk, after a test period on QA with the user's own squad and perhaps one more. Everything on the [launch gate](index.md#launch-gate) is therefore a requirement | **Gap** | [Q1](decisions.md#q1) |
-| **Free at launch.** No squad pays for anything, and nothing is metered | **Gap** | [Q2](decisions.md#q2) |
-| **Ready for a Pro tier.** Live match tracking and rating-based auto-balancing can later be made Pro-only by changing an entitlement, without a rebuild (OF-04 in [05](05-features.md#to-be)) | **Gap** | [Q2](decisions.md#q2) |
-| **Web, Android and iOS**, with a watch app to follow as the main live tracker ([04](04-devices.md#to-be)) | **Gap** | [Q4](decisions.md#q4), [Q5](decisions.md#q5) |
-| **Trust stays inside the squad.** Members see each other's ratings and admins add anyone, as today; towards strangers the product adds rate limits, verified email and a way to report a squad ([07](07-trust.md#to-be)) | **Gap** | [Q3](decisions.md#q3) |
-| **Any team-v-team size**, not only 5-a-side to 8-a-side | **Gap** | [Q12](decisions.md#q12) |
-| **A confirmed result is final.** It is never corrected afterwards; a squad can ask for the opposing team to confirm the score first | **Gap** | [Q11](decisions.md#q11) |
+| **Free, and useful enough free that squads want to upgrade.** Ratings are tracked in every squad | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5) |
+| **A Pro tier per squad**, at about £1–2 a month so it is barely noticed when split between players. Pro unlocks auto-balancing and the match-day customisation options (OF-04, MA-11 in [05](05-features.md#to-be)) | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5) |
+| **The native apps are the main way people use PitchMate**, so the public launch waits for the Android and iOS apps. The web stays; a watch app follows as the main live tracker ([04](04-devices.md#to-be)) | **Gap** | [Q4](decisions.md#q4), [Q5](decisions.md#q5), [R3](decisions.md#r3) |
+| **Trust stays inside the squad.** Members see each other's ratings and admins add anyone, as today; towards strangers the product adds rate limits and verified email. Reporting a squad was considered and dropped ([07](07-trust.md#to-be)) | **Gap** | [Q3](decisions.md#q3), [R10](decisions.md#r10) |
+| **4v4 to 11v11**, uneven sides allowed, not only 5-a-side to 8-a-side | **Gap** | [Q12](decisions.md#q12), [R7](decisions.md#r7) |
+| **A confirmed result is final.** It is never corrected afterwards; a squad can ask for the other team to confirm the score first | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6) |
+| **The match does not depend on an admin being there.** The admin can hand starting and tracking a match to another member | **Gap** | [R1](decisions.md#r1) |
 
 The "What it deliberately is not" list above still holds: not public, not a league manager, not a global ranking.
 
@@ -66,11 +67,11 @@ The principles the code already honours. A feature spec that breaks one needs an
 
 ## Open questions
 
-The four questions the as-is spec asked here are answered: launch ([Q1](decisions.md#q1)), mobile ([Q4](decisions.md#q4)), trust ([Q3](decisions.md#q3)) and business model ([Q2](decisions.md#q2)). What the answers leave open:
+Answered in round two: the launch waits for the apps ([R3](decisions.md#r3)), and Pro is per squad with ratings always tracked ([R5](decisions.md#r5)). Still open:
 
-1. **Does the public launch wait for the native apps, or does the web launch first?** Q1 and Q4 were answered separately. If the launch waits, the apps, push and Sign in with Apple all join the launch gate.
-2. **What is a Pro tier attached to: the squad, or a person?** The gating mechanism needs to know before it is built, even though nothing is charged for yet.
-3. **What does a squad without rating-based balancing get?** Fair teams are the product's core promise (see Rules). Random teams, manual teams, or balancing a limited number of times? And do ratings still update for it?
+1. **How does a free squad pick teams?** Pro unlocks auto-balancing, and fair teams are the product's core promise (see Rules). Does a free squad sort players by hand, get random teams, or get a limited number of balanced rolls? Does it still see the predicted win %?
+2. **Is live match tracking free or Pro?** Round one named it as a Pro feature; the round-two answer lists auto-balancing and match-day customisation only.
+3. **When is Pro first sold**: at the public launch, or once free squads are established? And where does a squad pay: in the apps (the stores take about 15%) or on the web?
 
 ## Ideas
 
