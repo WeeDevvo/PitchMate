@@ -53,6 +53,23 @@ Which devices PitchMate runs on and what each client can do. The honest summary:
 | A relay of the phone's session to the watch | **Gap** | `.claude/rules/security-and-privacy.md` |
 | Several people tracking the same match at once: the log accepts events from any admin client, but nothing reconciles two clients recording the same goal under different ids | **Partial** | `backend/src/PitchMate.Application/LiveTracking/UseCases/RecordEventBatchHandler.cs` |
 
+## To be
+
+What is wanted, from [decisions](decisions.md). **None of this is built** except the polling line. `apps/mobile` and `apps/watch` are still one README each.
+
+| Id | Requirement | Status | Decision |
+|---|---|---|---|
+| DV-01 | **An Android app** covering what a player and an admin do on the web: squads, availability, matches, teams, the team sheet, results, stats, notifications | **Gap** | [Q4](decisions.md#q4) |
+| DV-02 | **An iOS app** with the same scope | **Gap** | [Q4](decisions.md#q4) |
+| DV-03 | **Live tracking in the phone app, offline-first**: events are queued on the device, survive the app closing, and are sent when a connection returns. The API already accepts this (client event ids, batches, per-event outcomes) | **Gap** | [Q5](decisions.md#q5) |
+| DV-04 | **A watch app that becomes the main way to live-track**, built after the phone tracker | **Gap** | [Q5](decisions.md#q5) |
+| DV-05 | **Push notifications** from the apps, for the events that are emailed today (NO-05) | **Gap** | [Q4](decisions.md#q4) |
+| DV-06 | **Tokens in the device's secure store**: the Keychain on iOS, the Keystore on Android (SE-22) | **Gap** | [Q10](decisions.md#q10) |
+| DV-07 | **Sign in with Apple** in the iOS app, required by Apple because Google sign-in is offered (AC-05) | **Gap** | [A1](decisions.md#a1) |
+| DV-08 | **The web keeps polling**: 20 seconds for the live score, 60 for unread notifications (`apps/web/src/features/app-shell/lib/pollInterval.ts`, `apps/web/src/features/matches/components/LiveScorePanel.tsx:30`) | **Built** | [Q6](decisions.md#q6) |
+
+**Decided against:** an installable, offline-capable web app as the first "mobile" release ([Q4](decisions.md#q4)). The web manifest, service worker and web push lines under Today stay Gap and are not planned.
+
 ## Rules
 
 - **Built** · One API and one generated contract for every client; no client reimplements rating maths. `packages/api-client/package.json`, `backend/src/PitchMate.Domain/Stats/DisplayRatingCalculator.cs`
@@ -62,11 +79,13 @@ Which devices PitchMate runs on and what each client can do. The honest summary:
 
 ## Open questions
 
-1. **Is a native app needed for launch, or is the phone browser enough?** Everything a player does (mark days, see the team sheet, read stats) works in a phone browser today. The clear native-only needs are push notifications and reliable pitch-side tracking.
-2. **Would an installable, offline-capable web app cover the gap?** A manifest, a service worker and a persisted tracker outbox would give home-screen install and offline tracking without a second codebase, and web push covers Android and recent iOS.
-3. **Is the watch still the intended live tracker?** It is the most expensive client to build and needs the iOS app first. Is a phone-first tracker the nearer target?
-4. **React Native + Expo and SwiftUI are stated in the READMEs as decided.** Both READMEs cite `.kiro/steering/`, which is not in the repo. Are those decisions still current?
-5. **Where does Google sign-in on the web stand?** It decides how urgent Apple Sign-In is.
+Answered: native apps ([Q4](decisions.md#q4)), phone first then watch ([Q5](decisions.md#q5)), polling ([Q6](decisions.md#q6)). Still open:
+
+1. **Do the apps ship with the public launch, or after it?** See [01](01-vision.md#open-questions).
+2. **Which stack?** The READMEs say React Native + Expo for the phones and SwiftUI for the watch, citing `.kiro/steering/`, which is no longer used ([Q22](decisions.md#q22)). Are those choices still current? "The watch" there means Apple Watch only; is a Wear OS tracker wanted for Android?
+3. **How does the watch sign in and sync?** Through the paired phone, as the README says, or on its own?
+4. **Two people tracking the same match.** Nothing reconciles two clients recording the same goal under different ids (`backend/src/PitchMate.Application/LiveTracking/UseCases/RecordEventBatchHandler.cs`). With a phone and a watch both able to track, is one tracker per match enforced?
+5. **Does the web tracker get an offline outbox**, or is offline tracking an app-only feature?
 
 ## Ideas
 
@@ -75,3 +94,4 @@ Which devices PitchMate runs on and what each client can do. The honest summary:
 - **Idea** · A lock-screen or home-screen widget showing the next match and whether you have marked your days.
 - **Idea** · A watch companion that only does GOAL → team → scorer, with everything else on the phone.
 - **Idea** · A big-screen "team sheet" mode for a tablet or a phone propped at the side of the pitch.
+- **Idea** · A Wear OS tracker, if Android users want to track from the wrist.

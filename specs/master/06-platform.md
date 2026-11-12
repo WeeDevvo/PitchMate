@@ -110,6 +110,23 @@ All resources are declared in one template, deployed per environment into one re
 | The Static Web App serves an SPA fallback and security headers (minimal CSP, nosniff, HSTS) | **Built** | `apps/web/public/staticwebapp.config.json:2`, `apps/web/public/staticwebapp.config.json:7` |
 | The web Dockerfile builds on Node 22 while CI and CD use Node 24 | **Partial** | `apps/web/Dockerfile`, `.github/workflows/ci-web.yml:41` |
 
+## To be
+
+What is wanted, from [decisions](decisions.md). Nothing in this section is built unless the line says so; the tables above are what the template and workflows declare today.
+
+| Id | Requirement | Status | Launch | Decision |
+|---|---|---|---|---|
+| PL-01 | **A scheduled job beside the API**, on a timer, that does not depend on the API being awake (the API scales to zero). It runs the squad purge and the erasure work first; σ decay (RA-06) and expired-token clean-up (TR-13) are the other two pieces of scheduled work and would share it | **Gap** | Yes | [Q7](decisions.md#q7) |
+| PL-02 | **Production is provisioned**, with its own Postgres Flexible Server on a burstable tier and 7-day point-in-time restore. The template already declares this server when `useExternalDatabase` is false (`infra/main.bicep:119`, `infra/main.bicep:133`); what is missing is the deployment, the production identity's roles, and the production secrets and variables | **Gap** | Yes | [Q19](decisions.md#q19) |
+| PL-03 | **Custom domains**: `pitch-mate.co.uk` for production and a `qa.` subdomain for QA, with DNS and certificates, and CORS and the token issuer following the new hostnames | **Gap** | Yes | [Q20](decisions.md#q20) |
+| PL-04 | **Infrastructure deploys through CD**: a what-if preview of the Bicep change, then a manual approval, then the deployment. The workstation script stops being the only way | **Gap** | | [Q20](decisions.md#q20) |
+| PL-05 | **Production deploys are off until production exists, then on behind the approval.** QA and production get separate switches; today the single `AZURE_DEPLOY_ENABLED` variable arms both (`.github/workflows/cd-qa.yml:28`, `.github/workflows/cd-production.yml:31`) | **Gap** | Yes | [Q21](decisions.md#q21) |
+| PL-06 | **The docs match the platform**: `CLAUDE.md`, `README.md`, the workflow README and the device READMEs describe Container Apps, the external QA database and a live CD, and no longer mention `.kiro` or `docs/` | **Gap** | | [Q22](decisions.md#q22) |
+| PL-07 | **Azure Communication Services email** in the template and configured for QA and production, with a verified sender domain. The ACS sender is implemented in the API; the cloud is on the Console transport (`infra/README.md:55`) | **Gap** | Yes | [Q9](decisions.md#q9) |
+| PL-08 | **Somewhere to keep avatars**, for the account screen (AC-10). Nothing stores files today | **Gap** | | [Q17](decisions.md#q17) |
+| PL-09 | **The API on the same site as the web** (for example an `api.` subdomain), so the refresh-token cookie can be SameSite. Follows from PL-03 and is required by SE-18 in [07](07-trust.md#to-be) | **Gap** | Yes | [Q10](decisions.md#q10), [Q20](decisions.md#q20) |
+| PL-10 | **Geo-redundant database backup** once there are paying users | **Idea** | | [Q19](decisions.md#q19) |
+
 ## Rules
 
 - **Built** · The contract flows one way, C# API → OpenAPI → TypeScript client, and CI fails on drift in either generated file. `.github/workflows/ci-backend.yml:73`, `.github/workflows/ci-web.yml:65`
@@ -120,15 +137,16 @@ All resources are declared in one template, deployed per environment into one re
 
 ## Open questions
 
-1. **The docs describe a platform that no longer exists.** `CLAUDE.md` says hosting is "App Service, Postgres Flexible Server, Static Web Apps, Key Vault" and that CD is "scaffolded but inert"; `.github/workflows/README.md` says the same and tells the reader to create `develop`. The template now declares Container Apps and a registry (`infra/main.bicep:272`, `infra/main.bicep:203`), QA's database is external (`infra/main.qa.bicepparam:16`), and the CD error hints still mention `azurewebsites.net` (`.github/workflows/cd-qa.yml:154`). Update the docs, or is some of this temporary?
-2. **Is CD switched on?** Observed with `gh` on 2026-11-11 (live repository state, not in the repo): `AZURE_DEPLOY_ENABLED` is `true`, QA deploys from `develop` are succeeding, and a production run on `main` is waiting for approval while the `production` environment has no secrets and no `_PROD` variables, so approving it would fail. The variable is repo-wide, so it arms production as well as QA. Should production stay armed before it is provisioned?
-3. **What is production's database?** The prod parameter file leaves `useExternalDatabase` false, which creates a B1ms Flexible Server with 7-day local backups, no HA and no geo-redundancy. Is that the launch target, and what are the backup and restore expectations?
-4. **When does `pitch-mate.co.uk` get wired?** Custom domains, DNS and certificates are outside the template, and CORS and the token issuer are derived from platform hostnames.
+Answered: the docs ([Q22](decisions.md#q22)), arming production ([Q21](decisions.md#q21)), the production database ([Q19](decisions.md#q19)), the domain and infrastructure in CD ([Q20](decisions.md#q20)). Still open:
+
+1. **A production deploy was waiting for approval** when the as-is spec was written (seen with `gh` on 2026-11-11; live repository state, not in the repo), and `AZURE_DEPLOY_ENABLED` was `true` for both environments. Under [Q21](decisions.md#q21) that run should be rejected, not approved, and production disarmed until PL-02 is done. This is an action for the user in GitHub, not a code change.
+2. **What does the scheduled job run on** (PL-01)? A Container Apps job on a cron schedule fits the existing environment and image; an Azure Function on a timer is the alternative. How often does each task run?
+3. **Does QA stay on the external Supabase database**, which pauses after 7 idle days, while a real squad tests on it ([Q1](decisions.md#q1))?
+4. **Which hostnames exactly** (PL-03, PL-09)? The suggestion is `pitch-mate.co.uk` and `api.pitch-mate.co.uk`, with `qa.pitch-mate.co.uk` and `api.qa.pitch-mate.co.uk`. Who holds the DNS zone?
 5. **Should the web deploy wait for the API?** The jobs are unordered, so a web build can briefly call an API that has not rolled out.
-6. **Who applies infrastructure changes?** Today only `deploy-qa.ps1` run from a workstation. Should Bicep run in CD?
-7. **Observability.** Application Insights is provisioned but unused. Wire the SDK, or remove the resource?
-8. **Secret rotation.** `DB_CONNECTION_STRING` in GitHub is a one-time copy of the Key Vault secret, and rotating `Auth-SigningKey` signs everyone out. Is a rotation procedure needed before launch?
-9. **`README.md` and the device READMEs point at `docs/` and `.kiro/steering/`**, neither of which is in the repo. Should those references move to `specs/`?
+6. **Observability.** Application Insights is provisioned but unused. Wire the SDK before a public launch, or remove the resource?
+7. **Secret rotation.** `DB_CONNECTION_STRING` in GitHub is a one-time copy of the Key Vault secret, and rotating `Auth-SigningKey` signs everyone out. Is a rotation procedure needed before launch?
+8. **App distribution.** Native apps ([Q4](decisions.md#q4)) need store accounts, signing and a build pipeline; none exists.
 
 ## Ideas
 
@@ -137,3 +155,4 @@ All resources are declared in one template, deployed per environment into one re
 - **Idea** · An always-run "changes" job so path-filtered checks can be required safely.
 - **Idea** · Uptime and error-rate alerts to email once Application Insights is wired.
 - **Idea** · A keep-alive ping so the free QA database does not pause.
+- **Idea** · Payments infrastructure (a provider, webhooks, entitlement sync) when a Pro tier is priced ([Q2](decisions.md#q2)).

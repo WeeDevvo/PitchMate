@@ -102,6 +102,26 @@ stateDiagram-v2
 - **Built** · Completing rebinds the same membership to the user, so rating and stats are preserved; reversing unbinds it. `backend/src/PitchMate.Domain/Squads/SquadMembership.cs`
 - **Partial** · "The claim is audited": the claim row stores when it was accepted, completed, reversed and cancelled, plus the generic created-by/updated-by columns, but there is no separate audit log. `backend/src/PitchMate.Infrastructure/Persistence/Configurations/Squads/GuestClaimConfiguration.cs`
 
+## To be
+
+What is wanted, from [decisions](decisions.md). Nothing in this section is built unless the line says so; the matrix above is what the code enforces today.
+
+| Id | Requirement | Status | Decision |
+|---|---|---|---|
+| RO-01 | **Only the owner demotes an admin.** Admins keep the power to promote a member, and lose the power to demote. Today any admin can demote another (`backend/src/PitchMate.Application/Squads/UseCases/DemoteToMemberHandler.cs:49`) | **Gap** | [Q15](decisions.md#q15) |
+| RO-02 | **A signed-in user edits their own account** (name, avatar, password) and can export or delete it, from one account screen (AC-10 to AC-12 in [05](05-features.md#to-be)) | **Gap** | [Q17](decisions.md#q17) |
+| RO-03 | **A visitor must verify their email before signing in**, so every member of a squad has a verified address (SE-15 in [07](07-trust.md#to-be)) | **Gap** | [Q9](decisions.md#q9) |
+| RO-04 | **A player on the opposing team confirms the score**, in a squad that turns score confirmation on. This is the first match action a plain member takes on a result (RE-08 in [05](05-features.md#to-be)) | **Gap** | [Q11](decisions.md#q11) |
+| RO-05 | **An admin acknowledges the lawful basis for guests once**, not on every guest (GU-02 in [05](05-features.md#to-be)) | **Gap** | [Q14](decisions.md#q14) |
+| RO-06 | **Anyone who can see a squad can report it** (TR-17 in [07](07-trust.md#to-be)) | **Gap** | [Q3](decisions.md#q3) |
+
+Proposed change to the matrix once RO-01 is built:
+
+| Action | Member | Admin | Owner |
+|---|---|---|---|
+| Promote a member to admin | – | ✓ | ✓ |
+| Demote an admin to member | – | – | ✓ |
+
 ## Rules
 
 - **Built** · Exactly one owner per squad, held by a unique database index; transfer swaps both roles in one transaction. `backend/src/PitchMate.Infrastructure/Persistence/Configurations/Squads/SquadMembershipConfiguration.cs`, `backend/src/PitchMate.Application/Squads/UseCases/TransferOwnershipHandler.cs`
@@ -114,12 +134,14 @@ stateDiagram-v2
 
 ## Open questions
 
-1. **Can an admin demote or remove another admin?** The code allows both (`backend/src/PitchMate.Application/Squads/UseCases/DemoteToMemberHandler.cs:49`, `backend/src/PitchMate.Application/Squads/UseCases/RemoveMemberHandler.cs:74`). `product.md` only says the owner or an admin can promote; it is silent on demotion, which exists in the code.
-2. **Who may see guests' marked days?** Only organisers, and only while availability is being gathered (`backend/src/PitchMate.Application/Matches/UseCases/GetMatchDetailHandler.cs:89`). `product.md` does not say; members see the tally.
-3. **Should a member be able to rename themselves in a squad, or an owner rename the squad?** Neither exists. A join-time name collision is the only moment a member chooses a squad display name.
-4. **Is live tracking admin-only on purpose?** Recording is admin-gated (`backend/src/PitchMate.Application/LiveTracking/UseCases/RecordEventBatchHandler.cs:123`). The watch README imagines several tracking clients; does a non-admin ever track?
+Answered: admins promote only and the owner demotes ([Q15](decisions.md#q15)). Still open:
+
+1. **Can an admin remove another admin?** Q15 covered demotion. Removal has the same effect and the code allows it (`backend/src/PitchMate.Application/Squads/UseCases/RemoveMemberHandler.cs:74`). The consistent answer would be owner-only.
+2. **Can a non-admin ever track a match?** Left open in Q15. Recording is admin-gated today (`backend/src/PitchMate.Application/LiveTracking/UseCases/RecordEventBatchHandler.cs:123`), and the watch becoming the main tracker ([Q5](decisions.md#q5)) makes this more pressing: the admin may not be the one wearing the watch.
+3. **Who may see guests' marked days?** Only organisers, and only while availability is being gathered (`backend/src/PitchMate.Application/Matches/UseCases/GetMatchDetailHandler.cs:89`). `product.md` does not say; members see the tally.
+4. **Should a member be able to rename themselves in a squad, or an owner rename the squad?** Neither exists (SQ-12). Not covered by the account screen, which changes the account's name, not the squad display name.
 5. **Is the claim "audit" enough?** `product.md` says the claim is audited; today that means timestamps on the claim row.
-6. **Guest deletion.** There is no "delete guest" action; removal makes the guest inactive, and the erase-membership use case exists but nothing calls it (see [07 · Trust](07-trust.md)).
+6. **Who confirms a score when the recording admin did not play?** See RE-08's questions in [05](05-features.md#open-questions).
 
 ## Ideas
 
@@ -127,3 +149,4 @@ stateDiagram-v2
 - **Idea** · Let any member in the lineup record live events, with the admin able to correct.
 - **Idea** · A read-only "spectator" link to a team sheet or live score for people outside the squad (would need a privacy decision).
 - **Idea** · Self-service display-name change within a squad, subject to the uniqueness rule.
+- **Idea** · A "tracker" permission the admin hands to whoever wears the watch for one match, if non-admin tracking is wanted.

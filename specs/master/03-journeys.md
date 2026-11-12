@@ -144,6 +144,58 @@ flowchart LR
 | A user's cross-squad vanity aggregate | **Gap** | Nothing in the code | `backend/src/PitchMate.Application/Stats` |
 | A profile page for the signed-in user | **Gap** | `/app/profile` shows "not ready yet" | `apps/web/src/features/app-shell/shellRoutes.tsx:316` |
 
+## To be
+
+What is wanted, from [decisions](decisions.md). Nothing in this section is built unless the line says so; the journeys above are what happens today. Ids refer to [05 · Features](05-features.md#to-be), [04 · Devices](04-devices.md#to-be) and [07 · Trust](07-trust.md#to-be).
+
+### Journey 1 · Sign up and join a squad
+
+| Change | Status | Decision |
+|---|---|---|
+| Sign-up is followed by **email verification before the first sign-in** (SE-15) | **Gap** | [Q9](decisions.md#q9) |
+| The **invite survives verification**: a person who signs up from an invite link, verifies in another tab and signs in still lands in the squad without opening the link again (SQ-07) | **Gap** | [Q9](decisions.md#q9) |
+| Verification, reset and notification **emails are really sent** (NO-03) | **Gap** | [Q9](decisions.md#q9) |
+| **Google sign-in works on the web**, and the iOS app adds **Sign in with Apple** (AC-04, AC-05) | **Gap** | [A1](decisions.md#a1) |
+| The **privacy policy and terms** linked from sign-up exist (WE-05) | **Gap** | [Q8](decisions.md#q8) |
+| Repeated failed sign-ins **lock the account for 15 minutes after 5 attempts** (AC-13) | **Gap** | [Q9](decisions.md#q9) |
+
+### Journey 2 · The match lifecycle
+
+| Change | Status | Decision |
+|---|---|---|
+| **Teams can be rolled and locked at any team-v-team size**, uneven allowed; the 10–16 and 5–8-a-side limits go (TB-09, TB-11) | **Gap** | [Q12](decisions.md#q12) |
+| The admin can mark players to **keep together or keep apart** before rolling (TB-10) | **Gap** | [Q13](decisions.md#q13) |
+| **Cancelling a match notifies members** (NO-06) | **Gap** | [Q16](decisions.md#q16) |
+| **A completed result is never corrected** (RE-07 is decided against). This is already how the code behaves: a completed match is immutable (`backend/src/PitchMate.Domain/Matches/Match.cs:1188`) | **Built** | [Q11](decisions.md#q11) |
+| In a squad with **score confirmation** on, a player from the opposing team confirms the score before the match completes (RE-08) | **Gap** | [Q11](decisions.md#q11) |
+
+The proposed end of the lifecycle with score confirmation on. The extra step and its name are a sketch for the feature spec, not a decided state machine:
+
+```mermaid
+stateDiagram-v2
+  InProgress --> AwaitingConfirmation: admin records the score (confirmation on)
+  InProgress --> Completed: admin records and completes (confirmation off)
+  AwaitingConfirmation --> Completed: opposing-team player confirms
+  AwaitingConfirmation --> Completed: nobody on the other side can confirm, so the admin's confirmation stands
+  Completed --> [*]: ratings update once, result final
+```
+
+### Journey 3 · Live tracking
+
+| Change | Status | Decision |
+|---|---|---|
+| The **phone app** is the first new tracker, and it **keeps working offline** with an outbox that survives a restart (DV-03) | **Gap** | [Q5](decisions.md#q5) |
+| The **watch app** follows and becomes the main way to track (DV-04) | **Gap** | [Q5](decisions.md#q5) |
+| Members keep seeing the **live score by polling** every 20 seconds (`apps/web/src/features/matches/components/LiveScorePanel.tsx:30`) | **Built** | [Q6](decisions.md#q6) |
+| Live tracking sits behind an **entitlement** as well as the squad's toggle (OF-04) | **Gap** | [Q2](decisions.md#q2) |
+
+### Journey 4 · Stats
+
+| Change | Status | Decision |
+|---|---|---|
+| **Every available stat is shown**, including leaderboards for the rich stats (ST-08, ST-11) | **Gap** | [Q18](decisions.md#q18) |
+| The signed-in user's "profile" destination becomes the **account screen** (WE-04) | **Gap** | [Q17](decisions.md#q17) |
+
 ## Rules
 
 - **Built** · A signed-out visitor to any `/app` path is sent to `/login?redirect=…` and returned afterwards; the return target must be a same-origin, non-auth path. `apps/web/src/features/app-shell/RouteGuard.tsx`, `apps/web/src/features/auth/lib/redirectTarget.ts`
@@ -155,14 +207,18 @@ flowchart LR
 
 ## Open questions
 
-1. **`product.md` understates the tracker's corrections.** It says corrections "go no further than undoing the last goal", but the tracker can change a scorer and remove any goal or keeper change (`apps/web/src/features/matches/screens/LiveTrackerScreen.tsx:323`). Update `product.md`, or was the wider correction not meant to ship?
-2. **"Teams rolled" is announced at the lock, not at the roll** (`backend/src/PitchMate.Application/Matches/UseCases/LockTeamsHandler.cs`). Is the notification's name right, or should it read "Teams are set"?
-3. **What should happen between sign-up and joining?** The return to the invite is easy to lose. Should the invite code be remembered across email verification, and should verification be required before joining?
-4. **A member can only join or leave while the match is `Confirmed`.** After the lock they need an admin to unlock. Intended?
-5. **A basic result can be overwritten until "complete", and the web makes these two steps.** Should recording a basic result complete the match in one action, as ending a tracked match does?
-6. **No notification on cancel, start, or unlock.** Should members hear that a match was cancelled?
-7. **Should a completed match ever be correctable?** Today a wrong score is permanent, and with it the rating change.
-8. **Live score is polled every 20 seconds.** Good enough, or is a push channel wanted before mobile?
+Answered: result correction ([Q11](decisions.md#q11)), cancellation notices ([Q16](decisions.md#q16)), polling ([Q6](decisions.md#q6)), verification before joining ([Q9](decisions.md#q9)). Still open:
+
+1. **`product.md` understates the tracker's corrections.** It says corrections "go no further than undoing the last goal", but the tracker can change a scorer and remove any goal or keeper change (`apps/web/src/features/matches/screens/LiveTrackerScreen.tsx:323`). A reworded Today note is proposed in [decisions](decisions.md#proposed-productmd-changes).
+2. **"Teams rolled" is announced at the lock, not at the roll** (`backend/src/PitchMate.Application/Matches/UseCases/LockTeamsHandler.cs`). Left open in [Q16](decisions.md#q16): rename it to "Teams are set", or move it?
+3. **A member can only join or leave while the match is `Confirmed`.** After the lock they need an admin to unlock. Intended?
+4. **Score confirmation, the details** (RE-08):
+   - Who is "the opposing team" when the admin who recorded the score did not play?
+   - What happens if the opposing player disputes the score, or nobody responds? Is there a time limit after which the admin's score stands?
+   - Does it apply to a live-tracked result, or only to a basic one?
+   - With confirmation off, should recording a basic result complete the match in one action, as ending a tracked match does? Today they are two steps and the score can be overwritten in between.
+5. **Does the web tracker stay connection-only** once the phone app tracks offline, or does it get a persisted outbox too (RE-06)?
+6. **Does a claim link survive verification too**, as the invite must?
 
 ## Ideas
 
@@ -172,3 +228,5 @@ flowchart LR
 - **Idea** · A waiting list when a match is full at 16.
 - **Idea** · Recurring matches (same place, same weekday) so the admin doesn't recreate the draft each week.
 - **Idea** · Assists and a man-of-the-match vote as new event kinds or post-match inputs.
+- **Idea** · **Drop goalkeeper tracking** from the live tracker: no keeper dialog and no keeper stints, leaving GOAL → team → scorer. The user has tracked matches with it and finds it adds nothing for now. Conflicts with `product.md`'s rich results; see [decisions](decisions.md#proposed-productmd-changes).
+- **Idea** · A **customisable match-day flow per squad**: the short version is pick a day, invite players, record the result; the long version adds availability, payment tracking and more. Each step would be a squad choice rather than fixed.

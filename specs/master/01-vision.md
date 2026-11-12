@@ -36,6 +36,22 @@ What PitchMate is for, who it is for, and the handful of principles everything e
 - **Built** · Not a league or tournament manager: a match is one kickoff lineup, one outcome, one rating update. `backend/src/PitchMate.Application/Matches/UseCases/CompleteMatchHandler.cs`
 - **Built** · Not a global ranking: ratings hang off the squad membership, never the account. `backend/src/PitchMate.Domain/Matches/MembershipRating.cs`
 
+## To be
+
+What is wanted, from [decisions](decisions.md). Nothing in this section is built unless the line says so; the section above is the as-is truth.
+
+| Line | Status | Decision |
+|---|---|---|
+| **The first launch is public**, on pitch-mate.co.uk, after a test period on QA with the user's own squad and perhaps one more. Everything on the [launch gate](index.md#launch-gate) is therefore a requirement | **Gap** | [Q1](decisions.md#q1) |
+| **Free at launch.** No squad pays for anything, and nothing is metered | **Gap** | [Q2](decisions.md#q2) |
+| **Ready for a Pro tier.** Live match tracking and rating-based auto-balancing can later be made Pro-only by changing an entitlement, without a rebuild (OF-04 in [05](05-features.md#to-be)) | **Gap** | [Q2](decisions.md#q2) |
+| **Web, Android and iOS**, with a watch app to follow as the main live tracker ([04](04-devices.md#to-be)) | **Gap** | [Q4](decisions.md#q4), [Q5](decisions.md#q5) |
+| **Trust stays inside the squad.** Members see each other's ratings and admins add anyone, as today; towards strangers the product adds rate limits, verified email and a way to report a squad ([07](07-trust.md#to-be)) | **Gap** | [Q3](decisions.md#q3) |
+| **Any team-v-team size**, not only 5-a-side to 8-a-side | **Gap** | [Q12](decisions.md#q12) |
+| **A confirmed result is final.** It is never corrected afterwards; a squad can ask for the opposing team to confirm the score first | **Gap** | [Q11](decisions.md#q11) |
+
+The "What it deliberately is not" list above still holds: not public, not a league manager, not a global ranking.
+
 ## Rules
 
 The principles the code already honours. A feature spec that breaks one needs an explicit decision.
@@ -50,13 +66,15 @@ The principles the code already honours. A feature spec that breaks one needs an
 
 ## Open questions
 
-1. **What does "launched" mean?** A private beta for one squad on the QA environment, or a public launch on pitch-mate.co.uk with policy pages, production infrastructure and email? The gap list in [index](index.md) is long or short depending on the answer.
-2. **Is mobile part of the first launch**, or does a responsive web app carry it? This decides whether offline live tracking and push notifications are launch requirements. See [04 · Devices](04-devices.md).
-3. **How far beyond "friends" does it go?** Everything assumes a small trusted group (members see each other's ratings, admins can add anyone). Larger or semi-public groups would strain those assumptions.
-4. **Is there a business model?** Nothing in the code meters, limits or charges; hosting is on free and lowest tiers.
+The four questions the as-is spec asked here are answered: launch ([Q1](decisions.md#q1)), mobile ([Q4](decisions.md#q4)), trust ([Q3](decisions.md#q3)) and business model ([Q2](decisions.md#q2)). What the answers leave open:
+
+1. **Does the public launch wait for the native apps, or does the web launch first?** Q1 and Q4 were answered separately. If the launch waits, the apps, push and Sign in with Apple all join the launch gate.
+2. **What is a Pro tier attached to: the squad, or a person?** The gating mechanism needs to know before it is built, even though nothing is charged for yet.
+3. **What does a squad without rating-based balancing get?** Fair teams are the product's core promise (see Rules). Random teams, manual teams, or balancing a limited number of times? And do ratings still update for it?
 
 ## Ideas
 
 - **Idea** · A one-line positioning statement on the landing page tested against real organisers ("the fairest way to pick teams").
 - **Idea** · A "season" concept that groups matches for leaderboards without changing how ratings work.
 - **Idea** · Winner-stays-on and three-team formats, which the N-team rating engine already allows.
+- **Idea** · A **pitch-booking marketplace**: squads book a pitch through PitchMate, which takes a small cut, as Playtomic does for padel. The long-term revenue idea; needs partnerships with pitch providers. ([Q2](decisions.md#q2))

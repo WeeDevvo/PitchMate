@@ -9,7 +9,7 @@ PitchMate is built spec-first. The specs are committed under `specs/` (`docs/` i
 
 ## Layout
 
-- `specs/master/` holds the **master spec**: one file per chapter (`01-vision.md` … `08-design.md`) plus `index.md`, which lists the chapters and ends with the biggest gaps and open questions.
+- `specs/master/` holds the **master spec**: one file per chapter (`01-vision.md` … `08-design.md`) plus `index.md`, which lists the chapters and ends with the launch gate and the open questions, and `decisions.md`, which records each decision and where it came from.
 - `specs/features/<feature>.md` holds **feature specs**, each cut from the master spec. None exist until the to-be master spec is signed off.
 
 ## Status tags
@@ -32,13 +32,21 @@ Every requirement or feature line carries exactly one status tag:
 
 ## Chapter shape
 
-Every chapter has the same five sections, in this order:
+Every chapter has the same six sections, in this order:
 
 1. **Purpose**: what the chapter covers and who reads it.
 2. **Today (as-is)**: what the code does now, as tagged, cited lines.
-3. **Rules**: the invariants that hold, tagged and cited.
-4. **Open questions**: decisions for the user, including every disagreement between spec, code and `product.md`.
-5. **Ideas**: **Idea**-tagged candidates.
+3. **To be**: what is wanted, as tagged lines that each link the decision in `decisions.md` they come from. A decided requirement stays **Gap** until it is built; when it is built, update the Today line and its citation in the same change.
+4. **Rules**: the invariants that hold, tagged and cited.
+5. **Open questions**: decisions for the user, including every disagreement between spec, code and `product.md`.
+6. **Ideas**: **Idea**-tagged candidates.
+
+Keep built and wanted apart: never describe a wanted behaviour under Today, and never move a line to **Built** because it was decided.
+
+## Decisions
+
+- `specs/master/decisions.md` records each decision with its source: **User** (their own answer) or **Suggested** (a default they asked for and can still change).
+- A requirement that follows from a decision but was not itself decided says so on its line.
 
 Flows and state machines are **Mermaid** diagrams, not prose or ASCII art.
 

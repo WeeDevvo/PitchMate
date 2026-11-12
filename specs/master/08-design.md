@@ -65,6 +65,20 @@ Everything is exported from one barrel (`apps/web/src/ui/index.ts`). All **Built
 | Screens match the artifact's web mockups | **Partial** | Not verified in this pass; the brand rule requires reading the mockup before building a screen | `.claude/rules/brand.md` |
 | Mobile and watch designs | **Gap** | Mockups are said to exist in the artifact; no client implements them | `.claude/rules/brand.md`, `apps/mobile/README.md`, `apps/watch/README.md` |
 
+## To be
+
+What is wanted, from [decisions](decisions.md). No decision changed the brand rules. These are the design consequences of decisions made elsewhere; none is built.
+
+| Line | Status | Decision |
+|---|---|---|
+| **The mobile mockups in the design-system artifact become build targets**, for the Android and iOS apps | **Gap** | [Q4](decisions.md#q4) |
+| **The watch mockups become the target for the main live tracker**, after a phone tracker design | **Gap** | [Q5](decisions.md#q5) |
+| **One account screen** needs a design: name, email, avatar, password, export, delete. It replaces the profile placeholder | **Gap** | [Q17](decisions.md#q17) |
+| **Stats presentation**: every available stat shown usefully means a designed layout for the leaderboards and the player screen, not a longer list | **Gap** | [Q18](decisions.md#q18) |
+| **A locked-feature state** for a feature the squad is not entitled to, distinct from "the admin has turned this off" | **Gap** | [Q2](decisions.md#q2) |
+| **A score-confirmation prompt** for the opposing player, and a "waiting for confirmation" state on the match | **Gap** | [Q11](decisions.md#q11) |
+| **Privacy policy and terms pages** follow the brand's plain voice (no cheek in privacy copy) | **Gap** | [Q8](decisions.md#q8) |
+
 ## Rules
 
 The full rules are in `.claude/rules/brand.md`. The ones the code enforces mechanically:
@@ -80,12 +94,13 @@ Rules that rest on review rather than a test: voice (friendly, a bit cheeky, sen
 
 ## Open questions
 
-1. **Is the artifact still ahead of, level with, or behind the code?** Nothing in the repo records when the token export was last taken. Worth a one-off comparison before the to-be spec.
-2. **Should the unused components stay** (ready for mobile-width layouts and future screens) or be pruned?
-3. **Remove the template leftovers** (`App.tsx`, `App.css`, the stock README)?
-4. **The brand rule's component list and the kit have drifted slightly** (the kit also has ActionsMenu, AvailabilityGrid, Checkbox, EventTimeline, OptionCard, Steps, TabNav, TeamSheet). Update the rule's list?
-5. **Which mobile and watch mockups are current?** If a PWA comes first, the mobile mockups become the narrow-screen target for the web.
-6. **Does the profile screen have a design?** It is the one shell destination with no content.
+1. **Is the artifact still ahead of, level with, or behind the code?** Nothing in the repo records when the token export was last taken. Worth a one-off comparison now that the mobile and watch mockups are build targets ([Q4](decisions.md#q4), [Q5](decisions.md#q5)).
+2. **Which mobile and watch mockups are current**, and do they cover the tracker without goalkeeper changes if that idea is adopted?
+3. **Does the account screen have a design?** The artifact was not opened, so this is unknown.
+4. **Do the tokens carry over to native?** `tokens.json` generates CSS only; the apps need the same values in their own form.
+5. **Should the unused components stay** (ready for future screens) or be pruned?
+6. **Remove the template leftovers** (`App.tsx`, `App.css`, the stock README)? The README part falls under [Q22](decisions.md#q22).
+7. **The brand rule's component list and the kit have drifted slightly** (the kit also has ActionsMenu, AvailabilityGrid, Checkbox, EventTimeline, OptionCard, Steps, TabNav, TeamSheet). Update the rule's list?
 
 ## Ideas
 
@@ -94,3 +109,4 @@ Rules that rest on review rather than a test: voice (friendly, a bit cheeky, sen
 - **Idea** · Squad colours or a crest chosen by the owner, within the palette's contrast rules.
 - **Idea** · A shareable team-sheet image in brand style for the group chat.
 - **Idea** · Motion guidelines (goal celebration, "Dead even" delight) with reduced-motion fallbacks.
+- **Idea** · Generate native token files (for the app stack chosen) from the same `tokens.json`.

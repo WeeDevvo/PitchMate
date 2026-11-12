@@ -70,6 +70,42 @@ Personal data held: for a user, display name, email, verified flag, avatar refer
 | AX-09 | Manual checks: screen-reader walkthroughs, keyboard-only passes, zoom and reflow | **Gap** | Nothing recorded in the repo | `apps/web` |
 | AX-10 | An accessibility statement | **Gap** | | `apps/web/src/features/landing/content/landingContent.ts` |
 
+## To be
+
+What is wanted, from [decisions](decisions.md). Nothing in this section is built unless the line says so; the tables above are the as-is truth. A row that reuses an id is the requirement that closes that row. Every row marked **Launch** must be done before the public launch ([Q1](decisions.md#q1)).
+
+### Privacy and UK GDPR
+
+| Id | Requirement | Status | Launch | Decision |
+|---|---|---|---|---|
+| TR-06 | **Account erasure reaches every squad membership** of that user: the existing cascade is called from account erasure | **Gap** | Yes | [Q7](decisions.md#q7) |
+| TR-07 | **A real match-history check** replaces the stub, so a membership with history is anonymised and only one without history is hard-deleted | **Gap** | Yes | [Q7](decisions.md#q7) |
+| TR-08 | **A guest can be erased** by an admin, by the same rule | **Gap** | Yes | [Q7](decisions.md#q7) |
+| TR-09 | **Delete my account** is on the account screen (AC-11) | **Gap** | Yes | [Q17](decisions.md#q17) |
+| TR-10 | **The user's export is everything held about them**, as one JSON file: account, memberships, matches, rating history and stats | **Gap** | Yes | [Q8](decisions.md#q8) |
+| TR-12 | **Deleted squads are purged** when the grace period ends, by the scheduled job (PL-01 in [06](06-platform.md#to-be)) | **Gap** | Yes | [Q7](decisions.md#q7) |
+| TR-13 | **Expired tokens are cleaned up** by the same job. Follows from Q7; not separately decided | **Gap** | | [Q7](decisions.md#q7) |
+| TR-14 | **A privacy policy and terms exist** and are linked: drafted by Claude, reviewed by a solicitor before launch | **Gap** | Yes | [Q8](decisions.md#q8) |
+| TR-15 | **Reset codes and verification links never reach a log**: real email in every cloud environment (NO-03) | **Gap** | Yes | [Q9](decisions.md#q9) |
+| TR-04 | **The guest lawful-basis acknowledgement stays**, asked once per admin (GU-02). It is the UK GDPR cover for storing a profile of someone with no account | **Gap** | | [Q14](decisions.md#q14) |
+| TR-17 | **Report a squad**: someone who can see a squad can report it to PitchMate, and the report reaches a person who can act | **Gap** | Yes | [Q3](decisions.md#q3) |
+
+### Security
+
+| Id | Requirement | Status | Launch | Decision |
+|---|---|---|---|---|
+| SE-13 | **Lockout on: 5 failed attempts, then 15 minutes**, with the count shared between API replicas (AC-13) | **Gap** | Yes | [Q9](decisions.md#q9) |
+| SE-14 | **Rate limits on the API**, at least on the anonymous endpoints (register, sign-in, reset, invite preview and redeem) | **Gap** | Yes | [Q3](decisions.md#q3) |
+| SE-15 | **A verified email is required to sign in** | **Gap** | Yes | [Q9](decisions.md#q9) |
+| SE-18 | **Web session: the refresh token in an httpOnly, Secure, SameSite cookie; the access token in memory only.** Nothing in `localStorage`. This needs the web and API on the same site (PL-09), CORS that allows credentials for the web origin only, and a defence against cross-site requests on the refresh endpoint | **Gap** | Yes | [Q10](decisions.md#q10) |
+| SE-22 | **Native session: tokens in the Keychain (iOS) and the Keystore (Android).** The API keeps accepting the refresh token in the request body for these clients | **Gap** | With apps | [Q10](decisions.md#q10) |
+| SE-23 | **Auth stays in the PitchMate API.** No move to Firebase or another hosted identity provider. Email and password and Google verification are built (`backend/src/PitchMate.Application/Auth/UseCases/SignInWithPasswordHandler.cs`, `backend/src/PitchMate.Infrastructure/Auth/GoogleProviderVerifier.cs`); Sign in with Apple is added for iOS (AC-05) | **Partial** | | [A1](decisions.md#a1) |
+| SE-24 | **Trust is squad-scoped.** Inside a squad members see each other's ratings and admins add anyone; this is already how the code works (`backend/src/PitchMate.Application/Squads/SquadAuthorization.cs`). The controls in SE-14, SE-15 and TR-17 are what is added between squads | **Built** | | [Q3](decisions.md#q3) |
+
+### Accessibility
+
+No decision touched accessibility. AX-08 to AX-10 stay Gap, and the native apps ([Q4](decisions.md#q4)) will need their own accessibility checks, which nothing defines yet.
+
 ## Rules
 
 - **Built** · Every existence-sensitive failure looks the same to the caller. `backend/src/PitchMate.Api/Squads/Endpoints/SquadErrorResults.cs`
@@ -80,15 +116,16 @@ Personal data held: for a user, display name, email, verified flag, avatar refer
 
 ## Open questions
 
-1. **Erasure does not do what `product.md` and `security-and-privacy.md` say it does.** Both describe anonymisation of a user's de-identified rows across squads; today the account is anonymised and the memberships are untouched (TR-06), and the history check that would protect matches is a stub (TR-07). This is the most serious disagreement between the rules and the code. Fix before any real users?
-2. **Deleted squads are never purged** (TR-12). The UI promises a 30-day window. Who runs the purge: a scheduled job in the API, a separate timer, or a manual admin task for now?
-3. **Where does scheduled work run at all?** Purge, σ decay and token clean-up all need a scheduler, and the API scales to zero in QA.
-4. **What should a data export contain** to satisfy a subject access request (TR-10)? Presumably memberships, match history, ratings and notifications.
-5. **Who writes the privacy policy and terms**, and who is the data controller named in them?
-6. **Should sign-in require a verified email and lockout be on in production** (SE-13, SE-15)? Both are one config switch, but lockout needs shared storage once there is more than one replica.
-7. **Is `localStorage` acceptable for tokens at launch**, given the CSP is minimal (SE-16, SE-18)? Tightening the CSP is cheap; moving to cookies is not.
-8. **Reset codes in logs** (TR-15): acceptable in QA, not in production. Is a real email provider (ACS or SendGrid, both implemented) a launch requirement? This also decides whether notification emails exist at all.
-9. **How long is personal data kept** for inactive accounts, inactive memberships and old notifications? Nothing expires today.
+Answered: erasure, purge and where scheduled work runs ([Q7](decisions.md#q7)); the export and who writes the policies ([Q8](decisions.md#q8)); email, verification and lockout ([Q9](decisions.md#q9)); token storage ([Q10](decisions.md#q10)). Still open:
+
+1. **Report a squad (TR-17).** A squad is invisible to non-members, so who can report: members, and people holding an invite or claim link? Where does a report go, who reads it, and what can they do (suspend a squad, remove a member)? There is no operator role or back-office today.
+2. **Who is the data controller** named in the privacy policy, and what contact address does it give? The solicitor review ([Q8](decisions.md#q8)) will need this.
+3. **How long is personal data kept** for inactive accounts, inactive memberships and old notifications? Nothing expires today, and the policy has to state a period.
+4. **Verified email and Google.** Is a Google sign-in treated as already verified? What happens to accounts created on QA before verification became required?
+5. **Lockout and existence concealment.** Locking a known email must not reveal that the account exists; the response for a locked account and an unknown one should stay the same.
+6. **The squad export** (TR-11) was not covered by Q8. Does it gain matches, results and ratings?
+7. **Typed-name confirmation on the API** (SE-20), **API security headers** (SE-17) and **dependency scanning** (SE-21) were not discussed. Launch requirements for a public launch, or later?
+8. **Cookies change the consent picture slightly** (TR-16): the refresh cookie is strictly necessary, so no banner is needed, but the privacy policy must describe it.
 
 ## Ideas
 
@@ -97,3 +134,4 @@ Personal data held: for a user, display name, email, verified flag, avatar refer
 - **Idea** · Passkeys as a sign-in method.
 - **Idea** · Add `eslint-plugin-jsx-a11y` and a keyboard-only end-to-end pass to CI.
 - **Idea** · A per-member privacy choice to hide their rating number from other members.
+- **Idea** · A small operator console for handling squad reports and erasure requests, if reports turn out to need more than an inbox.
