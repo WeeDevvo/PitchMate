@@ -15,7 +15,11 @@ const router = createAppRouter()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RouterProvider router={router} />
-    <CookieBanner />
+    <CookieBanner
+      onNavigate={(path) => {
+        void router.navigate(path);
+      }}
+    />
   </StrictMode>,
 )
 

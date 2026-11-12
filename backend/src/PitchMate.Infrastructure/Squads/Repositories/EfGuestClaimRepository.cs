@@ -42,4 +42,12 @@ internal sealed class EfGuestClaimRepository(PitchMateDbContext db) : IGuestClai
                     membership.Id == claim.MembershipId && membership.SquadId == squadId))
             .OrderBy(claim => claim.Id)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<GuestClaim>> ListForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+        => await db.Set<GuestClaim>()
+            .Where(claim => claim.TargetUserId == userId)
+            .OrderBy(claim => claim.Id)
+            .ToListAsync(cancellationToken);
 }

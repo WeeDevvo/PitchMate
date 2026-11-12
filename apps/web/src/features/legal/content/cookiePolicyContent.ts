@@ -1,9 +1,13 @@
 /**
- * Authorised copy and structure for PitchMate's Cookie Policy.
+ * Legal content data for PitchMate's Cookie Policy (`/cookies`).
  *
- * Compliant with the Privacy and Electronic Communications Regulations (PECR) and UK GDPR.
+ * Discloses the exact first-party browser storage keys imported directly from
+ * their owning modules alongside PECR opt-in controls.
  */
 
+import { SESSION_STORAGE_KEY } from '../../auth';
+import { APPEARANCE_STORAGE_KEY } from '../../../theme';
+import { COOKIE_CONSENT_STORAGE_KEY } from '../lib/cookieConsent';
 import type { LegalSection } from './privacyPolicyContent';
 
 export interface CookieItem {
@@ -25,65 +29,75 @@ export interface CookiePolicyData {
 
 export const cookiePolicyContent: CookiePolicyData = {
   title: 'Cookie Policy',
-  lastUpdated: '19 October 2026',
-  effectiveDate: '19 October 2026',
-  version: '1.0.0',
+  lastUpdated: '12 November 2026',
+  effectiveDate: '12 November 2026',
+  version: '1.1.0',
   sections: [
     {
       id: 'what-are-cookies',
-      title: '1. What Are Cookies and Local Storage?',
+      title: '1. What Are Cookies & Browser Storage?',
       content: [
-        'Cookies and browser storage mechanisms (such as localStorage and sessionStorage) are small data files placed on your computer or mobile device when you visit our website.',
-        'They are widely used to make websites work efficiently, keep you signed in securely, remember your display preferences, and provide anonymous reporting data.',
+        'Cookies and similar browser storage technologies (such as browser localStorage) allow web applications like PitchMate (pitch-mate.co.uk) to keep you signed in and remember your essential interface choices.',
+        'Under the Privacy and Electronic Communications Regulations (PECR) and UK GDPR, strictly necessary storage required to provide the service you requested is enabled by default, whereas any optional analytics or marketing storage requires your explicit prior consent.',
       ],
     },
     {
-      id: 'categories',
-      title: '2. Cookie Categories We Use',
+      id: 'how-we-use',
+      title: '2. How PitchMate Uses Browser Storage',
       content: [
-        'Strictly Necessary Cookies: Essential for the core operation of PitchMate. These enable secure user authentication, prevent session hijacking and cross-site forgery, and preserve your theme preferences. They cannot be turned off in our systems.',
-        'Performance & Analytics Cookies (Opt-In): Help us understand how visitors interact with our application by reporting anonymous telemetry and diagnosing errors. These are only activated if you provide affirmative opt-in consent.',
-        'Marketing & Announcement Cookies (Opt-In): Used to measure the effectiveness of outreach and product update announcements. These are only activated if you provide affirmative opt-in consent.',
+        'Essential Functionality Only by Default: On initial load, PitchMate writes only strictly necessary state in localStorage (when signed in, when choosing an appearance theme, or after recording your cookie decision). Post-authentication redirect paths are held transiently in memory during sign-in.',
+        'No Active Advertising or Third-Party Trackers: PitchMate does not run third-party advertising trackers or non-essential analytics scripts by default. Performance & Analytics and Marketing consent categories remain disabled unless you explicitly opt in, and are reserved only for future first-party improvements covered by your saved consent preferences.',
+        'Optional Google Sign-In: If you actively click "Continue with Google" to authenticate, Google Identity Services may process temporary session tokens solely to issue your sign-in assertion.',
       ],
     },
     {
-      id: 'managing-cookies',
-      title: '3. How to Manage Your Cookie Preferences',
+      id: 'manage-preferences',
+      title: '3. Managing Your Cookie Preferences',
       content: [
-        'Under UK PECR regulations, no non-essential cookie is set on your device without your explicit consent.',
-        'You can change or withdraw your consent at any time by selecting "Cookie Preferences" at the bottom of our pages or in your Account Settings.',
-        'Most web browsers also allow you to control cookies through their browser settings. However, disabling essential cookies will prevent you from signing in to PitchMate.',
+        'You can inspect, update, or withdraw consent for optional categories at any time using the "Change Cookie Preferences" button below or in Account & Privacy Settings.',
+        'You can also clear or block site storage via your browser settings, though blocking strictly necessary storage will prevent persistent sign-in and theme selection.',
+      ],
+    },
+    {
+      id: 'contact',
+      title: '4. Questions',
+      content: [
+        'If you have questions about how PitchMate uses browser storage or cookies, contact our Privacy Team at privacy@pitch-mate.co.uk.',
       ],
     },
   ],
   cookies: [
     {
-      name: 'pitchmate_session',
+      name: SESSION_STORAGE_KEY,
       category: 'Strictly Necessary',
-      purpose: 'Stores authentication tokens to maintain your secure signed-in session.',
-      provider: 'PitchMate',
-      duration: 'Session / 7 days rotating',
+      purpose:
+        'Stores your authenticated PitchMate session tokens in localStorage so you remain signed in across page reloads.',
+      provider: 'PitchMate (First-party)',
+      duration: 'Until sign-out or session expiry',
     },
     {
-      name: 'pitchmate_cookie_consent_v1',
+      name: APPEARANCE_STORAGE_KEY,
       category: 'Strictly Necessary',
-      purpose: 'Remembers your cookie consent choices so you are not prompted on every visit.',
-      provider: 'PitchMate',
-      duration: '12 months',
+      purpose:
+        'Stores your selected dark or light theme preference in localStorage so PitchMate renders in your chosen appearance before paint.',
+      provider: 'PitchMate (First-party)',
+      duration: 'Persistent until changed or cleared',
     },
     {
-      name: 'pitchmate-theme',
+      name: COOKIE_CONSENT_STORAGE_KEY,
       category: 'Strictly Necessary',
-      purpose: 'Preserves your selected light or dark mode theme preference.',
-      provider: 'PitchMate',
-      duration: 'Persistent',
+      purpose:
+        'Records your PECR / UK GDPR cookie consent decision, version, and UTC timestamp in localStorage.',
+      provider: 'PitchMate (First-party)',
+      duration: 'Persistent until reset or cleared',
     },
     {
-      name: '_pk_analytics',
-      category: 'Performance & Analytics',
-      purpose: 'Gathers anonymous usage statistics and page response times to improve performance.',
-      provider: 'PitchMate',
-      duration: '30 days',
+      name: 'Google OAuth (if selected)',
+      category: 'Strictly Necessary',
+      purpose:
+        'Initiated only when you choose "Continue with Google" to verify your identity with Google Identity Services.',
+      provider: 'Google Identity Services',
+      duration: 'Session-scoped to sign-in flow',
     },
   ],
 };

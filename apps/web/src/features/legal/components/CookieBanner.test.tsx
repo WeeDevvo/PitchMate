@@ -1,24 +1,20 @@
-import React from 'react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { CookieBanner } from './CookieBanner';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   COOKIE_CONSENT_STORAGE_KEY,
   getCookieConsent,
   openCookiePreferences,
 } from '../lib/cookieConsent';
+import { CookieBanner } from './CookieBanner';
 
 describe('CookieBanner', () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
 
-  afterEach(() => {
-    window.localStorage.clear();
-  });
-
-  it('renders initial banner when no consent recorded', () => {
+  it('renders initial consent banner when no decision exists in localStorage', () => {
     render(<CookieBanner />);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -28,47 +24,47 @@ describe('CookieBanner', () => {
     expect(screen.getByRole('button', { name: /Customise Choices/i })).toBeInTheDocument();
   });
 
-  it('accepts all cookies and stores preference', async () => {
+  it('saves all consents when Accept All is clicked and hides banner', async () => {
     const user = userEvent.setup();
     render(<CookieBanner />);
 
     const acceptBtn = screen.getByRole('button', { name: /Accept All/i });
     await user.click(acceptBtn);
 
-    const consent = getCookieConsent();
-    expect(consent).not.toBeNull();
-    expect(consent?.necessary).toBe(true);
-    expect(consent?.analytics).toBe(true);
-    expect(consent?.marketing).toBe(true);
+    const saved = getCookieConsent();
+    expect(saved?.necessary).toBe(true);
+    expect(saved?.analytics).toBe(true);
+    expect(saved?.marketing).toBe(true);
 
-    // Floating trigger button should now be visible
+    expect(screen.queryByRole('heading', { name: /We value your privacy/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Manage Cookie Preferences/i })).toBeInTheDocument();
   });
 
-  it('rejects non-essential cookies and stores preference', async () => {
+  it('rejects non-essential cookies when Reject Non-Essential is clicked', async () => {
     const user = userEvent.setup();
     render(<CookieBanner />);
 
     const rejectBtn = screen.getByRole('button', { name: /Reject Non-Essential/i });
     await user.click(rejectBtn);
 
-    const consent = getCookieConsent();
-    expect(consent).not.toBeNull();
-    expect(consent?.necessary).toBe(true);
-    expect(consent?.analytics).toBe(false);
-    expect(consent?.marketing).toBe(false);
+    const saved = getCookieConsent();
+    expect(saved?.necessary).toBe(true);
+    expect(saved?.analytics).toBe(false);
+    expect(saved?.marketing).toBe(false);
 
-    // Floating trigger button should now be visible
+    expect(screen.queryByRole('heading', { name: /We value your privacy/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Manage Cookie Preferences/i })).toBeInTheDocument();
   });
 
-  it('customises categories with strictly necessary locked and optional categories unchecked', async () => {
+  it('allows granular toggle selection with defaults unchecked in preferences modal', async () => {
     const user = userEvent.setup();
     render(<CookieBanner />);
 
     await user.click(screen.getByRole('button', { name: /Customise Choices/i }));
 
-    expect(screen.getByRole('heading', { name: /Cookie & Privacy Preferences/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Cookie & Privacy Preferences/i }),
+    ).toBeInTheDocument();
 
     const necessaryCheckbox = screen.getByRole('checkbox', { name: /Strictly Necessary/i });
     expect(necessaryCheckbox).toBeChecked();
@@ -80,21 +76,31 @@ describe('CookieBanner', () => {
 
     const marketingCheckbox = screen.getByRole('checkbox', { name: /Marketing & Announcements/i });
     expect(marketingCheckbox).not.toBeChecked();
-    expect(marketingCheckbox).toBeEnabled();
 
-    // Check analytics only
     await user.click(analyticsCheckbox);
     expect(analyticsCheckbox).toBeChecked();
 
     await user.click(screen.getByRole('button', { name: /Save Preferences/i }));
 
-    const consent = getCookieConsent();
-    expect(consent?.analytics).toBe(true);
-    expect(consent?.marketing).toBe(false);
+    const saved = getCookieConsent();
+    expect(saved?.analytics).toBe(true);
+    expect(saved?.marketing).toBe(false);
+  });
+
+  it('routes policy links via onNavigate callback without full-document reload', async () => {
+    const user = userEvent.setup();
+    const onNavigate = vi.fn();
+
+    render(<CookieBanner onNavigate={onNavigate} />);
+
+    await user.click(screen.getByRole('link', { name: /Cookie Policy/i }));
+    await user.click(screen.getByRole('link', { name: /Privacy Policy/i }));
+
+    expect(onNavigate).toHaveBeenNthCalledWith(1, '/cookies');
+    expect(onNavigate).toHaveBeenNthCalledWith(2, '/privacy');
   });
 
   it('re-opens preferences when external event is fired', async () => {
-    // Seed consent
     window.localStorage.setItem(
       COOKIE_CONSENT_STORAGE_KEY,
       JSON.stringify({
@@ -108,14 +114,17 @@ describe('CookieBanner', () => {
 
     render(<CookieBanner />);
 
-    // Initially collapsed
-    expect(screen.queryByRole('heading', { name: /Cookie & Privacy Preferences/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /Cookie & Privacy Preferences/i }),
+    ).not.toBeInTheDocument();
 
-    // Trigger open
     await act(async () => {
       openCookiePreferences();
     });
 
-    expect(screen.getByRole('heading', { name: /Cookie & Privacy Preferences/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Cookie & Privacy Preferences/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Performance & Analytics/i })).toBeChecked();
   });
 });

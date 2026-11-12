@@ -1896,6 +1896,16 @@ export interface components {
             emailVerified: boolean;
             providers: components["schemas"]["AuthProvider"][];
         };
+        UserGdprAvailabilityRecord: {
+            /** Format: uuid */
+            matchId: string;
+            /** Format: uuid */
+            squadId: string;
+            squadName: string;
+            markedDays: string[];
+            /** Format: date-time */
+            submittedAt: string;
+        };
         UserGdprDataPackage: {
             profile: components["schemas"]["UserGdprProfile"];
             squads: components["schemas"]["UserGdprSquadMembership"][];
@@ -1904,6 +1914,24 @@ export interface components {
             payments: components["schemas"]["UserGdprPaymentRecord"][];
             /** Format: date-time */
             exportedAt: string;
+            availabilityResponses: components["schemas"]["UserGdprAvailabilityRecord"][];
+            guestClaims: components["schemas"]["UserGdprGuestClaimRecord"][];
+            notifications: components["schemas"]["UserGdprNotificationRecord"][];
+        };
+        UserGdprGuestClaimRecord: {
+            /** Format: uuid */
+            claimId: string;
+            /** Format: uuid */
+            membershipId: string;
+            state: string;
+            /** Format: date-time */
+            consentAt: null | string;
+            /** Format: date-time */
+            completedAt: null | string;
+            /** Format: date-time */
+            reversedAt: null | string;
+            /** Format: date-time */
+            cancelledAt: null | string;
         };
         UserGdprMatchRecord: {
             /** Format: uuid */
@@ -1911,17 +1939,42 @@ export interface components {
             /** Format: uuid */
             squadId: string;
             squadName: string;
-            matchState: string;
+            status: string;
             /** Format: date-time */
-            scheduledDate: string;
-            team: null | string;
+            matchDate: null | string;
+            teamName: null | string;
             outcome: null | string;
+            location?: null | string;
+            /** Format: int32 */
+            goalsScored?: null | number | string;
+            /** Format: int32 */
+            ownGoals?: null | number | string;
+            /** Format: int32 */
+            keeperMinutes?: null | number | string;
+        };
+        UserGdprNotificationRecord: {
+            /** Format: uuid */
+            notificationId: string;
+            /** Format: uuid */
+            squadId: string;
+            /** Format: uuid */
+            recipientMembershipId: string;
+            type: string;
+            title: string;
+            body: string;
+            readState: string;
+            /** Format: date-time */
+            createdAt: string;
         };
         UserGdprPaymentRecord: {
-            status: string;
+            /** Format: uuid */
+            paymentId: string;
             description: string;
+            /** Format: double */
+            amount: number | string;
+            currency: string;
             /** Format: date-time */
-            recordedAt: null | string;
+            date: string;
         };
         UserGdprProfile: {
             /** Format: uuid */
@@ -1932,6 +1985,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             linkedProviders: components["schemas"]["AuthProvider"][];
+            avatarReference?: null | string;
         };
         UserGdprSquadMembership: {
             /** Format: uuid */
@@ -1944,16 +1998,49 @@ export interface components {
             displayName: string;
             /** Format: date-time */
             joinedAt: string;
+            skillTier?: null | string;
+            /** @default false */
+            isGuest: boolean;
+            /** Format: date-time */
+            lawfulBasisAcknowledgedAt?: null | string;
+            /** @default false */
+            claimCompleted: boolean;
+            /** @default false */
+            squadPendingDeletion: boolean;
+            /** Format: double */
+            ratingMu?: null | number | string;
+            /** Format: double */
+            ratingSigma?: null | number | string;
         };
         UserGdprStatsSummary: {
             /** Format: int32 */
             totalMatchesPlayed: number | string;
             /** Format: int32 */
-            totalWins: number | string;
+            wins: number | string;
             /** Format: int32 */
-            totalDraws: number | string;
+            draws: number | string;
             /** Format: int32 */
-            totalLosses: number | string;
+            losses: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            goalsScored: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            ownGoals: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            cleanSheets: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            keeperMinutes: number | string;
         };
         WorkingTeamsView: {
             teams: components["schemas"]["WorkingTeamView"][];

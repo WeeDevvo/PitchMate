@@ -1,8 +1,9 @@
 /**
- * Authorised copy and structure for PitchMate's Privacy Policy.
+ * Legal content data for PitchMate's Privacy Policy (`/privacy`).
  *
- * Compliant with UK General Data Protection Regulation (UK GDPR), the Data Protection Act 2018 (DPA 2018),
- * and the Privacy and Electronic Communications Regulations (PECR).
+ * Drafted in alignment with UK GDPR, the Data Protection Act 2018, and PitchMate's
+ * implemented data flows (accounts, squads, guest claims, matches, live event
+ * tracking, ratings, notifications, and automated retention cleanup).
  */
 
 export interface LegalSection {
@@ -27,93 +28,89 @@ export interface PrivacyPolicyData {
 
 export const privacyPolicyContent: PrivacyPolicyData = {
   title: 'Privacy Policy',
-  lastUpdated: '19 October 2026',
-  effectiveDate: '19 October 2026',
-  version: '1.0.0',
-  contactEmail: 'privacy@pitchmate.app',
+  lastUpdated: '12 November 2026',
+  effectiveDate: '12 November 2026',
+  version: '1.1.0',
+  contactEmail: 'privacy@pitch-mate.co.uk',
   controller: {
-    name: 'PitchMate Ltd',
-    address: 'London, United Kingdom',
-    email: 'privacy@pitchmate.app',
+    name: 'PitchMate',
+    address: 'United Kingdom (contact via email for postal correspondence)',
+    email: 'privacy@pitch-mate.co.uk',
   },
   sections: [
     {
       id: 'introduction',
       title: '1. Introduction and Data Controller',
       content: [
-        'PitchMate Ltd ("PitchMate", "we", "us", or "our") is dedicated to protecting and respecting your personal privacy. We act as the Data Controller under the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018.',
-        'This Privacy Policy describes how we collect, store, process, transfer, and delete your personal data when you use the PitchMate website, applications, and match-coordination services.',
-        'If you have any questions about this policy or our data practices, please contact our Privacy Team at privacy@pitchmate.app.',
+        'PitchMate ("we", "us", "our", available at pitch-mate.co.uk) is committed to protecting and respecting your privacy in compliance with the UK General Data Protection Regulation (UK GDPR), the Data Protection Act 2018, and the Privacy and Electronic Communications Regulations (PECR).',
+        'For the purposes of data protection law, PitchMate is the Data Controller responsible for your personal data processed through the PitchMate web application and APIs.',
+        'If you have any questions about this policy or our data practices, please contact our Privacy Team at privacy@pitch-mate.co.uk.',
       ],
     },
     {
-      id: 'information-we-collect',
-      title: '2. Information We Collect',
+      id: 'data-we-collect',
+      title: '2. Personal Data We Collect',
       content: [
-        'Account & Identity Information: Your display name, email address, password hash (if registering via credentials), external identity subject identifiers (such as Google OAuth profile keys), and profile avatar.',
-        'Squad & Match Information: Squad memberships, roles (Owner, Organiser, Member), match RSVPs, availability selections, and team attendance records.',
-        'Athletic & Match Performance: Historical match appearances, team affiliations, match outcomes (wins, draws, losses), and calculated performance metrics necessary for creating balanced sides.',
-        'Technical & Device Data: Internet Protocol (IP) address, operating system, browser type, device identifiers, session tokens, and access timestamps collected to guarantee service security and prevent fraudulent access.',
+        'Account & Authentication Data: Email address, display name, verification status, cryptographic password hash (never stored in plaintext), optional Google sign-in subject link, optional avatar reference, and short-lived authentication/verification tokens.',
+        'Squad, Membership & Guest Claim Data: Squad memberships, member display names, roles (Owner, Admin, Player), skill tier, OpenSkill team-balancing ratings (mu and sigma), guest player indicators, squad organiser lawful-basis acknowledgements, and single-use guest claim links.',
+        'Match, Availability, Live Event & Statistics Data: Match fixtures (kick-off times, locations, statuses), weekly player availability responses, kickoff lineups, live-tracked match events (goals scored, own goals, goalkeeper stints, clean sheets), derived player leaderboards, and rating progression snapshots.',
+        'Notifications & Preferences: In-app squad notifications (event type, read status, timestamps), transactional account emails, and your cookie and theme preferences.',
+        'Operational Logs: Essential HTTP request metadata (IP address, request timestamps, and diagnostic errors) required for platform security, rate limiting, and reliability. PitchMate does not process payment card details or run commercial ad-tech profiling.',
       ],
     },
     {
-      id: 'lawful-basis',
+      id: 'lawful-bases',
       title: '3. Lawful Bases for Processing',
       content: [
-        'Performance of a Contract (Article 6(1)(b) UK GDPR): We process your account details, squad rosters, and availability to fulfill our core service of organising matches, forming fair teams, and tracking your season records.',
-        'Legitimate Interests (Article 6(1)(f) UK GDPR): We process technical logs and aggregated match metrics to safeguard against abuse, maintain platform stability, ensure referential integrity of squad histories, and enhance team-balancing balance.',
-        'Consent (Article 6(1)(a) UK GDPR): Where required by PECR, we request your explicit, opt-in consent before setting non-essential performance, analytics, or marketing cookies. You may revoke this consent at any time via Cookie Preferences.',
+        'Performance of a Contract (Article 6(1)(b) UK GDPR): Creating and authenticating your account, administering squad memberships, collecting availability, balancing teams, recording match events and statistics, and delivering in-app and account emails.',
+        'Legitimate Interests (Article 6(1)(f) UK GDPR): Platform security, rate-limiting, fraud prevention, maintaining historical match integrity when anonymising departing accounts, and allowing squad organisers to manage named guest placeholders after confirming a lawful basis before issuing a claim link.',
+        'Consent (Article 6(1)(a) UK GDPR & PECR): Optional analytics or announcement preferences configured via our Cookie Preferences controls (unchecked by default).',
       ],
     },
     {
-      id: 'child-privacy',
-      title: '4. Children & Age Assurance (Under 18s)',
+      id: 'data-sharing',
+      title: '4. Data Sharing and Subprocessors',
       content: [
-        'PitchMate is designed for community football participants aged 13 and older. We adhere to the UK Age Appropriate Design Code (Children’s Code).',
-        'High-Privacy Defaults: For users identified as minors (aged 13–17), default profile settings are configured to high privacy, restricting profile visibility to registered squad members only and disabling non-essential marketing processing.',
-        'We do not knowingly collect personal data from children under 13 without verified parental or legal guardian consent. If we become aware that an under-13 user has registered without verified authorization, we will immediately erase the account.',
+        'Squad Visibility: PitchMate squads are private and invite-only. Your display name, squad role, skill ratings, availability, and match participation statistics are visible to fellow members of squads you belong to.',
+        'Core Service Providers: We host application services and encrypted PostgreSQL databases on Microsoft Azure, and send transactional authentication emails (verification and password reset) via Azure Communication Services or SendGrid.',
+        'Optional Identity Provider: If you choose "Continue with Google", Google Identity Services verifies your identity token strictly for authentication.',
+        'No Commercial Sale: We do not sell, rent, or trade your personal data to third-party advertisers or data brokers.',
       ],
     },
     {
-      id: 'retention-and-anonymisation',
-      title: '5. Retention and Permanent Anonymisation',
+      id: 'retention',
+      title: '5. Data Retention and Automated Purges',
       content: [
-        'Data Minimisation: Ephemeral verification tokens, password reset links, and inactive refresh tokens are automatically purged after 48 hours.',
-        'Active Account Data: Retained as long as your account remains active and open.',
-        'Self-Service Account Erasure: When you delete your account, your personal identifying information (name, email address, external sign-in links) is immediately and permanently anonymised.',
-        'Preservation of Squad History: To safeguard the integrity of league standings and squad match histories for your fellow players, your previous match appearances and team rosters are retained under the de-identified pseudonym "Former player".',
-        'Squad Deletion Grace Period: Squads marked for removal enter a 30-day soft-delete grace period before permanent purge, allowing squad owners to reverse accidental deletions.',
+        'Account Data: Retained while your account remains active until you trigger self-service erasure.',
+        'Ephemeral Security Tokens: Expired email verification, password reset, and refresh tokens are automatically purged in background maintenance once 48 hours past expiry.',
+        'Soft-Deleted Squads: When an Owner deletes a squad, it enters a 30-day recovery grace period during which the Owner may restore it or export squad data. Automated background cleanup permanently purges the squad and its records once 30 days have elapsed.',
+        'Post-Erasure Match Integrity: When you delete your account, memberships without match history are deleted cleanly. If your membership is referenced by recorded match participation, ratings, or live match events, your profile reference is unlinked and your membership display name is anonymised rather than fabricating match history; any pending guest claims linked to your account are cancelled and scrubbed, and your in-app notifications are removed.',
       ],
     },
     {
       id: 'your-rights',
       title: '6. Your Rights under UK GDPR',
       content: [
-        'Right of Access (Article 15): You have the right to request a complete copy of the personal data we hold about you.',
-        'Right to Rectification (Article 16): You may update inaccurate personal details at any time in your Account Settings.',
-        'Right to Erasure ("Right to be Forgotten", Article 17): You have the right to delete your account and erase personal data through our self-service deletion feature.',
-        'Right to Data Portability (Article 20): You can download a comprehensive, machine-readable JSON archive of your personal profile, squads, matches, and stats using the "Download My Data" button.',
-        'Right to Restrict or Object (Articles 18 & 21): You can object to processing based on legitimate interests or request temporary restriction of your data.',
-        'Right to Withdraw Consent: Where processing relies on consent (e.g. non-essential cookies), you may withdraw it at any time.',
+        'Right of Access & Data Portability (Articles 15 & 20): You can download a complete machine-readable JSON archive of your account, memberships, availability, match participation, live-tracked statistics, rating history, notifications, and guest claims directly in Account & Privacy Settings.',
+        'Right to Erasure (Article 17): You can permanently delete your account from Account & Privacy Settings. If you are the sole Owner of an active squad, you must first transfer ownership or delete that squad before deleting your account.',
+        'Right to Rectification, Restriction & Objection (Articles 16, 18, 21): You may update profile details in the app or request corrections or processing restrictions by emailing privacy@pitch-mate.co.uk.',
+        'Right to Withdraw Consent (Article 7(3)): You can change or withdraw optional cookie preferences at any time without affecting essential functionality.',
       ],
     },
     {
-      id: 'subprocessors',
-      title: '7. Third-Party Subprocessors and Transfers',
+      id: 'privacy-by-default',
+      title: '7. Minimum Age & Privacy by Default',
       content: [
-        'We use trusted service providers to support our platform operations:',
-        'Cloud Hosting & Database: PostgreSQL database infrastructure hosted in secure UK/EU datacentres with encryption in transit and at rest.',
-        'Authentication Providers: Google OAuth for identity assertion (only when chosen by you).',
-        'Error Monitoring: Application performance and error diagnostics with IP anonymisation enabled.',
-        'All transfers outside the UK are protected by approved International Data Transfer Agreements (IDTA) or UK adequacy regulations.',
+        'PitchMate is intended for individuals aged 13 or older (or the applicable digital age of consent in your jurisdiction). We do not knowingly permit children under 13 to register accounts; if you believe an underage account exists, please contact privacy@pitch-mate.co.uk so we can remove it.',
+        'Rather than profiling age groups, PitchMate enforces universal privacy-by-default safeguards for every account: all squads are private and invite-only with no public directory, and optional analytics and marketing tracking remain disabled by default unless explicitly consented to.',
       ],
     },
     {
       id: 'complaints',
-      title: '8. How to Complain',
+      title: '8. Supervisory Authority and Contact',
       content: [
-        'If you have any concerns regarding how we handle your personal data, we ask that you contact us first at privacy@pitchmate.app so we can resolve the issue.',
-        'You also have the right to lodge a complaint with the UK supervisory authority: Information Commissioner’s Office (ICO), Wycliffe House, Water Lane, Wilmslow, Cheshire, SK9 5AF, Tel: 0303 123 1113, Website: https://ico.org.uk.',
+        'If you have concerns regarding how we handle personal data, please contact us first at privacy@pitch-mate.co.uk so we can address them promptly.',
+        'You also have the right to lodge a complaint with the UK Information Commissioner’s Office (ICO) via https://ico.org.uk or on 0303 123 1113.',
       ],
     },
   ],

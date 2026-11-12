@@ -1,195 +1,235 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
+
+import { Button, Card, Checkbox, Dialog, Icon } from '../../../ui';
 import {
   acceptAllCookies,
   getCookieConsent,
   rejectNonEssentialCookies,
   saveCookieConsent,
   subscribeToOpenPreferences,
+  type CookieConsentPreferences,
 } from '../lib/cookieConsent';
 import './CookieBanner.css';
 
-export function CookieBanner() {
-  const [isOpen, setIsOpen] = useState(() => !getCookieConsent());
-  const [isCustomising, setIsCustomising] = useState(false);
-  const [analytics, setAnalytics] = useState(() => getCookieConsent()?.analytics ?? false);
-  const [marketing, setMarketing] = useState(() => getCookieConsent()?.marketing ?? false);
-  const [hasConsented, setHasConsented] = useState(() => Boolean(getCookieConsent()));
+export interface CookieBannerProps {
+  /**
+   * Optional client-side router navigation callback (used when mounted outside
+   * `<RouterProvider>` so legal links navigate without full-document reloads).
+   */
+  readonly onNavigate?: (path: string) => void;
+}
+
+export function CookieBanner({ onNavigate }: CookieBannerProps = {}) {
+  const [consent, setConsent] = useState<CookieConsentPreferences | null>(() =>
+    getCookieConsent(),
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [analyticsConsent, setAnalyticsConsent] = useState<boolean>(
+    () => consent?.analytics ?? false,
+  );
+  const [marketingConsent, setMarketingConsent] = useState<boolean>(
+    () => consent?.marketing ?? false,
+  );
 
   useEffect(() => {
-    const unsubscribe = subscribeToOpenPreferences(() => {
+    return subscribeToOpenPreferences(() => {
       const current = getCookieConsent();
-      if (current) {
-        setAnalytics(current.analytics);
-        setMarketing(current.marketing);
-      }
-      setIsCustomising(true);
-      setIsOpen(true);
+      setAnalyticsConsent(current?.analytics ?? false);
+      setMarketingConsent(current?.marketing ?? false);
+      setIsModalOpen(true);
     });
-
-    return unsubscribe;
   }, []);
 
+  const handlePolicyClick = (event: MouseEvent<HTMLAnchorElement>, path: string) => {
+    if (onNavigate) {
+      event.preventDefault();
+      onNavigate(path);
+    }
+  };
+
+  const openModal = () => {
+    const current = getCookieConsent();
+    setAnalyticsConsent(current?.analytics ?? false);
+    setMarketingConsent(current?.marketing ?? false);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
   const handleAcceptAll = () => {
-    acceptAllCookies();
-    setHasConsented(true);
-    setIsOpen(false);
-    setIsCustomising(false);
+    const saved = acceptAllCookies();
+    setConsent(saved);
+    setAnalyticsConsent(true);
+    setMarketingConsent(true);
+    setIsModalOpen(false);
   };
 
   const handleRejectNonEssential = () => {
-    rejectNonEssentialCookies();
-    setHasConsented(true);
-    setIsOpen(false);
-    setIsCustomising(false);
+    const saved = rejectNonEssentialCookies();
+    setConsent(saved);
+    setAnalyticsConsent(false);
+    setMarketingConsent(false);
+    setIsModalOpen(false);
   };
 
-  const handleSaveCustom = (e: FormEvent) => {
-    e.preventDefault();
-    saveCookieConsent({ analytics, marketing });
-    setHasConsented(true);
-    setIsOpen(false);
-    setIsCustomising(false);
+  const handleSavePreferences = () => {
+    const saved = saveCookieConsent({
+      analytics: analyticsConsent,
+      marketing: marketingConsent,
+    });
+    setConsent(saved);
+    setIsModalOpen(false);
   };
-
-  if (!isOpen) {
-    if (!hasConsented) return null;
-    return (
-      <button
-        type="button"
-        className="cookie-retrigger-btn"
-        onClick={() => {
-          setIsCustomising(true);
-          setIsOpen(true);
-        }}
-        aria-label="Manage Cookie Preferences"
-      >
-        🍪 Cookies
-      </button>
-    );
-  }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="false"
-      aria-labelledby="cookie-banner-title"
-      aria-describedby="cookie-banner-desc"
-      className="cookie-banner-wrapper"
-    >
-      <h2 id="cookie-banner-title" className="cookie-banner-title">
-        {isCustomising ? 'Cookie & Privacy Preferences' : 'We value your privacy'}
-      </h2>
+    <>
+      {consent === null && !isModalOpen && (
+        <div
+          className="cookie-banner"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="cookie-banner-title"
+        >
+          <Card raised className="cookie-banner__surface">
+            <div className="cookie-banner__inner">
+              <div className="cookie-banner__icon" aria-hidden="true">
+                <Icon name="shield" size={20} />
+              </div>
 
-      <p id="cookie-banner-desc" className="cookie-banner-desc">
-        {isCustomising ? (
-          <>
-            Choose which cookie categories you permit. Essential cookies are required to sign in and
-            use PitchMate securely. See our{' '}
-            <a href="/cookies" onClick={() => setIsOpen(false)}>
-              Cookie Policy
-            </a>{' '}
-            for full details.
-          </>
-        ) : (
-          <>
-            We use strictly necessary cookies to keep you signed in and secure. With your consent, we
-            also use optional performance and marketing cookies to improve PitchMate. Learn more in our{' '}
-            <a href="/cookies" onClick={() => setIsOpen(false)}>
-              Cookie Policy
-            </a>{' '}
-            and{' '}
-            <a href="/privacy" onClick={() => setIsOpen(false)}>
-              Privacy Policy
-            </a>
-            .
-          </>
-        )}
-      </p>
-
-      {isCustomising ? (
-        <form onSubmit={handleSaveCustom}>
-          <div className="cookie-categories">
-            <div className="cookie-category-item">
-              <input
-                type="checkbox"
-                id="cookie-cat-necessary"
-                checked={true}
-                disabled={true}
-                aria-describedby="desc-cat-necessary"
-              />
-              <label htmlFor="cookie-cat-necessary" className="cookie-category-label">
-                <span className="cookie-category-name">
-                  Strictly Necessary <span className="cookie-badge-required">Always Active</span>
-                </span>
-                <span id="desc-cat-necessary" className="cookie-category-desc">
-                  Required for user authentication, security tokens, CSRF protection, and theme preference.
-                </span>
-              </label>
+              <div className="cookie-banner__copy">
+                <h2 id="cookie-banner-title" className="cookie-banner__title">
+                  We value your privacy
+                </h2>
+                <p className="cookie-banner__description">
+                  PitchMate uses strictly necessary browser storage to keep you signed in and
+                  remember your theme preference. Optional analytics and marketing tracking remain
+                  off unless you opt in. Read our{' '}
+                  <a
+                    href="/cookies"
+                    className="cookie-banner__link"
+                    onClick={(event) => handlePolicyClick(event, '/cookies')}
+                  >
+                    Cookie Policy
+                  </a>{' '}
+                  and{' '}
+                  <a
+                    href="/privacy"
+                    className="cookie-banner__link"
+                    onClick={(event) => handlePolicyClick(event, '/privacy')}
+                  >
+                    Privacy Policy
+                  </a>
+                  .
+                </p>
+              </div>
             </div>
 
-            <div className="cookie-category-item">
-              <input
-                type="checkbox"
-                id="cookie-cat-analytics"
-                checked={analytics}
-                onChange={(e) => setAnalytics(e.target.checked)}
-                aria-describedby="desc-cat-analytics"
-              />
-              <label htmlFor="cookie-cat-analytics" className="cookie-category-label">
-                <span className="cookie-category-name">Performance & Analytics</span>
-                <span id="desc-cat-analytics" className="cookie-category-desc">
-                  Anonymous usage stats and error diagnostics to help us improve match organisation performance.
-                </span>
-              </label>
+            <div className="cookie-banner__actions">
+              <Button type="button" variant="accent-ghost" size="sm" onClick={openModal}>
+                Customise Choices
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleRejectNonEssential}
+              >
+                Reject Non-Essential
+              </Button>
+              <Button type="button" variant="primary" size="sm" onClick={handleAcceptAll}>
+                Accept All
+              </Button>
             </div>
-
-            <div className="cookie-category-item">
-              <input
-                type="checkbox"
-                id="cookie-cat-marketing"
-                checked={marketing}
-                onChange={(e) => setMarketing(e.target.checked)}
-                aria-describedby="desc-cat-marketing"
-              />
-              <label htmlFor="cookie-cat-marketing" className="cookie-category-label">
-                <span className="cookie-category-name">Marketing & Announcements</span>
-                <span id="desc-cat-marketing" className="cookie-category-desc">
-                  Measures the reach of new feature updates and referral invites.
-                </span>
-              </label>
-            </div>
-          </div>
-
-          <div className="cookie-banner-actions">
-            <button type="submit" className="cookie-btn-primary">
-              Save Preferences
-            </button>
-            <button type="button" onClick={handleAcceptAll} className="cookie-btn-secondary">
-              Accept All
-            </button>
-            <button type="button" onClick={handleRejectNonEssential} className="cookie-btn-ghost">
-              Reject Non-Essential
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="cookie-banner-actions">
-          <button type="button" onClick={handleAcceptAll} className="cookie-btn-primary">
-            Accept All
-          </button>
-          <button type="button" onClick={handleRejectNonEssential} className="cookie-btn-secondary">
-            Reject Non-Essential
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsCustomising(true)}
-            className="cookie-btn-ghost"
-          >
-            Customise Choices
-          </button>
+          </Card>
         </div>
       )}
-    </div>
+
+      {consent !== null && !isModalOpen && (
+        <div className="cookie-reopen">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            icon="settings"
+            className="cookie-reopen__btn"
+            aria-label="Manage Cookie Preferences"
+            onClick={openModal}
+          >
+            Manage Cookie Preferences
+          </Button>
+        </div>
+      )}
+
+      <Dialog
+        open={isModalOpen}
+        title="Cookie & Privacy Preferences"
+        icon="shield"
+        tone="neutral"
+        onClose={closeModal}
+        actions={
+          <>
+            <Button type="button" variant="ghost" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleRejectNonEssential}>
+              Reject Non-Essential
+            </Button>
+            <Button type="button" variant="primary" onClick={handleSavePreferences}>
+              Save Preferences
+            </Button>
+          </>
+        }
+      >
+        <p className="pm-dialog__body">
+          Manage your PECR &amp; UK GDPR storage choices below. Non-essential categories are off by
+          default. View the{' '}
+          <a
+            href="/cookies"
+            className="cookie-banner__link"
+            onClick={(event) => {
+              closeModal();
+              handlePolicyClick(event, '/cookies');
+            }}
+          >
+            Cookie Policy
+          </a>{' '}
+          for full technical details.
+        </p>
+
+        <div className="cookie-pref-list">
+          <div className="cookie-pref-item">
+            <Checkbox
+              label="Strictly Necessary"
+              checked={true}
+              disabled={true}
+              onChange={() => {}}
+              description="Essential authentication session, theme appearance, and cookie consent storage required for PitchMate to operate."
+            />
+          </div>
+
+          <div className="cookie-pref-item">
+            <Checkbox
+              label="Performance & Analytics"
+              checked={analyticsConsent}
+              onChange={setAnalyticsConsent}
+              description="Optional anonymous usage diagnostics and reliability measurements. Off by default unless enabled."
+            />
+          </div>
+
+          <div className="cookie-pref-item">
+            <Checkbox
+              label="Marketing & Announcements"
+              checked={marketingConsent}
+              onChange={setMarketingConsent}
+              description="Optional announcements about new PitchMate features and updates. Off by default unless enabled."
+            />
+          </div>
+        </div>
+      </Dialog>
+    </>
   );
 }
 

@@ -13,7 +13,7 @@ export * from './content/cookiePolicyContent';
 export { PrivacyPolicyPage } from './components/PrivacyPolicyPage';
 export { TermsOfServicePage } from './components/TermsOfServicePage';
 export { CookiePolicyPage } from './components/CookiePolicyPage';
-export { CookieBanner } from './components/CookieBanner';
+export { CookieBanner, type CookieBannerProps } from './components/CookieBanner';
 export { AccountPrivacyScreen, type AccountPrivacyScreenProps } from './components/AccountPrivacyScreen';
 
 export const PRIVACY_ROUTE = '/privacy';

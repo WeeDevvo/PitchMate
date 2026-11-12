@@ -1,41 +1,43 @@
+import { Button } from '../../../ui';
 import { LegalLayout } from './LegalLayout';
 import { cookiePolicyContent } from '../content/cookiePolicyContent';
 import { openCookiePreferences } from '../lib/cookieConsent';
 
 export function CookiePolicyPage() {
-  const { title, lastUpdated, version, sections, cookies } = cookiePolicyContent;
-
   return (
-    <LegalLayout title={title} lastUpdated={lastUpdated} version={version}>
-      <div className="legal-action-box">
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Manage Your Consent</h2>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Review or update your opt-in choices for analytics and marketing cookies at any time.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={openCookiePreferences}
-          className="legal-btn-primary"
-        >
-          Change Cookie Preferences
-        </button>
-      </div>
-
-      {sections.map((section) => (
-        <section key={section.id} id={section.id} className="legal-section">
-          <h2>{section.title}</h2>
-          {section.content.map((paragraph, index) => (
-            <p key={index}>{paragraph}</p>
+    <LegalLayout
+      title={cookiePolicyContent.title}
+      lastUpdated={cookiePolicyContent.lastUpdated}
+      version={cookiePolicyContent.version}
+    >
+      {cookiePolicyContent.sections.map((section) => (
+        <section key={section.id} id={section.id} className="legal-section" aria-labelledby={`${section.id}-title`}>
+          <h2 id={`${section.id}-title`} className="legal-section__heading">
+            {section.title}
+          </h2>
+          {section.content.map((paragraph, idx) => (
+            <p key={idx} className="legal-section__paragraph">
+              {paragraph}
+            </p>
           ))}
         </section>
       ))}
 
-      <section className="legal-section">
-        <h2>Cookies and Storage Inventory</h2>
-        <div className="legal-table-wrapper">
+      <section className="legal-section" aria-labelledby="cookie-inventory-heading">
+        <h2 id="cookie-inventory-heading" className="legal-section__heading">
+          Browser Storage &amp; Authentication Flows
+        </h2>
+
+        <div
+          className="legal-table-wrapper"
+          role="region"
+          aria-labelledby="cookie-inventory-caption"
+          tabIndex={0}
+        >
           <table className="legal-table">
+            <caption id="cookie-inventory-caption" className="legal-table__caption">
+              Cookies, localStorage keys, and sign-in technologies used by PitchMate
+            </caption>
             <thead>
               <tr>
                 <th scope="col">Name / Key</th>
@@ -46,17 +48,32 @@ export function CookiePolicyPage() {
               </tr>
             </thead>
             <tbody>
-              {cookies.map((c) => (
-                <tr key={c.name}>
-                  <td><code>{c.name}</code></td>
-                  <td>{c.category}</td>
-                  <td>{c.purpose}</td>
-                  <td>{c.provider}</td>
-                  <td>{c.duration}</td>
+              {cookiePolicyContent.cookies.map((cookie) => (
+                <tr key={cookie.name}>
+                  <th scope="row" data-label="Name / Key">
+                    <code className="legal-code">{cookie.name}</code>
+                  </th>
+                  <td data-label="Category">
+                    <span className="legal-badge">{cookie.category}</span>
+                  </td>
+                  <td data-label="Purpose">{cookie.purpose}</td>
+                  <td data-label="Provider">{cookie.provider}</td>
+                  <td data-label="Duration">{cookie.duration}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="legal-action-bar">
+          <Button
+            type="button"
+            variant="primary"
+            icon="settings"
+            onClick={() => openCookiePreferences()}
+          >
+            Change Cookie Preferences
+          </Button>
         </div>
       </section>
     </LegalLayout>

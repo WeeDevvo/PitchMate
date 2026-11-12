@@ -1,190 +1,129 @@
-.cookie-banner-wrapper {
+/*
+ * Cookie consent banner and preferences trigger built on PitchMate `--pm-*` design tokens.
+ */
+
+.cookie-banner {
   position: fixed;
-  bottom: 1.5rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  max-width: 680px;
-  margin: 0 auto;
-  z-index: 9999;
-  background: var(--bg);
-  border: 1px solid var(--accent-border);
-  box-shadow: var(--shadow);
-  border-radius: 12px;
-  padding: 1.5rem;
+  inset-block-end: var(--pm-space-4);
+  inset-inline: var(--pm-space-4);
+  z-index: var(--pm-z-toast);
+  max-inline-size: 60rem;
+  margin-inline: auto;
+  font-family: var(--pm-font-sans);
+}
+
+.cookie-banner,
+.cookie-banner *,
+.cookie-banner *::before,
+.cookie-banner *::after {
   box-sizing: border-box;
-  color: var(--text);
-  text-align: left;
-  animation: cookieBannerSlideUp 0.3s ease-out;
 }
 
-@keyframes cookieBannerSlideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.cookie-banner-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-h);
-  margin-bottom: 0.5rem;
-}
-
-.cookie-banner-desc {
-  font-size: 0.95rem;
-  line-height: 1.5;
-  margin-bottom: 1.25rem;
-}
-
-.cookie-banner-desc a {
-  color: var(--accent);
-  text-decoration: underline;
-}
-
-.cookie-banner-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.cookie-btn-primary {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  padding: 0.6rem 1.25rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.cookie-btn-primary:hover,
-.cookie-btn-primary:focus-visible {
-  opacity: 0.9;
-}
-
-.cookie-btn-secondary {
-  background: var(--code-bg);
-  color: var(--text-h);
-  border: 1px solid var(--border);
-  padding: 0.6rem 1.25rem;
-  border-radius: 6px;
-  font-weight: 500;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.cookie-btn-secondary:hover,
-.cookie-btn-secondary:focus-visible {
-  border-color: var(--text);
-}
-
-.cookie-btn-ghost {
-  background: transparent;
-  color: var(--text);
-  border: none;
-  padding: 0.6rem 0.75rem;
-  font-size: 0.95rem;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.cookie-btn-ghost:hover,
-.cookie-btn-ghost:focus-visible {
-  color: var(--accent);
-}
-
-.cookie-categories {
+.cookie-banner__surface {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin: 1.25rem 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 1.25rem 0;
+  gap: var(--pm-space-4);
+  background: var(--pm-surface-overlay);
+  border: 1px solid var(--pm-border-control);
+  box-shadow: var(--pm-shadow-3);
 }
 
-.cookie-category-item {
+.cookie-banner__inner {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: var(--pm-space-3);
 }
 
-.cookie-category-item input[type='checkbox'] {
-  width: 1.25rem;
-  height: 1.25rem;
-  margin-top: 0.2rem;
-  accent-color: var(--accent);
-  cursor: pointer;
+.cookie-banner__icon {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--pm-accent-subtle);
+  color: var(--pm-accent-on-subtle);
 }
 
-.cookie-category-item input[type='checkbox']:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
+.cookie-banner__copy {
+  min-inline-size: 0;
+  flex: 1;
 }
 
-.cookie-category-label {
+.cookie-banner__title {
+  margin: 0 0 var(--pm-space-1);
+  font: var(--pm-type-headline);
+  color: var(--pm-text-primary);
+}
+
+.cookie-banner__description {
+  margin: 0;
+  color: var(--pm-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.cookie-banner__link {
+  color: var(--pm-accent-text);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.cookie-banner__link:focus-visible {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.cookie-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--pm-space-2);
+}
+
+.cookie-reopen {
+  position: fixed;
+  inset-block-end: var(--pm-space-4);
+  inset-inline-start: var(--pm-space-4);
+  z-index: var(--pm-z-sticky);
+}
+
+.cookie-reopen__btn {
+  min-block-size: var(--pm-target-touch);
+  box-shadow: var(--pm-shadow-2);
+}
+
+.cookie-pref-list {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.95rem;
-  cursor: pointer;
+  gap: var(--pm-space-3);
 }
 
-.cookie-category-name {
-  font-weight: 600;
-  color: var(--text-h);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.cookie-pref-item {
+  padding: var(--pm-space-3);
+  border-radius: var(--pm-radius-md);
+  border: 1px solid var(--pm-border-subtle);
+  background: var(--pm-surface-sunken);
 }
 
-.cookie-badge-required {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  background: var(--code-bg);
-  color: var(--text);
+@media (max-width: 640px) {
+  .cookie-banner__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cookie-banner__actions > button {
+    inline-size: 100%;
+    min-block-size: var(--pm-target-touch);
+  }
 }
 
-.cookie-category-desc {
-  font-size: 0.85rem;
-  color: var(--text);
-  line-height: 1.4;
-}
-
-/* Floating re-trigger button */
-.cookie-retrigger-btn {
-  position: fixed;
-  bottom: 1rem;
-  left: 1rem;
-  z-index: 9000;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  color: var(--text);
-  border-radius: 20px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.cookie-retrigger-btn:hover,
-.cookie-retrigger-btn:focus-visible {
-  border-color: var(--accent);
-  color: var(--accent);
+@media (forced-colors: active) {
+  .cookie-banner__surface,
+  .cookie-pref-item,
+  .cookie-reopen__btn {
+    border: 1px solid CanvasText;
+  }
 }

@@ -10808,6 +10808,40 @@
           }
         }
       },
+      "UserGdprAvailabilityRecord": {
+        "required": [
+          "matchId",
+          "squadId",
+          "squadName",
+          "markedDays",
+          "submittedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "squadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "squadName": {
+            "type": "string"
+          },
+          "markedDays": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "UserGdprDataPackage": {
         "required": [
           "profile",
@@ -10815,7 +10849,10 @@
           "matches",
           "stats",
           "payments",
-          "exportedAt"
+          "exportedAt",
+          "availabilityResponses",
+          "guestClaims",
+          "notifications"
         ],
         "type": "object",
         "properties": {
@@ -10846,6 +10883,77 @@
           "exportedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "availabilityResponses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserGdprAvailabilityRecord"
+            }
+          },
+          "guestClaims": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserGdprGuestClaimRecord"
+            }
+          },
+          "notifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserGdprNotificationRecord"
+            }
+          }
+        }
+      },
+      "UserGdprGuestClaimRecord": {
+        "required": [
+          "claimId",
+          "membershipId",
+          "state",
+          "consentAt",
+          "completedAt",
+          "reversedAt",
+          "cancelledAt"
+        ],
+        "type": "object",
+        "properties": {
+          "claimId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          },
+          "consentAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "reversedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -10854,9 +10962,9 @@
           "matchId",
           "squadId",
           "squadName",
-          "matchState",
-          "scheduledDate",
-          "team",
+          "status",
+          "matchDate",
+          "teamName",
           "outcome"
         ],
         "type": "object",
@@ -10872,14 +10980,17 @@
           "squadName": {
             "type": "string"
           },
-          "matchState": {
+          "status": {
             "type": "string"
           },
-          "scheduledDate": {
-            "type": "string",
+          "matchDate": {
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "date-time"
           },
-          "team": {
+          "teamName": {
             "type": [
               "null",
               "string"
@@ -10890,28 +11001,115 @@
               "null",
               "string"
             ]
+          },
+          "location": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "goalsScored": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ownGoals": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "keeperMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "UserGdprNotificationRecord": {
+        "required": [
+          "notificationId",
+          "squadId",
+          "recipientMembershipId",
+          "type",
+          "title",
+          "body",
+          "readState",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "notificationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "squadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientMembershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "readState": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
       "UserGdprPaymentRecord": {
         "required": [
-          "status",
+          "paymentId",
           "description",
-          "recordedAt"
+          "amount",
+          "currency",
+          "date"
         ],
         "type": "object",
         "properties": {
-          "status": {
-            "type": "string"
+          "paymentId": {
+            "type": "string",
+            "format": "uuid"
           },
           "description": {
             "type": "string"
           },
-          "recordedAt": {
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
             "type": [
-              "null",
+              "number",
               "string"
             ],
+            "format": "double"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
             "format": "date-time"
           }
         }
@@ -10949,6 +11147,12 @@
             "items": {
               "$ref": "#/components/schemas/AuthProvider"
             }
+          },
+          "avatarReference": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -10987,15 +11191,58 @@
           "joinedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "skillTier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isGuest": {
+            "type": "boolean",
+            "default": false
+          },
+          "lawfulBasisAcknowledgedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "claimCompleted": {
+            "type": "boolean",
+            "default": false
+          },
+          "squadPendingDeletion": {
+            "type": "boolean",
+            "default": false
+          },
+          "ratingMu": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "ratingSigma": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
       "UserGdprStatsSummary": {
         "required": [
           "totalMatchesPlayed",
-          "totalWins",
-          "totalDraws",
-          "totalLosses"
+          "wins",
+          "draws",
+          "losses"
         ],
         "type": "object",
         "properties": {
@@ -11007,7 +11254,7 @@
             ],
             "format": "int32"
           },
-          "totalWins": {
+          "wins": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -11015,7 +11262,7 @@
             ],
             "format": "int32"
           },
-          "totalDraws": {
+          "draws": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -11023,13 +11270,49 @@
             ],
             "format": "int32"
           },
-          "totalLosses": {
+          "losses": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
               "string"
             ],
             "format": "int32"
+          },
+          "goalsScored": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "ownGoals": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "cleanSheets": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "keeperMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
