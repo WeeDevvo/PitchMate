@@ -91,7 +91,7 @@
 
 .pm-select {
   appearance: none;
-  padding-right: 40px;
+  padding-right: var(--pm-space-10);
   cursor: pointer;
 }
 

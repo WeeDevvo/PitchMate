@@ -1,7 +1,7 @@
 /**
  * The shared component library, built from the PitchMate design system. Features
  * import it through this barrel only. Components read the `--pm-*` tokens from
- * `src/design`, know nothing of any feature or the API, and hold no domain logic:
+ * `packages/design-tokens`, know nothing of any feature or the API, and hold no domain logic:
  * a feature maps its data (wire enums, ratings) onto their props.
  */
 export { ActionsMenu, type ActionsMenuProps } from './ActionsMenu';
@@ -16,7 +16,18 @@ export {
   type AvailabilityGridTotal,
 } from './AvailabilityGrid';
 export { Avatar, AvatarStack, type AvatarProps } from './Avatar';
-export { Badge, FormerBadge, GuestBadge, ProvisionalBadge, RoleBadge, type BadgeProps, type BadgeTone } from './Badge';
+export {
+  Badge,
+  FormerBadge,
+  GuestBadge,
+  ProBadge,
+  ProvisionalBadge,
+  RoleBadge,
+  SettlingMark,
+  type BadgeProps,
+  type BadgeTone,
+  type SettlingMarkProps,
+} from './Badge';
 export { BibFlag, BibToggle, type BibToggleProps } from './BibFlag';
 export { Button, IconButton, type ButtonProps, type IconButtonProps } from './Button';
 export { buttonClasses, type ButtonClassOptions } from './buttonClasses';
@@ -48,6 +59,12 @@ export {
 } from './EventTimeline';
 export { GoogleMark, type GoogleMarkProps } from './GoogleMark';
 export { Icon, type IconName, type IconProps } from './Icon';
+export {
+  LockedFeature,
+  LockedFeatureList,
+  type LockedFeatureListProps,
+  type LockedFeatureProps,
+} from './LockedFeature';
 export { Logo, type LogoProps } from './Logo';
 export {
   DayPicker,

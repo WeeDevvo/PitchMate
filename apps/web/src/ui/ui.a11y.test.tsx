@@ -32,6 +32,8 @@ import {
   GuestBadge,
   Icon,
   IconButton,
+  LockedFeature,
+  LockedFeatureList,
   Logo,
   DayPicker,
   FairnessMeter,
@@ -52,12 +54,14 @@ import {
   Sidebar,
   SidebarLabel,
   TopBar,
+  ProBadge,
   ProvisionalBadge,
   Rating,
   ResultBadge,
   RoleBadge,
   SegmentedControl,
   Select,
+  SettlingMark,
   Skeleton,
   Tabs,
   TextField,
@@ -113,6 +117,12 @@ function Gallery() {
       <RoleBadge role="admin" />
       <GuestBadge />
       <ProvisionalBadge />
+      <SettlingMark detail="3 of 5 matches" />
+      <ProBadge />
+      <LockedFeatureList aria-label="Match-day options">
+        <LockedFeature icon="shuffle" title="Balanced teams every match" description="Free squads get one balanced roll a month" />
+        <LockedFeature icon="calendar" title="Skip availability" />
+      </LockedFeatureList>
       <FormerBadge />
       <Badge tone="live">Live</Badge>
       <MatchStateChip state="gathering" />

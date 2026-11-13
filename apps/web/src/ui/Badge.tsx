@@ -57,3 +57,32 @@ export function ProvisionalBadge({ short = false }: { short?: boolean }) {
 export function FormerBadge() {
   return <Badge tone="former">Former</Badge>;
 }
+
+export interface SettlingMarkProps {
+  /** How far along the rating is, such as "3 of 5 matches". */
+  detail?: string;
+}
+
+/**
+ * The note beside a player whose rating has not settled yet: the wave and the
+ * word. It goes with the name, never in place of the rating, and the rating
+ * number itself looks like every other rating.
+ */
+export function SettlingMark({ detail }: SettlingMarkProps) {
+  return (
+    <span className="pm-settling" title="Rating still settling">
+      <Icon name="wave" size={14} />
+      {detail === undefined ? 'Settling' : `Settling · ${detail}`}
+    </span>
+  );
+}
+
+/** Marks a Pro feature or a Pro squad: an inverse chip with a star, so it never reads as a state. */
+export function ProBadge({ children = 'Pro' }: { children?: ReactNode }) {
+  return (
+    <span className="pm-pro">
+      <Icon name="star" size={11} className="pm-pro__star" />
+      {children}
+    </span>
+  );
+}

@@ -2,8 +2,8 @@
  * The squads screens' layout scale.
  *
  * Colour is not declared here any more: every stylesheet of `features/squads/`
- * reads its colours from the design-system `--pm-*` tokens (`src/design/
- * tokens.css`), which carry both Themes and are contrast-tested in
+ * reads its colours from the design-system `--pm-*` tokens
+ * (`packages/design-tokens`), which carry both Themes and are contrast-tested in
  * `src/design/tokens.contrast.test.ts`. Those tokens are global, so the
  * Invite_Landing_Route, which renders outside the App_Shell frame, gets the
  * same colours as the screens inside it.

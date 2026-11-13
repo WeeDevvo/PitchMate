@@ -60,6 +60,7 @@ export const ICONS = {
   star: <path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z" />,
   crown: <path d="M3.5 18h17M4 16L3 7l5 4 4-6 4 6 5-4-1 9z" />,
   sparkle: <path d="M12 3c.6 4.5 2.5 6.4 7 7-4.5.6-6.4 2.5-7 7-.6-4.5-2.5-6.4-7-7 4.5-.6 6.4-2.5 7-7z" />,
+  wave: <path d="M3 12c3-4 6 4 9 0s6 4 9 0" />,
   dice: <><rect x="4" y="4" width="16" height="16" rx="4" /><circle cx="9" cy="9" r="1.3" fill="currentColor" /><circle cx="15" cy="15" r="1.3" fill="currentColor" /><circle cx="15" cy="9" r="1.3" fill="currentColor" /><circle cx="9" cy="15" r="1.3" fill="currentColor" /></>,
   play: <path d="M7 4.5v15l12-7.5z" />,
   stop: <rect x="6" y="6" width="12" height="12" rx="2" />,

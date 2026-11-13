@@ -3,7 +3,7 @@
  *
  * Colour is not declared here any more: every stylesheet of
  * `features/player-stats/` reads its colours from the design-system `--pm-*`
- * tokens (`src/design/tokens.css`), which carry both Themes and are
+ * tokens (`packages/design-tokens`), which carry both Themes and are
  * contrast-tested in `src/design/tokens.contrast.test.ts`; the pairings this
  * feature paints are measured again in `screens/declaredStyles.property.test.ts`.
  *

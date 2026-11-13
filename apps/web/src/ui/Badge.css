@@ -1,9 +1,9 @@
 .pm-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--pm-space-1);
   height: 22px;
-  padding: 0 8px;
+  padding: 0 var(--pm-space-2);
   border-radius: var(--pm-radius-pill);
   font-size: 12px;
   line-height: 1;
@@ -74,5 +74,44 @@
   height: 8px;
   border-radius: 50%;
   background: var(--pm-live);
-  animation: pm-pulse 1.4s ease-in-out infinite;
+}
+
+/* The dot pulses only for someone who has not asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .pm-badge--live::before {
+    animation: pm-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+/* The settling note: a wave and the word beside a name. No colour of its own. */
+.pm-settling {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pm-space-1);
+  font-weight: 600;
+  color: var(--pm-settling-text);
+  white-space: nowrap;
+}
+
+.pm-pro {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pm-space-1);
+  height: 22px;
+  padding: 0 var(--pm-space-2);
+  border-radius: var(--pm-radius-xs);
+  background: var(--pm-pro-fill);
+  color: var(--pm-on-pro);
+  font-family: var(--pm-font-display);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.pm-pro__star {
+  fill: currentColor;
 }

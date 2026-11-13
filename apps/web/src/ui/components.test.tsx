@@ -29,13 +29,17 @@ import {
   NotFoundState,
   NotificationItem,
   NotificationList,
+  LockedFeature,
+  LockedFeatureList,
   PlayerRow,
+  ProBadge,
   ProvisionalBadge,
   Rating,
   ResultBadge,
   RoleBadge,
   SegmentedControl,
   Select,
+  SettlingMark,
   Sidebar,
   SidebarLabel,
   SquadCard,
@@ -238,6 +242,40 @@ describe('badges', () => {
     expect(screen.getByText('~ Prov')).toBeInTheDocument();
     expect(screen.getByText('Guest')).toBeInTheDocument();
   });
+
+  it('says a rating is settling in words, with how far along it is', () => {
+    const { container, rerender } = render(<SettlingMark />);
+    expect(container.querySelector('.pm-settling')).toHaveTextContent(/^Settling$/);
+    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    rerender(<SettlingMark detail="3 of 5 matches" />);
+    expect(container.querySelector('.pm-settling')).toHaveTextContent('Settling · 3 of 5 matches');
+  });
+
+  it('spells out Pro beside its star, or the words it is given', () => {
+    const { container, rerender } = render(<ProBadge />);
+    expect(container.querySelector('.pm-pro')).toHaveTextContent(/^Pro$/);
+    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    rerender(<ProBadge>Squad Pro</ProBadge>);
+    expect(container.querySelector('.pm-pro')).toHaveTextContent('Squad Pro');
+  });
+});
+
+describe('LockedFeature', () => {
+  it('lists each locked feature with its description and a lock named in words', () => {
+    render(
+      <LockedFeatureList aria-label="Match-day options">
+        <LockedFeature icon="shuffle" title="Balanced teams every match" description="Free squads get one balanced roll a month" />
+        <LockedFeature title="Payment tracking" lockedLabel="Needs Squad Pro" />
+      </LockedFeatureList>,
+    );
+    const list = screen.getByRole('list', { name: 'Match-day options' });
+    const rows = screen.getAllByRole('listitem');
+    expect(list).toHaveClass('pm-locked');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('Balanced teams every matchFree squads get one balanced roll a month');
+    expect(screen.getByRole('img', { name: 'Locked' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Needs Squad Pro' })).toBeInTheDocument();
+  });
 });
 
 describe('Rating', () => {
@@ -250,6 +288,17 @@ describe('Rating', () => {
     );
     expect(screen.getByText('▲ +12')).toBeInTheDocument();
     expect(screen.getByText('▼ -8')).toBeInTheDocument();
+  });
+
+  it('shows a settling player the same number as anyone else, with the note beside the name', () => {
+    render(
+      <PlayerRow name="Priya Shah" meta={<SettlingMark detail="3 of 5 matches" />} end={<Rating value="1,118" />} />,
+    );
+    const rating = screen.getByText('1,118');
+    expect(rating).toHaveClass('pm-rating');
+    expect(rating).not.toHaveClass('pm-rating--prov');
+    expect(rating).toHaveTextContent(/^1,118$/);
+    expect(screen.getByText('Settling · 3 of 5 matches')).toBeInTheDocument();
   });
 
   it('shows only the band for a provisional player', () => {
