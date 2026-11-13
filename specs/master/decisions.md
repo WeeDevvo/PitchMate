@@ -7,7 +7,7 @@ The answers to the 22 questions the as-is spec ended with (Q1–Q22, round one) 
 - **User**: the user's own answer.
 - **Suggested**: a default the user asked for and has not overridden. It stands until they change it.
 
-A decision is not a built feature. Nothing on this page is in the code unless a chapter's **Today (as-is)** section says so. `.claude/rules/product.md` has not been edited; the changes these decisions imply are listed under [Proposed product.md changes](#proposed-productmd-changes) at the end.
+A decision is not a built feature. Nothing on this page is in the code unless a chapter's **Today (as-is)** section says so. The changes these decisions imply for `.claude/rules/product.md` were approved by the user and applied on 2026-11-13; they are listed under [Proposed product.md changes](#proposed-productmd-changes) at the end, now marked Applied.
 
 ## Summary
 
@@ -531,7 +531,7 @@ The user asked for a proposal on the number itself, because the conservative fig
 
 Why not keep μ − 3σ once a player has settled: the two formulas differ by 3σ × 40, about 980 points at the threshold, so the number would fall off a cliff on the day the note disappears. And under μ − 3σ a rating climbs simply by turning up, because σ falls with every match; the same Average player shows 1000 on day one and about 1400 once σ reaches 5, without getting any better. A μ-based number says how good the ratings think a player is; the settling mark says how sure they are.
 
-**What follows:** RA-13, which replaces the display half of RA-03 and RA-08, and ST-12. The cost is honest volatility: μ moves fastest in a player's first matches, so a settling number swings more than a settled one. The formula is decided; `product.md` itself is still unedited, so the change stays a row under [Proposed product.md changes](#proposed-productmd-changes).
+**What follows:** RA-13, which replaces the display half of RA-03 and RA-08, and ST-12. The cost is honest volatility: μ moves fastest in a player's first matches, so a settling number swings more than a settled one. The formula is decided and is in `product.md` (row 26 under [Proposed product.md changes](#proposed-productmd-changes)).
 
 <a id="t9"></a>
 ### T9 · Keeper tracking: hide or remove?
@@ -712,7 +712,7 @@ Raised in round one. Two have since been decided.
 
 ## Proposed product.md changes
 
-`product.md` is unchanged. These are the edits it would need for the decisions above to become the product rules. Each one needs the user's go-ahead.
+**Applied on 2026-11-13.** The user approved all 30 rows, plus the two decisions recorded in rows 10 and 31, and `.claude/rules/product.md` was edited to match. The heading keeps its name so that links to it still work. Every rule that is not built yet carries a **Today** note in `product.md`, so applying a row did not make anything Built.
 
 ### From decisions
 
@@ -727,7 +727,7 @@ Raised in round one. Two have since been decided.
 | 7 | Match lifecycle, steps 4 and 5 | An admin starts the match, undoes kickoff and records the result | The admin or the match's tracker does; there is one tracker at a time | R1, T6 |
 | 8 | Team balancing, Today | "proposals need 10–16 participants in 2 teams and brute-force every split. Keep-together/keep-apart constraints and the >16 heuristic … are not built" | Both become intended behaviour, with the constraints described as standing per-squad rules that are always obeyed and seen by admins only; the Today note stays until they are built | Q12, Q13, R8 |
 | 9 | Match lifecycle, step 5 | "Play, then record the result (basic or rich), then complete" | Add the optional step: in a squad with score confirmation on, any player in the match or an admin enters a basic score and a user on the other team confirms it (anyone in the match, if the person entering it played on neither side); unconfirmed after 48 hours it confirms itself; a dispute goes to an admin; the admin's confirmation stands where nobody on the other side can confirm. A live-tracked result needs no confirmation. Ratings update on confirmation. State that a completed result is never corrected | Q11, R6, T5 |
-| 10 | Match lifecycle, States | Five states plus Cancelled | Possibly a state for "awaiting confirmation"; depends on the design of RE-08 | Q11 |
+| 10 | Match lifecycle, States | Five states plus Cancelled | Add `AwaitingConfirmation`, between InProgress and Completed, for a basic result that has been entered and not yet confirmed. It applies only when score confirmation is on and the result was not live-tracked. A dispute is decided by an admin from this state; there is no separate disputed state | Q11, user 2026-11-13 |
 | 11 | Ratings | "σ decays back up after about 4–6 weeks inactive" | After 8 weeks without a match; decay raises σ only | R15 |
 | 12 | Ratings | "(today the engine supports decay but no scheduled job runs it)" | Keep until the nightly job exists | R15 |
 | 13 | Results | Rich results are goal events (scorer, conceding keeper, minute) and goalkeeper stints | Rich results are goal events (scorer, minute). Keeper stints and the conceding keeper are removed, with their stored data | R13, T9 |
@@ -747,6 +747,7 @@ Raised in round one. Two have since been decided.
 | 28 | Match lifecycle, step 4 | "roll teams (needs 10–16 players): the balancer proposes" | Once Pro is on sale: in a free squad the roll is a random split the admin then swaps, with no win %, except for one match a month that gets balanced rolls; in a Pro squad the balancer proposes | T1, U4 |
 | 29 | Results | "the event log is append-only, so nothing is discarded" | Unchanged as a rule; note the one-off removal of keeper events | T9 |
 | 30 | Team balancing, Ratings | "OpenSkill's `Predict`" | Keep the name; add once that the engine is PitchMate's own PlackettLuce implementation of the OpenSkill model, with no OpenSkill package | U7 |
+| 31 | Ratings, Stats, throughout | "provisional" | **"Settling"**, as the one term for a rating above the σ threshold. The rename should carry through the code and the UI copy (for example `RatingEngineConfig.ProvisionalThreshold` and the web's "~ Provisional" badge). No code is changed here; the code rename is a follow-up feature-spec item, and `product.md` carries a Today note until it is done | user 2026-11-13 |
 
 ### To correct `product.md` against the code
 
@@ -760,10 +761,10 @@ None left: dropping goalkeeper tracking and the customisable match-day flow are 
 
 ### Disagreements the decisions did not settle
 
-These rows of the as-is list in [index](index.md) still need an answer; `product.md` stays the authority on each until then.
+All five are now settled; the list is kept as a record.
 
 - **OpenSkill** names an algorithm, not a dependency: settled by [U7](#u7) (row 30).
 - **K and C tunable per squad**: settled by [T17](#t17), fixed; `product.md` moves (row 26).
 - **Typed-name confirmation** on squad deletion: settled by [T17](#t17); the code moves (SQ-14).
-- **A squad in its grace period** is hidden from reads but not from match-changing actions. `product.md` is clear here, so this is treated as a Gap to fix (SQ-18), not a question.
-- **"Provisional for at most 5 matches (3 at 5v5, 4–5 at 8v8)"** was worked out for 5-a-side to 8-a-side. With [T8](#t8) it now says how long the settling note lasts, and it needs re-checking with `/balance-simulation` for 3-a-side and 11-a-side before `product.md` repeats it ([T7](#t7)).
+- **A squad in its grace period** is hidden from reads but not from match-changing actions. `product.md` is clear here, so this is a Gap to fix (SQ-18), and `product.md` now has a Today note for it.
+- **"Provisional for at most 5 matches (3 at 5v5, 4–5 at 8v8)"** was worked out for 5-a-side to 8-a-side. With [T8](#t8) it now says how long the settling note lasts. `product.md` keeps the claim and says it is not yet checked for 3-a-side or 11-a-side; a `/balance-simulation` run settles it ([T7](#t7)).

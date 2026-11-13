@@ -52,6 +52,8 @@ Flows and state machines are **Mermaid** diagrams, not prose or ASCII art.
 
 ## Authority
 
-- `.claude/rules/product.md` stays the authority on product behaviour until the to-be master spec is signed off.
-- Where the spec (or the code it describes) and `product.md` disagree, record it under **Open questions** in the affected chapter. Never change `product.md` silently to make them agree.
-- Use the terminology `product.md` uses (squad, owner, admin, guest, claim, match draft, candidate day, kickoff lineup, provisional, bibs, and so on) in every spec.
+- The to-be master spec was **signed off on 2026-11-13**, and `.claude/rules/product.md` was updated from it the same day. The two now say the same thing at different depths: `product.md` holds the product rules and, in its **Today** notes, what the shipped code actually does; the master spec holds the requirements, their ids, their status and the decision behind each.
+- `product.md` stays the authority on built behaviour. A rule in it without a **Today** note is shipped; a rule with one is intended and not yet built.
+- When product direction changes, change `product.md` and the master spec in the same change, then the code. When a requirement is built, update the spec's Today line and remove or reword the `product.md` **Today** note in that change.
+- Where the spec, the code and `product.md` disagree, that is a defect: record it under **Open questions** in the affected chapter. Never change `product.md` silently to make them agree.
+- Use the terminology `product.md` uses (squad, owner, admin, tracker, guest, claim, match draft, candidate day, kickoff lineup, settling, bibs, Pro, and so on) in every spec. "Settling" replaced "provisional" on 2026-11-13; the code and the spec's as-is lines still say "provisional" until the code is renamed.

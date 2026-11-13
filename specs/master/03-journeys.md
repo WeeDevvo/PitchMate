@@ -174,7 +174,7 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | **A completed result is never corrected** (RE-07 is decided against). This is already how the code behaves: a completed match is immutable (`backend/src/PitchMate.Domain/Matches/Match.cs:1188`) | **Built** | [Q11](decisions.md#q11) |
 | In any squad that turns **score confirmation** on (it is free), any player in the match or an admin enters a basic score and a user on the other team confirms it before the match completes; if the person entering it played on neither side, anyone in the match confirms. Unconfirmed after 48 hours, it confirms itself; a dispute goes to an admin. A live-tracked result needs no confirmation. Ratings update on confirmation (RE-08) | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6), [T5](decisions.md#t5), [U2](decisions.md#u2) |
 
-The proposed end of the lifecycle with score confirmation on. The extra step and its name are a sketch for the feature spec, not a decided state machine:
+The end of the lifecycle with score confirmation on. `AwaitingConfirmation` is a decided state, in `product.md` since 2026-11-13 and not built; a dispute is decided from it, with no separate state:
 
 ```mermaid
 stateDiagram-v2
@@ -185,8 +185,8 @@ stateDiagram-v2
   AwaitingConfirmation --> Completed: entered by someone on neither side, and anyone in the match confirms
   AwaitingConfirmation --> Completed: 48 hours pass (nightly job)
   AwaitingConfirmation --> Completed: nobody on the other side can confirm, so the admin's confirmation stands
-  AwaitingConfirmation --> Disputed: the other team disputes
-  Disputed --> Completed: an admin decides the score
+  AwaitingConfirmation --> AwaitingConfirmation: the other team disputes
+  AwaitingConfirmation --> Completed: an admin decides a disputed score
   Completed --> [*]: ratings update once, result final
 ```
 
@@ -224,7 +224,7 @@ stateDiagram-v2
 None waiting on the user. Round four settled that score confirmation and team naming are free ([U2](decisions.md#u2)) and that the web tracker needs a connection ([U5](decisions.md#u5)). Left for the feature specs:
 
 1. **With confirmation off, should recording a basic result complete the match in one action**, as ending a tracked match does? Today it is two steps.
-2. **`product.md` understates the tracker's corrections.** It says corrections "go no further than undoing the last goal", but the tracker can change a scorer and remove any goal (`apps/web/src/features/matches/screens/LiveTrackerScreen.tsx:323`). A reworded Today note is proposed in [decisions](decisions.md#proposed-productmd-changes).
+2. **`product.md` understates the tracker's corrections.** It says corrections "go no further than undoing the last goal", but the tracker can change a scorer and remove any goal (`apps/web/src/features/matches/screens/LiveTrackerScreen.tsx:323`). `product.md` now lists changing a scorer and removing a goal (row 24 in [decisions](decisions.md#proposed-productmd-changes)); settled.
 3. **A member can only join or leave while the match is `Confirmed`.** After the lock they need an admin to unlock. Intended?
 4. **Availability off** (MA-11): a match with no availability step has to start somewhere. The likely shape is "pick a day, and members join", which is today's Confirmed state without the candidate days.
 5. **Does a claim link survive verification too**, as the invite must?

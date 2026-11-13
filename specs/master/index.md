@@ -1,19 +1,21 @@
 # PitchMate master spec
 
-**Stage: to-be, every question answered, not yet signed off.** Each chapter has two halves that must not be confused:
+**Stage: to-be, signed off on 2026-11-13.** Each chapter has two halves that must not be confused:
 
 - **Today (as-is)** describes what is built, taken from the code on 2026-11-11, with every Built or Partial line citing the file it comes from.
 - **To be** describes what is wanted, taken from the user's answers in three rounds: the 22 questions the as-is spec ended with (Q1–Q22) and the 17 those answers raised (R1–R17), both on 2026-11-12, then the 17 still open after that (T1–T17) and the last 7 (U1–U7) on 2026-11-13. Every line links the [decision](decisions.md) it comes from, and says whether that decision was the user's own or a suggested default they can still change.
 
-This is step 0 of the move to spec-driven development: as-is spec → brainstorm → **to-be spec** → feature specs in `specs/features/`.
+This is step 0 of the move to spec-driven development: as-is spec → brainstorm → **to-be spec** → feature specs in `specs/features/`. The next step is cutting feature specs from this one.
 
-Until the to-be spec is signed off, `.claude/rules/product.md` remains the authority on product behaviour, and it has not been changed. The edits it would need are listed in [decisions](decisions.md#proposed-productmd-changes). The conventions for these files are in `.claude/rules/specs.md`.
+`.claude/rules/product.md` was updated from this spec on 2026-11-13: the user approved every change listed in [decisions](decisions.md#proposed-productmd-changes). The two now agree. `product.md` holds the product rules and, in its **Today** notes, what is actually built, and it stays the authority on built behaviour; this spec holds the requirements, their status and the decision behind each. The conventions for these files are in `.claude/rules/specs.md`.
+
+**One term changed with the sign-off:** a rating above the σ threshold is now **settling**, not "provisional". The To be sections say settling. The Today sections, the catalogue rows and the as-is findings still say provisional, because that is what the code and the web copy say until they are renamed (row 31 in [decisions](decisions.md#proposed-productmd-changes)).
 
 ## Chapters
 
 | # | Chapter | What it answers |
 |---|---|---|
-| | [Decisions](decisions.md) | The answer to each question, its source, and the proposed `product.md` changes |
+| | [Decisions](decisions.md) | The answer to each question, its source, and the `product.md` changes, now applied |
 | 01 | [Vision](01-vision.md) | What PitchMate is for, and how far the code delivers the promise |
 | 02 | [Roles](02-roles.md) | Visitor, member, admin, owner, guest and claimed guest; who can do what |
 | 03 | [Journeys](03-journeys.md) | Sign-up and join, the match lifecycle, live tracking, stats |
@@ -84,13 +86,13 @@ The twelve biggest gaps from the as-is pass, in the same order, with the decisio
 
 ## Where the code and `product.md` disagree
 
-`product.md` has not been edited. The proposed edits are in [decisions](decisions.md#proposed-productmd-changes).
+This table is the as-is finding: what `product.md` said on 2026-11-11 against what the code did. Every row where `product.md` moves was applied on 2026-11-13 ([decisions](decisions.md#proposed-productmd-changes)). Every row where the code moves is still a Gap, and `product.md` now carries a **Today** note for it.
 
 | # | `product.md` says | The code does | Which side moves |
 |---|---|---|---|
 | 1 | Erasure anonymises a user's de-identified rows so matches stay valid | Only the account is anonymised; memberships are untouched | The code ([Q7](decisions.md#q7)) |
 | 2 | Deleted squads are purged after the grace period | Never purged | The code ([Q7](decisions.md#q7)) |
-| 3 | Live-tracker corrections "go no further than undoing the last goal" | The tracker can also change a scorer and remove any goal or keeper change | `product.md`, proposed |
+| 3 | Live-tracker corrections "go no further than undoing the last goal" | The tracker can also change a scorer and remove any goal or keeper change | `product.md`, applied |
 | 4 | Creating a guest needs a **one-time** admin acknowledgement of lawful basis | The acknowledgement is required on every guest | The code ([Q14](decisions.md#q14)) |
 | 5 | Balancing and ratings use OpenSkill | An in-house PlackettLuce engine; no OpenSkill package | `product.md`: keep the name, say once that the engine is PitchMate's own implementation ([U7](decisions.md#u7)) |
 | 6 | K and C of the display rating are tunable per squad | Fixed at K=40, C=1000 | `product.md`: they stay fixed ([T17](decisions.md#t17)) |
@@ -120,18 +122,19 @@ The twelve biggest gaps from the as-is pass, in the same order, with the decisio
 | 6 | The launch-gate rows this spec added | **Decided**: all stay ([U6](decisions.md#u6)) |
 | 7 | The "OpenSkill" wording | **Decided**: keep the name, state the implementation once ([U7](decisions.md#u7)) |
 
-**Before sign-off**
+**After sign-off**
 
-1. **`product.md` is unedited.** The 30 [proposed changes](decisions.md#proposed-productmd-changes) are proposals until the user approves them; `product.md` stays the authority until then.
-2. **A production deploy was waiting for approval** on 2026-11-11 with deploys armed for both environments. Under [Q21](decisions.md#q21) it should be rejected and production disarmed until it is provisioned. An action for the user in GitHub. ([06](06-platform.md#open-questions))
+1. **The code still says "provisional".** `product.md` and this spec's To be sections say "settling"; renaming the code and the UI copy is a follow-up feature-spec item (row 31 in [decisions](decisions.md#proposed-productmd-changes)).
+2. **`CLAUDE.md` still says the spec is not signed off** and that `product.md` is the authority "until" it is. It was left alone in this change and should be updated with the docs refresh (PL-06).
+3. **A production deploy was waiting for approval** on 2026-11-11 with deploys armed for both environments. Under [Q21](decisions.md#q21) it should be rejected and production disarmed until it is provisioned. An action for the user in GitHub. ([06](06-platform.md#open-questions))
 
 **Left for the feature specs**, each with a default the user accepted or a check to run
 
-3. The watch signs in and syncs through the paired phone. ([04](04-devices.md#open-questions))
-4. "Inactive" means no sign-in for the 2- and 3-year rule. ([07](07-trust.md#open-questions))
-5. The together and apart rules act only on balanced rolls. ([05](05-features.md#to-be) TB-10)
-6. How long the settling note lasts at 3-a-side and 11-a-side: a `/balance-simulation` check. ([05](05-features.md#open-questions))
-7. The smaller questions in each chapter's Open questions section: none blocks the launch gate or needs an answer before feature specs are cut.
+4. The watch signs in and syncs through the paired phone. ([04](04-devices.md#open-questions))
+5. "Inactive" means no sign-in for the 2- and 3-year rule. ([07](07-trust.md#open-questions))
+6. The together and apart rules act only on balanced rolls. ([05](05-features.md#to-be) TB-10)
+7. How long the settling note lasts at 3-a-side and 11-a-side: a `/balance-simulation` check. ([05](05-features.md#open-questions))
+8. The smaller questions in each chapter's Open questions section: none blocks the launch gate or needs an answer before feature specs are cut.
 
 ## How this was produced
 
@@ -144,3 +147,5 @@ The twelve biggest gaps from the as-is pass, in the same order, with the decisio
 **Round three (2026-11-13).** The answers to T1–T17 were relayed the same way. Read from the code for this pass: the rating defaults (μ 25, σ 25/3, the 8.19 threshold) and the display calculator, for the [T8](decisions.md#t8) proposal; and the files that hold keeper data, for [T9](decisions.md#t9). The keeper file list comes from a search for the word, not a line-by-line read, so the feature spec should re-check it. The design-system artifact is still unopened.
 
 **Round four (2026-11-13).** The user answered the seven remaining questions and accepted the readings and defaults; they are recorded as U1–U7 in [decisions](decisions.md#round-four). No code was read.
+
+**Sign-off (2026-11-13).** The user approved all 30 `product.md` changes, the `AwaitingConfirmation` state and the rename of "provisional" to "settling". `product.md` and `.claude/rules/specs.md` were edited to match; no code changed.
