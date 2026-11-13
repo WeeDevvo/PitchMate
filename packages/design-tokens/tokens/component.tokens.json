@@ -1,0 +1,45 @@
+{
+  "size": {
+    "$type": "dimension",
+    "target-web": {
+      "$value": "36px",
+      "$description": "Minimum pointer target on web (desktop)."
+    },
+    "target-touch": {
+      "$value": "44px",
+      "$description": "Minimum touch target, phone and touch web."
+    },
+    "target-pitch": {
+      "$value": "64px",
+      "$description": "Live tracking primary actions (sweaty hands)."
+    },
+    "target-watch": {
+      "$value": "52px",
+      "$description": "Minimum watch tap target; primary watch action spans the width."
+    },
+    "control-h": {
+      "$value": "44px",
+      "$description": "Default button/input height."
+    },
+    "control-h-sm": {
+      "$value": "36px",
+      "$description": "Compact button/input height (web tables, toolbars)."
+    },
+    "topbar-h": {
+      "$value": "64px",
+      "$description": "Web top bar."
+    },
+    "sidebar-w": {
+      "$value": "256px",
+      "$description": "Web sidebar."
+    },
+    "tabbar-h": {
+      "$value": "64px",
+      "$description": "Mobile tab bar (plus safe area)."
+    },
+    "content-max": {
+      "$value": "1200px",
+      "$description": "Max content width on web."
+    }
+  }
+}

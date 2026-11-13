@@ -1,0 +1,10 @@
+{
+  "name": "@pitchmate/design-tokens",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "PitchMate's design tokens: one DTCG source (tokens/) built into CSS custom properties for the web, plain values for the React Native phone app, SwiftUI constants for the watch, and the export the claude.ai design system reads. The outputs in dist/ are committed; a web test fails on drift.",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
+}

@@ -64,6 +64,8 @@ DeleteMe/
 # ----- Node / JavaScript (web + packages) -----
 node_modules/
 dist/
+# The design tokens' built outputs are committed: the web imports them and a test fails on drift.
+!packages/design-tokens/dist/
 dist-ssr/
 build/
 .vite/

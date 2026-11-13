@@ -1,0 +1,168 @@
+{
+  "space": {
+    "1": {
+      "$value": "4px",
+      "$description": "Icon-to-text gap in chips."
+    },
+    "2": {
+      "$value": "8px",
+      "$description": "Gap inside rows, between chips."
+    },
+    "3": {
+      "$value": "12px",
+      "$description": "Row vertical padding, input padding-y."
+    },
+    "4": {
+      "$value": "16px",
+      "$description": "Card padding (mobile), page gutter at 360px, button padding-x."
+    },
+    "5": {
+      "$value": "20px",
+      "$description": "Card padding (web)."
+    },
+    "6": {
+      "$value": "24px",
+      "$description": "Section gap inside a card, page gutter on tablet."
+    },
+    "8": {
+      "$value": "32px",
+      "$description": "Gap between cards and sections."
+    },
+    "10": {
+      "$value": "40px",
+      "$description": "Page gutter on desktop."
+    },
+    "12": {
+      "$value": "48px",
+      "$description": "Section spacing on web pages."
+    },
+    "16": {
+      "$value": "64px",
+      "$description": "Landing section spacing."
+    },
+    "24": {
+      "$value": "96px",
+      "$description": "Landing hero padding."
+    },
+    "$type": "dimension",
+    "0-5": {
+      "$value": "2px",
+      "$description": "Hairline nudges: badge icon gap."
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "xs": {
+      "$value": "4px",
+      "$description": "Focus-ring corners on tight items, chart bars."
+    },
+    "sm": {
+      "$value": "8px",
+      "$description": "Inputs, small buttons, badges, availability cells."
+    },
+    "md": {
+      "$value": "12px",
+      "$description": "Buttons, menus, list groups."
+    },
+    "lg": {
+      "$value": "16px",
+      "$description": "Cards: squad, match, team column, stat tiles."
+    },
+    "xl": {
+      "$value": "24px",
+      "$description": "Bottom sheets (top corners), dialogs, phone hero cards."
+    },
+    "pill": {
+      "$value": "999px",
+      "$description": "Pill buttons, chips, segmented controls, the fairness bar."
+    }
+  },
+  "duration": {
+    "$type": "duration",
+    "fast": {
+      "$value": "120ms",
+      "$description": "Hover, press, toggle thumb."
+    },
+    "base": {
+      "$value": "200ms",
+      "$description": "Tabs, chips, toasts in."
+    },
+    "slow": {
+      "$value": "360ms",
+      "$description": "Sheets, dialogs, the fairness needle settling."
+    },
+    "celebrate": {
+      "$value": "700ms",
+      "$description": "Sweet-spot pulse, goal flash. Skipped under prefers-reduced-motion."
+    }
+  },
+  "ease": {
+    "$type": "cubicBezier",
+    "standard": {
+      "$value": [
+        0.2,
+        0,
+        0,
+        1
+      ],
+      "$description": "Default for UI movement."
+    },
+    "out": {
+      "$value": [
+        0,
+        0,
+        0.2,
+        1
+      ],
+      "$description": "Things entering: sheets, toasts."
+    },
+    "bounce": {
+      "$value": [
+        0.34,
+        1.56,
+        0.64,
+        1
+      ],
+      "$description": "Playful moments only: needle landing at 50/50, a goal tally ticking up."
+    }
+  },
+  "z": {
+    "$type": "number",
+    "sticky": {
+      "$value": 10,
+      "$description": "Sticky headers, tab bar."
+    },
+    "menu": {
+      "$value": 40,
+      "$description": "Menus, popovers, notifications panel."
+    },
+    "overlay": {
+      "$value": 60,
+      "$description": "Scrim, dialogs, sheets."
+    },
+    "toast": {
+      "$value": 80,
+      "$description": "Toasts, cookie banner."
+    }
+  },
+  "font": {
+    "$type": "fontFamily",
+    "display": {
+      "$value": [
+        "Barlow Condensed",
+        "Arial Narrow",
+        "system-ui",
+        "sans-serif"
+      ]
+    },
+    "sans": {
+      "$value": [
+        "Barlow",
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "sans-serif"
+      ]
+    }
+  }
+}

@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 const uiRoot = dirname(fileURLToPath(import.meta.url));
 const logosRoot = resolve(uiRoot, '../design/logos');
-const tokensCss = readFileSync(resolve(uiRoot, '../design/tokens.css'), 'utf8');
+const tokensCss = readFileSync(resolve(uiRoot, '../../../../packages/design-tokens/dist/tokens.css'), 'utf8');
 
 const PACKAGES = new Set(['react', 'react-dom']);
 

@@ -52,7 +52,7 @@
  * imported stylesheet, and `jest-axe` disables axe's colour-category rules for
  * exactly that reason. So every stylesheet of the feature is read as **source
  * text**, the design-system tokens it paints with (`--pm-*`) are resolved for
- * each Theme from `src/design/tokens.json`, the scale is read from
+ * each Theme from the design-tokens package's export, the scale is read from
  * `styles/playerStatsTokens.css`, and WCAG 2.1 relative luminance and contrast
  * ratios are computed here, the same mechanism the squads
  * `screens/keyboardAndContrast.property.test.tsx` uses.
@@ -78,7 +78,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { resolveColour } from '../../../design/contrast';
-import designTokens from '../../../design/tokens.json';
+import designTokens from '@pitchmate/design-tokens/dist/tokens.json';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -120,7 +120,18 @@ const TOKENS_NAME = 'player-stats/styles/playerStatsTokens.css';
 const TOKENS_PATH = join(FEATURE_ROOT, 'styles', 'playerStatsTokens.css');
 
 /** The design-system tokens the stylesheets read their colours from. */
-const DESIGN_TOKENS_PATH = join(FEATURE_ROOT, '..', '..', 'design', 'tokens.css');
+const DESIGN_TOKENS_PATH = join(
+  FEATURE_ROOT,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'packages',
+  'design-tokens',
+  'dist',
+  'tokens.css',
+);
 
 const tokensSource = readFileSync(TOKENS_PATH, 'utf8');
 
@@ -255,7 +266,7 @@ function contrastRatio(a: string, b: string): number {
  * The declared token tables
  *
  * Colours are the design system's: every stylesheet here paints with `--pm-*`
- * tokens, whose values per Theme come from `src/design/tokens.json` (the same
+ * tokens, whose values per Theme come from the design-tokens package (the same
  * source `tokens.css` is generated from). The feature's own table holds its
  * Theme-invariant scale only.
  * ------------------------------------------------------------------ */

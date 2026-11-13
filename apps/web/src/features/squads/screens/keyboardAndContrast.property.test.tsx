@@ -107,7 +107,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Theme } from '../../../theme';
 import { resolveColour } from '../../../design/contrast';
-import designTokens from '../../../design/tokens.json';
+import designTokens from '@pitchmate/design-tokens/dist/tokens.json';
 import {
   SCREEN_STATE_CASES,
   THEMES,
@@ -335,7 +335,7 @@ function contrastRatio(a: string, b: string): number {
  * The declared token tables
  *
  * Colours are the design system's: every stylesheet here paints with `--pm-*`
- * tokens, whose values per Theme come from `src/design/tokens.json` (the same
+ * tokens, whose values per Theme come from the design-tokens package (the same
  * source `tokens.css` is generated from). The feature's own table holds its
  * Theme-invariant scale only.
  * ------------------------------------------------------------------ */

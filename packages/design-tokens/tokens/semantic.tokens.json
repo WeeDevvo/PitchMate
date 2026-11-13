@@ -1,0 +1,593 @@
+{
+  "color": {
+    "$type": "color",
+    "brand-pitch-green": {
+      "$value": "{color.green.500}",
+      "$description": "Brand Pitch Green. Fills, dark-mode accents, the app icon ground. Never as text on a light ground (2.6:1 on white)."
+    },
+    "brand-green-dark": {
+      "$value": "{color.green.700}",
+      "$description": "Brand Green Dark, kept exact from the brand palette. For icons, focus rings and bold display text 19px+ (3:1 minimum) on surface in the light theme, where it measures 4.07:1. Not a body-text colour, and never drawn on top of another green."
+    },
+    "brand-green-light": {
+      "$value": "{color.green.300}",
+      "$description": "Brand Green Light. Highlights and the dark-mode focus ring. Ink text on it (10.8:1)."
+    },
+    "brand-ink": {
+      "$value": "{color.ink.950}",
+      "$description": "Brand Ink. Dark-mode page ground; text on light grounds and on every green, amber or red fill."
+    },
+    "bg": {
+      "$value": "{color.ink.950}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.50}"
+        }
+      },
+      "$description": "Page ground behind everything (Ink in dark)."
+    },
+    "surface": {
+      "$value": "{color.ink.900}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.0}"
+        }
+      },
+      "$description": "Cards, panels, list containers, the sidebar."
+    },
+    "surface-raised": {
+      "$value": "{color.ink.860}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.0}"
+        }
+      },
+      "$description": "Things that sit above a card: menus, popovers, the team-sheet card, inputs in dark. Pair with shadow-2 in light."
+    },
+    "surface-overlay": {
+      "$value": "{color.ink.830}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.0}"
+        }
+      },
+      "$description": "Dialogs and bottom sheets, above scrim."
+    },
+    "surface-sunken": {
+      "$value": "{color.ink.1000}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.80}"
+        }
+      },
+      "$description": "Wells: the pitch strip, availability grid ground, input-group tracks, segmented-control tracks."
+    },
+    "surface-inverse": {
+      "$value": "{color.ink.50}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.950}"
+        }
+      },
+      "$description": "Inverse chips and tooltips; text-inverse on it."
+    },
+    "surface-hover": {
+      "$value": "{color.ink.840}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.70}"
+        }
+      },
+      "$description": "Hover wash for rows, ghost buttons and menu items."
+    },
+    "surface-pressed": {
+      "$value": "{color.ink.800}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.100}"
+        }
+      },
+      "$description": "Pressed wash for rows, ghost buttons and menu items."
+    },
+    "border-subtle": {
+      "$value": "{color.ink.820}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.110}"
+        }
+      },
+      "$description": "Decorative dividers and card outlines only — never the only boundary of a control."
+    },
+    "border-control": {
+      "$value": "{color.ink.550}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.500}"
+        }
+      },
+      "$description": "Input, select, toggle-track and secondary-button borders. 3:1+ on bg, surface, surface-raised and surface-sunken in both themes."
+    },
+    "scrim": {
+      "$value": "rgba(0,0,0,0.64)",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "rgba(20,20,20,0.44)"
+        }
+      },
+      "$description": "Behind dialogs and sheets."
+    },
+    "text-primary": {
+      "$value": "{color.ink.50}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.950}"
+        }
+      },
+      "$description": "Headings and body on bg, surface, surface-raised, surface-overlay, surface-sunken."
+    },
+    "text-secondary": {
+      "$value": "{color.ink.300}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.700}"
+        }
+      },
+      "$description": "Supporting copy, row meta, labels on all surfaces."
+    },
+    "text-muted": {
+      "$value": "{color.ink.450}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.600}"
+        }
+      },
+      "$description": "Placeholders, timestamps, helper text on all surfaces (4.7:1+ dark, 5.2:1+ light)."
+    },
+    "text-disabled": {
+      "$value": "{color.ink.610}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.400}"
+        }
+      },
+      "$description": "Disabled control labels only (exempt from contrast, always paired with a disabled cursor/state)."
+    },
+    "text-inverse": {
+      "$value": "{color.ink.950}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.50}"
+        }
+      },
+      "$description": "Text on surface-inverse."
+    },
+    "accent-fill": {
+      "$value": "{color.green.500}",
+      "$description": "Primary buttons, selected chips, active tab pip, the 'you' marker, team A in the fairness bar. on-accent text on it."
+    },
+    "accent-fill-hover": {
+      "$value": "{color.green.400}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.550}"
+        }
+      },
+      "$description": "Primary button hover."
+    },
+    "accent-fill-pressed": {
+      "$value": "{color.green.600}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.650}"
+        }
+      },
+      "$description": "Primary button pressed."
+    },
+    "on-accent": {
+      "$value": "{color.ink.950}",
+      "$description": "Text and icons on accent-fill, highlight and every hover/pressed green (6:1+)."
+    },
+    "accent-text": {
+      "$value": "{color.green.500}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.800}"
+        }
+      },
+      "$description": "Green links, 'View all', active nav labels on bg/surface/surface-raised. Light value deepens Green Dark to pass 4.5:1 at body size."
+    },
+    "accent-icon": {
+      "$value": "{color.green.500}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.700}"
+        }
+      },
+      "$description": "Green icons and non-text marks (3:1+)."
+    },
+    "accent-subtle": {
+      "$value": "{color.green.950}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.100}"
+        }
+      },
+      "$description": "Tinted ground for selected rows, 'you' row on leaderboards, available cells."
+    },
+    "accent-on-subtle": {
+      "$value": "{color.green.300}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.900}"
+        }
+      },
+      "$description": "Text on accent-subtle."
+    },
+    "highlight": {
+      "$value": "{color.green.300}",
+      "$description": "Moments of delight: fairness sweet spot, first place, new personal best. Ink text on it."
+    },
+    "focus-ring": {
+      "$value": "{color.green.300}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.700}"
+        }
+      },
+      "$description": "2px focus outline, offset 2px. 3:1+ against every surface in its theme."
+    },
+    "result-win": {
+      "$value": "{color.green.500}",
+      "$description": "Win fill (W chip, ✓). Always with the W letter and ✓ icon; on-result text."
+    },
+    "result-win-text": {
+      "$value": "{color.green.500}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.800}"
+        }
+      },
+      "$description": "Win as text on surfaces."
+    },
+    "result-loss": {
+      "$value": "{color.red.500}",
+      "$description": "Loss fill (L chip, ✗) and destructive fills. Always with the L letter and ✗ icon; on-result text (4.7:1)."
+    },
+    "result-loss-text": {
+      "$value": "{color.red.300}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.red.700}"
+        }
+      },
+      "$description": "Loss and error text on surfaces."
+    },
+    "result-draw": {
+      "$value": "{color.amber.500}",
+      "$description": "Draw fill (D chip, –). Shared with provisional, so always with a letter or label; on-result text."
+    },
+    "result-draw-text": {
+      "$value": "{color.amber.500}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.amber.800}"
+        }
+      },
+      "$description": "Draw text on surfaces."
+    },
+    "on-result": {
+      "$value": "{color.ink.950}",
+      "$description": "Text on result-win, result-loss, result-draw, provisional and info fills."
+    },
+    "result-win-subtle": {
+      "$value": "{color.green.950}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.100}"
+        }
+      },
+      "$description": "Win row/tile tint; result-win-text on it."
+    },
+    "result-loss-subtle": {
+      "$value": "{color.red.950}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.red.100}"
+        }
+      },
+      "$description": "Loss and error tint; result-loss-text on it."
+    },
+    "result-draw-subtle": {
+      "$value": "{color.amber.950}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.amber.100}"
+        }
+      },
+      "$description": "Draw and provisional tint; result-draw-text on it."
+    },
+    "provisional": {
+      "$value": "{color.result-draw}",
+      "$description": "A score that is not final yet (amber, always with the word \"Provisional\"), and the legacy \"~\" rating band until the server sends a number for every player. Not for a settling rating."
+    },
+    "provisional-text": {
+      "$value": "{color.result-draw-text}",
+      "$description": "Text and outlines for the provisional score state and the legacy \"~\" rating band."
+    },
+    "info": {
+      "$value": "{color.blue.500}",
+      "$description": "Info fill: tips, 'syncing', notification dots that aren't urgent. on-result text."
+    },
+    "info-text": {
+      "$value": "{color.blue.300}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.blue.700}"
+        }
+      },
+      "$description": "Info text and links inside notices."
+    },
+    "info-subtle": {
+      "$value": "{color.blue.950}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.blue.100}"
+        }
+      },
+      "$description": "Info banner ground; info-text on it."
+    },
+    "danger": {
+      "$value": "{color.result-loss}",
+      "$description": "Destructive buttons, delete confirmations; on-result text."
+    },
+    "danger-hover": {
+      "$value": "{color.red.400}",
+      "$description": "Destructive button hover; on-result text."
+    },
+    "danger-text": {
+      "$value": "{color.result-loss-text}",
+      "$description": "Error messages, field errors."
+    },
+    "team-a": {
+      "$value": "{color.green.500}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.700}"
+        }
+      },
+      "$description": "Team A side of the fairness meter, scoreboard and team column header. Always labelled with the team name."
+    },
+    "team-b": {
+      "$value": "{color.ink.90}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.950}"
+        }
+      },
+      "$description": "Team B side (a neutral, like a white kit). Always labelled with the team name."
+    },
+    "on-team-a": {
+      "$value": "{color.ink.950}",
+      "$description": "Text on team-a."
+    },
+    "on-team-b": {
+      "$value": "{color.ink.950}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.50}"
+        }
+      },
+      "$description": "Text on team-b."
+    },
+    "bib": {
+      "$value": "{color.orange.500}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.orange.600}"
+        }
+      },
+      "$description": "Hi-vis bib orange: the bib flag fill, bib stat tiles. Always with the bib icon and the word BIBS — it sits near loss red and draw amber in hue, so never colour alone. on-bib text on it; 3:1+ as a mark on every ground."
+    },
+    "bib-text": {
+      "$value": "{color.orange.300}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.orange.800}"
+        }
+      },
+      "$description": "Bib orange as text (“in bibs”) on bg, surface, surface-raised."
+    },
+    "bib-subtle": {
+      "$value": "{color.orange.950}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.orange.100}"
+        }
+      },
+      "$description": "Tinted ground for the 'you're in bibs' banner; bib-text on it."
+    },
+    "on-bib": {
+      "$value": "{color.ink.950}",
+      "$description": "Text and stripes on the bib flag."
+    },
+    "live": {
+      "$value": "{color.red.500}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.red.700}"
+        }
+      },
+      "$description": "The LIVE dot and running-clock pip (always with the word LIVE)."
+    },
+    "skeleton": {
+      "$value": "{color.ink.850}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.100}"
+        }
+      },
+      "$description": "Skeleton block base."
+    },
+    "skeleton-shine": {
+      "$value": "{color.ink.810}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.60}"
+        }
+      },
+      "$description": "Skeleton shimmer highlight."
+    },
+    "chart-grid": {
+      "$value": "{color.ink.820}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.ink.110}"
+        }
+      },
+      "$description": "Chart gridlines."
+    },
+    "chart-line": {
+      "$value": "{color.green.300}",
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": "{color.green.700}"
+        }
+      },
+      "$description": "Rating line (3:1+ on surface)."
+    },
+    "settling-text": {
+      "$value": "{color.text-secondary}",
+      "$description": "The settling note beside a player whose rating has not settled: the wave mark and the words. Deliberately not a colour of its own, and never applied to the rating number."
+    },
+    "pro-fill": {
+      "$value": "{color.surface-inverse}",
+      "$description": "The PRO chip. An inverse chip with a star, so it never reads as a result or a state."
+    },
+    "on-pro": {
+      "$value": "{color.text-inverse}",
+      "$description": "Text and the star on pro-fill."
+    },
+    "locked-border": {
+      "$value": "{color.border-control}",
+      "$description": "The dashed outline of a Pro feature the squad does not have. Always with the lock icon."
+    }
+  },
+  "shadow": {
+    "1": {
+      "$value": [
+        {
+          "offsetX": "0",
+          "offsetY": "1px",
+          "blur": "0",
+          "spread": "0",
+          "color": "rgba(255,255,255,0.04)",
+          "inset": true
+        }
+      ],
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": [
+            {
+              "offsetX": "0",
+              "offsetY": "1px",
+              "blur": "2px",
+              "spread": "0",
+              "color": "rgba(20,20,20,0.08)"
+            }
+          ]
+        }
+      },
+      "$description": "Cards at rest."
+    },
+    "2": {
+      "$value": [
+        {
+          "offsetX": "0",
+          "offsetY": "8px",
+          "blur": "24px",
+          "spread": "-6px",
+          "color": "rgba(0,0,0,0.6)"
+        }
+      ],
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": [
+            {
+              "offsetX": "0",
+              "offsetY": "8px",
+              "blur": "24px",
+              "spread": "-8px",
+              "color": "rgba(20,20,20,0.18)"
+            }
+          ]
+        }
+      },
+      "$description": "Menus, popovers, the notifications panel, dragged player chips."
+    },
+    "3": {
+      "$value": [
+        {
+          "offsetX": "0",
+          "offsetY": "24px",
+          "blur": "64px",
+          "spread": "-12px",
+          "color": "rgba(0,0,0,0.75)"
+        }
+      ],
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": [
+            {
+              "offsetX": "0",
+              "offsetY": "24px",
+              "blur": "64px",
+              "spread": "-16px",
+              "color": "rgba(20,20,20,0.28)"
+            }
+          ]
+        }
+      },
+      "$description": "Dialogs and sheets."
+    },
+    "$type": "shadow",
+    "glow": {
+      "$value": [
+        {
+          "offsetX": "0",
+          "offsetY": "0",
+          "blur": "0",
+          "spread": "1px",
+          "color": "rgba(91,191,54,0.5)"
+        },
+        {
+          "offsetX": "0",
+          "offsetY": "0",
+          "blur": "32px",
+          "spread": "-4px",
+          "color": "rgba(91,191,54,0.55)"
+        }
+      ],
+      "$extensions": {
+        "pitchmate.modes": {
+          "light": [
+            {
+              "offsetX": "0",
+              "offsetY": "0",
+              "blur": "0",
+              "spread": "1px",
+              "color": "rgba(62,143,36,0.45)"
+            },
+            {
+              "offsetX": "0",
+              "offsetY": "0",
+              "blur": "28px",
+              "spread": "-6px",
+              "color": "rgba(91,191,54,0.5)"
+            }
+          ]
+        }
+      },
+      "$description": "The fairness meter in its sweet spot (48–52%), the Lock teams button when ready, the watch goal ring."
+    }
+  }
+}

@@ -21,6 +21,7 @@ const TEXT_PAIRS = [
       'result-loss-text',
       'result-draw-text',
       'provisional-text',
+      'settling-text',
       'danger-text',
       'info-text',
       'bib-text',
@@ -42,6 +43,7 @@ const TEXT_PAIRS = [
   ['on-team-a', 'team-a'],
   ['on-team-b', 'team-b'],
   ['text-inverse', 'surface-inverse'],
+  ['on-pro', 'pro-fill'],
 ] as const
 
 const NON_TEXT_PAIRS = [
