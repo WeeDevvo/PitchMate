@@ -77,8 +77,8 @@ What is wanted, from [decisions](decisions.md). No decision changed the brand ru
 | **The watch tracker is designed for the launch**, as the main live tracker, alongside the phone tracker | **Gap** | [Q5](decisions.md#q5), [T10](decisions.md#t10) |
 | **One account screen** needs a design: name, email (changeable), avatar, password, linked sign-in methods, notification preferences, signed-in devices, export, delete. It replaces the profile placeholder | **Gap** | [Q17](decisions.md#q17), [R12](decisions.md#r12), [T15](decisions.md#t15) |
 | **The rating with a "settling" note**: a number for every player, a mark and a line of copy while it settles, on the player screen, the leaderboards and the progression chart. It replaces "~ Provisional" in place of a number, and must not rely on colour alone | **Gap** | [T8](decisions.md#t8) |
-| **The free roll**: a random split with swapping, the monthly balanced roll and how many are left, and the way to upgrade | **Gap** | [T1](decisions.md#t1) |
-| **The match-day options** screen for a Pro squad | **Gap** | [T4](decisions.md#t4) |
+| **The free roll**: a random split with swapping and no win %, the one balanced match a month and whether it has been used, and the way to upgrade | **Gap** | [T1](decisions.md#t1), [U4](decisions.md#u4) |
+| **The match-day options** screen for a Pro squad: availability on or off, payment tracking | **Gap** | [T4](decisions.md#t4), [U2](decisions.md#u2) |
 | **Stats presentation**: every available stat shown usefully means a designed layout for the leaderboards and the player screen, not a longer list | **Gap** | [Q18](decisions.md#q18) |
 | **A locked-feature state** for a Pro feature the squad does not have, distinct from "the admin has turned this off", with a way to upgrade | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5) |
 | **Score confirmation screens**: enter the score, confirm or dispute it, "waiting for confirmation", and the admin's decision on a dispute | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6) |

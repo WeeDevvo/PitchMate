@@ -110,7 +110,7 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | SE-24 | **Trust is squad-scoped.** Inside a squad members see each other's ratings and admins add anyone; this is already how the code works (`backend/src/PitchMate.Application/Squads/SquadAuthorization.cs`). The controls in SE-14 and SE-15 are what is added between squads | **Built** | | [Q3](decisions.md#q3), [R10](decisions.md#r10) |
 | SE-25 | **The per-match tracker is authorised by the API**, for that match only, and loses the power when the match ends or the admin picks someone else (RO-07) | **Gap** | | [R1](decisions.md#r1), [T6](decisions.md#t6) |
 | SE-26 | **The nightly-job endpoint is callable by the job alone**: authenticated with the job's own identity or a secret from Key Vault, not a user token, and hidden from everyone else as any concealed resource is (PL-01) | **Gap** | Yes | [T16](decisions.md#t16) |
-| SE-17 | **Security headers on the API** (HSTS among them) and a global error handler. Marking this, SE-20 and SE-21 for launch is this spec's reading; the answer did not say when | **Gap** | Yes | [T17](decisions.md#t17) |
+| SE-17 | **Security headers on the API** (HSTS among them) and a global error handler | **Gap** | Yes | [T17](decisions.md#t17), [U6](decisions.md#u6) |
 | SE-20 | **The API enforces the typed-name confirmation** on squad deletion; today only the web does | **Gap** | Yes | [T17](decisions.md#t17) |
 | SE-21 | **Dependabot** watches the NuGet, npm and GitHub Actions dependencies. No `.github/dependabot.yml` exists | **Gap** | Yes | [T17](decisions.md#t17) |
 | SE-27 | **A purchase is checked by the API** with the store before a squad becomes Pro; a client's word is not enough (OF-05, PL-16) | **Gap** | | [T3](decisions.md#t3) |
@@ -136,7 +136,7 @@ Answered in round three: the retention periods ([T13](decisions.md#t13)), the co
 2. **Lockout and existence concealment.** Locking a known email must not reveal that the account exists; the response for a locked account and an unknown one should stay the same.
 3. **Cookies and the policy** (TR-16): the refresh cookie is strictly necessary, so no banner is needed, but the privacy policy must describe it. The apps will also hold push tokens and, once Application Insights is wired, send telemetry; the policy and the store privacy labels must list both.
 4. **Payments and personal data** (OF-05): a store subscription adds a payer and two store operators to the policy, after launch.
-5. **What counts as "inactive"** for TR-21: no sign-in, or no match played either? No sign-in is assumed.
+5. **What counts as "inactive"** for TR-21: no sign-in. The default was accepted in round four.
 6. **Outside services in the design work.** The design overhaul may send brand material to Higgsfield ([T12](decisions.md#t12)). No personal data should go with it; worth one line in the policy only if that ever changes.
 
 ## Ideas

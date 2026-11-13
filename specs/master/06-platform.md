@@ -130,7 +130,7 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | PL-12 | **QA stays on the external database while the user is the only tester**, which is how it is set today (`infra/main.qa.bicepparam:16`). The setting is switched before anyone else tests on QA | **Built** | | [R17](decisions.md#r17) |
 | PL-13 | **App distribution**: store accounts, signing, and a build and release pipeline for the Expo apps and for the Apple Watch app, since the launch waits for them. None exists | **Gap** | Yes | [R3](decisions.md#r3), [R4](decisions.md#r4), [T10](decisions.md#t10) |
 | PL-14 | **Push delivery** for the apps: the platform credentials and a sender the API or the job can call (NO-05) | **Gap** | Yes | [R3](decisions.md#r3) |
-| PL-15 | **Application Insights is wired up**: the API sends requests, failures and traces to the resource that already exists (`infra/main.bicep:108`). The resource is kept, not removed. Marking it for launch is this spec's reading; the answer did not say when | **Gap** | Yes | [T17](decisions.md#t17) |
+| PL-15 | **Application Insights is wired up**: the API sends requests, failures and traces to the resource that already exists (`infra/main.bicep:108`). The resource is kept, not removed | **Gap** | Yes | [T17](decisions.md#t17), [U6](decisions.md#u6) |
 | PL-16 | **Store subscriptions for Pro**: products in both app stores, and server-side checking of a purchase so the API knows which squad is entitled (OF-05). After the launch | **Gap** | | [T3](decisions.md#t3) |
 
 ## Rules

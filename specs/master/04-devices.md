@@ -64,7 +64,7 @@ What is wanted, from [decisions](decisions.md). **None of this is built** except
 | DV-03 | **Live tracking in the phone app, offline-first**: events are queued on the device, survive the app closing, and are sent when a connection returns. The API already accepts this (client event ids, batches, per-event outcomes) | **Gap** | [Q5](decisions.md#q5) |
 | DV-04 | **An Apple Watch app in SwiftUI, at launch, as the main way to live-track.** It is built after the phone tracker, whose tracking logic and offline outbox it relies on, and before the launch | **Gap** | [Q5](decisions.md#q5), [R4](decisions.md#r4), [T10](decisions.md#t10) |
 | DV-09 | **A Wear OS tracker, after the launch.** It is a second native codebase for fewer users, and an Android user has the phone tracker from day one | **Gap** | [R4](decisions.md#r4), [T10](decisions.md#t10) |
-| DV-10 | **Parity.** The web keeps every feature except watch tracking, and the phone app does everything an admin can do. A feature is built for both, apart from what a device cannot do (the watch tracker, push, store purchases) | **Gap** | [T11](decisions.md#t11) |
+| DV-10 | **Parity.** The web keeps every feature except watch tracking and offline tracking, and the phone app does everything an admin can do. A feature is built for both, apart from what a device cannot do (the watch tracker, offline tracking, push, store purchases). The web tracker needs a connection, as today | **Gap** | [T11](decisions.md#t11), [U5](decisions.md#u5) |
 | DV-05 | **Push notifications** from the apps, for the events that are emailed today (NO-05) | **Gap** | [Q4](decisions.md#q4) |
 | DV-06 | **Tokens in the device's secure store**: the Keychain on iOS, the Keystore on Android (SE-22) | **Gap** | [Q10](decisions.md#q10) |
 | DV-07 | **Sign in with Apple** in the iOS app, required by Apple because Google sign-in is offered (AC-05) | **Gap** | [A1](decisions.md#a1) |
@@ -90,12 +90,11 @@ flowchart LR
 
 ## Open questions
 
-Answered in round three: the Apple Watch app is in the launch and Wear OS follows ([T10](decisions.md#t10)); the web keeps every feature except watch tracking ([T11](decisions.md#t11)). Still open:
+None waiting on the user. Round four settled that the web tracker stays connection-only ([U5](decisions.md#u5)) and confirmed that Wear OS follows the launch. Left for the feature specs:
 
-1. **How does the watch sign in and sync?** Through the paired phone, as the README says, or on its own? Through the phone is the simpler default and is assumed until the feature spec says otherwise; it means a tracker needs their phone nearby, or the watch must queue events until it is.
+1. **How the watch signs in and syncs.** Through the paired phone is the accepted default; it means a tracker needs their phone nearby, or the watch must queue events until it is.
 2. **Two devices tracking the same match.** Nothing reconciles two clients recording the same goal under different ids (`backend/src/PitchMate.Application/LiveTracking/UseCases/RecordEventBatchHandler.cs`). There is one tracker at a time ([T6](decisions.md#t6)), but admins can still record, and one person may hold a watch and a phone. Is it one recording device at a time?
-3. **Does the web tracker get an offline outbox**, now that the web keeps every feature ([T11](decisions.md#t11))? [Q5](decisions.md#q5) placed offline tracking in the phone app.
-4. **How much does the watch add to the launch?** A second language and toolchain, a second store review, and testing on real watches. Not a question of whether (that is decided), but the size should be known before a launch date is named.
+3. **How much the watch adds to the launch.** A second language and toolchain, a second store review, and testing on real watches. The size should be known before a launch date is named.
 
 ## Ideas
 

@@ -1,9 +1,9 @@
 # PitchMate master spec
 
-**Stage: to-be, draft, not yet signed off.** Each chapter has two halves that must not be confused:
+**Stage: to-be, every question answered, not yet signed off.** Each chapter has two halves that must not be confused:
 
 - **Today (as-is)** describes what is built, taken from the code on 2026-11-11, with every Built or Partial line citing the file it comes from.
-- **To be** describes what is wanted, taken from the user's answers in three rounds: the 22 questions the as-is spec ended with (Q1–Q22) and the 17 those answers raised (R1–R17), both on 2026-11-12, then the 17 still open after that (T1–T17) on 2026-11-13. Every line links the [decision](decisions.md) it comes from, and says whether that decision was the user's own or a suggested default they can still change.
+- **To be** describes what is wanted, taken from the user's answers in three rounds: the 22 questions the as-is spec ended with (Q1–Q22) and the 17 those answers raised (R1–R17), both on 2026-11-12, then the 17 still open after that (T1–T17) and the last 7 (U1–U7) on 2026-11-13. Every line links the [decision](decisions.md) it comes from, and says whether that decision was the user's own or a suggested default they can still change.
 
 This is step 0 of the move to spec-driven development: as-is spec → brainstorm → **to-be spec** → feature specs in `specs/features/`.
 
@@ -33,7 +33,7 @@ A decided requirement is tagged **Gap** until it is built. A decision does not m
 
 **Built.** The core loop works end to end on the web: squads, invites, guests and claims, availability, fair two-team balancing with admin control, the team sheet, basic and live-tracked results, squad-scoped ratings, stats and leaderboards, and in-app notifications. The match state machine, the permission model and existence concealment are thorough and heavily tested.
 
-**Wanted.** A public launch on pitch-mate.co.uk, free, after a test period on QA with one or two real squads. The launch waits for the Android and iOS apps, which are meant to be the main way people use PitchMate, and for an Apple Watch app, which is the main live tracker. The web keeps every feature except watch tracking. Before the launch: erasure and purge that work, a nightly job, real email, verified accounts, safer token storage, policy pages and ICO registration, an account screen, a rating shown from a player's first match, keeper tracking removed, and a production environment on its own domain. Also wanted, not launch-blocking: 3 to 11 a side, standing together and apart rules, a tracker the admin picks for each match, every remaining stat on show, and, sold after the launch, a Pro tier per squad that gives balanced rolls every time and the match-day options (a free squad gets a random split and one balanced roll a month).
+**Wanted.** A public launch on pitch-mate.co.uk, free, after a test period on QA with one or two real squads. The launch waits for the Android and iOS apps, which are meant to be the main way people use PitchMate, and for an Apple Watch app, which is the main live tracker. The web keeps every feature except watch tracking and offline tracking. Before the launch: erasure and purge that work, a nightly job, real email, verified accounts, safer token storage, policy pages and ICO registration, an account screen, a rating shown from a player's first match, keeper tracking removed, and a production environment on its own domain. Also wanted, not launch-blocking: 3 to 11 a side, standing together and apart rules, a tracker the admin picks for each match, every remaining stat on show, and, sold after the launch, a Pro tier per squad that gives balanced rolls every time, availability on or off and payment tracking. Until Pro is on sale everything is free; after that a free squad gets a random split and one balanced match a month. Score confirmation, team naming and live tracking are free throughout.
 
 ## Launch gate
 
@@ -55,11 +55,11 @@ What must be true before the public launch ([Q1](decisions.md#q1)), which waits 
 | Hardening | Security headers, Dependabot, the typed-name check on the API, Application Insights wired | SE-17, SE-21, SE-20, SQ-14, PL-15 |
 | Production | Provisioned with its own database; `pitch-mate.co.uk` and `api.pitch-mate.co.uk`, QA on `qa.`; deploys armed only once it exists | PL-02, PL-03, PL-05 |
 
-Three rows are on the gate by this spec's reading, not by a stated answer: **Tracking and ratings** (both change what every client shows, so they are cheapest before the apps and the watch are built), **Hardening** ([T17](decisions.md#t17) said to do them, not when), and the two additions to **Account** ([T15](decisions.md#t15)). Say if any should come off.
+Three rows were added to the gate by this spec's reading and then confirmed by the user ([U6](decisions.md#u6)): **Tracking and ratings**, **Hardening**, and the two additions to **Account**.
 
-Wanted but not on the gate: 3 to 11 a side (TB-09, TB-11), the together and apart rules (TB-10), the per-match tracker (RE-09), "Teams locked" and cancellation notices (NO-07, NO-06), every stat (ST-08, ST-11), owner-only demotion and removal of admins (SQ-08, SQ-09), the once-per-admin guest acknowledgement (GU-02), the squad CSV export (SQ-15), σ decay after 8 weeks (RA-06), erasing inactive accounts at 3 years (TR-21), infrastructure in CD (PL-04) and the docs refresh (PL-06).
+Wanted but not on the gate: 3 to 11 a side (TB-09, TB-11), the together and apart rules (TB-10), the per-match tracker (RE-09), score confirmation (RE-08), "Teams locked" and cancellation notices (NO-07, NO-06), every stat (ST-08, ST-11), owner-only demotion and removal of admins (SQ-08, SQ-09), the once-per-admin guest acknowledgement (GU-02), the squad CSV export (SQ-15), σ decay after 8 weeks (RA-06), erasing inactive accounts at 3 years (TR-21), infrastructure in CD (PL-04) and the docs refresh (PL-06).
 
-After the launch: Pro and everything sold with it (OF-04, OF-05, TB-13, TB-14, MA-11, RE-08 as a match-day option, PL-16, SE-27), and the Wear OS tracker (DV-09).
+After the launch: Pro and everything sold with it (OF-04, OF-05, TB-13, TB-14, MA-11, PL-16, SE-27), and the Wear OS tracker (DV-09).
 
 Match sizes and the tracker role change what the apps and the watch are built to do, so they are cheaper to settle before those are designed, even though neither blocks the launch by itself. Reporting a squad was on this gate after round one and has been dropped ([R10](decisions.md#r10)).
 
@@ -92,7 +92,7 @@ The twelve biggest gaps from the as-is pass, in the same order, with the decisio
 | 2 | Deleted squads are purged after the grace period | Never purged | The code ([Q7](decisions.md#q7)) |
 | 3 | Live-tracker corrections "go no further than undoing the last goal" | The tracker can also change a scorer and remove any goal or keeper change | `product.md`, proposed |
 | 4 | Creating a guest needs a **one-time** admin acknowledgement of lawful basis | The acknowledgement is required on every guest | The code ([Q14](decisions.md#q14)) |
-| 5 | Balancing and ratings use OpenSkill | An in-house PlackettLuce engine; no OpenSkill package | Not decided |
+| 5 | Balancing and ratings use OpenSkill | An in-house PlackettLuce engine; no OpenSkill package | `product.md`: keep the name, say once that the engine is PitchMate's own implementation ([U7](decisions.md#u7)) |
 | 6 | K and C of the display rating are tunable per squad | Fixed at K=40, C=1000 | `product.md`: they stay fixed ([T17](decisions.md#t17)) |
 | 7 | Margin-of-victory and participation weights are switchable levers | The switches exist but the match outcome carries no data for them | Neither: they stay off ([Q13](decisions.md#q13)) |
 | 8 | A squad in its grace period is invisible to every read but the owner's list | Reads conceal it; match-changing actions do not check | The code (SQ-18) |
@@ -106,28 +106,32 @@ The twelve biggest gaps from the as-is pass, in the same order, with the decisio
 
 ## Still open
 
-Round three answered all 16 questions from round two and four of the five technical leftovers. What remains is mostly what the new answers raised. Each chapter's Open questions section has the detail, and [decisions](decisions.md#what-round-three-contradicts) lists every place a round-three answer disagrees with something earlier.
+**Nothing is waiting on the user.** Round four answered the seven questions round three left ([U1–U7](decisions.md#round-four)), and every conflict in [what round three contradicts](decisions.md#what-round-three-contradicts) is settled.
 
-**Needs the user**
+**Decided in round four**
 
-1. **The rating display formula.** The proposal asked for in [T8](decisions.md#t8): one μ-based number for everyone, round((μ − 25) × 40 + 1000), with σ only driving the "settling" note. Yes, or something else? ([05](05-features.md#open-questions))
-2. **Are score confirmation and team naming really Pro?** [T4](decisions.md#t4) lists both as match-day options, which are Pro. Score confirmation was a setting any squad could use, and team names are built and free today. ([03](03-journeys.md#open-questions))
-3. **What is free before Pro goes on sale?** Pro is sold after the launch. The spec assumes balanced rolls are unlimited for everyone until then, following round one. ([01](01-vision.md#open-questions))
-4. **The free roll's small print**: is "one balanced roll a month" one match or one press, and does a free squad see the predicted win % on its random split? ([05](05-features.md#open-questions))
-5. **Does the web tracker work offline?** The web keeps every feature, but offline tracking was placed in the phone app. ([03](03-journeys.md#open-questions))
-6. **The launch-gate rows added by this spec's reading**: keeper removal and the new rating display, the hardening items, and the two account-screen additions. Any to take off? ([Launch gate](#launch-gate))
-7. **"OpenSkill" names an algorithm, not a package.** The one technical leftover the round-three answer did not cover. ([05](05-features.md#open-questions))
+| # | Question | Decided |
+|---|---|---|
+| 1 | The rating display formula | **Decided**: round((μ − 25) × 40 + 1000) for everyone from match one ([U1](decisions.md#u1)) |
+| 2 | Are score confirmation and team naming Pro? | **Decided**: no, both free ([U2](decisions.md#u2)) |
+| 3 | What is free before Pro goes on sale? | **Decided**: everything ([U3](decisions.md#u3)) |
+| 4 | The free roll's small print | **Decided**: one match a month, re-rolls included; no win % on a random split ([U4](decisions.md#u4)) |
+| 5 | Does the web tracker work offline? | **Decided**: no, phone and watch only ([U5](decisions.md#u5)) |
+| 6 | The launch-gate rows this spec added | **Decided**: all stay ([U6](decisions.md#u6)) |
+| 7 | The "OpenSkill" wording | **Decided**: keep the name, state the implementation once ([U7](decisions.md#u7)) |
 
-**For the feature specs, with a default assumed**
+**Before sign-off**
 
-8. The watch signs in and syncs through the paired phone. ([04](04-devices.md#open-questions))
-9. "Inactive" means no sign-in for the 2- and 3-year rule. ([07](07-trust.md#open-questions))
-10. The together and apart rules act only on balanced rolls. ([05](05-features.md#open-questions))
-11. How long the settling note lasts at 3-a-side and 11-a-side: a `/balance-simulation` check, not a question. ([05](05-features.md#open-questions))
+1. **`product.md` is unedited.** The 30 [proposed changes](decisions.md#proposed-productmd-changes) are proposals until the user approves them; `product.md` stays the authority until then.
+2. **A production deploy was waiting for approval** on 2026-11-11 with deploys armed for both environments. Under [Q21](decisions.md#q21) it should be rejected and production disarmed until it is provisioned. An action for the user in GitHub. ([06](06-platform.md#open-questions))
 
-**An action for the user, outside the repo**
+**Left for the feature specs**, each with a default the user accepted or a check to run
 
-12. A production deploy was waiting for approval on 2026-11-11 with deploys armed for both environments. Under [Q21](decisions.md#q21) it should be rejected and production disarmed until it is provisioned. ([06](06-platform.md#open-questions))
+3. The watch signs in and syncs through the paired phone. ([04](04-devices.md#open-questions))
+4. "Inactive" means no sign-in for the 2- and 3-year rule. ([07](07-trust.md#open-questions))
+5. The together and apart rules act only on balanced rolls. ([05](05-features.md#to-be) TB-10)
+6. How long the settling note lasts at 3-a-side and 11-a-side: a `/balance-simulation` check. ([05](05-features.md#open-questions))
+7. The smaller questions in each chapter's Open questions section: none blocks the launch gate or needs an answer before feature specs are cut.
 
 ## How this was produced
 
@@ -138,3 +142,5 @@ Round three answered all 16 questions from round two and four of the five techni
 **Round two (2026-11-12).** The answers to R1–R17 were relayed the same way and added to [decisions](decisions.md), with a note on each round-one entry they change. Four more values were read from the code: the log retention in the template, the decay-free period, the team size limits, and QA's database setting.
 
 **Round three (2026-11-13).** The answers to T1–T17 were relayed the same way. Read from the code for this pass: the rating defaults (μ 25, σ 25/3, the 8.19 threshold) and the display calculator, for the [T8](decisions.md#t8) proposal; and the files that hold keeper data, for [T9](decisions.md#t9). The keeper file list comes from a search for the word, not a line-by-line read, so the feature spec should re-check it. The design-system artifact is still unopened.
+
+**Round four (2026-11-13).** The user answered the seven remaining questions and accepted the readings and defaults; they are recorded as U1–U7 in [decisions](decisions.md#round-four). No code was read.

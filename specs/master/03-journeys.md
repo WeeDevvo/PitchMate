@@ -165,14 +165,14 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | Change | Status | Decision |
 |---|---|---|
 | **Teams can be rolled and locked from 3 to 11 a side**, the sides at most 2 apart; the 10–16 and 5–8-a-side limits go (TB-09, TB-11) | **Gap** | [Q12](decisions.md#q12), [R7](decisions.md#r7), [T7](decisions.md#t7) |
-| **In a free squad the roll is a random split**, which the admin then swaps; once a month it can be a balanced roll. In a Pro squad every roll is balanced (TB-13, TB-14) | **Gap** | [T1](decisions.md#t1) |
+| **Once Pro is on sale, a free squad's roll is a random split**, which the admin then swaps, with no win % shown; one match a month gets balanced rolls. In a Pro squad every roll is balanced. Until Pro is on sale every squad's rolls are balanced (TB-13, TB-14) | **Gap** | [T1](decisions.md#t1), [U3](decisions.md#u3), [U4](decisions.md#u4) |
 | The balancer always obeys the squad's standing **keep-together and keep-apart rules**, which only admins see (TB-10) | **Gap** | [Q13](decisions.md#q13), [R8](decisions.md#r8) |
 | The lock sends **"Teams locked" with the team sheet**; the roll sends nothing (NO-07) | **Gap** | [R2](decisions.md#r2) |
 | The admin can **pick a tracker** for the match, who can then start it, undo kickoff and record a basic score (RE-09) | **Gap** | [R1](decisions.md#r1), [T6](decisions.md#t6) |
-| In a Pro squad the admin can **shape the match-day flow** with four options: availability on or off, payment tracking, score confirmation, team naming (MA-11) | **Gap** | [R5](decisions.md#r5), [T4](decisions.md#t4) |
+| In a Pro squad the admin can **shape the match-day flow** with two options: availability on or off, and payment tracking (MA-11). Score confirmation and team naming are not among them; they are free | **Gap** | [R5](decisions.md#r5), [T4](decisions.md#t4), [U2](decisions.md#u2) |
 | **Cancelling a match notifies members** (NO-06) | **Gap** | [Q16](decisions.md#q16) |
 | **A completed result is never corrected** (RE-07 is decided against). This is already how the code behaves: a completed match is immutable (`backend/src/PitchMate.Domain/Matches/Match.cs:1188`) | **Built** | [Q11](decisions.md#q11) |
-| In a squad with **score confirmation** on, any player in the match or an admin enters a basic score and a user on the other team confirms it before the match completes; if the person entering it played on neither side, anyone in the match confirms. Unconfirmed after 48 hours, it confirms itself; a dispute goes to an admin. A live-tracked result needs no confirmation. Ratings update on confirmation (RE-08) | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6), [T5](decisions.md#t5) |
+| In any squad that turns **score confirmation** on (it is free), any player in the match or an admin enters a basic score and a user on the other team confirms it before the match completes; if the person entering it played on neither side, anyone in the match confirms. Unconfirmed after 48 hours, it confirms itself; a dispute goes to an admin. A live-tracked result needs no confirmation. Ratings update on confirmation (RE-08) | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6), [T5](decisions.md#t5), [U2](decisions.md#u2) |
 
 The proposed end of the lifecycle with score confirmation on. The extra step and its name are a sketch for the feature spec, not a decided state machine:
 
@@ -194,7 +194,7 @@ stateDiagram-v2
 
 | Change | Status | Decision |
 |---|---|---|
-| The **phone app** is the first new tracker to be built, and it **keeps working offline** with an outbox that survives a restart (DV-03) | **Gap** | [Q5](decisions.md#q5) |
+| The **phone app** is the first new tracker to be built, and it **keeps working offline** with an outbox that survives a restart (DV-03). The web tracker keeps needing a connection | **Gap** | [Q5](decisions.md#q5), [U5](decisions.md#u5) |
 | The **Apple Watch app** is the main way to track, and is there at launch; Wear OS follows (DV-04, DV-09) | **Gap** | [Q5](decisions.md#q5), [T10](decisions.md#t10) |
 | Members keep seeing the **live score by polling** every 20 seconds (`apps/web/src/features/matches/components/LiveScorePanel.tsx:30`) | **Built** | [Q6](decisions.md#q6) |
 | The match's **tracker**, not only an admin, starts the match and runs the tracker (RE-09) | **Gap** | [R1](decisions.md#r1) |
@@ -207,7 +207,7 @@ stateDiagram-v2
 |---|---|---|
 | **Every available stat is shown**, including a top-scorer leaderboard (ST-08, ST-11) | **Gap** | [Q18](decisions.md#q18) |
 | **Keeper-only stats are removed**, data included: clean sheets, goals conceded as keeper, keeper time (RE-10) | **Gap** | [R13](decisions.md#r13), [T9](decisions.md#t9) |
-| **Every player shows a rating number from their first match**, with a "settling" note while it is still uncertain; the progression chart plots numbers throughout (RA-13, ST-12) | **Gap** | [T8](decisions.md#t8) |
+| **Every player shows a rating number from their first match**, with a "settling" note while it is still uncertain; the progression chart plots numbers throughout (RA-13, ST-12) | **Gap** | [T8](decisions.md#t8), [U1](decisions.md#u1) |
 | The signed-in user's "profile" destination becomes the **account screen** (WE-04) | **Gap** | [Q17](decisions.md#q17) |
 
 ## Rules
@@ -221,16 +221,13 @@ stateDiagram-v2
 
 ## Open questions
 
-Answered in round three: score confirmation ([T5](decisions.md#t5)), the match-day options ([T4](decisions.md#t4)), the tracker's powers ([T6](decisions.md#t6)) and keeper data ([T9](decisions.md#t9)). Still open:
+None waiting on the user. Round four settled that score confirmation and team naming are free ([U2](decisions.md#u2)) and that the web tracker needs a connection ([U5](decisions.md#u5)). Left for the feature specs:
 
-1. **Score confirmation as a Pro option.** [T4](decisions.md#t4) lists it among the match-day options, which are Pro; rounds one and two had it as a setting any squad could turn on. Which is meant?
-2. **Team naming as a match-day option.** Team names and the silly-name generator are built and in every squad's flow today. What does the option switch: naming off for squads that do not want it, or something Pro adds?
-3. **With confirmation off, should recording a basic result complete the match in one action**, as ending a tracked match does? Today it is two steps.
-4. **`product.md` understates the tracker's corrections.** It says corrections "go no further than undoing the last goal", but the tracker can change a scorer and remove any goal (`apps/web/src/features/matches/screens/LiveTrackerScreen.tsx:323`). A reworded Today note is proposed in [decisions](decisions.md#proposed-productmd-changes).
-5. **A member can only join or leave while the match is `Confirmed`.** After the lock they need an admin to unlock. Intended?
-6. **Availability off** (MA-11): a match with no availability step has to start somewhere. The likely shape is "pick a day, and members join", which is today's Confirmed state without the candidate days.
-7. **Does the web tracker get an offline outbox?** The web keeps every feature except watch tracking ([T11](decisions.md#t11)), but offline tracking was placed in the phone app ([Q5](decisions.md#q5)).
-8. **Does a claim link survive verification too**, as the invite must?
+1. **With confirmation off, should recording a basic result complete the match in one action**, as ending a tracked match does? Today it is two steps.
+2. **`product.md` understates the tracker's corrections.** It says corrections "go no further than undoing the last goal", but the tracker can change a scorer and remove any goal (`apps/web/src/features/matches/screens/LiveTrackerScreen.tsx:323`). A reworded Today note is proposed in [decisions](decisions.md#proposed-productmd-changes).
+3. **A member can only join or leave while the match is `Confirmed`.** After the lock they need an admin to unlock. Intended?
+4. **Availability off** (MA-11): a match with no availability step has to start somewhere. The likely shape is "pick a day, and members join", which is today's Confirmed state without the candidate days.
+5. **Does a claim link survive verification too**, as the invite must?
 
 ## Ideas
 
