@@ -114,7 +114,7 @@
 .pm-lb__main {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--pm-space-0-5);
   min-width: 0;
 }
 
@@ -192,6 +192,15 @@
 .pm-chart__dot--prov.pm-chart__dot--last {
   fill: var(--pm-provisional);
   stroke-dasharray: none;
+}
+
+.pm-chart__line--settling {
+  stroke-dasharray: 6 5;
+}
+
+/* Hollow even when it is the latest reading: the number is not settled yet. */
+.pm-chart__dot--settling.pm-chart__dot--last {
+  fill: var(--pm-surface);
 }
 
 .pm-chart__area {

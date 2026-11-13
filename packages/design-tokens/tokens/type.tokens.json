@@ -1,0 +1,317 @@
+{
+  "type": {
+    "$type": "typography",
+    "$extensions": {
+      "pitchmate.fontFiles": [
+        {
+          "family": "Barlow",
+          "file": "fonts/Barlow-400.woff2",
+          "weight": "400"
+        },
+        {
+          "family": "Barlow",
+          "file": "fonts/Barlow-500.woff2",
+          "weight": "500"
+        },
+        {
+          "family": "Barlow",
+          "file": "fonts/Barlow-600.woff2",
+          "weight": "600"
+        },
+        {
+          "family": "Barlow",
+          "file": "fonts/Barlow-700.woff2",
+          "weight": "700"
+        },
+        {
+          "family": "Barlow Condensed",
+          "file": "fonts/BarlowCondensed-600.woff2",
+          "weight": "600"
+        },
+        {
+          "family": "Barlow Condensed",
+          "file": "fonts/BarlowCondensed-700.woff2",
+          "weight": "700"
+        },
+        {
+          "family": "Barlow Condensed",
+          "file": "fonts/BarlowCondensed-800.woff2",
+          "weight": "800"
+        },
+        {
+          "family": "Barlow Condensed",
+          "file": "fonts/BarlowCondensed-800Italic.woff2",
+          "weight": "800",
+          "style": "italic"
+        }
+      ]
+    },
+    "display": {
+      "$extensions": {
+        "pitchmate.groupName": "Display",
+        "pitchmate.family": "display"
+      },
+      "display-xl": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 800,
+          "fontSize": "72px",
+          "lineHeight": 0.92,
+          "letterSpacing": "-0.01em"
+        },
+        "$description": "Landing hero only. Uppercase.",
+        "$extensions": {
+          "pitchmate.sample": "FAIR TEAMS. EVERY WEEK."
+        }
+      },
+      "display-l": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 800,
+          "fontSize": "52px",
+          "lineHeight": 0.95
+        },
+        "$description": "Page heroes, team-sheet title. Uppercase.",
+        "$extensions": {
+          "pitchmate.sample": "SUNDAY 5-A-SIDE"
+        }
+      },
+      "display-m": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 700,
+          "fontSize": "36px",
+          "lineHeight": 1
+        },
+        "$description": "Squad and match page titles.",
+        "$extensions": {
+          "pitchmate.sample": "Thursday Ballers"
+        }
+      },
+      "headline": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 700,
+          "fontSize": "26px",
+          "lineHeight": 1.1
+        },
+        "$description": "Section headings, dialog titles, team names.",
+        "$extensions": {
+          "pitchmate.sample": "Roll the teams"
+        }
+      },
+      "title": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 700,
+          "fontSize": "20px",
+          "lineHeight": 1.15
+        },
+        "$description": "Card titles, team column headers.",
+        "$extensions": {
+          "pitchmate.sample": "Galácticos (ish)"
+        }
+      },
+      "overline": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 700,
+          "fontSize": "13px",
+          "lineHeight": 1.2,
+          "letterSpacing": "0.12em"
+        },
+        "$description": "Eyebrows above headings, state chips, BIBS flag. Uppercase.",
+        "$extensions": {
+          "pitchmate.sample": "MATCH DAY"
+        }
+      }
+    },
+    "numerals": {
+      "$extensions": {
+        "pitchmate.groupName": "Numerals",
+        "pitchmate.family": "display"
+      },
+      "score-xl": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 800,
+          "fontSize": "128px",
+          "lineHeight": 0.85
+        },
+        "$description": "Live tracking score on phone. Tabular numerals.",
+        "$extensions": {
+          "pitchmate.sample": "3–2"
+        }
+      },
+      "score-l": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 800,
+          "fontSize": "64px",
+          "lineHeight": 0.9
+        },
+        "$description": "Scoreboard, match result hero.",
+        "$extensions": {
+          "pitchmate.sample": "4–4"
+        }
+      },
+      "stat": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 700,
+          "fontSize": "40px",
+          "lineHeight": 1
+        },
+        "$description": "Stat tiles, display rating.",
+        "$extensions": {
+          "pitchmate.sample": "1,240"
+        }
+      },
+      "clock": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 700,
+          "fontSize": "28px",
+          "lineHeight": 1
+        },
+        "$description": "Running match clock. Tabular numerals.",
+        "$extensions": {
+          "pitchmate.sample": "32:07"
+        }
+      },
+      "percent": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 800,
+          "fontSize": "24px",
+          "lineHeight": 1
+        },
+        "$description": "Fairness meter win %.",
+        "$extensions": {
+          "pitchmate.sample": "49%"
+        }
+      }
+    },
+    "text": {
+      "$extensions": {
+        "pitchmate.groupName": "Text",
+        "pitchmate.family": "sans"
+      },
+      "body-l": {
+        "$value": {
+          "fontFamily": "{font.sans}",
+          "fontWeight": 400,
+          "fontSize": "18px",
+          "lineHeight": "28px"
+        },
+        "$description": "Landing and empty-state lead copy.",
+        "$extensions": {
+          "pitchmate.sample": "Fair teams for Sunday 5-a-side."
+        }
+      },
+      "body": {
+        "$value": {
+          "fontFamily": "{font.sans}",
+          "fontWeight": 400,
+          "fontSize": "16px",
+          "lineHeight": "24px"
+        },
+        "$description": "Default body copy, inputs.",
+        "$extensions": {
+          "pitchmate.sample": "Mark the days you can make it."
+        }
+      },
+      "body-strong": {
+        "$value": {
+          "fontFamily": "{font.sans}",
+          "fontWeight": 600,
+          "fontSize": "16px",
+          "lineHeight": "24px"
+        },
+        "$description": "Player names, row titles.",
+        "$extensions": {
+          "pitchmate.sample": "Jamie Okafor"
+        }
+      },
+      "label": {
+        "$value": {
+          "fontFamily": "{font.sans}",
+          "fontWeight": 600,
+          "fontSize": "14px",
+          "lineHeight": "20px"
+        },
+        "$description": "Buttons, field labels, tabs.",
+        "$extensions": {
+          "pitchmate.sample": "Location"
+        }
+      },
+      "small": {
+        "$value": {
+          "fontFamily": "{font.sans}",
+          "fontWeight": 400,
+          "fontSize": "14px",
+          "lineHeight": "20px"
+        },
+        "$description": "Row meta, helper text.",
+        "$extensions": {
+          "pitchmate.sample": "Played 23 · Won 12"
+        }
+      },
+      "caption": {
+        "$value": {
+          "fontFamily": "{font.sans}",
+          "fontWeight": 500,
+          "fontSize": "12px",
+          "lineHeight": "16px"
+        },
+        "$description": "Timestamps, chart axes, badge text. Never for anything the user must act on.",
+        "$extensions": {
+          "pitchmate.sample": "Updated 2 min ago"
+        }
+      }
+    },
+    "watch": {
+      "$extensions": {
+        "pitchmate.groupName": "Watch",
+        "pitchmate.family": "display"
+      },
+      "watch-score": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 800,
+          "fontSize": "60px",
+          "lineHeight": 0.9
+        },
+        "$description": "Watch score. One per screen.",
+        "$extensions": {
+          "pitchmate.sample": "3 2"
+        }
+      },
+      "watch-title": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontWeight": 700,
+          "fontSize": "20px",
+          "lineHeight": 1.1
+        },
+        "$description": "Watch screen question / title.",
+        "$extensions": {
+          "pitchmate.sample": "GOAL — WHO?"
+        }
+      },
+      "watch-body": {
+        "$value": {
+          "fontFamily": "{font.sans}",
+          "fontWeight": 600,
+          "fontSize": "17px",
+          "lineHeight": 1.15
+        },
+        "$description": "Watch list rows and buttons.",
+        "$extensions": {
+          "pitchmate.sample": "Jamie O.",
+          "pitchmate.ownFamily": true
+        }
+      }
+    }
+  }
+}

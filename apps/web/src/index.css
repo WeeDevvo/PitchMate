@@ -1,7 +1,7 @@
 /* Global foundations: the design-system tokens, its fonts, and base element styles. */
 
 @import './design/fonts.css';
-@import './design/tokens.css';
+@import '@pitchmate/design-tokens/dist/tokens.css';
 
 *,
 *::before,

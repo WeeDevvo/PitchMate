@@ -50,7 +50,7 @@
   display: inline-flex;
   flex: 0 1 auto;
   align-items: center;
-  gap: 4px;
+  gap: var(--pm-space-1);
   box-sizing: border-box;
   min-width: max-content;
   padding: 0 10px;

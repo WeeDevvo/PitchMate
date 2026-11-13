@@ -85,7 +85,7 @@ flowchart LR
 
 - **Built** · One API and one generated contract for every client; no client reimplements rating maths. `packages/api-client/package.json`, `backend/src/PitchMate.Domain/Stats/DisplayRatingCalculator.cs`
 - **Built** · One session model across clients: bearer access token plus rotating refresh token. `backend/src/PitchMate.Infrastructure/Auth/JwtTokenService.cs`
-- **Built** · Dark mode is designed first; every token has a light value too. `apps/web/src/design/tokens.css`
+- **Built** · Dark mode is designed first; every token has a light value too. `packages/design-tokens/tokens/semantic.tokens.json`
 - **Gap** · Apple Sign-In ships with the iOS app (an App Store requirement once Google sign-in is offered). `apps/mobile/README.md`
 
 ## Open questions

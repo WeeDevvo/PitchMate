@@ -2,7 +2,7 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--pm-space-3);
   min-width: var(--pm-target-touch);
   min-height: var(--pm-target-touch);
   justify-content: flex-start;
@@ -37,7 +37,7 @@
 .pm-check--lg .pm-check__box {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--pm-radius-sm);
 }
 
 .pm-check.is-checked .pm-check__box {

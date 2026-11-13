@@ -3,7 +3,7 @@
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 10px 0 8px;
+  padding: 0 10px 0 var(--pm-space-2);
   border-radius: var(--pm-radius-sm);
   background-color: var(--pm-bib);
   color: var(--pm-on-bib);

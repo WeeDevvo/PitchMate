@@ -10,10 +10,11 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "tokens": "node scripts/generate-design-tokens.mjs"
+    "tokens": "node ../../packages/design-tokens/scripts/build.mjs"
   },
   "dependencies": {
     "@pitchmate/api-client": "*",
+    "@pitchmate/design-tokens": "*",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "7.18.2"

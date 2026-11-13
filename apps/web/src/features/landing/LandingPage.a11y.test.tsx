@@ -94,7 +94,7 @@ function tabbableAnchors(container: HTMLElement): HTMLAnchorElement[] {
 // ---- Stylesheet contracts (read once; they are static build artifacts) ----
 const here = dirname(fileURLToPath(import.meta.url))
 const ctaCss = readFileSync(join(here, 'components/Cta.css'), 'utf8')
-const designTokensCss = readFileSync(join(here, '../../design/tokens.css'), 'utf8')
+const designTokensCss = readFileSync(join(here, '../../../../../packages/design-tokens/dist/tokens.css'), 'utf8')
 
 describe('LandingPage accessibility', () => {
   const originalMatchMedia = window.matchMedia

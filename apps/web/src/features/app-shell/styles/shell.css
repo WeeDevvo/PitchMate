@@ -2,7 +2,7 @@
  * Layout and presentation for the Shell_Frame, on the PitchMate design system.
  *
  * Colours, type, radii and shadows come from the design-system `--pm-*` tokens
- * (`src/design/tokens.css`); this file writes no colour value of its own
+ * (`packages/design-tokens`); this file writes no colour value of its own
  * (Requirements 12.8, 13.4). The shell's components render the shared `src/ui`
  * pieces (TopBar, Logo, NotificationList, NotificationItem, Icon), which
  * bring their own look; the rules here place them in the frame and hold the

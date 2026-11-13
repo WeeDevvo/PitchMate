@@ -6,7 +6,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--pm-space-0-5);
   height: 26px;
   min-width: 26px;
   padding: 0 6px;
@@ -38,5 +38,5 @@
 
 .pm-form {
   display: inline-flex;
-  gap: 4px;
+  gap: var(--pm-space-1);
 }

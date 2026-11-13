@@ -1,0 +1,31 @@
+{
+  "$description": "Tokens only the phone and watch apps use. They are not written to the web's CSS.",
+  "spring": {
+    "standard": {
+      "$value": { "response": 0.35, "dampingFraction": 0.86 },
+      "$description": "Default spring for sheets, navigation and anything that moves. The native match for ease-standard at duration-slow."
+    },
+    "bouncy": {
+      "$value": { "response": 0.4, "dampingFraction": 0.62 },
+      "$description": "Playful moments only: the fairness needle landing at 50/50, a goal ticking up. The native match for ease-bounce."
+    }
+  },
+  "haptic": {
+    "goal": {
+      "$value": "success",
+      "$description": "A goal is logged, on the phone tracker and the watch."
+    },
+    "undo": {
+      "$value": "warning",
+      "$description": "The last goal is undone."
+    },
+    "select": {
+      "$value": "selection",
+      "$description": "A player is picked for a swap, the scorer wheel moves a slice."
+    },
+    "lock": {
+      "$value": "impactMedium",
+      "$description": "Teams are locked, a match is ended."
+    }
+  }
+}

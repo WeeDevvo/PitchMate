@@ -15,6 +15,7 @@ The repository is structured as a monorepo with strict architectural boundaries:
   - `PitchMate.Api`: Minimal API endpoints, transport DTOs, uniform existence-concealing error mapping (`XErrorResults`), authentication/JWT handling, and build-time OpenAPI document emission.
 - **Web Frontend (`apps/web/`)**: React 19, TypeScript, Vite, and React Router v7 (`@pitchmate/web`). Feature-sliced architecture (`src/features/<feature>/`) consuming the typed API client facade. (`apps/mobile` and `apps/watch` are future placeholders).
 - **Shared Packages (`packages/api-client/`)**: `@pitchmate/api-client`, providing TypeScript types and client generated directly from the backend OpenAPI specification.
+- **Design tokens (`packages/design-tokens/`)**: `@pitchmate/design-tokens`, the one source for colour, type, spacing, radius and motion. The DTCG files in `tokens/` build into `dist/`: `tokens.css` (the web's `--pm-*` custom properties), `tokens.ts` (React Native), `PitchMateTokens.swift` (watch) and `tokens.json` (the export the claude.ai design system reads). The built files are committed and a web test fails on drift.
 
 The product rules live in `.claude/rules/product.md`, which loads every session. `docs/` is git-ignored and may not exist locally.
 
@@ -67,6 +68,9 @@ npm run lint
 
 # Run web test suite (Vitest)
 npm test --workspace @pitchmate/web
+
+# Rebuild the design tokens after changing packages/design-tokens/tokens
+npm run tokens --workspace @pitchmate/web
 
 # Run a single web test file or test pattern
 npm test --workspace @pitchmate/web -- src/features/squads/api/squadsApi.test.ts

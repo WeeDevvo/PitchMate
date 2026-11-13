@@ -16,9 +16,9 @@ export interface PlayerRowProps extends HTMLAttributes<HTMLDivElement> {
    * opens the player's stats. Defaults to the name.
    */
   nameContent?: ReactNode;
-  /** Role, guest, provisional or former badges beside the name. */
+  /** Role, guest or former badges beside the name. */
   badges?: ReactNode;
-  /** A line under the name. */
+  /** A line under the name: the player's record, or a `SettlingMark` while the rating settles. */
   meta?: ReactNode;
   /** The trailing column: the rating, then any row actions. */
   end?: ReactNode;

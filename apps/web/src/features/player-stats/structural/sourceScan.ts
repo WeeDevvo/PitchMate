@@ -99,7 +99,16 @@ export const wireRoot: string = join(srcRoot, 'wire');
 export const uiRoot: string = join(srcRoot, 'ui');
 
 /** The design-system tokens every stylesheet of the feature reads its colours from. */
-export const designTokensPath: string = join(srcRoot, 'design', 'tokens.css');
+export const designTokensPath: string = join(
+  srcRoot,
+  '..',
+  '..',
+  '..',
+  'packages',
+  'design-tokens',
+  'dist',
+  'tokens.css',
+);
 
 /** This directory: scan support, not part of the shipped feature. */
 export const scanSupportRoot: string = join(playerStatsRoot, 'structural');

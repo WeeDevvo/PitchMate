@@ -10,7 +10,7 @@
 }
 
 .pm-agrid th {
-  padding: 4px 8px;
+  padding: var(--pm-space-1) var(--pm-space-2);
   font-size: 14px;
   font-weight: 600;
   color: var(--pm-text-secondary);
@@ -122,7 +122,7 @@
 }
 
 .pm-agrid__star {
-  margin-left: 2px;
+  margin-left: var(--pm-space-0-5);
   font-size: 14px;
   vertical-align: super;
 }

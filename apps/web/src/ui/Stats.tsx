@@ -92,6 +92,8 @@ export interface ChartPoint {
   y: number;
   /** A provisional reading: drawn as a dashed amber ring. */
   provisional?: boolean;
+  /** A reading taken while the rating was still settling: a hollow mark, even when it is the latest. */
+  settling?: boolean;
 }
 
 export interface RatingChartProps extends SVGProps<SVGSVGElement> {
@@ -105,6 +107,8 @@ export interface RatingChartProps extends SVGProps<SVGSVGElement> {
   marks: readonly ChartPoint[];
   /** Stretches of the line through provisional readings, as SVG `points`, drawn dashed amber over it. */
   provisionalLines?: readonly string[];
+  /** Stretches of the line through settling readings, as SVG `points`, drawn dashed in the line's own colour. */
+  settlingLines?: readonly string[];
   pointRadius?: number;
   /** Attributes for the line and for each point, such as test hooks. */
   lineProps?: SVGProps<SVGPolylineElement>;
@@ -132,7 +136,8 @@ const percentOf = (value: number, whole: number) => `${(value / whole) * 100}%`;
 /**
  * A rating line in the design system's chart style: frame lines, the line, and
  * a mark at each reading, the latest filled. Provisional readings get a dashed
- * amber ring, and the line through them is dashed amber. It draws a plot it is given; the geometry
+ * amber ring, and the line through them is dashed amber. Settling readings stay hollow on a dashed
+ * line in the chart's own colour. It draws a plot it is given; the geometry
  * (scaling, degenerate series) is the caller's. Decorative: show the readings as
  * text beside it, provisional ones as the "~" band.
  */
@@ -143,6 +148,7 @@ export function RatingChart({
   polyline,
   marks,
   provisionalLines = [],
+  settlingLines = [],
   pointRadius = 3.5,
   lineProps,
   pointProps,
@@ -185,6 +191,12 @@ export function RatingChart({
           <polyline className="pm-chart__line pm-chart__line--prov" points={points} />
         </g>
       ))}
+      {settlingLines.map((points) => (
+        <g key={points}>
+          <polyline className="pm-chart__line pm-chart__line--prov-cover" points={points} />
+          <polyline className="pm-chart__line pm-chart__line--settling" points={points} />
+        </g>
+      ))}
       {marks.map((point, index) => (
         <circle
           key={point.key}
@@ -193,6 +205,7 @@ export function RatingChart({
             'pm-chart__dot',
             index === marks.length - 1 && 'pm-chart__dot--last',
             point.provisional === true && 'pm-chart__dot--prov',
+            point.settling === true && 'pm-chart__dot--settling',
           )}
           cx={point.x}
           cy={point.y}

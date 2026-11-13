@@ -1,8 +1,8 @@
 /**
  * WCAG 2.1 contrast between design-system colour tokens, resolved from
- * `tokens.json` for a theme. Used by the token contrast tests.
+ * the design-tokens package's export for a theme. Used by the token contrast tests.
  */
-import tokens from './tokens.json';
+import tokens from '@pitchmate/design-tokens/dist/tokens.json';
 
 export type DesignTheme = 'dark' | 'light';
 
