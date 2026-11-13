@@ -27,6 +27,10 @@ const STATES: readonly {
 }[] = [
   { name: 'loading', outcome: () => new Promise(() => undefined) },
   { name: 'loaded', outcome: () => success(boardOf('DisplayRating', [1200, 1100, 1100])) },
+  {
+    name: 'loaded with a settling player',
+    outcome: () => success(boardOf('DisplayRating', [1200, 1118, 1100], [1])),
+  },
   { name: 'empty', outcome: () => success(boardOf('DisplayRating', [])) },
   { name: 'failed', outcome: () => ({ kind: 'transport-failure' }) },
 ];

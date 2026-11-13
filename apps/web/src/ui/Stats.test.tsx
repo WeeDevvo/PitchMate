@@ -123,25 +123,6 @@ describe('RatingChart', () => {
     );
   });
 
-  it('rings provisional readings dashed and draws the line through them dashed', () => {
-    const { container } = render(
-      <RatingChart
-        width={100}
-        height={40}
-        polyline="0,30 50,20 100,10"
-        provisionalLines={['0,30 50,20 100,10']}
-        marks={[
-          { key: 'a', x: 0, y: 30, provisional: true },
-          { key: 'b', x: 50, y: 20, provisional: true },
-          { key: 'c', x: 100, y: 10 },
-        ]}
-      />,
-    );
-    const dots = Array.from(container.querySelectorAll('.pm-chart__dot'));
-    expect(dots.map((dot) => dot.classList.contains('pm-chart__dot--prov'))).toEqual([true, true, false]);
-    expect(container.querySelector('.pm-chart__line--prov')).toHaveAttribute('points', '0,30 50,20 100,10');
-  });
-
   it('keeps settling readings hollow, the latest included, on a dashed line in the chart colour', () => {
     const { container } = render(
       <RatingChart
@@ -158,8 +139,7 @@ describe('RatingChart', () => {
     );
     const dots = Array.from(container.querySelectorAll('.pm-chart__dot'));
     expect(dots.every((dot) => dot.classList.contains('pm-chart__dot--settling'))).toBe(true);
-    expect(dots.some((dot) => dot.classList.contains('pm-chart__dot--prov'))).toBe(false);
     expect(container.querySelector('.pm-chart__line--settling')).toHaveAttribute('points', '0,30 50,20 100,10');
-    expect(container.querySelector('.pm-chart__line--prov')).toBeNull();
+    expect(container.querySelector('.pm-chart__line--cover')).toHaveAttribute('points', '0,30 50,20 100,10');
   });
 });

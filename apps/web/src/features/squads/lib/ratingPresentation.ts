@@ -8,24 +8,20 @@
  * `web-player-stats-screen` spec's Requirement 17, and every reference to it is
  * written out in full so the two seventeens cannot be mistaken for each other.
  *
- * `web-player-stats-screen` Requirement 17.1 allows a Player_Row exactly **one**
- * of four conditions — a settled Display_Rating, a provisional rating, a player
- * who has played no matches, and a rating that could not be obtained — and
- * Requirement 8.6
- * requires the choice to be a pure, total function of the Squad_Member and the
- * optional Display_Rating_Leaderboard. Making the return type a tagged union of
- * exactly those four cases is what turns "exactly one" from a rendering
- * convention into something the type system enforces: there is no value of
- * {@link RatingPresentation} that carries a number *and* claims to be
- * provisional, and no way for a component to render two of them, because it is
- * handed one value rather than four optional fields.
+ * A Player_Row says exactly **one** of three things about a rating — a
+ * Display_Rating, a player who has played no matches, or a rating that could not
+ * be obtained — and Requirement 8.6 requires the choice to be a pure, total
+ * function of the Squad_Member and the optional Display_Rating_Leaderboard.
+ * Making the return type a tagged union of exactly those cases is what turns
+ * "exactly one" from a rendering convention into something the type system
+ * enforces: a component is handed one value rather than several optional fields.
  *
- * The fourth condition is why that spec reaches in here at all: a player with no
- * completed match and a player whose rating is still settling used to collapse
- * onto one band, which told a reader the same thing about two different
- * situations. They are now separated **without a further call** — the
- * Appearance_Count and the Rating_State this function reads are already carried
- * on every Squad_Member and every Player_List row, and were simply unread
+ * **Every rated player shows a number, settling or not** (product.md,
+ * "Ratings"). A rating that is still settling is the `rating` case like any
+ * other, with `settling` set from the member's Rating_State; the number is
+ * rendered identically, and the flag only puts the settling note beside the
+ * player's name. The Appearance_Count and the Rating_State this function reads
+ * are already carried on every Squad_Member, so no further call is made
  * (`web-player-stats-screen` Requirements 17.2, 17.6).
  *
  * **Nothing here computes a rating.** The mapping from the model to a friendly
@@ -42,8 +38,8 @@
  * a band from varying with Membership_State, Guest_Flag, Member_Role, or
  * leaderboard size — so this function never looks at those fields, and no band
  * can acquire an accidental tell through a branch that was added later. The
- * union's three non-numeric cases carry no payload at all, which is the same
- * guarantee stated in the type: their copy is three fixed strings in
+ * union's two non-numeric cases carry no payload at all, which is the same
+ * guarantee stated in the type: their copy is two fixed strings in
  * `lib/messages.ts`, identical on every row by construction (Requirements 8.12,
  * 8.13, and `web-player-stats-screen` 17.3).
  *
@@ -59,19 +55,20 @@ import type { DisplayRatingLeaderboard } from './parse/leaderboard';
 import type { SquadMember } from './parse/squadDetail';
 
 /**
- * What a Player_Row says about one player's rating: exactly one of the four
- * conditions `web-player-stats-screen` Requirement 17.1 permits.
+ * What a Player_Row says about one player's rating: exactly one of three
+ * conditions.
  *
  * `rating` carries the value **already rounded** by {@link formatDisplayRating},
  * so a component renders it with `String(value)` and performs no arithmetic and
- * no formatting of its own. The other three carry nothing: their labels are the
- * constants `PROVISIONAL_BAND_LABEL`, `NEVER_PLAYED_BAND_LABEL`, and
+ * no formatting of its own, and `settling`, which is true while the rating has
+ * not settled. `settling` never changes how the number looks; it is what puts
+ * the settling note beside the player's name. The other two carry nothing: their
+ * labels are the constants `NEVER_PLAYED_BAND_LABEL` and
  * `RATING_UNAVAILABLE_LABEL` in `lib/messages.ts`, and a payload here would be a
  * place for row-dependent copy to creep in against Requirements 8.12 and 8.13.
  */
 export type RatingPresentation =
-  | { readonly kind: 'rating'; readonly value: number }
-  | { readonly kind: 'provisional' }
+  | { readonly kind: 'rating'; readonly value: number; readonly settling: boolean }
   | { readonly kind: 'never-played' }
   | { readonly kind: 'unavailable' };
 
@@ -80,7 +77,7 @@ export type RatingPresentation =
  * obtained.
  *
  * Pure, total, and free of exceptions: it reads three fields off the member,
- * walks the entries once, and returns one of four literal shapes. Equal inputs
+ * walks the entries once, and returns one of three shapes. Equal inputs
  * give equal results (Requirement 8.6), so composing a Player_List twice renders
  * the same ratings twice.
  *
@@ -100,17 +97,13 @@ export type RatingPresentation =
  *    rating branch: a rating shown for somebody who has played nothing is the
  *    exact confusion that requirement exists to remove, so no later branch may
  *    override it.
- * 3. **A provisional Rating_State → `provisional`** (`web-player-stats-screen`
- *    17.2). A
- *    provisional rating is deliberately not shown as a number even when the
- *    leaderboard carries one for this membership, which is what product.md's
- *    "Rating display" asks for: a band rather than a hard number while the
- *    uncertainty is high.
- * 4. **A leaderboard entry for this membership with a finite value → `rating`**,
- *    rounded by {@link formatDisplayRating} (Requirement 8.1).
- * 5. **Otherwise → `unavailable`.** The residual is a player who has played, is
- *    not provisional, and has no usable entry — a rating that was not obtained
- *    for this row, which is what that label already says. A `NaN` or infinite
+ * 3. **A leaderboard entry for this membership with a finite value → `rating`**,
+ *    rounded by {@link formatDisplayRating} (Requirement 8.1), with `settling`
+ *    true exactly when the member's Rating_State is the wire's `Provisional`.
+ *    The leaderboard ranks settling players too, so their number is there.
+ * 4. **Otherwise → `unavailable`.** The residual is a player who has played and
+ *    has no usable entry — a rating that was not obtained for this row, which is
+ *    what that label already says. A `NaN` or infinite
  *    value lands here with an absent entry, because an unusable number carries no
  *    more information about the player than no number at all (Requirement 8.10).
  *
@@ -125,7 +118,7 @@ export type RatingPresentation =
  *   `web-player-stats-screen` 17.2)
  * @param leaderboard the parsed Display_Rating_Leaderboard, or `null` when none
  *   was obtained
- * @returns exactly one of the four presentations
+ * @returns exactly one of the three presentations
  *
  * Requirements: 8.1, 8.3, 8.5, 8.6, 8.9, 8.10, and `web-player-stats-screen`
  * 17.1, 17.2, 17.3, 17.6
@@ -145,24 +138,23 @@ export function selectRatingPresentation(
     return { kind: 'never-played' };
   }
 
-  // 3. player-stats 17.2: the rating exists but is still settling, so it is
-  // presented as a band rather than a number, whatever the leaderboard carries.
-  if (member.ratingState === 'Provisional') {
-    return { kind: 'provisional' };
-  }
-
   const entry = leaderboard.entries.find(
     (candidate) => candidate.membershipId === member.membershipId,
   );
 
-  // 5. 8.3, 8.10: an absent entry and an unusable value are the same statement —
-  // this played, non-provisional row has no rating that could be obtained.
+  // 4. 8.3, 8.10: an absent entry and an unusable value are the same statement —
+  // this row has played and has no rating that could be obtained.
   if (entry === undefined || !Number.isFinite(entry.value)) {
     return { kind: 'unavailable' };
   }
 
-  // 4. 8.1, 8.9: the row's own entry value, rounded, and nothing else.
-  return { kind: 'rating', value: formatDisplayRating(entry.value) };
+  // 3. 8.1, 8.9: the row's own entry value, rounded, and nothing else. A rating
+  // that is still settling is the same number; the flag only places the note.
+  return {
+    kind: 'rating',
+    value: formatDisplayRating(entry.value),
+    settling: member.ratingState === 'Provisional',
+  };
 }
 
 /**

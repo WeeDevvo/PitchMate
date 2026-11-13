@@ -126,7 +126,7 @@ flowchart LR
   squad[Squad screen] --> players[Players tab] --> profile[Player stats screen]
   squad --> boards[Leaderboards tab] --> pick[Pick one statistic] --> ranked[Ranked list] --> profile
   profile --> record[Record: W/L/D, win %]
-  profile --> rating[Rating or 'still settling']
+  profile --> rating[Rating, with a settling note]
   profile --> chart[Rating progression]
   profile --> fun[Streaks, bibs, played with/against, partnerships, bogey opponents]
   profile --> rich{Live tracking on?}
@@ -138,7 +138,7 @@ flowchart LR
 |---|---|---|---|
 | Leaderboards, one statistic at a time | **Built** | Appearances, win %, display rating (default), win streak, unbeaten streak, bib appearances | `apps/web/src/features/player-stats/screens/SquadLeaderboards.tsx`, `backend/src/PitchMate.Application/Stats/LeaderboardStatistic.cs` |
 | Player stats screen for any member or guest, scoped to the squad it was opened from | **Built** | `/app/squads/:squadId/players/:membershipId` | `apps/web/src/features/player-stats/screens/PlayerStatsScreen.tsx`, `backend/src/PitchMate.Application/Stats/GetPlayerProfileHandler.cs:93` |
-| Provisional players show no number | **Built** | "Rating still settling" and a "~ Provisional" band on the chart | `apps/web/src/features/player-stats/components/RatingPanel.tsx`, `apps/web/src/features/player-stats/components/ProgressionChart.tsx` |
+| Every rated player shows a number, with a settling note while it settles | **Built** | The number looks like any other; "Settling" sits beside the name on the squad list, the leaderboards and the stats screen, and the chart draws those readings hollow on a dashed line | `apps/web/src/features/squads/components/PlayerRow.tsx`, `apps/web/src/features/player-stats/screens/SquadLeaderboards.tsx`, `apps/web/src/features/player-stats/components/RatingPanel.tsx`, `apps/web/src/features/player-stats/components/ProgressionChart.tsx` |
 | Rich stats degrade gracefully | **Built** | Disabled or empty states rather than zeros | `apps/web/src/features/player-stats/lib/richStats.ts` |
 | Top scorer and other rich-stat leaderboards | **Partial** | Goals show on a profile; a top-scorer query exists in the stats port but nothing calls it and no leaderboard offers it | `backend/src/PitchMate.Application/Stats/IRichStatsSource.cs`, `backend/src/PitchMate.Application/Stats/LeaderboardStatistic.cs` |
 | A user's cross-squad vanity aggregate | **Gap** | Nothing in the code | `backend/src/PitchMate.Application/Stats` |
@@ -207,7 +207,7 @@ stateDiagram-v2
 |---|---|---|
 | **Every available stat is shown**, including a top-scorer leaderboard (ST-08, ST-11) | **Gap** | [Q18](decisions.md#q18) |
 | **Keeper-only stats are removed**, data included: clean sheets, goals conceded as keeper, keeper time (RE-10) | **Gap** | [R13](decisions.md#r13), [T9](decisions.md#t9) |
-| **Every player shows a rating number from their first match**, with a "settling" note while it is still uncertain; the progression chart plots numbers throughout (RA-13, ST-12) | **Gap** | [T8](decisions.md#t8), [U1](decisions.md#u1) |
+| **Every player shows a rating number from their first match**, with a "settling" note while it is still uncertain; the progression chart plots numbers throughout (RA-13, ST-12) (`backend/src/PitchMate.Domain/Stats/DisplayRatingCalculator.cs`, `apps/web/src/features/player-stats/components/ProgressionChart.tsx`) | **Built** | [T8](decisions.md#t8), [U1](decisions.md#u1) |
 | The signed-in user's "profile" destination becomes the **account screen** (WE-04) | **Gap** | [Q17](decisions.md#q17) |
 
 ## Rules

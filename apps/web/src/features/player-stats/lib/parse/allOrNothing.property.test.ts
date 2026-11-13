@@ -675,27 +675,20 @@ describe('a parsed profile is never partially populated', () => {
         const records = wireArray(fixture.wire, 'progression');
 
         // The one declared normalisation that shortens a collection: a record
-        // with neither a display rating nor an estimate parses and contributes
-        // no point. Every *other* record must survive, in order, a settled
-        // number winning over an estimate.
+        // with no display rating parses and contributes no point. Every *other*
+        // record must survive, in order, with its number as sent and its
+        // settling flag read from its own state.
         const rated = records.filter(
-          (record) =>
-            absentAsNull(record, 'displayRating') !== null ||
-            absentAsNull(record, 'estimatedRating') !== null,
+          (record) => absentAsNull(record, 'displayRating') !== null,
         );
 
         expect(profile.progression).toHaveLength(rated.length);
 
         rated.forEach((record, index) => {
           const point = profile.progression[index];
-          const settled = absentAsNull(record, 'displayRating') !== null;
-
-          expect(point.provisional).toBe(!settled);
+          expect(point.provisional).toBe(wireMember(record, 'state') === 'Provisional');
           expect(
-            Object.is(
-              point.displayRating,
-              wireMember(record, settled ? 'displayRating' : 'estimatedRating'),
-            ),
+            Object.is(point.displayRating, wireMember(record, 'displayRating')),
           ).toBe(true);
         });
       }),
@@ -718,7 +711,7 @@ describe('a parsed profile is never partially populated', () => {
                 instant,
                 displayRating: 1_200,
                 displayRatingAbsence: 'null',
-                state: null,
+                state: 'Established',
                 modelValues: [0, 0],
               }),
             ],

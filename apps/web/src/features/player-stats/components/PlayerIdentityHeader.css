@@ -114,3 +114,10 @@
   font-size: var(--player-stats-font-size-meta);
   line-height: var(--player-stats-line-height-body);
 }
+
+/* The settling note sits with the name's labels. Its look is the design system's. */
+.player-stats-identity__settling {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--player-stats-font-size-chip);
+}

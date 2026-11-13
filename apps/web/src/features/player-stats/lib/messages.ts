@@ -32,10 +32,10 @@
  * the render sites:
  *
  *  - The four Rating_Condition presentations must be mutually distinguishable
- *    (Requirement 7.6), so {@link RATING_PROVISIONAL},
- *    {@link RATING_NEVER_PLAYED}, and {@link RATING_ABSENT} are pairwise
- *    distinct and none is a substring of another. The fourth condition,
- *    Established_Rating, presents the Display_Rating itself. This is the
+ *    (Requirement 7.6), so {@link RATING_NEVER_PLAYED} and
+ *    {@link RATING_ABSENT} are distinct and neither is a substring of the
+ *    other. An established rating presents the Display_Rating itself, and a
+ *    settling one presents it with {@link RATING_SETTLING_NOTE} beneath. This is the
  *    conflation the shipped squads player list currently carries, and separating
  *    the copy is half of the fix (Property 18).
  *  - {@link TRACKING_DISABLED} and {@link TRACKING_EMPTY} must be distinct, and
@@ -341,21 +341,15 @@ export const WIN_PERCENTAGE_LABEL = 'Win percentage';
 /* -------------------------------------------------------------------------- */
 
 /**
- * The Provisional_Rating label (Requirement 7.3).
+ * The sentence under a rating that is still settling (Requirement 7.3).
  *
- * A provisional rating is one whose uncertainty is still high, so there is no
- * firm number to assert and this label asserts none: it carries no digit, no
- * approximation or range indicator, and no count of matches played. The surface
- * pairs it with a badge so the condition survives a greyscale rendering
- * (Requirements 7.3, 16.6).
- *
- * Distinct from {@link RATING_NEVER_PLAYED} and {@link RATING_ABSENT}, and a
- * substring of neither (Requirement 7.6).
+ * A settling rating shows its number like any other; this says, in plain words
+ * beneath it, why the number may still move. It carries no digit, so it never
+ * reads as a second figure, and it is distinct from {@link RATING_NEVER_PLAYED}
+ * and {@link RATING_ABSENT} and a substring of neither (Requirement 7.6).
  */
-export const RATING_PROVISIONAL = 'Rating still settling';
-
-/** The words on the progression chart's band behind provisional readings. */
-export const PROVISIONAL_BAND_LABEL = '~ Provisional';
+export const RATING_SETTLING_NOTE =
+  'This rating is still settling. Ratings take a few matches to settle.';
 
 /**
  * The Never_Played label (Requirement 7.4).
@@ -568,8 +562,8 @@ export const LEADERBOARD_LOADING_LABEL = 'Loading the leaderboard';
 export const LEADERBOARD_EMPTY_STATEMENT = 'Nobody is on this leaderboard yet.';
 
 /**
- * Shown under the Display_Rating board, which leaves out every player whose
- * rating is still provisional, so an absent player isn't read as unrated.
+ * Shown under the Display_Rating board while any ranked player's rating is
+ * still settling, so a newcomer on a lucky start is read as such.
  */
-export const LEADERBOARD_PROVISIONAL_STATEMENT =
-  'Players whose rating is still settling are not ranked yet.';
+export const LEADERBOARD_SETTLING_STATEMENT =
+  'Ratings take a few matches to settle.';

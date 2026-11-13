@@ -482,6 +482,11 @@ const PAIRINGS: readonly Pairing[] = [
     'field hints, timestamps and an expired invite',
   ),
   ...onEverySurface(
+    '--pm-settling-text',
+    TEXT_FLOOR,
+    "the settling note beside a player's name: words, with no colour of its own",
+  ),
+  ...onEverySurface(
     '--pm-accent-text',
     TEXT_FLOOR,
     'an active invite and the accent text the design system clears for body copy',
@@ -498,12 +503,6 @@ const PAIRINGS: readonly Pairing[] = [
     background: '--pm-accent-subtle',
     floor: TEXT_FLOOR,
     usage: 'a squad crest, the current sidebar link, and the first avatar tint',
-  },
-  {
-    foreground: '--pm-provisional-text',
-    background: '--pm-result-draw-subtle',
-    floor: TEXT_FLOOR,
-    usage: 'the provisional Rating_Presentation on its tinted badge',
   },
   {
     foreground: '--pm-result-draw-text',
@@ -546,12 +545,6 @@ const PAIRINGS: readonly Pairing[] = [
     background: '--pm-surface',
     floor: NON_TEXT_FLOOR,
     usage: "an active invite's accent edge",
-  },
-  {
-    foreground: '--pm-provisional-text',
-    background: '--pm-result-draw-subtle',
-    floor: NON_TEXT_FLOOR,
-    usage: "the provisional badge's outline, drawn in the text amber so it shows on the light tint",
   },
   {
     foreground: '--pm-brand-ink',
@@ -730,7 +723,7 @@ const MATCHABLE_RULES: readonly CssRule[] = RULES.filter(
  *
  * Matching is `Element.matches`, so jsdom's own selector engine decides, including
  * for the attribute-conditional rules that carry this feature's state styling
- * (`[data-membership-state='inactive']`, `[data-rating-kind='provisional']`, and
+ * (`[data-membership-state='inactive']`, `[data-rating-kind='never-played']`, and
  * the three `[data-squads-invite-state]` values).
  */
 function winningValue(element: Element, property: string): string | undefined {
@@ -1439,20 +1432,20 @@ describe('the rendered checks are not vacuous', () => {
     // to complain: raising the floor beyond any attainable ratio must report every
     // text-bearing element, and only those.
     const tree = fragment(
-      '<span class="squads-rating" data-rating-kind="provisional">' +
+      '<span class="squads-rating" data-rating-kind="never-played">' +
         '<span class="squads-rating__badge"></span>' +
-        '<span class="squads-rating__text">No settled rating yet</span>' +
+        '<span class="squads-rating__text">No matches played yet</span>' +
         '</span>',
     );
 
     const clean = textContrastOffences(tree, 'light', 'the guard');
     expect(clean.offences).toEqual([]);
-    // Only the words are measured: the chip holds elements, and the badge is a ring.
+    // Only the words are measured: the chip holds elements, and the badge is a shape.
     expect(clean.measured).toBe(1);
 
     const impossible = textContrastOffences(tree, 'light', 'the guard', 21.1);
     expect(impossible.offences).toEqual([
-      expect.stringContaining('--pm-provisional-text'),
+      expect.stringContaining('--pm-text-secondary'),
     ]);
     // The badge carries no words, so nothing is measured against it.
     expect(rendersOwnText(tree.querySelectorAll('span')[1])).toBe(false);

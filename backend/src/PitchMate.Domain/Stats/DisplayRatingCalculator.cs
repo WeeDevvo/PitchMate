@@ -1,57 +1,31 @@
-using PitchMate.Domain.Rating;
-
 namespace PitchMate.Domain.Stats;
 
 /// <summary>
-/// The pure <c>Display_Rating</c> definition. Maps a rating's conservative estimate (μ − 3σ) to a
-/// friendly, presentational whole number using the squad's <see cref="DisplayRatingParameters"/>,
-/// producing <em>no number</em> while the rating is <see cref="RatingState.Provisional"/>
-/// (Requirement 7.3, 7.4). The display rating is presentational only and is never an input to team
-/// balancing or a rating update (Requirement 7.6).
+/// The pure <c>Display_Rating</c> definition: μ on a friendlier scale. Every rating has a number from
+/// its first match, whatever its <see cref="Rating.RatingState"/>; σ never changes the number, it only
+/// decides whether the rating is still settling (which callers report beside the number, from
+/// <see cref="Rating.IRatingEngine.GetState"/>). The display rating is presentational only and is
+/// never an input to team balancing or a rating update.
 /// </summary>
 public static class DisplayRatingCalculator
 {
     /// <summary>
-    /// Computes the display rating for a rating whose <paramref name="state"/> has already been
-    /// classified via <see cref="IRatingEngine.GetState"/>. Returns <see langword="null"/> when
-    /// <paramref name="state"/> is <see cref="RatingState.Provisional"/> (no number is shown for a
-    /// still-settling rating, Requirement 7.4); otherwise returns
-    /// <c>max(Floor, round((μ − 3σ) × K + C))</c> as a whole number never below
-    /// <see cref="DisplayRatingParameters.Floor"/>, rounding half away from zero (Requirement 7.3).
+    /// The μ that maps to <see cref="DisplayRatingParameters.C"/>: the starting mean of an Average
+    /// player. With the default scale a new Beginner (μ 20), Average (μ 25) or Strong (μ 30) player
+    /// starts on 800, 1000 or 1200.
     /// </summary>
-    /// <param name="state">The rating's provisional/established classification.</param>
-    /// <param name="mu">The mean skill estimate (μ).</param>
-    /// <param name="sigma">The uncertainty of the estimate (σ).</param>
-    /// <param name="parameters">The squad's display-rating scale, offset, and floor.</param>
-    /// <returns>The floored, rounded display rating, or <see langword="null"/> when provisional.</returns>
-    public static int? Compute(RatingState state, double mu, double sigma, DisplayRatingParameters parameters)
-    {
-        if (state == RatingState.Provisional)
-        {
-            return null;
-        }
-
-        return Map(mu, sigma, parameters);
-    }
+    public const double ReferenceMean = 25.0;
 
     /// <summary>
-    /// Computes the approximate number for a <see cref="RatingState.Provisional"/> rating, using the
-    /// same mapping as <see cref="Compute"/>. Clients show it only as a rough "~" band, never as a
-    /// precise figure, so a still-settling player can see the trend of their rating. Returns
-    /// <see langword="null"/> when <paramref name="state"/> is <see cref="RatingState.Established"/>,
-    /// whose number is <see cref="Compute"/>'s, so exactly one of the two is ever present.
+    /// Computes the display rating <c>max(Floor, round((μ − 25) × K + C))</c>: a whole number never
+    /// below <see cref="DisplayRatingParameters.Floor"/>, rounding half away from zero.
     /// </summary>
-    /// <param name="state">The rating's provisional/established classification.</param>
     /// <param name="mu">The mean skill estimate (μ).</param>
-    /// <param name="sigma">The uncertainty of the estimate (σ).</param>
-    /// <param name="parameters">The squad's display-rating scale, offset, and floor.</param>
-    /// <returns>The floored, rounded estimate, or <see langword="null"/> when established.</returns>
-    public static int? Estimate(RatingState state, double mu, double sigma, DisplayRatingParameters parameters) =>
-        state == RatingState.Provisional ? Map(mu, sigma, parameters) : null;
-
-    private static int Map(double mu, double sigma, DisplayRatingParameters parameters)
+    /// <param name="parameters">The display-rating scale, offset, and floor.</param>
+    /// <returns>The floored, rounded display rating.</returns>
+    public static int Compute(double mu, DisplayRatingParameters parameters)
     {
-        var mapped = ((mu - (3.0 * sigma)) * parameters.K) + parameters.C;
+        var mapped = ((mu - ReferenceMean) * parameters.K) + parameters.C;
         var rounded = Math.Round(mapped, MidpointRounding.AwayFromZero);
         return (int)Math.Max(parameters.Floor, rounded);
     }

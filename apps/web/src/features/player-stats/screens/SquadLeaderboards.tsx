@@ -13,8 +13,10 @@
  * - **The backend's order, the client's positions.** Entries keep the order they
  *   arrived in. Level values share a position ("1, 2, 2, 4"), computed by
  *   `competitionPositions` without re-sorting.
- * - **No rating arithmetic.** A Display_Rating arrives as a finished figure, and
- *   provisional players are absent from that board, which one statement says.
+ * - **No rating arithmetic.** A Display_Rating arrives as a finished figure.
+ *   Everyone with a rating is ranked; a player whose rating is still settling
+ *   shows the same kind of number with the settling mark under their name, and
+ *   one statement under the board says ratings take a few matches to settle.
  * - **A hidden squad is the squad screen's to state.** On `not-found` this
  *   renders nothing, because the screen around it already shows its own
  *   not-found treatment.
@@ -22,7 +24,7 @@
 
 import { useId, useState, type ReactElement } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { LeaderboardRow } from '../../../ui';
+import { LeaderboardRow, SettlingMark } from '../../../ui';
 
 import { SQUAD_SCOPE_ROUTE_PARAMETER } from '../../app-shell';
 import { useAuth } from '../../auth';
@@ -42,8 +44,8 @@ import {
   FORMER_PLAYER_LABEL,
   LEADERBOARD_EMPTY_STATEMENT,
   LEADERBOARD_LOADING_LABEL,
-  LEADERBOARD_PROVISIONAL_STATEMENT,
   LEADERBOARD_RANK_BY_LABEL,
+  LEADERBOARD_SETTLING_STATEMENT,
 } from '../lib/messages';
 import type { Leaderboard } from '../lib/parse/leaderboard';
 import type { LeaderboardStatistic } from '../lib/wireEnums';
@@ -102,6 +104,7 @@ function BoardList({
               ) : null}
             </>
           }
+          sub={entry.settling ? <SettlingMark /> : undefined}
           value={formatLeaderboardValue(board.statistic, entry.value)}
         />
       ))}
@@ -136,9 +139,9 @@ function SquadLeaderboardsBody({
     body = (
       <>
         <BoardList squadId={squadId} board={machine.board} />
-        {machine.board.statistic === 'DisplayRating' ? (
+        {machine.board.entries.some((entry) => entry.settling) ? (
           <p className="player-stats-leaderboard__statement">
-            {LEADERBOARD_PROVISIONAL_STATEMENT}
+            {LEADERBOARD_SETTLING_STATEMENT}
           </p>
         ) : null}
       </>

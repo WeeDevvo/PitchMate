@@ -65,7 +65,7 @@ import type { RatingState } from './wireEnums';
  */
 const CONDITION_KINDS = [
   'established',
-  'provisional',
+  'settling',
   'never-played',
   'absent',
 ] as const;
@@ -110,7 +110,7 @@ const CONDITION_SHAPES: readonly {
       return false;
     }
 
-    if (condition.kind === 'established') {
+    if (condition.kind === 'established' || condition.kind === 'settling') {
       return (
         keySignature(condition) === 'displayRating,kind' &&
         typeof condition.displayRating === 'number' &&
@@ -268,7 +268,7 @@ describe('resolveRatingCondition — the four conditions this suite holds it to'
       'absent',
       'established',
       'never-played',
-      'provisional',
+      'settling',
     ]);
   });
 
@@ -367,7 +367,7 @@ describe('resolveRatingCondition — exactly one of four conditions', () => {
     );
   });
 
-  it('carries nothing but its kind, except for the one arm with a number to render', () => {
+  it('carries nothing but its kind, except for the two arms with a number to render', () => {
     fc.assert(
       fc.property(resolverInputArb, (input) => {
         // The single-valued claim read as a field set: three of the four arms
@@ -377,7 +377,7 @@ describe('resolveRatingCondition — exactly one of four conditions', () => {
         const keys = Object.keys(condition).sort();
 
         const expected =
-          condition.kind === 'established'
+          condition.kind === 'established' || condition.kind === 'settling'
             ? ['displayRating', 'kind']
             : ['kind'];
 
@@ -400,10 +400,10 @@ describe('resolveRatingCondition — exactly one of four conditions', () => {
       [{ rating: established, appearances: 5 }, 'established'],
       [
         {
-          rating: { state: 'Provisional', displayRating: null },
+          rating: { state: 'Provisional', displayRating: 1118 },
           appearances: 2,
         },
-        'provisional',
+        'settling',
       ],
       [{ rating: established, appearances: 0 }, 'never-played'],
       [

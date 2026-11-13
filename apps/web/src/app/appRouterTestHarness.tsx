@@ -352,8 +352,8 @@ function playerProfileBody(membershipId: string): unknown {
     winPercentage: 58.3,
     rating: { state: 'Established', displayRating: 1204 },
     progression: [
-      { completedAt: '2026-01-08T19:30:00.000Z', displayRating: 1180 },
-      { completedAt: '2026-01-15T19:30:00.000Z', displayRating: 1204 },
+      { completedAt: '2026-01-08T19:30:00.000Z', state: 'Provisional', displayRating: 1180 },
+      { completedAt: '2026-01-15T19:30:00.000Z', state: 'Established', displayRating: 1204 },
     ],
     winStreak: 3,
     unbeatenStreak: 5,

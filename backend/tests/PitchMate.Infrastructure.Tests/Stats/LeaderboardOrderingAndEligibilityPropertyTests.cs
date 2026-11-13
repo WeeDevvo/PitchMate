@@ -161,16 +161,19 @@ public sealed class LeaderboardOrderingAndEligibilityPropertyTests
 
             if (statistic == LeaderboardStatistic.DisplayRating)
             {
-                // Display_Rating eligibility is "an Established display-rating value is present"
-                // (Req 4.5). In production a rating only exists once a membership has participated, so
+                // Display_Rating eligibility is "the membership has a rating" (Req 4.5): a settling
+                // rating is ranked on its number like any other and carries its state so a client can
+                // mark it. In production a rating only exists once a membership has participated, so
                 // the appearance requirement is satisfied by construction; the generator can seed a
-                // rating without an appearance, so the enforced invariant here is value presence, which
-                // the non-streak Value non-null assertion below covers.
+                // rating without an appearance, so the enforced invariant here is value presence.
                 Assert.NotNull(actualRow.Value);
                 Assert.Null(actualRow.Results);
+                Assert.NotNull(actualRow.RatingState);
+                Assert.Equal(expectedRow.RatingState, actualRow.RatingState);
             }
             else if (isStreak)
             {
+                Assert.Null(actualRow.RatingState);
                 // A streak row is appearance-eligible (Req 4.4) and carries the result sequence, not a
                 // precomputed value.
                 Assert.True(stats!.Appearances >= 1);

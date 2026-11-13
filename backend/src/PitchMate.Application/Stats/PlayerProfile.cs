@@ -19,7 +19,7 @@ namespace PitchMate.Application.Stats;
 /// <param name="IsGuest">Whether the subject is a guest membership (no backing user).</param>
 /// <param name="Record">The win/draw/loss record across appearances.</param>
 /// <param name="WinPercentage">The win percentage, or <see langword="null"/> when there is no appearance.</param>
-/// <param name="Rating">The current rating summary (not-yet-established, provisional, or established).</param>
+/// <param name="Rating">The current rating summary (not-yet-established, provisional (settling), or established).</param>
 /// <param name="Progression">The chronological rating progression points; empty when no snapshot exists.</param>
 /// <param name="WinStreak">The longest run of consecutive wins.</param>
 /// <param name="UnbeatenStreak">The longest run of consecutive non-loss results.</param>

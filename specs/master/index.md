@@ -39,7 +39,7 @@ A decided requirement is tagged **Gap** until it is built. A decision does not m
 
 ## Launch gate
 
-What must be true before the public launch ([Q1](decisions.md#q1)), which waits for the native apps ([R3](decisions.md#r3)) and the Apple Watch app ([T10](decisions.md#t10)). Every item is a **Gap** today. Ids point at the To be sections of [04](04-devices.md#to-be), [05](05-features.md#to-be), [06](06-platform.md#to-be) and [07](07-trust.md#to-be).
+What must be true before the public launch ([Q1](decisions.md#q1)), which waits for the native apps ([R3](decisions.md#r3)) and the Apple Watch app ([T10](decisions.md#t10)). Every item is a **Gap** today, except RA-13 and ST-12, which are built. Ids point at the To be sections of [04](04-devices.md#to-be), [05](05-features.md#to-be), [06](06-platform.md#to-be) and [07](07-trust.md#to-be).
 
 | Area | Requirement | Ids |
 |---|---|---|
@@ -102,7 +102,7 @@ This table is the as-is finding: what `product.md` said on 2026-11-11 against wh
 | 10 | Typed-name confirmation guards squad deletion | Only the web enforces it | The code: the API enforces it too ([T17](decisions.md#t17)) |
 | 11 | The owner or an admin can promote | Also true of demote and remove, including admin against admin | Both: demoting or removing an admin becomes owner-only ([Q15](decisions.md#q15), [R9](decisions.md#r9)) |
 | 12 | Web surfaces include profile, and auth by Google | Profile is a placeholder; Google is not wired on the web | Both: one account screen ([Q17](decisions.md#q17)), Google finished ([A1](decisions.md#a1)) |
-| 14 | Provisional players show a badge or "~" band instead of a number; display rating is (μ − 3σ) × K + C | Exactly that | Both: a number from the first match with a settling note, on a μ-based formula ([T8](decisions.md#t8)) |
+| 14 | Provisional players show a badge or "~" band instead of a number; display rating is (μ − 3σ) × K + C | Exactly that, when this was written. Since built the new way: a number from the first match, on (μ − 25) × K + C, with a settling note (RA-13) | Both: a number from the first match with a settling note, on a μ-based formula ([T8](decisions.md#t8)) |
 | 15 | Rich results include goalkeeper stints; keeper stats are listed | Built | Both: keeper tracking and its data are removed ([T9](decisions.md#t9)) |
 | 13 | (`CLAUDE.md`) Hosting is App Service and Postgres Flexible Server; CD is inert | Container Apps; QA on Supabase; CD appears to be switched on | The docs ([Q22](decisions.md#q22)) |
 
@@ -124,7 +124,7 @@ This table is the as-is finding: what `product.md` said on 2026-11-11 against wh
 
 **After sign-off**
 
-1. **The code still says "provisional".** `product.md` and this spec's To be sections say "settling"; renaming the code and the UI copy is a follow-up feature-spec item (row 31 in [decisions](decisions.md#proposed-productmd-changes)).
+1. **The code still says "provisional".** `product.md` and this spec's To be sections say "settling", and so does the web's rating copy since RA-13 was built; renaming the code and the API's `Provisional` rating state is a follow-up feature-spec item (row 31 in [decisions](decisions.md#proposed-productmd-changes)).
 2. **A production deploy was waiting for approval** on 2026-11-11 with deploys armed for both environments. Under [Q21](decisions.md#q21) it should be rejected and production disarmed until it is provisioned. An action for the user in GitHub. ([06](06-platform.md#open-questions))
 
 **Left for the feature specs**, each with a default the user accepted or a check to run

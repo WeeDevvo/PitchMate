@@ -70,3 +70,10 @@
   font-size: var(--player-stats-font-size-body);
   line-height: var(--player-stats-line-height-body);
 }
+
+/* The settling note beside a reading's date: never on the figure itself. */
+.player-stats-progression-table__settling {
+  display: inline-flex;
+  margin-inline-start: var(--player-stats-gap-tight);
+  vertical-align: bottom;
+}

@@ -52,10 +52,14 @@ export function stubLeaderboardApi(
   return { api, calls };
 }
 
-/** A board with one entry per value, in the order given, named Player 1, 2… */
+/**
+ * A board with one entry per value, in the order given, named Player 1, 2…
+ * `settlingAt` lists the positions (from 0) whose rating is still settling.
+ */
 export function boardOf(
   statistic: LeaderboardStatistic,
   values: readonly number[],
+  settlingAt: readonly number[] = [],
 ): Leaderboard {
   return {
     statistic,
@@ -63,6 +67,7 @@ export function boardOf(
       membershipId: wireIdentityForIndex(index + 1),
       displayName: `Player ${String(index + 1)}`,
       value,
+      settling: settlingAt.includes(index),
     })),
   };
 }

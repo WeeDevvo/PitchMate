@@ -7,11 +7,6 @@
   font-size: 20px;
 }
 
-.pm-rating--prov {
-  align-items: center;
-  color: var(--pm-provisional-text);
-}
-
 .pm-rating__delta {
   font-family: var(--pm-font-sans);
   font-size: 14px;

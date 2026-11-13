@@ -35,9 +35,8 @@
  * | `winPercentage` | nobody has played, so there is no ratio to state |
  * | `state` | the membership has no recorded lifecycle state |
  * | `rating.state` | the rating has not been classified |
- * | `rating.displayRating` | there is no settled number to show |
- * | a progression point's `displayRating` | the rating was still provisional after that match |
- * | a progression point's `estimatedRating` | the rating was established after that match |
+ * | `rating.displayRating` | there is no rating, so no number to show |
+ * | a progression point's `displayRating` | the record carries no number, so it is no point |
  * | `rich` | the squad's live-tracking feature is off |
  * | each member of `rich` | tracking is on but that figure was never recorded |
  *
@@ -49,9 +48,8 @@
  *
  * ## Why `mu` and `sigma` are absent from this file's readings
  *
- * The wire `RatingSummary` carries `mu` and `sigma`, and every wire progression
- * point carries `mu`, `sigma`, and a `state`. **No parser here names any of
- * them.** That is the whole of Requirement 7.7's guarantee on the read path: a
+ * The wire `RatingSummary` carries `mu` and `sigma`, and so does every wire
+ * progression point. **No parser here names either of them.** That is the whole of Requirement 7.7's guarantee on the read path: a
  * member that is never named is never read, so the parsed type graph contains no
  * field in which a Rating_Internal could sit, and no component, formatter, or
  * chart downstream has one available to plot or to recompute a display number
@@ -67,18 +65,18 @@
  * printer's output shaped like the contract's; emitting zeros keeps the printer
  * free of any rating quantity.
  *
- * ## Provisional progression points
+ * ## Settling progression points
  *
- * The backend sends exactly one number per progression record: a settled
- * `displayRating`, or an `estimatedRating` while the rating is still provisional.
- * Both are on the same scale, so the parser reads whichever is present into
- * `ProgressionPoint.displayRating` and records which one it was in `provisional`.
- * A provisional point's number is plotted for its trend and only ever *shown* as
- * the design system's rough "~" band, never as a precise figure.
+ * The backend sends one number per progression record, `displayRating`, and the
+ * record's `state` says whether the rating was still settling after that match
+ * (the wire name for that state is `Provisional`). The parser reads the number
+ * into `ProgressionPoint.displayRating` and the state, by name, into
+ * `provisional`. A settling point's number is shown exactly as a settled one is;
+ * the flag only marks the reading as settling.
  *
  * `ProgressionPoint.displayRating` stays non-nullable, because a point is a thing
- * the chart and the Progression_Table can show. A wire record carrying neither
- * number is **not a parse failure** — both absences are declared above — and
+ * the chart and the Progression_Table can show. A wire record carrying no number
+ * is **not a parse failure** — the absence is declared above — and
  * {@link parseProgressionPoint} reports it as an accepted reading carrying **no
  * point** (`ok(null)`).
  *
@@ -141,12 +139,12 @@ export interface RatingSummary {
 
 /**
  * One plottable point of the rating progression: when a match completed, the
- * rating number recorded for it, and whether that rating was still provisional.
+ * rating number recorded for it, and whether that rating was still settling.
  *
  * `displayRating` is non-nullable — a record that carries no number is no point
- * at all (see the module note). Where `provisional` is true it is the backend's
- * estimate, which is plotted but only displayed as a "~" band. There is no mean
- * and no uncertainty.
+ * at all (see the module note). `provisional` is true while the rating was still
+ * settling (the wire's `Provisional` state): the number is shown like any other
+ * and the reading is marked as settling. There is no mean and no uncertainty.
  */
 export interface ProgressionPoint {
   readonly completedAtMs: number;
@@ -405,6 +403,14 @@ export function printRatingSummary(rating: RatingSummary): unknown {
   };
 }
 
+/**
+ * The wire names of the two rating states, pinned to the generated vocabulary so
+ * a renamed backend member fails `tsc -b` here. A settling rating's wire name is
+ * still `Provisional`.
+ */
+const SETTLING_STATE = 'Provisional' as const satisfies RatingState;
+const SETTLED_STATE = 'Established' as const satisfies RatingState;
+
 /* -------------------------------------------------------------------------- */
 /* A progression point                                                        */
 /* -------------------------------------------------------------------------- */
@@ -415,16 +421,17 @@ export function printRatingSummary(rating: RatingSummary): unknown {
  *
  * The completion instant is required and is normalised to epoch milliseconds on
  * read, which is what lets the round-trip property compare instants rather than
- * wire strings. A settled `displayRating` makes an established point; failing
- * that, an `estimatedRating` makes a provisional one. Both are declared-optional,
- * and a record carrying neither yields `ok(null)`: it parses, and contributes
- * nothing to plot.
+ * wire strings. The `displayRating` is the point's number, and the record's
+ * `state`, read by name against the generated vocabulary, says whether it was
+ * still settling. The state is required of every record, because a settling
+ * reading shown as settled would misstate it. A record carrying no number yields
+ * `ok(null)`: it parses, and contributes nothing to plot.
  *
  * A record whose instant is malformed fails — and so fails the whole body
  * (Requirement 13.3) — whether or not it carries a rating: a progression the
  * chart cannot order is not a progression.
  *
- * The wire record's `mu`, `sigma`, and `state` are not named (Requirement 7.7).
+ * The wire record's `mu` and `sigma` are not named (Requirement 7.7).
  *
  * Requirements: 7.7, 13.3, 13.6
  */
@@ -456,40 +463,32 @@ export function parseProgressionPoint(
     return displayRating;
   }
 
-  if (displayRating.value !== null) {
-    return ok({
-      completedAtMs: completedAtMs.value,
-      displayRating: displayRating.value,
-      provisional: false,
-    });
-  }
-
-  const estimatedRating = readOptional(
-    readProperty(source.value, 'estimatedRating'),
-    'progression point estimatedRating',
-    readNumber,
+  const state = readWireEnumName(
+    readProperty(source.value, 'state'),
+    'progression point state',
+    isRatingState,
   );
 
-  if (!estimatedRating.ok) {
-    return estimatedRating;
+  if (!state.ok) {
+    return state;
   }
 
-  if (estimatedRating.value === null) {
+  if (displayRating.value === null) {
     return ok(null);
   }
 
   return ok({
     completedAtMs: completedAtMs.value,
-    displayRating: estimatedRating.value,
-    provisional: true,
+    displayRating: displayRating.value,
+    provisional: state.value === SETTLING_STATE,
   });
 }
 
 /**
  * A progression point rendered back into the wire shape
  * {@link parseProgressionPoint} accepts, with the rating-model members emitted as
- * placeholder zeros (see the module note). No `state` is emitted, because none is
- * read. The number goes back to whichever member it was read from.
+ * placeholder zeros (see the module note). The `state` goes back as the wire
+ * name the flag was read from.
  *
  * Requirements: 13.7
  */
@@ -498,8 +497,8 @@ export function printProgressionPoint(point: ProgressionPoint): unknown {
     completedAt: printInstant(point.completedAtMs),
     mu: RATING_MODEL_PLACEHOLDER,
     sigma: RATING_MODEL_PLACEHOLDER,
-    displayRating: point.provisional ? null : point.displayRating,
-    estimatedRating: point.provisional ? point.displayRating : null,
+    state: point.provisional ? SETTLING_STATE : SETTLED_STATE,
+    displayRating: point.displayRating,
   };
 }
 

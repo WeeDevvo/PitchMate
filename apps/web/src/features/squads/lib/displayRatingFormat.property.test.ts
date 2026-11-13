@@ -656,7 +656,7 @@ describe('selectRatingPresentation — the rating comes from the matching entry 
     );
   });
 
-  it('carries no field beyond the kind and the value', () => {
+  it('carries no field beyond the kind, the value and the settling flag', () => {
     fc.assert(
       fc.property(
         fc.uuid(),
@@ -674,7 +674,7 @@ describe('selectRatingPresentation — the rating comes from the matching entry 
 
           // Nothing the entry carries can ride along to the row, because the
           // presentation has exactly two own keys.
-          expect(Object.keys(presentation).sort()).toEqual(['kind', 'value']);
+          expect(Object.keys(presentation).sort()).toEqual(['kind', 'settling', 'value']);
           expect(presentation.kind).toBe('rating');
         },
       ),

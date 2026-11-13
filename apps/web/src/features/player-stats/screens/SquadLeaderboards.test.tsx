@@ -9,8 +9,8 @@ import {
   GENERIC_PROFILE_FAILURE,
   LEADERBOARD_EMPTY_STATEMENT,
   LEADERBOARD_LOADING_LABEL,
-  LEADERBOARD_PROVISIONAL_STATEMENT,
   LEADERBOARD_RANK_BY_LABEL,
+  LEADERBOARD_SETTLING_STATEMENT,
   RETRY_LABEL,
 } from '../lib/messages';
 import type { Leaderboard } from '../lib/parse/leaderboard';
@@ -65,7 +65,28 @@ describe('SquadLeaderboards', () => {
       'href',
       playerStatsPath(SQUAD_ID, board.entries[0]!.membershipId),
     );
-    expect(screen.getByText(LEADERBOARD_PROVISIONAL_STATEMENT)).toBeInTheDocument();
+    // Nobody on this board is settling, so nothing says so.
+    expect(screen.queryByText(LEADERBOARD_SETTLING_STATEMENT)).not.toBeInTheDocument();
+    expect(screen.queryByText('Settling')).not.toBeInTheDocument();
+  });
+
+  it('ranks a settling player on their number, with the settling note under their name', async () => {
+    const { api } = stubLeaderboardApi(() =>
+      success(boardOf('DisplayRating', [1180, 1118, 960], [1])),
+    );
+
+    await renderLeaderboards(api);
+
+    // The number sits in the value column like every other, with nothing on it.
+    expect(rows()).toEqual([
+      ['1', 'Player 1', '1180'],
+      ['2', 'Player 2Settling', '1118'],
+      ['3', 'Player 3', '960'],
+    ]);
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(items[1]!.lastElementChild!.className).toBe(items[0]!.lastElementChild!.className);
+    expect(screen.getAllByText('Settling')).toHaveLength(1);
+    expect(screen.getByText(LEADERBOARD_SETTLING_STATEMENT)).toBeInTheDocument();
   });
 
   it('switches board on a pick, issuing one call for that statistic', async () => {
@@ -86,7 +107,7 @@ describe('SquadLeaderboards', () => {
       ['1', 'Player 1', '75.0%'],
       ['2', 'Player 2', '50.0%'],
     ]);
-    expect(screen.queryByText(LEADERBOARD_PROVISIONAL_STATEMENT)).not.toBeInTheDocument();
+    expect(screen.queryByText(LEADERBOARD_SETTLING_STATEMENT)).not.toBeInTheDocument();
   });
 
   it('shows level players at the same position', async () => {

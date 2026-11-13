@@ -64,7 +64,7 @@ Personal data held: for a user, display name, email, verified flag, avatar refer
 | AX-03 | Colour contrast of every documented token pairing is tested in both themes | **Built** | `apps/web/src/design/tokens.contrast.test.ts` |
 | AX-04 | Skip link and focus moved to the arriving page heading | **Built** | `apps/web/src/features/app-shell/components/SkipLink.tsx`, `apps/web/src/features/app-shell/components/ContentRegion.tsx` |
 | AX-05 | Reduced motion respected | **Built** | `apps/web/src/index.css:55` |
-| AX-06 | Never colour alone: W/L/D letters and marks, the "~ Provisional" label, team names, the word BIBS | **Built** | `apps/web/src/ui/Result.tsx`, `apps/web/src/ui/BibFlag.tsx`, `apps/web/src/features/player-stats/components/ProgressionChart.tsx` |
+| AX-06 | Never colour alone: W/L/D letters and marks, the word "Settling" beside a rating that has not settled, team names, the word BIBS | **Built** | `apps/web/src/ui/Result.tsx`, `apps/web/src/ui/BibFlag.tsx`, `apps/web/src/ui/Badge.tsx` |
 | AX-07 | Keyboard patterns for composite widgets (roving focus) are property-tested | **Built** | `apps/web/src/ui/roving.ts`, `apps/web/src/ui/roving.property.test.ts` |
 | AX-08 | Static accessibility linting | **Gap** | No `eslint-plugin-jsx-a11y` in the lint config | `apps/web/eslint.config.js` |
 | AX-09 | Manual checks: screen-reader walkthroughs, keyboard-only passes, zoom and reflow | **Gap** | Nothing recorded in the repo | `apps/web` |

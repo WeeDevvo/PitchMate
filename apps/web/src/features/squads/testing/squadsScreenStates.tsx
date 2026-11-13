@@ -318,7 +318,7 @@ export function squadMember(overrides: Partial<SquadMember> = {}): SquadMember {
  * | Member | What it exercises |
  * | --- | --- |
  * | `Ada` | a rated active member, promotable under Admin_Authority |
- * | `Grace` | a member the leaderboard names nowhere — the Provisional_Band |
+ * | `Grace` | a newcomer whose rating is still settling: a number like anyone's, with the settling note by her name |
  * | `Dave` | a guest: the guest label, and the edit affordance under authority |
  * | `Kay` | an inactive membership: the state label and the muted row |
  * | the placeholder | a Former_Player: navigable, and offered no admin action |
@@ -367,15 +367,18 @@ export function squadDetail(overrides: Partial<SquadDetail> = {}): SquadDetail {
 }
 
 /**
- * A leaderboard naming two of the five memberships.
+ * A leaderboard naming three of the five memberships, the settling newcomer
+ * among them.
  *
- * The three it does not name render the Provisional_Band, so one tree carries
- * both of the presentations a held leaderboard can produce (Requirement 8.3).
+ * The guest it does not name renders Rating_Unavailable and the Former_Player
+ * has never played, so one tree carries every presentation a held leaderboard
+ * can produce, and the settling note (Requirement 8.3).
  */
 export function displayRatingLeaderboard(): DisplayRatingLeaderboard {
   return {
     entries: [
       { membershipId: RATED_MEMBERSHIP_ID, displayName: 'Ada', value: 1204 },
+      { membershipId: PROVISIONAL_MEMBERSHIP_ID, displayName: 'Grace', value: 1118 },
       { membershipId: INACTIVE_MEMBERSHIP_ID, displayName: 'Kay', value: 988 },
     ],
   };
@@ -1220,7 +1223,7 @@ export const SCREEN_STATE_CASES: readonly ScreenStateCase[] = [
     render: (theme) => renderSquadScreenState('not-found', theme),
   },
   {
-    name: 'the Player_List with ratings and Provisional_Bands',
+    name: 'the Player_List with ratings and a settling player',
     render: (theme) => renderSquadScreenState('players', theme),
   },
   {

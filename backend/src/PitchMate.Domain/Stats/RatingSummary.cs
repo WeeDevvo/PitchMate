@@ -15,11 +15,13 @@ namespace PitchMate.Domain.Stats;
 ///     are <see langword="null"/>.
 ///   </description></item>
 ///   <item><description>
-///     <b>Provisional</b> — <see cref="Mu"/>/<see cref="Sigma"/> are set and <see cref="State"/> is
-///     <see cref="RatingState.Provisional"/>, but <see cref="DisplayRating"/> is <see langword="null"/>.
+///     <b>Provisional</b> (settling) — all four values are set and <see cref="State"/> is
+///     <see cref="RatingState.Provisional"/>. The number is the same μ-based number an established
+///     rating shows; the state is what tells a client to show the settling note.
 ///   </description></item>
 ///   <item><description>
-///     <b>Established</b> — all four values are set.
+///     <b>Established</b> — all four values are set and <see cref="State"/> is
+///     <see cref="RatingState.Established"/>.
 ///   </description></item>
 /// </list>
 /// The classification is obtained from <see cref="IRatingEngine.GetState"/>; this type never
@@ -28,7 +30,7 @@ namespace PitchMate.Domain.Stats;
 /// <param name="Mu">The current mean skill estimate (μ), or <see langword="null"/> when not yet established.</param>
 /// <param name="Sigma">The current uncertainty (σ), or <see langword="null"/> when not yet established.</param>
 /// <param name="State">The provisional/established classification, or <see langword="null"/> when not yet established.</param>
-/// <param name="DisplayRating">The friendly display number when established, otherwise <see langword="null"/>.</param>
+/// <param name="DisplayRating">The friendly display number, or <see langword="null"/> when not yet established.</param>
 public sealed record RatingSummary(double? Mu, double? Sigma, RatingState? State, int? DisplayRating)
 {
     /// <summary>
@@ -41,9 +43,9 @@ public sealed record RatingSummary(double? Mu, double? Sigma, RatingState? State
     /// <summary>
     /// Builds the summary for a membership that has a <c>Membership_Rating</c>. Classifies the rating
     /// through <paramref name="engine"/>'s <see cref="IRatingEngine.GetState"/> (never re-implementing
-    /// the rule, Requirement 7.2); a provisional rating carries μ/σ and a <see cref="RatingState.Provisional"/>
-    /// state with no display number, while an established rating additionally carries the display number
-    /// computed by <see cref="DisplayRatingCalculator"/> from <paramref name="parameters"/>.
+    /// the rule, Requirement 7.2) and carries the display number computed by
+    /// <see cref="DisplayRatingCalculator"/> from <paramref name="parameters"/> in either state: σ
+    /// decides the state, never the number.
     /// </summary>
     /// <param name="engine">The rating engine used solely to classify the rating's state.</param>
     /// <param name="mu">The membership's current mean skill estimate (μ).</param>
@@ -67,7 +69,7 @@ public sealed record RatingSummary(double? Mu, double? Sigma, RatingState? State
         }
 
         var state = stateResult.Value;
-        var displayRating = DisplayRatingCalculator.Compute(state, mu, sigma, parameters);
+        var displayRating = DisplayRatingCalculator.Compute(mu, parameters);
         return new RatingSummary(mu, sigma, state, displayRating);
     }
 }

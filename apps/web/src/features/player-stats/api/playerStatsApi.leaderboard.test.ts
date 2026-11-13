@@ -66,10 +66,46 @@ describe('getLeaderboard over the generated client', () => {
       value: {
         statistic: 'Appearances',
         entries: [
-          { membershipId: MEMBER_ID, displayName: 'Dave', value: 12 },
-          { membershipId: SQUAD_ID, displayName: 'Sam', value: 9 },
+          { membershipId: MEMBER_ID, displayName: 'Dave', value: 12, settling: false },
+          { membershipId: SQUAD_ID, displayName: 'Sam', value: 9, settling: false },
         ],
       },
+    });
+  });
+
+  it('ranks a settling player on the rating board and marks them as settling', async () => {
+    const { api } = apiAnswering(() =>
+      json({
+        statistic: 'DisplayRating',
+        entries: [
+          { membershipId: MEMBER_ID, displayName: 'Dave', value: 1118, ratingState: 'Provisional' },
+          { membershipId: SQUAD_ID, displayName: 'Sam', value: 1040, ratingState: 'Established' },
+        ],
+      }),
+    );
+
+    expect(await api.getLeaderboard(SQUAD_ID, 'DisplayRating')).toEqual({
+      kind: 'success',
+      value: {
+        statistic: 'DisplayRating',
+        entries: [
+          { membershipId: MEMBER_ID, displayName: 'Dave', value: 1118, settling: true },
+          { membershipId: SQUAD_ID, displayName: 'Sam', value: 1040, settling: false },
+        ],
+      },
+    });
+  });
+
+  it('settles a board whose rating state is no known name as a parse failure', async () => {
+    const { api } = apiAnswering(() =>
+      json({
+        statistic: 'DisplayRating',
+        entries: [{ membershipId: MEMBER_ID, displayName: 'Dave', value: 1118, ratingState: 'Wobbly' }],
+      }),
+    );
+
+    expect(await api.getLeaderboard(SQUAD_ID, 'DisplayRating')).toEqual({
+      kind: 'parse-failure',
     });
   });
 

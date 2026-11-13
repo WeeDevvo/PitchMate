@@ -1,5 +1,6 @@
 using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Application.Stats;
+using PitchMate.Domain.Rating;
 using PitchMate.Domain.Squads;
 using PitchMate.Domain.Stats;
 
@@ -163,6 +164,45 @@ public class LeaderboardHandlerTests
         Assert.Equal(3.0, board.Entries[0].Value);
         Assert.Equal(one, board.Entries[1].MembershipId);
         Assert.Equal(1.0, board.Entries[1].Value);
+        // Only the display-rating leaderboard reports a rating state.
+        Assert.All(board.Entries, entry => Assert.Null(entry.RatingState));
+    }
+
+    // The display-rating leaderboard ranks a settling rating on its number like any other and passes
+    // each row's rating state through, so a client can show the settling note beside the name.
+    [Fact]
+    public async Task Display_rating_ranks_settling_players_and_carries_their_state()
+    {
+        Guid squadId = Guid.NewGuid();
+        Guid userId = Guid.NewGuid();
+        SquadMembership requester = SquadMembership.CreateRegistered(squadId, userId, "Requester").Value!;
+
+        Guid settled = Guid.NewGuid();
+        Guid newcomer = Guid.NewGuid();
+        var rows = new List<LeaderboardRow>
+        {
+            new(settled, "Settled", MembershipState.Active, Value: 1040, Results: null,
+                RatingState: RatingState.Established),
+            new(newcomer, "Newcomer", MembershipState.Active, Value: 1118, Results: null,
+                RatingState: RatingState.Provisional),
+        };
+
+        var handler = new GetLeaderboardHandler(
+            new FakeStatsMembershipRepository(requester),
+            new FakeStatsRepository(rows: rows));
+
+        var result = await handler.HandleAsync(
+            new GetLeaderboardCommand(userId, squadId, LeaderboardStatistic.DisplayRating),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Leaderboard board = result.Value!;
+        Assert.Equal(2, board.Entries.Count);
+        Assert.Equal(newcomer, board.Entries[0].MembershipId);
+        Assert.Equal(1118.0, board.Entries[0].Value);
+        Assert.Equal(RatingState.Provisional, board.Entries[0].RatingState);
+        Assert.Equal(settled, board.Entries[1].MembershipId);
+        Assert.Equal(RatingState.Established, board.Entries[1].RatingState);
     }
 
     /// <summary>

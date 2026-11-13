@@ -10,6 +10,7 @@ import {
   RATING_PANEL_CONDITION_ATTRIBUTE,
   RATING_PANEL_PRESENTATION_SELECTOR,
   RATING_PANEL_SELECTOR,
+  RATING_PANEL_SETTLING_SELECTOR,
   RATING_PANEL_TEXT_SELECTOR,
   RatingPanel,
   ratingPanelAccessibleName,
@@ -17,7 +18,7 @@ import {
 import {
   RATING_ABSENT,
   RATING_NEVER_PLAYED,
-  RATING_PROVISIONAL,
+  RATING_SETTLING_NOTE,
 } from '../lib/messages';
 import { formatCount } from '../lib/numberFormat';
 import type { RatingCondition } from '../lib/ratingCondition';
@@ -28,82 +29,47 @@ import type { RatingCondition } from '../lib/ratingCondition';
  * rather than over the four hand-written cases beside it in
  * `RatingPanel.test.tsx`.
  *
- * The claim (Requirements 7.5, 7.6): *for any two distinct Rating_Conditions,
- * their rendered text differs and their accessible names differ, each accessible
- * name states which condition holds, and each condition is conveyed by text plus
- * a non-colour cue in addition to any colour.*
+ * The claim: *any two distinct Rating_Conditions read differently as a panel,
+ * and each is conveyed in words plus a non-colour cue.* How two conditions
+ * differ depends on which two they are:
  *
- * ## Why this is worth generating rather than enumerating
+ * - **A rating, never played, and not recorded** are three different
+ *   presentations: different visible words, different accessible names, and
+ *   different badge shapes.
+ * - **An established rating and a settling one are the same presentation of the
+ *   number** — same words, same name, same badge, same classes — because a
+ *   settling rating looks like every other rating (brand.md). They are told
+ *   apart by the plain sentence under a settling figure, and by nothing on the
+ *   figure itself.
  *
- * There are twelve ordered pairs of the four conditions, which an example test
- * could list. What it could not list is the *parameter* the conditions carry: the
- * `established` arm renders a Display_Rating, and a number is exactly the kind of
- * value that can collide with words — a rating that happened to render as the
- * empty string, or a label that happened to carry the same digits, would make two
- * presentations identical for *some* ratings while the four hand-written cases
- * still passed. The player's name is generated for the same reason: it is
- * prepended to every accessible name, so a name could in principle be what makes
- * two names differ, which would leave the *condition* undistinguished. Holding
- * the name fixed across each pair removes that escape: anything that differs
- * below differs because the condition does.
+ * The player's name is held fixed across each pair, so anything that differs
+ * differs because the condition does. Generated names carry no digit and none of
+ * the vocabulary, so every match found is attributable to the condition.
  *
- * ## The three channels, asserted separately
- *
- * Requirement 7.6 asks that no two of the four presentations render identical
- * text. Requirement 16.6 asks that the condition be conveyed in addition to any
- * colour. So each pair is separated on **three independent channels** and the
- * assertions are made one at a time rather than as a single "they differ
- * somehow":
- *
- * | Channel | Read from | Why |
- * | --- | --- | --- |
- * | the visible words | {@link RATING_PANEL_TEXT_SELECTOR} | Requirement 7.6's "identical text" |
- * | the accessible name | the `aria-label` of the named composite | what a screen reader announces |
- * | the badge shape | {@link RATING_PANEL_BADGE_SELECTOR} | the non-colour cue (7.3, 16.6) |
- *
- * The cue is read as **markup** — the badge's own `data-` attribute and its shape
- * class — and never as a computed colour. That is not a convenience: the panel's
- * hues come from custom properties declared in `styles/playerStatsTokens.css`,
- * and jsdom resolves a `var()` reference to the empty string, so a colour
- * assertion here would be vacuous whatever the stylesheet said. Asserting the
- * shape is also the stronger claim: a reader in greyscale, in a forced-colours
- * mode, or with no colour perception at all is told the four apart by the words
- * and the shape, which is what "in addition to any colour" means.
- *
- * ## What "states which condition holds" is held to
- *
- * Difference alone is not enough — four distinct but meaningless names would
- * satisfy it. So each name is additionally required to carry **its own
- * condition's claim** and **none of the other conditions' claims**: the three
- * non-numeric conditions carry their fixed statement from `lib/messages.ts`
- * verbatim, and the `established` condition carries the rating's digits announced
- * as a rating rather than as a bare figure. The vocabulary block below asserts
- * that those three statements are pairwise distinct and that none is a substring
- * of another, so the containment test is a real discriminator rather than an
- * accident of wording.
- *
- * Generated names are constrained to carry no digit and to mention none of the
- * vocabulary, so every match found in an accessible name is attributable to the
- * condition and not to the subject.
- *
- * Deliberately **not** claimed here: that a provisional rating renders no number
- * (Property 17, `ratingPanel.provisional.property.test.tsx`), and that exactly
- * one condition is resolved in the first place (Property 15,
- * `lib/ratingCondition.property.test.ts`). Restating either would hide a
- * regression behind a duplicate.
+ * The cue is read as **markup** — the badge's own `data-` attribute and its
+ * shape class — and never as a computed colour: jsdom resolves a `var()`
+ * reference to the empty string, so a colour assertion would be vacuous.
  */
 
 // --- the vocabulary this suite is written against -----------------------------
 
-/** The four conditions, transcribed from Requirement 7.1 rather than read off the union. */
+/** The four conditions, transcribed rather than read off the union. */
 const CONDITION_KINDS = [
   'established',
-  'provisional',
+  'settling',
   'never-played',
   'absent',
 ] as const;
 
 type ConditionKind = (typeof CONDITION_KINDS)[number];
+
+/** The look each condition is drawn in: both numeric conditions are a rating. */
+const LOOK_OF: Readonly<Record<ConditionKind, string>> = {
+  established: 'rating',
+  settling: 'rating',
+  'never-played': 'never-played',
+  absent: 'absent',
+};
 
 /** Every ordered pair of two *distinct* conditions — the quantifier of the property. */
 const DISTINCT_KIND_PAIRS: readonly (readonly [ConditionKind, ConditionKind])[] =
@@ -116,23 +82,18 @@ const DISTINCT_KIND_PAIRS: readonly (readonly [ConditionKind, ConditionKind])[] 
 /** The statement each non-numeric condition's accessible name must carry. */
 const CONDITION_STATEMENT: Readonly<Record<ConditionKind, string | null>> = {
   established: null,
-  provisional: RATING_PROVISIONAL,
+  settling: null,
   'never-played': RATING_NEVER_PLAYED,
   absent: RATING_ABSENT,
 };
 
-/** The three fixed statements, as the discriminators the containment test uses. */
+/** The three fixed statements the rating section can show. */
 const EVERY_STATEMENT: readonly string[] = [
-  RATING_PROVISIONAL,
+  RATING_SETTLING_NOTE,
   RATING_NEVER_PLAYED,
   RATING_ABSENT,
 ];
 
-/**
- * The noun that makes a Display_Rating an announced *rating* rather than a bare
- * digit sequence, matched case-insensitively so the panel is free to word it
- * either way.
- */
 const RATING_NOUN = /rating/iu;
 
 // --- generators ---------------------------------------------------------------
@@ -145,11 +106,6 @@ const NAME_CHARACTERS = [
   "'",
 ] as const;
 
-/**
- * A Player_Display_Name: the shapes a squad really produces, arbitrary
- * digit-free strings, and the blank name the panel answers with the statement
- * alone.
- */
 const nameArb: fc.Arbitrary<string> = fc.oneof(
   {
     weight: 4,
@@ -171,11 +127,6 @@ const nameArb: fc.Arbitrary<string> = fc.oneof(
   { weight: 1, arbitrary: fc.constantFrom('', '   ') },
 );
 
-/**
- * A Display_Rating for the `established` arm: ordinary values, the named edge
- * magnitudes, and `-0`, which renders as `'0'` and so is the one value that
- * could collide with another rating's text.
- */
 const displayRatingArb: fc.Arbitrary<number> = fc.oneof(
   { weight: 5, arbitrary: fc.integer({ min: -2000, max: 5000 }) },
   {
@@ -194,19 +145,22 @@ const displayRatingArb: fc.Arbitrary<number> = fc.oneof(
   },
 );
 
-/** One ordered pair of distinct conditions, each with its own generated rating. */
+/** Build the union member for a kind, so a generated kind becomes a condition. */
+function conditionOf(kind: ConditionKind, displayRating: number): RatingCondition {
+  return kind === 'established' || kind === 'settling'
+    ? { kind, displayRating }
+    : { kind };
+}
+
+/** One ordered pair of distinct conditions, sharing one generated rating. */
 const distinctPairArb: fc.Arbitrary<readonly [RatingCondition, RatingCondition]> =
   fc
-    .tuple(
-      fc.constantFrom(...DISTINCT_KIND_PAIRS),
-      displayRatingArb,
-      displayRatingArb,
-    )
+    .tuple(fc.constantFrom(...DISTINCT_KIND_PAIRS), displayRatingArb)
     .map(
-      ([[firstKind, secondKind], firstRating, secondRating]) =>
+      ([[firstKind, secondKind], displayRating]) =>
         [
-          conditionOf(firstKind, firstRating),
-          conditionOf(secondKind, secondRating),
+          conditionOf(firstKind, displayRating),
+          conditionOf(secondKind, displayRating),
         ] as const,
     );
 
@@ -215,25 +169,20 @@ const conditionArb: fc.Arbitrary<RatingCondition> = fc
   .tuple(fc.constantFrom(...CONDITION_KINDS), displayRatingArb)
   .map(([kind, displayRating]) => conditionOf(kind, displayRating));
 
-/** Build the union member for a kind, so a generated kind becomes a condition. */
-function conditionOf(kind: ConditionKind, displayRating: number): RatingCondition {
-  return kind === 'established' ? { kind, displayRating } : { kind };
-}
+// --- reading a render ---------------------------------------------------------
 
-// --- rendering ----------------------------------------------------------------
-
-/** What one render says about its condition, read across the three channels. */
+/** What one render says about its condition. */
 interface RenderedCondition {
   /** The words (or digits) of the presentation. */
   readonly visibleText: string;
 
-  /** Everything the panel renders, the squad-scope statement included. */
+  /** Everything the panel renders, the sentences beneath the figure included. */
   readonly panelText: string;
 
   /** The accessible name of the badge-and-text composite. */
   readonly accessibleName: string;
 
-  /** The condition the badge names — the non-colour cue, read as markup. */
+  /** The look the badge names — the non-colour cue, read as markup. */
   readonly badgeCue: string;
 
   /** The badge's shape class, which is what makes the cue visible. */
@@ -248,18 +197,16 @@ interface RenderedCondition {
   /** How many named composites rendered. */
   readonly presentationCount: number;
 
+  /** The markup of the named composite: the badge, the figure and their classes. */
+  readonly presentationMarkup: string;
+
+  /** How many settling sentences rendered. */
+  readonly settlingSentenceCount: number;
+
   /** The condition the panel records having rendered. */
   readonly conditionAttribute: string;
 }
 
-/**
- * Render one condition and read the three channels off it.
- *
- * Unmounted before returning, because a property runs hundreds of times within
- * one test and Testing Library's automatic cleanup only fires between tests —
- * so without this, the second render of a pair would be read out of a document
- * still holding the first.
- */
 function renderCondition(
   playerName: string,
   condition: RatingCondition,
@@ -291,6 +238,9 @@ function renderCondition(
       badgeCount: badges.length,
       badgeHidden: badge?.getAttribute('aria-hidden') === 'true',
       presentationCount: presentations.length,
+      presentationMarkup: presentations[0]?.outerHTML ?? '',
+      settlingSentenceCount: panel.querySelectorAll(RATING_PANEL_SETTLING_SELECTOR)
+        .length,
       conditionAttribute: panel.getAttribute(RATING_PANEL_CONDITION_ATTRIBUTE) ?? '',
     };
   } finally {
@@ -307,17 +257,11 @@ function namesNothingItShouldNot(playerName: string): boolean {
   );
 }
 
-/** The statements that belong to conditions other than this one. */
-function foreignStatements(kind: ConditionKind): readonly string[] {
-  return EVERY_STATEMENT.filter(
-    (statement) => statement !== CONDITION_STATEMENT[kind],
-  );
+/** Whether both conditions of a pair are a number. */
+function bothNumeric(first: RatingCondition, second: RatingCondition): boolean {
+  return LOOK_OF[first.kind] === 'rating' && LOOK_OF[second.kind] === 'rating';
 }
 
-// --- the vocabulary is a real discriminator -----------------------------------
-
-// Feature: web-player-stats-screen, Property 18: The four conditions are mutually distinguishable
-// Validates: Requirements 7.5, 7.6
 describe('the four conditions this suite holds the panel to', () => {
   it('names four conditions and all twelve ordered pairs of distinct ones', () => {
     expect(new Set(CONDITION_KINDS).size).toBe(4);
@@ -325,7 +269,7 @@ describe('the four conditions this suite holds the panel to', () => {
       'absent',
       'established',
       'never-played',
-      'provisional',
+      'settling',
     ]);
     expect(DISTINCT_KIND_PAIRS).toHaveLength(12);
     expect(
@@ -334,9 +278,6 @@ describe('the four conditions this suite holds the panel to', () => {
   });
 
   it('carries three statements that are pairwise distinct and none a substring of another', () => {
-    // The containment test below is only a discriminator if this holds: a
-    // statement contained in another would make one condition's name "state"
-    // two conditions at once.
     expect(new Set(EVERY_STATEMENT).size).toBe(EVERY_STATEMENT.length);
 
     for (const statement of EVERY_STATEMENT) {
@@ -355,84 +296,66 @@ describe('the four conditions this suite holds the panel to', () => {
   });
 });
 
-// --- the property proper ------------------------------------------------------
-
-// Feature: web-player-stats-screen, Property 18: The four conditions are mutually distinguishable
-// Validates: Requirements 7.5, 7.6
 describe('any two distinct rating conditions present differently (Req 7.6)', () => {
-  it('renders different text and announces a different name for every distinct pair', () => {
+  it('reads differently as a panel, and records a different condition, for every distinct pair', () => {
     fc.assert(
       fc.property(nameArb, distinctPairArb, (playerName, [first, second]) => {
         fc.pre(namesNothingItShouldNot(playerName));
 
-        // The same subject on both sides, so nothing below can differ because
-        // the player did.
         const left = renderCondition(playerName, first);
         const right = renderCondition(playerName, second);
 
-        // 7.6: no two of the four render identical text — asserted on the
-        // presentation's own words and on the whole panel, since the
-        // squad-scope statement is identical in all four conditions and so
-        // cannot be what separates them.
-        expect(left.visibleText).not.toBe(right.visibleText);
         expect(left.panelText).not.toBe(right.panelText);
-
-        // What a screen reader hears differs too, and not only what a sighted
-        // reader sees.
-        expect(left.accessibleName).not.toBe(right.accessibleName);
-      }),
-      { numRuns: 300 },
-    );
-  });
-
-  it('gives every distinct pair two different non-colour cues (Req 16.6)', () => {
-    fc.assert(
-      fc.property(nameArb, distinctPairArb, (playerName, [first, second]) => {
-        const left = renderCondition(playerName, first);
-        const right = renderCondition(playerName, second);
-
-        // The shape channel separates the pair on its own, so the two are told
-        // apart with no colour perceived at all. Read as markup rather than as
-        // a computed hue: the panel's colours come from custom properties, and
-        // jsdom resolves a `var()` reference to nothing.
-        expect(left.badgeCue).not.toBe(right.badgeCue);
-        expect(left.badgeClass).not.toBe(right.badgeClass);
-
-        // And the panel records which condition it rendered, so the markup
-        // agrees with the words.
         expect(left.conditionAttribute).not.toBe(right.conditionAttribute);
       }),
       { numRuns: 300 },
     );
   });
 
-  it('separates all four at once, for any one subject', () => {
+  it('separates a rating, never played and not recorded by words, name and shape', () => {
+    fc.assert(
+      fc.property(nameArb, distinctPairArb, (playerName, [first, second]) => {
+        fc.pre(namesNothingItShouldNot(playerName));
+        fc.pre(!bothNumeric(first, second));
+
+        const left = renderCondition(playerName, first);
+        const right = renderCondition(playerName, second);
+
+        expect(left.visibleText).not.toBe(right.visibleText);
+        expect(left.accessibleName).not.toBe(right.accessibleName);
+        expect(left.badgeCue).not.toBe(right.badgeCue);
+        expect(left.badgeClass).not.toBe(right.badgeClass);
+      }),
+      { numRuns: 300 },
+    );
+  });
+
+  it('draws a settling rating exactly as an established one, and tells them apart in words beneath', () => {
     fc.assert(
       fc.property(nameArb, displayRatingArb, (playerName, displayRating) => {
-        fc.pre(namesNothingItShouldNot(playerName));
+        const established = renderCondition(playerName, {
+          kind: 'established',
+          displayRating,
+        });
+        const settling = renderCondition(playerName, {
+          kind: 'settling',
+          displayRating,
+        });
 
-        const rendered = CONDITION_KINDS.map((kind) =>
-          renderCondition(playerName, conditionOf(kind, displayRating)),
-        );
+        // Nothing on the figure differs: no colour, mark or label of its own.
+        expect(settling.presentationMarkup).toBe(established.presentationMarkup);
 
-        // Pairwise difference does not by itself give four distinct
-        // presentations unless it holds simultaneously, which is what
-        // Requirement 7.6's "four mutually distinguishable presentations"
-        // asks for. Four sets of four.
-        expect(new Set(rendered.map(({ visibleText }) => visibleText)).size).toBe(4);
-        expect(new Set(rendered.map(({ accessibleName }) => accessibleName)).size).toBe(4);
-        expect(new Set(rendered.map(({ badgeCue }) => badgeCue)).size).toBe(4);
-        expect(new Set(rendered.map(({ badgeClass }) => badgeClass)).size).toBe(4);
+        // The sentence is the difference, and it is words.
+        expect(established.settlingSentenceCount).toBe(0);
+        expect(settling.settlingSentenceCount).toBe(1);
+        expect(settling.panelText).toContain(RATING_SETTLING_NOTE);
+        expect(established.panelText).not.toContain(RATING_SETTLING_NOTE);
       }),
       { numRuns: 200 },
     );
   });
 });
 
-// --- each name says which condition holds -------------------------------------
-
-// Feature: web-player-stats-screen, Property 18: The four conditions are mutually distinguishable
-// Validates: Requirements 7.5, 7.6
 describe('each accessible name states which condition holds (Req 7.5)', () => {
   it('carries its own condition’s claim and none of the others’', () => {
     fc.assert(
@@ -442,21 +365,15 @@ describe('each accessible name states which condition holds (Req 7.5)', () => {
         const { accessibleName } = renderCondition(playerName, condition);
         const statement = CONDITION_STATEMENT[condition.kind];
 
-        if (statement === null) {
-          // 7.2: the one condition whose claim is a figure. The digits are
-          // announced as a *rating*, so the number is not heard as a bare
-          // value — and the name is more than the digits alone.
+        if (condition.kind === 'established' || condition.kind === 'settling') {
           expect(accessibleName).toContain(formatCount(condition.displayRating));
           expect(accessibleName).toMatch(RATING_NOUN);
           expect(accessibleName).not.toBe(formatCount(condition.displayRating));
         } else {
-          // 7.3, 7.4, 7.5: the fixed statement, verbatim.
           expect(accessibleName).toContain(statement);
         }
 
-        // Whatever it says, it says one thing: no other condition's statement
-        // appears, so a name cannot be read as two conditions at once.
-        for (const foreign of foreignStatements(condition.kind)) {
+        for (const foreign of EVERY_STATEMENT.filter((other) => other !== statement)) {
           expect(accessibleName).not.toContain(foreign);
         }
       }),
@@ -469,9 +386,6 @@ describe('each accessible name states which condition holds (Req 7.5)', () => {
       fc.property(nameArb, conditionArb, (playerName, condition) => {
         const { accessibleName } = renderCondition(playerName, condition);
 
-        // The announced name is exactly what the exported pure function builds,
-        // so the claim can be reasoned about without a DOM — and the two cannot
-        // drift apart.
         expect(accessibleName).toBe(
           ratingPanelAccessibleName(playerName, condition),
         );
@@ -485,28 +399,18 @@ describe('each accessible name states which condition holds (Req 7.5)', () => {
   });
 });
 
-// --- every condition has both channels ----------------------------------------
-
-// Feature: web-player-stats-screen, Property 18: The four conditions are mutually distinguishable
-// Validates: Requirements 7.5, 7.6
 describe('every condition is conveyed by text plus a non-colour cue (Req 16.6)', () => {
   it('renders words and exactly one shape for every condition', () => {
     fc.assert(
       fc.property(nameArb, conditionArb, (playerName, condition) => {
         const rendered = renderCondition(playerName, condition);
 
-        // Channel one: words. Never blank, so no condition is a shape alone.
         expect(rendered.visibleText).not.toBe('');
 
-        // Channel two: one shape, naming the condition it stands for, and
-        // carrying the condition in its class so the shape really is its own.
         expect(rendered.badgeCount).toBe(1);
-        expect(rendered.badgeCue).toBe(condition.kind);
-        expect(rendered.badgeClass).toContain(condition.kind);
+        expect(rendered.badgeCue).toBe(LOOK_OF[condition.kind]);
+        expect(rendered.badgeClass).toContain(LOOK_OF[condition.kind]);
 
-        // The shape is decorative to a screen reader because the composite's
-        // name already states the condition — two channels for sight, one
-        // complete statement for hearing.
         expect(rendered.badgeHidden).toBe(true);
         expect(rendered.presentationCount).toBe(1);
         expect(rendered.conditionAttribute).toBe(condition.kind);

@@ -15,7 +15,7 @@
  * | Surface | States |
  * | --- | --- |
  * | Squads_Home | awaiting the first response, cards, the Squads_Empty_State, the failure, the Create_Squad_Form open, the Join_Code_Form open |
- * | Squad_Screen | awaiting the first response, the failure, the Not_Found_Treatment, the Player_List with ratings and Provisional_Bands, the Player_List with ratings unavailable, the Admin_Section, the Guest_Form open for creation and for an edit, the invite generator open, the revoke confirmation open, the promotion confirmation open |
+ * | Squad_Screen | awaiting the first response, the failure, the Not_Found_Treatment, the Player_List with ratings and a settling player, the Player_List with ratings unavailable, the Admin_Section, the Guest_Form open for creation and for an edit, the invite generator open, the revoke confirmation open, the promotion confirmation open |
  * | Invite_Landing_Route | the handover, the handover after a failed preview, redeeming, the unusable invite, the failure, the incomplete link |
  *
  * The set itself lives in `../testing/squadsScreenStates.tsx`, because tasks 16.2,

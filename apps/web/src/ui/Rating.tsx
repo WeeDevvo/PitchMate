@@ -1,33 +1,19 @@
-import { ProvisionalBadge } from './Badge';
 import { cx } from './cx';
 import './Rating.css';
 
-export type RatingProps =
-  | {
-      /** Already formatted for display, e.g. "1,240". */
-      value: string;
-      /** Change since the last match. */
-      delta?: number;
-      provisional?: false;
-    }
-  | {
-      provisional: true;
-      /** The rough band shown instead of a number, e.g. "1,1xx". */
-      band: string;
-    };
+export interface RatingProps {
+  /** Already formatted for display, e.g. "1,240". */
+  value: string;
+  /** Change since the last match. */
+  delta?: number;
+}
 
-/** A display rating, or the "~" band: a provisional player never shows a precise number. */
-export function Rating(props: RatingProps) {
-  if (props.provisional) {
-    return (
-      <span className="pm-rating pm-rating--prov">
-        <span className="pm-rating__band pm-num">~{props.band}</span>
-        <ProvisionalBadge short />
-      </span>
-    );
-  }
-
-  const { value, delta } = props;
+/**
+ * A display rating. Every player shows a number, and a rating that is still
+ * settling looks the same as any other: the note that it is settling goes with
+ * the player's name (`SettlingMark`), never on the number.
+ */
+export function Rating({ value, delta }: RatingProps) {
   return (
     <span className="pm-rating pm-num">
       {value}

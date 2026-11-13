@@ -188,15 +188,17 @@ function identityShapesIn(text: string): readonly string[] {
  *  - The Not_Found_Treatment's heading and statement conceal five causes behind
  *    one presentation, and the heading names neither identity nor any
  *    Player_Display_Name (Requirements 3.5, 3.6).
- *  - The three non-numeric Rating_Condition labels stand *in place of* a
+ *  - The two non-numeric Rating_Condition labels stand *in place of* a
  *    Display_Rating, so a digit in one of them would be the rating the
- *    condition says does not exist (Requirements 7.3, 7.4, 7.5).
+ *    condition says does not exist (Requirements 7.4, 7.5). The sentence under
+ *    a settling rating sits beside the real figure, so a digit in it would read
+ *    as a second rating (Requirement 7.3).
  */
 const NON_DISCLOSURE_MESSAGES: readonly (readonly [string, string])[] = [
   ['GENERIC_PROFILE_FAILURE', messages.GENERIC_PROFILE_FAILURE],
   ['NOT_FOUND_TREATMENT_HEADING', messages.NOT_FOUND_TREATMENT_HEADING],
   ['NOT_FOUND_TREATMENT_STATEMENT', messages.NOT_FOUND_TREATMENT_STATEMENT],
-  ['RATING_PROVISIONAL', messages.RATING_PROVISIONAL],
+  ['RATING_SETTLING_NOTE', messages.RATING_SETTLING_NOTE],
   ['RATING_NEVER_PLAYED', messages.RATING_NEVER_PLAYED],
   ['RATING_ABSENT', messages.RATING_ABSENT],
 ];
@@ -204,9 +206,13 @@ const NON_DISCLOSURE_MESSAGES: readonly (readonly [string, string])[] = [
 const nonDisclosureMessageArb: fc.Arbitrary<readonly [string, string]> =
   fc.constantFrom(...NON_DISCLOSURE_MESSAGES);
 
-/** The three non-numeric Rating_Condition labels, in the order of Requirement 7. */
+/**
+ * The rating section's three fixed statements, in the order of Requirement 7:
+ * the sentence under a settling rating, and the two labels shown in place of a
+ * number.
+ */
 const RATING_CONDITION_LABELS: readonly (readonly [string, string])[] = [
-  ['RATING_PROVISIONAL', messages.RATING_PROVISIONAL],
+  ['RATING_SETTLING_NOTE', messages.RATING_SETTLING_NOTE],
   ['RATING_NEVER_PLAYED', messages.RATING_NEVER_PLAYED],
   ['RATING_ABSENT', messages.RATING_ABSENT],
 ];
@@ -411,10 +417,10 @@ describe('messages — the non-disclosing strings carry no number and no identit
         // from a network that dropped and from a body that would not parse
         // (4.2). A digit in the Not_Found_Treatment would be a count or a code
         // narrowing the five concealed causes to one (3.5). A digit in one of
-        // the three rating labels would be the rating the label exists to say
-        // does not exist — the Provisional_Rating has no firm number, the
-        // Never_Played condition has none at all, and an absent rating is not a
-        // zero (7.3, 7.4, 7.5).
+        // the rating statements would read as a rating: the settling sentence
+        // sits under the real figure and must not look like a second one, the
+        // Never_Played condition has no number at all, and an absent rating is
+        // not a zero (7.3, 7.4, 7.5).
         expect(digitsIn(text), `${name} must carry no digit`).toEqual([]);
       }),
       { numRuns: 300 },
@@ -444,10 +450,10 @@ describe('messages — the non-disclosing strings carry no number and no identit
 // the rendered distinctness claims rest on are themselves distinguishable
 // Validates: Requirements 3.5, 4.2
 describe('messages — the pinned copy is the copy the requirements name', () => {
-  it('keeps the three non-numeric rating labels pairwise distinct, none inside another', () => {
+  it('keeps the three rating statements pairwise distinct, none inside another', () => {
     // Property 18 claims the four Rating_Conditions are mutually
     // distinguishable as rendered. A rendered test can only observe that if the
-    // three non-numeric labels read differently — and substring containment
+    // three fixed statements read differently — and substring containment
     // matters as much as equality, because an assertion that the rendered text
     // *contains* one label would also pass for the label that contains it. This
     // is the conflation the shipped squads player list carries (7.6).

@@ -90,8 +90,6 @@ export interface ChartPoint {
   key: string;
   x: number;
   y: number;
-  /** A provisional reading: drawn as a dashed amber ring. */
-  provisional?: boolean;
   /** A reading taken while the rating was still settling: a hollow mark, even when it is the latest. */
   settling?: boolean;
 }
@@ -105,8 +103,6 @@ export interface RatingChartProps extends SVGProps<SVGSVGElement> {
   /** The line through the points as SVG `points`, or `null` for a single reading. */
   polyline: string | null;
   marks: readonly ChartPoint[];
-  /** Stretches of the line through provisional readings, as SVG `points`, drawn dashed amber over it. */
-  provisionalLines?: readonly string[];
   /** Stretches of the line through settling readings, as SVG `points`, drawn dashed in the line's own colour. */
   settlingLines?: readonly string[];
   pointRadius?: number;
@@ -115,10 +111,6 @@ export interface RatingChartProps extends SVGProps<SVGSVGElement> {
   pointProps?: (index: number) => SVGProps<SVGCircleElement>;
   /** The area under the line as SVG `points`, shaded faintly. */
   area?: string | null;
-  /** Horizontal spans of provisional readings, in plot coordinates: an amber band behind them. */
-  provisionalBands?: readonly { x1: number; x2: number }[];
-  /** The words on the first band, such as "~ Provisional". */
-  provisionalLabel?: string;
   /** Rating labels up the side, at plot heights. */
   yTicks?: readonly ChartTick[];
   /** Labels along the bottom, such as months, at plot positions. */
@@ -135,11 +127,10 @@ const percentOf = (value: number, whole: number) => `${(value / whole) * 100}%`;
 
 /**
  * A rating line in the design system's chart style: frame lines, the line, and
- * a mark at each reading, the latest filled. Provisional readings get a dashed
- * amber ring, and the line through them is dashed amber. Settling readings stay hollow on a dashed
- * line in the chart's own colour. It draws a plot it is given; the geometry
- * (scaling, degenerate series) is the caller's. Decorative: show the readings as
- * text beside it, provisional ones as the "~" band.
+ * a mark at each reading, the latest filled. Settling readings stay hollow on a
+ * dashed line in the chart's own colour. It draws a plot it is given; the
+ * geometry (scaling, degenerate series) is the caller's. Decorative: show the
+ * readings as text beside it.
  */
 export function RatingChart({
   width,
@@ -147,14 +138,11 @@ export function RatingChart({
   gridLines = [],
   polyline,
   marks,
-  provisionalLines = [],
   settlingLines = [],
   pointRadius = 3.5,
   lineProps,
   pointProps,
   area,
-  provisionalBands = [],
-  provisionalLabel,
   yTicks = [],
   xTicks = [],
   className,
@@ -170,30 +158,14 @@ export function RatingChart({
       className={cx('pm-chart', className)}
     >
       {area ? <polygon className="pm-chart__area" points={area} /> : null}
-      {provisionalBands.map((band) => (
-        <rect
-          key={`${band.x1}:${band.x2}`}
-          className="pm-chart__band"
-          x={band.x1}
-          y={0}
-          width={Math.max(0, band.x2 - band.x1)}
-          height={height}
-        />
-      ))}
       {gridLines.map((line) => (
         <line key={line.y} className="pm-chart__grid" x1={line.x1} y1={line.y} x2={line.x2} y2={line.y} />
       ))}
       {polyline === null ? null : <polyline {...lineProps} className="pm-chart__line" points={polyline} />}
-      {provisionalLines.map((points) => (
-        <g key={points}>
-          {/* Covers the solid line beneath, so the dashes read on the card. */}
-          <polyline className="pm-chart__line pm-chart__line--prov-cover" points={points} />
-          <polyline className="pm-chart__line pm-chart__line--prov" points={points} />
-        </g>
-      ))}
       {settlingLines.map((points) => (
         <g key={points}>
-          <polyline className="pm-chart__line pm-chart__line--prov-cover" points={points} />
+          {/* Covers the solid line beneath, so the dashes read on the card. */}
+          <polyline className="pm-chart__line pm-chart__line--cover" points={points} />
           <polyline className="pm-chart__line pm-chart__line--settling" points={points} />
         </g>
       ))}
@@ -204,7 +176,6 @@ export function RatingChart({
           className={cx(
             'pm-chart__dot',
             index === marks.length - 1 && 'pm-chart__dot--last',
-            point.provisional === true && 'pm-chart__dot--prov',
             point.settling === true && 'pm-chart__dot--settling',
           )}
           cx={point.x}
@@ -215,8 +186,7 @@ export function RatingChart({
     </svg>
   );
 
-  const firstBand = provisionalBands[0];
-  if (yTicks.length === 0 && xTicks.length === 0 && (firstBand === undefined || !provisionalLabel)) return svg;
+  if (yTicks.length === 0 && xTicks.length === 0) return svg;
 
   // The labels are HTML laid over the drawing, so they keep their size however
   // the plot is stretched. Decorative like the plot: the readings are stated in
@@ -230,14 +200,7 @@ export function RatingChart({
           </span>
         ))}
       </div>
-      <div className="pm-chart-frame__plot">
-        {svg}
-        {firstBand !== undefined && provisionalLabel ? (
-          <span className="pm-chart-frame__band-label" style={{ left: percentOf(firstBand.x1, width) }}>
-            {provisionalLabel}
-          </span>
-        ) : null}
-      </div>
+      <div className="pm-chart-frame__plot">{svg}</div>
       <div className="pm-chart-frame__x">
         {xTicks.map((tick) => (
           <span key={`${tick.at}:${tick.label}`} className="pm-chart-frame__tick" style={{ left: percentOf(tick.at, width) }}>

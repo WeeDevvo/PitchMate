@@ -1,38 +1,24 @@
 /*
  * A Rating_Presentation's presentation.
  *
- * Every value resolves from a custom property declared in
- * `../styles/squadsTokens.css`, so this file carries no colour literal
- * (Requirements 18.9, 19.5). The four-condition amendment
- * (`web-player-stats-screen` Requirement 17) introduced **no new token**: it
- * reuses the already-declared provisional and muted ones, so the contrast figures
- * recorded beside that table still cover every pairing painted here.
+ * Every value resolves from a custom property, so this file carries no colour
+ * literal (Requirements 18.9, 19.5).
  *
  * ### Shape carries the state, colour only emphasises it
  *
- * Each of the four conditions takes its own silhouette, drawn from
+ * Each of the three conditions takes its own silhouette, drawn from
  * `currentColor` so it can never disagree with the word beside it
  * (`web-player-stats-screen` Requirements 17.3, 17.4; Requirements 8.4, 8.7,
  * 19.3):
  *
- *   rating        a filled disc, and no chip — the only condition with a value
- *   provisional   a hollow ring, in a chip — an outline not yet filled in
- *   never-played  a hollow square, in a chip — a different silhouette entirely
+ *   rating        a filled disc, and no chip — a number, settled or settling
+ *   never-played  a hollow square, in a chip
  *   unavailable   a horizontal bar, in a chip — a blank where a value would be
  *
- * So a greyscale rendering still shows four distinguishable presentations, and
- * the words themselves say which is which. The two muted conditions —
- * `never-played` and `unavailable` — deliberately share a colour, so nothing a
- * reader relies on to separate them can be a hue.
- *
- * The chip has no fill of its own, matching the label chips of `SquadCard.css`, so
- * it introduces no fourth surface: its text is read against
- * `--squads-card-surface` or `--squads-inactive-surface`, both of which the token
- * table's contrast table measures. The amber `--squads-provisional-text` clears
- * the 4.5:1 text floor on both (7.79 / 7.34 dark, 5.39 / 4.97 light) and
- * `--muted-text` likewise (9.86 / 9.30 dark, 6.37 / 5.88 light); each badge shape
- * takes `currentColor`, so the graphical cue clears its own 3:1 floor by the same
- * measurement.
+ * A rating that is still settling is styled exactly as a settled one: it has no
+ * colour, chip or mark of its own here, and the settling note sits beside the
+ * player's name instead (brand.md). The two muted conditions deliberately share
+ * a colour, so nothing a reader relies on to separate them can be a hue.
  *
  * Sizes are relative (`rem`, `em`), so a browser text-size preference scales the
  * badge along with the label rather than leaving a fixed dot beside grown text.
@@ -57,9 +43,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The three non-rating conditions share the chip shape, which is itself the first
+/* The two non-rating conditions share the chip shape, which is itself the first
    cue separating them from a Display_Rating (8.7, player-stats 17.4). */
-.squads-rating[data-rating-kind='provisional'],
 .squads-rating[data-rating-kind='never-played'],
 .squads-rating[data-rating-kind='unavailable'] {
   padding: 0 var(--squads-gap-tight);
@@ -67,16 +52,6 @@
   border-radius: var(--squads-radius-chip);
   font-size: var(--squads-font-size-chip);
   font-weight: var(--squads-font-weight-label);
-}
-
-/* The Provisional_Band — amber, the palette's "unsettled / uncertain" (brand.md).
-   The word beside it is what actually states the condition (8.4, 19.3). */
-.squads-rating[data-rating-kind='provisional'] {
-  background: var(--pm-result-draw-subtle);
-  /* The text amber, not the fill amber: the fill is 1.9:1 on the light tint,
-     below the 3:1 a visible outline owes. */
-  border-color: var(--pm-provisional-text);
-  color: var(--pm-provisional-text);
 }
 
 /* The Never_Played band — muted, because it is a statement about this squad's
@@ -100,7 +75,7 @@
   height: 0.75em;
 }
 
-/* A filled disc for a settled Display_Rating — solid, like the value it marks.
+/* A filled disc for a Display_Rating, settling or not — solid, like the value it marks.
    Smaller than the outlined shapes so it reads as a mark rather than a blob. */
 .squads-rating__badge[data-rating-shape='disc'] {
   width: 0.5em;
@@ -109,14 +84,7 @@
   background: currentColor;
 }
 
-/* A hollow ring for a rating still settling. */
-.squads-rating__badge[data-rating-shape='ring'] {
-  border: var(--squads-border-width) solid currentColor;
-  border-radius: 50%;
-}
-
-/* A hollow square for a player who has played nothing — the same outline weight
-   as the ring, so only the silhouette differs. */
+/* A hollow square for a player who has played nothing. */
 .squads-rating__badge[data-rating-shape='square'] {
   border: var(--squads-border-width) solid currentColor;
   border-radius: 0;

@@ -154,7 +154,7 @@ function placeholderFormsIn(text: string): readonly string[] {
  * because each is named by a requirement.
  */
 const NON_DISCLOSURE_MESSAGES: readonly (readonly [string, string])[] = [
-  ['PROVISIONAL_BAND_LABEL', messages.PROVISIONAL_BAND_LABEL],
+  ['NEVER_PLAYED_BAND_LABEL', messages.NEVER_PLAYED_BAND_LABEL],
   ['RATING_UNAVAILABLE_LABEL', messages.RATING_UNAVAILABLE_LABEL],
   ['GENERIC_SQUADS_FAILURE', messages.GENERIC_SQUADS_FAILURE],
 ];
@@ -398,31 +398,28 @@ describe('messages — the detectors catch what they claim to catch', () => {
 });
 
 describe('messages — the pinned copy is the copy the requirements name', () => {
-  it('states the three rating labels literally', () => {
+  it('states the two rating labels literally', () => {
     // The generated properties read these from the module, so they could not
     // catch a reworded label on their own. The wording is pinned because
     // Requirement 8.4 fixes what the band may state and 8.13 fixes that the
     // unavailable label speaks of ratings in general.
     //
-    // The band now **asserts** the provisional condition rather than reporting a
-    // bare absence: `web-player-stats-screen` Requirement 17.3 splits the player
-    // who has never played out of it, so the label no longer stands for two
-    // situations at once and is free to name the one it means.
-    expect(messages.PROVISIONAL_BAND_LABEL).toBe('Rating still settling');
+    // A rating that is still settling has no label here: it shows its number
+    // like any other, and the design system's settling mark sits by the name.
+    expect('PROVISIONAL_BAND_LABEL' in messages).toBe(false);
     expect(messages.NEVER_PLAYED_BAND_LABEL).toBe('No matches played yet');
     expect(messages.RATING_UNAVAILABLE_LABEL).toBe('Ratings unavailable');
   });
 
-  it('keeps the three rating labels pairwise distinct, none containing another', () => {
+  it('keeps the two rating labels distinct, neither containing the other', () => {
     const labels = [
-      messages.PROVISIONAL_BAND_LABEL,
       messages.NEVER_PLAYED_BAND_LABEL,
       messages.RATING_UNAVAILABLE_LABEL,
     ];
 
     // `web-player-stats-screen` Requirement 17.3: a player who has played
-    // nothing, a rating still settling, and a rating that could not be obtained
-    // are three statements, so a reader must be able to tell them apart — and a
+    // nothing and a rating that could not be obtained are two statements, so a
+    // reader must be able to tell them apart — and a
     // label that contained another would be ambiguous to a substring assertion
     // as well as to a person skimming the column.
     expect(new Set(labels).size).toBe(labels.length);

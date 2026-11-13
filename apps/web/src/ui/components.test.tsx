@@ -33,7 +33,6 @@ import {
   LockedFeatureList,
   PlayerRow,
   ProBadge,
-  ProvisionalBadge,
   Rating,
   ResultBadge,
   RoleBadge,
@@ -230,16 +229,8 @@ describe('badges', () => {
     expect(screen.getByText('Admin')).toBeInTheDocument();
   });
 
-  it('always spells out provisional with the ~', () => {
-    render(
-      <>
-        <ProvisionalBadge />
-        <ProvisionalBadge short />
-        <GuestBadge />
-      </>,
-    );
-    expect(screen.getByText('~ Provisional')).toBeInTheDocument();
-    expect(screen.getByText('~ Prov')).toBeInTheDocument();
+  it('spells out the guest badge', () => {
+    render(<GuestBadge />);
     expect(screen.getByText('Guest')).toBeInTheDocument();
   });
 
@@ -296,15 +287,8 @@ describe('Rating', () => {
     );
     const rating = screen.getByText('1,118');
     expect(rating).toHaveClass('pm-rating');
-    expect(rating).not.toHaveClass('pm-rating--prov');
     expect(rating).toHaveTextContent(/^1,118$/);
     expect(screen.getByText('Settling · 3 of 5 matches')).toBeInTheDocument();
-  });
-
-  it('shows only the band for a provisional player', () => {
-    const { container } = render(<Rating provisional band="1,1xx" />);
-    expect(container).toHaveTextContent('~1,1xx');
-    expect(screen.getByText('~ Prov')).toBeInTheDocument();
   });
 });
 

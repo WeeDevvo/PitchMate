@@ -61,8 +61,8 @@ States: `GatheringAvailability → Confirmed → TeamsRolled → InProgress → 
 - **Cold start:** an admin may seed a starting **skill tier** (Beginner / Average / Strong), which sets the initial μ while σ stays high. The tier is an input only.
 - Ratings move on **outcome rank** (win/loss/draw, draws first-class). The score is always stored, but margin doesn't count by default: a capped margin-of-victory weight and a participation weight exist as switchable levers, both **off**, and they stay off.
 - **One match = one kickoff lineup = one outcome = one rating update.** Late arrivals, early leavers and substitutions count for stats only. Re-mixing teams mid-session makes a new match.
-- **Display rating** = round((μ − 25) × K + C), floored, with K=40 and C=1000 fixed. It is μ on a friendlier scale: a new Beginner, Average or Strong player starts on 800, 1000 or 1200 and moves with results. Every player shows a number from their first match. A settling player shows the same number with a visible note that ratings take a few matches to settle; σ changes the note, never the number. It's presentational only: balancing always uses μ/σ through `Predict`. **Today:** the number is round((μ − 3σ) × K + C), and a settling player shows a badge or "~" band instead of a number.
-- **"Settling"** is the one term for a rating above the σ threshold. **Today:** the code and UI copy still say "provisional" (`RatingEngineConfig.ProvisionalThreshold`, the web's "~ Provisional" badge); renaming them is a follow-up, not yet done.
+- **Display rating** = round((μ − 25) × K + C), floored, with K=40 and C=1000 fixed. It is μ on a friendlier scale: a new Beginner, Average or Strong player starts on 800, 1000 or 1200 and moves with results. Every player shows a number from their first match. A settling player shows the same number with a visible note that ratings take a few matches to settle; σ changes the note, never the number. It's presentational only: balancing always uses μ/σ through `Predict`.
+- **"Settling"** is the one term for a rating above the σ threshold. **Today:** the web's rating copy says "settling", but the code and the API still say "provisional" (`RatingEngineConfig.ProvisionalThreshold`, the `Provisional` rating state on the wire); renaming them is a follow-up, not yet done.
 
 ## Results
 
@@ -90,7 +90,7 @@ Squad-scoped leaderboards and per-player profiles. A player's screen shows only 
 
 - **Always available:** appearances, W/L/D and win %, current rating and whether it is settling, rating progression (from μ/σ snapshots; every point is plotted as a number, settling points marked), longest win/unbeaten streak, most played with/against, best partnerships and bogey opponents, bib appearances.
 - **Rich tracking only:** goals and top scorer, including a top-scorer leaderboard.
-- **Today:** the top-scorer leaderboard is not built; clean sheets, goals conceded as keeper and keeper time are still shown; and the progression chart shows settling points only as a "~" band.
+- **Today:** the top-scorer leaderboard is not built; and clean sheets, goals conceded as keeper and keeper time are still shown.
 
 New "fun stat" ideas go in the backlog.
 

@@ -174,24 +174,9 @@
   fill: var(--pm-chart-line);
 }
 
-.pm-chart__line--prov-cover {
+.pm-chart__line--cover {
   stroke: var(--pm-surface);
   stroke-width: 4;
-}
-
-.pm-chart__line--prov {
-  stroke: var(--pm-provisional);
-  stroke-dasharray: 6 5;
-}
-
-.pm-chart__dot--prov {
-  stroke: var(--pm-provisional);
-  stroke-dasharray: 2 2;
-}
-
-.pm-chart__dot--prov.pm-chart__dot--last {
-  fill: var(--pm-provisional);
-  stroke-dasharray: none;
 }
 
 .pm-chart__line--settling {
@@ -206,10 +191,6 @@
 .pm-chart__area {
   fill: color-mix(in srgb, var(--pm-chart-line) 14%, transparent);
   stroke: none;
-}
-
-.pm-chart__band {
-  fill: var(--pm-result-draw-subtle);
 }
 
 /* The chart with its axis labels: ratings up the left, labels along the bottom. */
@@ -253,15 +234,4 @@
 .pm-chart-frame__x .pm-chart-frame__tick {
   top: 4px;
   transform: translateX(-50%);
-}
-
-.pm-chart-frame__band-label {
-  position: absolute;
-  top: 6px;
-  margin-left: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--pm-provisional-text);
-  white-space: nowrap;
 }

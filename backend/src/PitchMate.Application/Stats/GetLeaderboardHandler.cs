@@ -81,7 +81,8 @@ public sealed class GetLeaderboardHandler
                 await _stats.GetLeaderboardRowsAsync(command.SquadId, command.Statistic, cancellationToken);
 
             IReadOnlyList<LeaderboardEntry> entries = rows
-                .Select(row => new LeaderboardEntry(row.MembershipId, row.DisplayName, ResolveValue(command.Statistic, row)))
+                .Select(row => new LeaderboardEntry(
+                    row.MembershipId, row.DisplayName, ResolveValue(command.Statistic, row), row.RatingState))
                 .OrderByDescending(entry => entry.Value)
                 .ThenBy(entry => entry.MembershipId, UuidV7Comparer.Instance)
                 .ToList();

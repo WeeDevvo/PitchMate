@@ -227,6 +227,7 @@ function profileSections(
         displayName={profile.displayName}
         state={profile.state}
         isGuest={profile.isGuest}
+        settling={ratingCondition.kind === 'settling'}
       />
 
       {/* 2.3: a re-read keeps the whole profile rendered and states that it is

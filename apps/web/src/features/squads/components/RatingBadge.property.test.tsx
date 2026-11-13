@@ -1,16 +1,19 @@
 /**
- * Property test for the two non-rating Rating_Presentations (task 11.2).
+ * Property test for the Rating_Unavailable presentation (task 11.2).
  *
- * **Property 21: The band and unavailable presentations are constant,
- * non-numeric, and non-colour-dependent.** *For any* Player_Row presenting a
- * Provisional_Band, the rendered band content is identical irrespective of that
- * member's membership state, guest flag, and role and irrespective of how many
- * entries the leaderboard carries, comprises a badge together with a text label
- * containing no digit character, no approximation or range indicator, no count of
- * matches played, and no statement of a reason; *for any* Player_Row presenting
- * Rating_Unavailable the label text is identical across rows, states that ratings
- * are unavailable, and contains no digit character; and both are conveyed by text
+ * **Property 21: The unavailable presentation is constant, non-numeric, and
+ * non-colour-dependent.** *For any* Player_Row whose rating could not be
+ * obtained — no leaderboard, or a leaderboard that does not name the player —
+ * the rendered content is identical irrespective of that member's membership
+ * state, guest flag, and role and irrespective of how many entries the
+ * leaderboard carries; it comprises a badge together with a text label
+ * containing no digit character, no approximation or range indicator, no count
+ * of matches played, and no statement of a reason; and it is conveyed by text
  * and shape in addition to any colour difference.
+ *
+ * Every generated member's rating is still settling. That used to send the row
+ * to a band of its own; a settling rating now shows its number like any other,
+ * so a settling player the leaderboard does not name is simply unavailable.
  *
  * | Clause | Where it is asserted |
  * | --- | --- |
@@ -26,7 +29,7 @@
  * Squad_Member and a **parsed** leaderboard, so the case reaching the component is
  * the one a real screen would reach. That matters for Requirement 8.12: the claim
  * is about a band rendered for a member with a state, a guest flag, and a role, and
- * a hand-built `{ kind: 'provisional' }` would quietly assume the very thing the
+ * a hand-built `{ kind: 'unavailable' }` would quietly assume the very thing the
  * property is testing — that none of those fields can reach the badge. Generating
  * the member and letting the selection function choose keeps that a result rather
  * than a premise. The expected kind is derived independently (a leaderboard was
@@ -45,13 +48,12 @@
  *
  * ### Why the leaderboard size is generated, including 200
  *
- * A Provisional_Band arises when the leaderboard carries no entry for that
- * membership — which happens whether the leaderboard is empty or carries every
- * other player in the squad. A band that quietly said "unranked of 200" would be a
- * statement of a reason, so sizes 0, 1, 2, and 200 are generated and all of them
- * are compared to the same baseline. {@link describe}'s third property goes
- * further: the entries carry generated values, and none of those values' digits
- * may appear anywhere in the rendered band.
+ * The label must not vary with how many other players the leaderboard carries.
+ * A label that quietly said "unranked of 200" would be a statement of a reason,
+ * so no leaderboard and sizes 0, 1, 2, and 200 are generated and all of them are
+ * compared to the same baseline. {@link describe}'s third property goes further:
+ * the entries carry generated values, and none of those values' digits may
+ * appear anywhere in the rendered label.
  *
  * Feature: web-squads-screens, Property 21: The band and unavailable presentations are constant, non-numeric, and non-colour-dependent
  * Validates: Requirements 8.4, 8.7, 8.12, 8.13, 19.3
@@ -72,7 +74,7 @@ import {
   type DisplayRatingLeaderboard,
 } from '../lib/parse/leaderboard';
 import { parseSquadMember, type SquadMember } from '../lib/parse/squadDetail';
-import { PROVISIONAL_BAND_LABEL, RATING_UNAVAILABLE_LABEL } from '../lib/messages';
+import { RATING_UNAVAILABLE_LABEL } from '../lib/messages';
 import {
   selectRatingPresentation,
   type RatingPresentation,
@@ -81,8 +83,7 @@ import {
 // --- What the two non-rating presentations may say ---------------------------
 
 /** The label each non-rating presentation must render (Requirements 8.4, 8.13). */
-const LABEL_OF_KIND: Readonly<Record<'provisional' | 'unavailable', string>> = {
-  provisional: PROVISIONAL_BAND_LABEL,
+const LABEL_OF_KIND: Readonly<Record<'unavailable', string>> = {
   unavailable: RATING_UNAVAILABLE_LABEL,
 };
 
@@ -288,10 +289,7 @@ function markupOf(playerName: string, presentation: RatingPresentation): string 
  * active, non-guest owner, with a leaderboard of one entry for the provisional case
  * and none at all for the unavailable case (Requirements 8.12, 8.13).
  */
-function baselineMarkupFor(
-  kind: 'provisional' | 'unavailable',
-  playerName: string,
-): string {
+function baselineMarkupFor(kind: 'unavailable', playerName: string): string {
   const member = parsedMemberOf({
     membershipId: '00000000-0000-4000-8000-000000000001',
     playerName,
@@ -299,7 +297,7 @@ function baselineMarkupFor(
     state: 'Active',
     isGuest: false,
   });
-  const leaderboard = parsedLeaderboardOf(kind === 'provisional' ? 1 : null);
+  const leaderboard = parsedLeaderboardOf(null);
   const presentation = selectRatingPresentation(member, leaderboard);
 
   expect(presentation.kind).toBe(kind);
@@ -365,7 +363,7 @@ function expectNotColourDependent(badge: HTMLElement, kind: string): void {
 
 // --- The property ------------------------------------------------------------
 
-describe('Property 21 — the band and unavailable presentations are constant, non-numeric, and non-colour-dependent', () => {
+describe('Property 21 — the unavailable presentation is constant, non-numeric, and non-colour-dependent', () => {
   // Feature: web-squads-screens, Property 21: The band and unavailable presentations are constant, non-numeric, and non-colour-dependent
   // Validates: Requirements 8.12, 8.13
   it('renders identical content for every membership state, guest flag, role, and leaderboard size', () => {
@@ -377,8 +375,9 @@ describe('Property 21 — the band and unavailable presentations are constant, n
 
         // No entry can match, so the leaderboard's presence alone decides which of
         // the two non-rating presentations this row gets.
-        const expectedKind =
-          testCase.leaderboardSize === null ? 'unavailable' : 'provisional';
+        // A player the leaderboard does not name has no rating to show, whether
+        // or not a leaderboard was obtained and however large it is.
+        const expectedKind = 'unavailable';
 
         expect(presentation.kind).toBe(expectedKind);
         expect(markupOf(testCase.playerName, presentation)).toBe(
@@ -398,8 +397,8 @@ describe('Property 21 — the band and unavailable presentations are constant, n
         const leaderboard = parsedLeaderboardOf(testCase.leaderboardSize);
         const presentation = selectRatingPresentation(member, leaderboard);
 
-        if (presentation.kind === 'rating') {
-          throw new Error('the generated case must present no Display_Rating');
+        if (presentation.kind !== 'unavailable') {
+          throw new Error('the generated case must present Rating_Unavailable');
         }
 
         const { container } = render(
@@ -449,7 +448,7 @@ describe('Property 21 — the band and unavailable presentations are constant, n
           const presentation = selectRatingPresentation(member, leaderboard);
 
           // Nobody else's rating is this row's rating (Requirement 8.3).
-          expect(presentation.kind).toBe('provisional');
+          expect(presentation.kind).toBe('unavailable');
 
           const markup = markupOf(playerName, presentation);
 
