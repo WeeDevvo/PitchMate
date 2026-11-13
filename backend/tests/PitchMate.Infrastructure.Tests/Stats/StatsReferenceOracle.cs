@@ -236,13 +236,9 @@ public static class StatsReferenceOracle
                 continue;
             }
 
-            int? displayRating = DisplayRatingCalculator.Compute(state.Value, mu, sigma, parameters);
-            if (displayRating is null)
-            {
-                continue;
-            }
-
-            rows.Add(new LeaderboardRow(member.MembershipId, member.DisplayName, member.State, displayRating.Value, null));
+            int displayRating = DisplayRatingCalculator.Compute(mu, parameters);
+            rows.Add(new LeaderboardRow(
+                member.MembershipId, member.DisplayName, member.State, displayRating, null, state.Value));
         }
 
         return rows;

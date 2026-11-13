@@ -14,16 +14,16 @@ namespace PitchMate.Application.Tests.Stats;
 /// (stats-and-summaries design Property 9: Rating progression). Driven against in-memory fakes. For an
 /// arbitrary snapshot sequence, the progression has exactly one point per snapshot ordered by
 /// completion instant then match identity, each carrying that snapshot's μ/σ, the state from
-/// <see cref="IRatingEngine.GetState"/>, and a display rating iff established; it is empty when there is
-/// no snapshot. Each property runs at least 100 iterations.
+/// <see cref="IRatingEngine.GetState"/>, and the display rating for that μ in either state; it is
+/// empty when there is no snapshot. Each property runs at least 100 iterations.
 /// </summary>
 [Trait("Feature", "stats-and-summaries")]
 public class RatingProgressionPropertyTests
 {
     // Feature: stats-and-summaries, Property 9: Rating progression - for an arbitrary snapshot sequence
     // the progression has exactly one point per snapshot in order (by CompletedAt then MatchId), each
-    // carrying that snapshot's μ/σ, State from IRatingEngine.GetState, and a DisplayRating iff
-    // Established (null when Provisional); the progression is empty when there is no snapshot.
+    // carrying that snapshot's μ/σ, State from IRatingEngine.GetState, and the DisplayRating for
+    // that μ in either state; the progression is empty when there is no snapshot.
     // Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.5, 8.6
     [Property(MaxTest = 200)]
     [Trait("Property", "9")]
@@ -80,18 +80,16 @@ public class RatingProgressionPropertyTests
                 .Select(s =>
                 {
                     RatingState state = engine.GetState(new Rating(s.Mu, s.Sigma)).Value;
-                    int? display = DisplayRatingCalculator.Compute(state, s.Mu, s.Sigma, parameters);
-                    int? estimate = DisplayRatingCalculator.Estimate(state, s.Mu, s.Sigma, parameters);
-                    return new RatingProgressionPoint(s.CompletedAt, s.Mu, s.Sigma, state, display, estimate);
+                    int display = DisplayRatingCalculator.Compute(s.Mu, parameters);
+                    return new RatingProgressionPoint(s.CompletedAt, s.Mu, s.Sigma, state, display);
                 })
                 .ToList();
 
             bool orderedAndShaped = actual.SequenceEqual(expected);
 
-            // A provisional point carries only an estimate; an established point only a display rating.
+            // Every point carries the number for its μ, whichever state its σ puts it in.
             bool displayGating = actual.All(p =>
-                (p.State == RatingState.Provisional && p.DisplayRating is null && p.EstimatedRating is not null)
-                || (p.State == RatingState.Established && p.DisplayRating is not null && p.EstimatedRating is null));
+                p.DisplayRating == DisplayRatingCalculator.Compute(p.Mu, parameters));
 
             bool emptyWhenNoSnapshot = snapshots.Count != 0 || actual.Count == 0;
 

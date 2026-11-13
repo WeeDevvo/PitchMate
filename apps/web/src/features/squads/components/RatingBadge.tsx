@@ -1,93 +1,73 @@
 /**
- * The Rating_Presentation of one Player_Row: a Display_Rating, a
- * Provisional_Band, the Never_Played band, or the Rating_Unavailable label.
+ * The Rating_Presentation of one Player_Row: a Display_Rating, the Never_Played
+ * band, or the Rating_Unavailable label.
  *
  * **A note on the numbering below.** Bare requirement numbers are this feature's
- * own, from `web-squads-screens`. The four-condition rule arrived later, from the
- * `web-player-stats-screen` spec's Requirement 17, and every reference to it is
- * written out in full so the two seventeens cannot be mistaken for each other.
+ * own, from `web-squads-screens`. The rule about telling the conditions apart
+ * arrived later, from the `web-player-stats-screen` spec's Requirement 17, and
+ * every reference to it is written out in full.
  *
- * ### One component for all four presentations
+ * ### One component for all three presentations
  *
- * Requirement 8.5 and `web-player-stats-screen` Requirement 17.1 allow a
- * Player_Row exactly one of the four, and the choice is already made for it —
- * `selectRatingPresentation` in `lib/ratingPresentation.ts` returns a tagged
- * union, so this component receives one value rather than four optional fields
- * and there is no arrangement of props that renders two of them. Keeping all four
- * renderings in one file is what stops them drifting apart: the badge, the label,
- * and the integer share one wrapper, one descriptor, and one stylesheet, so a
- * change to how a band looks cannot leave another condition behind.
+ * A Player_Row gets exactly one of the three, and the choice is already made for
+ * it — `selectRatingPresentation` in `lib/ratingPresentation.ts` returns a tagged
+ * union, so this component receives one value rather than several optional
+ * fields and there is no arrangement of props that renders two of them.
  *
  * **Nothing here computes a rating.** The value arrives already rounded by
  * `formatDisplayRating`, and this file renders it with `String(value)` — no
- * arithmetic, no `toLocaleString`. That is deliberate rather than lazy: a locale
- * formatter is free to insert a grouping separator or locale-specific digits, and
- * Requirement 8.1 asks for a plain decimal integer on every row whatever the
- * reader's locale. There is no mean skill estimate, no uncertainty value, and no
- * scaling parameter in sight, because the mapping to a friendly number is the
- * backend's (Requirement 8.9).
+ * arithmetic, no `toLocaleString`. There is no mean skill estimate, no
+ * uncertainty value, and no scaling parameter in sight, because the mapping to a
+ * friendly number is the backend's (Requirement 8.9).
+ *
+ * ### A settling rating looks like every other rating
+ *
+ * Every rated player shows a number from their first match. A rating that is
+ * still settling is the same `rating` presentation, drawn in the same style with
+ * the same disc and the same accessible name: this component does not read the
+ * presentation's `settling` flag at all. The settling note goes with the
+ * player's name — `PlayerRow` puts the design system's `SettlingMark` in the
+ * row's meta line — never on the number (brand.md).
  *
  * ### Text and shape, never colour alone
  *
- * Each of the four conditions renders **its own words together with its own badge
- * shape** (`web-player-stats-screen` Requirements 17.3, 17.4; Requirements 8.4,
- * 8.7, 19.3):
+ * Each of the three conditions renders **its own words together with its own
+ * badge shape** (`web-player-stats-screen` Requirements 17.3, 17.4; Requirements
+ * 8.4, 8.7, 19.3):
  *
  * | Condition | Words | Shape | Colour |
  * | --- | --- | --- | --- |
- * | `rating` | the rounded integer | a filled disc, no chip | `--text` |
- * | `provisional` | {@link PROVISIONAL_BAND_LABEL} | a hollow ring, in a chip | `--squads-provisional-text` |
- * | `never-played` | {@link NEVER_PLAYED_BAND_LABEL} | a hollow square, in a chip | `--muted-text` |
- * | `unavailable` | {@link RATING_UNAVAILABLE_LABEL} | a horizontal bar, in a chip | `--muted-text` |
+ * | `rating` | the rounded integer | a filled disc, no chip | primary text |
+ * | `never-played` | {@link NEVER_PLAYED_BAND_LABEL} | a hollow square, in a chip | secondary text |
+ * | `unavailable` | {@link RATING_UNAVAILABLE_LABEL} | a horizontal bar, in a chip | secondary text |
  *
- * Three things follow, and the third is the point. The **words** differ pairwise
- * and none contains another, which `lib/messages.property.test.ts` holds them to.
- * The **silhouettes** differ — disc, ring, square, bar — and only the
- * Display_Rating sits outside a chip, so a greyscale rendering still tells the
- * four apart. And the **two muted conditions share a colour on purpose**:
- * `never-played` and `unavailable` are distinguished by shape and word alone, so
- * no reader can be depending on hue to separate them. The amber of
- * `--squads-provisional-text` only adds emphasis to a statement that survives
- * without it. No colour value is written here or in `RatingBadge.css`; both read
- * the feature token table, and this change introduces no token — it reuses the
- * declared provisional and muted ones (Requirement 18.9).
+ * The **words** differ and neither label contains the other, which
+ * `lib/messages.property.test.ts` holds them to. The **silhouettes** differ —
+ * disc, square, bar — and only the Display_Rating sits outside a chip, so a
+ * greyscale rendering still tells the three apart. The two muted conditions
+ * share a colour on purpose: they are distinguished by shape and word alone. No
+ * colour value is written here or in `RatingBadge.css`.
  *
- * The three non-rating labels come straight from `lib/messages.ts` and take no
+ * The two non-rating labels come straight from `lib/messages.ts` and take no
  * interpolation parameter, so their content is identical on every row that
  * presents them irrespective of that member's Membership_State, Guest_Flag, and
- * Member_Role and irrespective of how many entries the leaderboard carried
- * (Requirements 8.12, 8.13). Those fields are not props of this component, which
- * is the mechanism rather than the intention: a band cannot acquire a tell about
- * why a rating is missing from data it was never handed.
+ * Member_Role (Requirements 8.12, 8.13).
  *
  * ### The accessible name is the whole statement
  *
  * The wrapper is a `role="img"` carrying an `aria-label` built by
  * {@link ratingBadgeAccessibleName}, so a screen reader announces "Dave: rating
  * 1240" or "Dave: No matches played yet" as one unit and never has to infer which
- * badge belongs to which row from its visual position (Requirement 8.8), and the
- * four conditions are as distinguishable to assistive technology as they are to
- * the eye (`web-player-stats-screen` Requirement 17.5). A `role="img"` collapses
- * its subtree for name computation, which is exactly what is wanted for a
- * composite of a shape and a word; the alternative — a bare `aria-label` on a
- * `<span>` with no role — is not reliably exposed at all.
+ * badge belongs to which row from its visual position (Requirement 8.8). The
+ * words and the name come out of one switch, {@link conditionOf}, so the two
+ * cannot disagree.
  *
- * **The words and the name come out of one switch.** {@link conditionOf} is the
- * only place in the file that reads `presentation.kind`, and it returns the
- * visible text, the spoken statement, and the shape together, so there is no
- * second switch to forget a case in and no way for a row to show one thing and
- * announce another.
- *
- * Requirements: 8.1, 8.4, 8.7, 8.8, 8.12, 8.13, 19.3, and
- * `web-player-stats-screen` 17.3, 17.4, 17.5
+ * Requirements: 8.1, 8.4, 8.5, 8.7, 8.8, 8.9, 8.12, 8.13, 19.3, and
+ * `web-player-stats-screen` 17.1, 17.3, 17.4, 17.5
  */
 import { type ReactElement } from 'react';
 
-import {
-  NEVER_PLAYED_BAND_LABEL,
-  PROVISIONAL_BAND_LABEL,
-  RATING_UNAVAILABLE_LABEL,
-} from '../lib/messages';
+import { NEVER_PLAYED_BAND_LABEL, RATING_UNAVAILABLE_LABEL } from '../lib/messages';
 import type { RatingPresentation } from '../lib/ratingPresentation';
 
 // The feature token table, so a badge rendered outside the App_Shell frame still
@@ -137,7 +117,7 @@ const RATING_VALUE_NOUN = 'rating';
  * drawn from `currentColor` in `RatingBadge.css`, so the cue survives a greyscale
  * rendering and can never disagree with the colour of the word beside it.
  */
-export type RatingBadgeShape = 'disc' | 'ring' | 'square' | 'bar';
+export type RatingBadgeShape = 'disc' | 'square' | 'bar';
 
 /**
  * Everything one condition renders: the words on screen, the statement its
@@ -187,12 +167,6 @@ function conditionOf(presentation: RatingPresentation): RatingCondition {
     }
     // 8.4, 8.12, player-stats 17.3: the same words on every band, whatever the
     // member. A hollow ring — an outline not yet filled in.
-    case 'provisional':
-      return {
-        text: PROVISIONAL_BAND_LABEL,
-        statement: PROVISIONAL_BAND_LABEL,
-        shape: 'ring',
-      };
     // player-stats 17.2, 17.3: a player with no completed match reads
     // differently from one whose rating is still settling — different words and
     // a different silhouette, a hollow square.

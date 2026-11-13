@@ -9,8 +9,9 @@
  *     (Requirements 9.1, 9.5, 9.8);
  *  2. the **membership labels** — role or guest, state, and the Former_Player
  *     label, with an inactive row's leading dash glyph (Requirements 7.5–7.8);
- *  3. the **Rating_Presentation** — one of a Display_Rating, a Provisional_Band,
- *     or the Rating_Unavailable label (Requirement 8.5);
+ *  3. the **Rating_Presentation** — one of a Display_Rating, the Never_Played
+ *     band, or the Rating_Unavailable label (Requirement 8.5) — with the
+ *     settling note in the line under the name while that rating settles;
  *  4. the **Promotion_Control** and the **guest edit control**, only while the
  *     caller holds Admin_Authority and only where the row is eligible
  *     (Requirements 10.2, 12.7, 13.1).
@@ -87,7 +88,7 @@
  * Requirements: 7.5, 7.6, 7.7, 7.8, 9.1, 9.4, 9.5, 9.8, 19.3
  */
 import { useId, type ReactElement } from 'react';
-import { ActionsMenu, PlayerRow as UiPlayerRow } from '../../../ui';
+import { ActionsMenu, PlayerRow as UiPlayerRow, SettlingMark } from '../../../ui';
 
 import { MembershipActionControl } from './MembershipActionControl';
 import { MembershipLabels } from './MembershipLabels';
@@ -121,6 +122,12 @@ import './PlayerRow.css';
  * their membership identities without depending on any rendered copy.
  */
 export const PLAYER_ROW_SELECTOR = '[data-squads-player-row="true"]';
+
+/**
+ * The selector of the settling note in a row's meta line, present only while
+ * that player's rating is still settling.
+ */
+export const PLAYER_ROW_SETTLING_SELECTOR = '[data-squads-player-settling="true"]';
 
 /**
  * The attribute carrying a row's membership identity, so a test can assert the
@@ -262,6 +269,8 @@ export function PlayerRow({
   demotion,
 }: PlayerRowProps): ReactElement {
   const nameId = useId();
+  const presentation = presentationOf(row);
+  const settling = presentation.kind === 'rating' && presentation.settling;
 
   // 13.1, 13.2, 12.7: both decisions are the predicates', never this component's.
   const promotable = isPromotable(row, viewer.membershipId, viewer.isAdmin);
@@ -323,11 +332,25 @@ export function PlayerRow({
           isFormerPlayer={row.isFormerPlayer}
         />
       }
-      meta={`${row.appearances} ${PLAYED_LABEL}`}
+      meta={
+        <>
+          {`${row.appearances} ${PLAYED_LABEL}`}
+          {/* The settling note goes with the name, never on the rating number,
+              which looks the same as every other rating (brand.md). */}
+          {settling && (
+            <span
+              className="squads-player-row__settling"
+              data-squads-player-settling="true"
+            >
+              <SettlingMark />
+            </span>
+          )}
+        </>
+      }
       end={
         <>
       {/* 8.5, 8.8: exactly one Rating_Presentation, named for this player. */}
-      <RatingBadge playerName={row.displayName} presentation={presentationOf(row)} />
+      <RatingBadge playerName={row.displayName} presentation={presentation} />
 
       {(offersAction || hasOutcome) && (
       <ActionsMenu label={`${PLAYER_ACTIONS_LABEL} ${row.displayName}`}>

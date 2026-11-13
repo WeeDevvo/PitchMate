@@ -14,7 +14,7 @@
  * | Group | Conditions |
  * | --- | --- |
  * | no profile rendered | loading, not-found, an unidentifiable subject, failed, failed with the retry activated, failed with a retry pending |
- * | Rating_Condition | established, provisional, never played, absent |
+ * | Rating_Condition | established, settling, never played, absent |
  * | tracking | disabled, empty, present |
  * | progression | empty, a single point, populated |
  * | Pairwise_Sections | empty, populated |
@@ -195,7 +195,7 @@ describe('the condition set', () => {
       'absent',
       'established',
       'never-played',
-      'provisional',
+      'settling',
     ]);
   });
 

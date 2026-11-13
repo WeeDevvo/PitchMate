@@ -14,7 +14,7 @@ public enum LeaderboardStatistic
     /// <summary>Wins divided by appearances, as a percentage; memberships with no value are excluded.</summary>
     WinPercentage,
 
-    /// <summary>The friendly display rating; memberships without an established display rating are excluded.</summary>
+    /// <summary>The friendly display rating; memberships with no rating yet are excluded, settling ratings are ranked.</summary>
     DisplayRating,
 
     /// <summary>The longest run of consecutive wins in chronological order.</summary>

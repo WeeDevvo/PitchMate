@@ -78,7 +78,7 @@
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
  */
 import { type ReactElement } from 'react';
-import { Avatar } from '../../../ui';
+import { Avatar, SettlingMark } from '../../../ui';
 
 import { isAnonymisedPlaceholder } from '../lib/anonymisedName';
 import {
@@ -143,6 +143,13 @@ export interface PlayerIdentityHeaderProps {
 
   /** Whether the membership is a guest — the Guest_Flag (Requirement 5.4). */
   readonly isGuest: boolean;
+
+  /**
+   * Whether the player's rating is still settling. The settling mark then sits
+   * with the name's labels: the note goes with the name, never on the rating
+   * number (brand.md).
+   */
+  readonly settling?: boolean;
 }
 
 /**
@@ -199,6 +206,7 @@ export function PlayerIdentityHeader({
   displayName,
   state,
   isGuest,
+  settling = false,
 }: PlayerIdentityHeaderProps): ReactElement {
   const labels = identityLabels(displayName, state, isGuest);
 
@@ -225,6 +233,14 @@ export function PlayerIdentityHeader({
               {label.text}
             </span>
           ))}
+          {settling ? (
+            <span
+              className="player-stats-identity__settling"
+              data-player-stats-identity-settling="true"
+            >
+              <SettlingMark />
+            </span>
+          ) : null}
         </p>
 
         {/* 5.6: stated before a reader reaches a figure, so the numbers below

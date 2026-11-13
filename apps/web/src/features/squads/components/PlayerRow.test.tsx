@@ -20,6 +20,7 @@ import {
   PLAYER_ROW_OPEN_SELECTOR,
   PLAYER_ROW_PROMOTE_SELECTOR,
   PLAYER_ROW_SELECTOR,
+  PLAYER_ROW_SETTLING_SELECTOR,
   PLAYER_ROW_STATS_PATH_ATTRIBUTE,
   PlayerRow,
   type ViewerContext,
@@ -31,7 +32,6 @@ import {
   EDIT_GUEST_LABEL,
   NEVER_PLAYED_BAND_LABEL,
   PROMOTE_TO_ADMIN_LABEL,
-  PROVISIONAL_BAND_LABEL,
   RATING_UNAVAILABLE_LABEL,
 } from '../lib/messages';
 import { playerStatsPath } from '../lib/routePaths';
@@ -317,13 +317,8 @@ describe('PlayerRow', () => {
     const cases: readonly (readonly [PlayerListRow, string, string])[] = [
       // The entry's value, rounded upstream, as a plain decimal integer.
       [rowOf(), 'rating', '1240'],
-      // A rating that is still settling: a band, and no number, whatever the
-      // leaderboard carries for this membership.
-      [
-        rowOf({ ratingState: 'Provisional' }),
-        'provisional',
-        PROVISIONAL_BAND_LABEL,
-      ],
+      // A rating that is still settling: the same number, the same way.
+      [rowOf({ ratingState: 'Provisional' }), 'rating', '1240'],
       // No completed match in this squad: its own statement, not the band.
       [
         rowOf({ appearances: 0 }),
@@ -351,6 +346,43 @@ describe('PlayerRow', () => {
       expect(badges, `${kind} must be the row's only presentation`).toHaveLength(1);
       expect(badges[0].getAttribute(RATING_BADGE_KIND_ATTRIBUTE)).toBe(kind);
       expect(badges[0]).toHaveTextContent(text);
+      unmount();
+    }
+  });
+
+  // A settling rating looks like every other rating; the note goes with the name.
+  it('draws a settling rating exactly as a settled one, with the settling note in the meta line', () => {
+    const settled = renderRow(rowOf());
+    const settledBadge = settled.container.querySelector(RATING_BADGE_SELECTOR)!.outerHTML;
+
+    expect(settled.container.querySelector(PLAYER_ROW_SETTLING_SELECTOR)).toBeNull();
+    settled.unmount();
+
+    const settling = renderRow(rowOf({ ratingState: 'Provisional' }));
+    const badge = settling.container.querySelector(RATING_BADGE_SELECTOR)!;
+    const notes = settling.container.querySelectorAll(PLAYER_ROW_SETTLING_SELECTOR);
+
+    // The badge is identical: nothing on the number says it is settling.
+    expect(badge.outerHTML).toBe(settledBadge);
+    expect(badge.outerHTML).not.toMatch(/~|settling|provisional/iu);
+
+    // The note is words, once, in the line under the name and outside the badge.
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toHaveTextContent('Settling');
+    expect(notes[0].closest('.pm-player__meta')).not.toBeNull();
+    expect(badge.contains(notes[0])).toBe(false);
+    settling.unmount();
+  });
+
+  it('shows no settling note where there is no rating to settle', () => {
+    for (const row of [
+      rowOf({ ratingState: 'Provisional', appearances: 0 }),
+      rowOf({ ratingState: 'Provisional', ratingEntry: null }),
+      rowOf({ ratingState: 'Provisional', leaderboardObtained: false, ratingEntry: null }),
+    ]) {
+      const { container, unmount } = renderRow(row);
+
+      expect(container.querySelector(PLAYER_ROW_SETTLING_SELECTOR)).toBeNull();
       unmount();
     }
   });

@@ -45,15 +45,6 @@ export function GuestBadge() {
   );
 }
 
-/** Amber is shared with draws, so provisional always carries the "~" and the word. */
-export function ProvisionalBadge({ short = false }: { short?: boolean }) {
-  return (
-    <Badge tone="provisional" title="Provisional: rating not settled yet">
-      {short ? '~ Prov' : '~ Provisional'}
-    </Badge>
-  );
-}
-
 export function FormerBadge() {
   return <Badge tone="former">Former</Badge>;
 }

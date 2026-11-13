@@ -341,13 +341,16 @@ const distinctiveRatingArb = fc
   })
   .map((input) => ratingSummaryFixture(input));
 
-/** A progression record, mostly carrying a plottable Display_Rating. */
+/**
+ * A progression record, mostly carrying a plottable Display_Rating. A record
+ * always names its rating state, because one with a number must.
+ */
 const distinctiveProgressionRecordArb = fc
   .record({
     instant: distinctiveInstantArb,
     displayRating: fc.option(distinctiveDisplayRatingArb, { nil: null }),
     displayRatingAbsence: absenceSpellingArb,
-    state: fc.option(fc.constantFrom(...RATING_STATE_NAMES), { nil: null }),
+    state: fc.constantFrom(...RATING_STATE_NAMES),
     modelValues: fc.tuple(distinctiveModelValueArb, distinctiveModelValueArb),
   })
   .map((input) => progressionRecordFixture(input));

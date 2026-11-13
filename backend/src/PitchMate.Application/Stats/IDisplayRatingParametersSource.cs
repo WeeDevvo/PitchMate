@@ -4,7 +4,7 @@ namespace PitchMate.Application.Stats;
 
 /// <summary>
 /// Source of the per-squad <see cref="DisplayRatingParameters"/> (scale, offset, floor) used to map a
-/// conservative rating estimate (μ − 3σ) to a friendly display rating. Declared in Application so the
+/// rating's μ to a friendly display rating. Declared in Application so the
 /// stats use cases stay free of persistence concerns; implemented in Infrastructure. The MVP
 /// implementation returns the defaults (K = 40, C = 1000, Floor = 0) for every squad, substituting a
 /// default for each unconfigured value, with the contract ready for future per-squad storage

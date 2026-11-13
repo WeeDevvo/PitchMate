@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { plotProgression, provisionalLines, type ChartExtent } from './chartGeometry';
+import { plotProgression, settlingLines, type ChartExtent } from './chartGeometry';
 import type { ProgressionPoint } from './parse/playerProfile';
 
 const EXTENT: ChartExtent = { width: 640, height: 200, padding: 12 };
@@ -30,10 +30,10 @@ function pairsOf(polyline: string): readonly string[] {
 /**
  * For every series of distinct instants, the points sit one even step apart
  * across the drawing box whatever the time between matches; and the dashed
- * provisional lines are exactly the stretches through each provisional run,
- * reaching one settled neighbour on each side where there is one.
+ * settling lines are exactly the stretches through each run of settling
+ * readings, reaching one settled neighbour on each side where there is one.
  */
-describe('match spacing and provisional lines', () => {
+describe('match spacing and settling lines', () => {
   it('spaces matches evenly, whatever the time between them', () => {
     fc.assert(
       fc.property(seriesArb.filter((series) => series.length >= 2), (series) => {
@@ -48,7 +48,7 @@ describe('match spacing and provisional lines', () => {
     );
   });
 
-  it('dashes exactly the stretches through provisional runs', () => {
+  it('dashes exactly the stretches through settling runs', () => {
     fc.assert(
       fc.property(seriesArb, (series) => {
         const plot = plotProgression(series, EXTENT);
@@ -69,7 +69,7 @@ describe('match spacing and provisional lines', () => {
           }
         });
 
-        expect(provisionalLines(plot.points)).toEqual(expected);
+        expect(settlingLines(plot.points)).toEqual(expected);
       }),
       { numRuns: 300 },
     );

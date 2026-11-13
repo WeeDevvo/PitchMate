@@ -1,13 +1,13 @@
 namespace PitchMate.Domain.Stats;
 
 /// <summary>
-/// The per-<c>Squad</c> scale <see cref="K"/>, offset <see cref="C"/>, and <see cref="Floor"/> applied
-/// to map a conservative rating estimate (μ − 3σ) to a friendly <c>Display_Rating</c>. Each value
-/// defaults — via <see cref="Create"/> — to <see cref="DefaultK"/>, <see cref="DefaultC"/>, or
-/// <see cref="DefaultFloor"/> respectively for any value a squad has left unconfigured
-/// (Requirement 7.5).
+/// The scale <see cref="K"/>, offset <see cref="C"/>, and <see cref="Floor"/> applied to map a
+/// rating's μ to a friendly <c>Display_Rating</c>, round((μ − 25) × K + C). Each value defaults —
+/// via <see cref="Create"/> — to <see cref="DefaultK"/>, <see cref="DefaultC"/>, or
+/// <see cref="DefaultFloor"/> respectively. The product fixes K = 40 and C = 1000 for every squad,
+/// so nothing configures them today (Requirement 7.5).
 /// </summary>
-/// <param name="K">The scale applied to the conservative estimate.</param>
+/// <param name="K">The scale applied to μ's distance from the reference mean.</param>
 /// <param name="C">The offset added after scaling.</param>
 /// <param name="Floor">The inclusive lower bound the computed display rating is never below.</param>
 public readonly record struct DisplayRatingParameters(double K, double C, double Floor)

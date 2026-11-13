@@ -112,9 +112,6 @@ type PathSegment = string | number;
  */
 const UNREAD_RATING_MODEL_MEMBERS = ['mu', 'sigma'] as const;
 
-/** A progression record's own classification, which the parser never names. */
-const UNREAD_PROGRESSION_STATE = 'state';
-
 /** The four members of the `rich` block, every one declared-optional. */
 const RICH_MEMBER_NAMES = [
   'goals',
@@ -229,9 +226,10 @@ const BODY_CONTAINERS: readonly BodyContainer[] = [
     indexed: true,
     members: {
       completedAt: 'rejects-absence',
+      state: 'rejects-absence',
       displayRating: 'tolerates-absence',
     },
-    unread: [...UNREAD_RATING_MODEL_MEMBERS, UNREAD_PROGRESSION_STATE],
+    unread: UNREAD_RATING_MODEL_MEMBERS,
   },
   {
     id: 'mostPlayedWith',
@@ -941,8 +939,8 @@ describe('the member table and the planted absences', () => {
 
     // Seven declared groups, ten paths — `rich`'s four members are one group.
     expect(TOLERATING_LABELS).toHaveLength(10);
-    expect(REJECTING_LABELS).toHaveLength(32);
-    expect(NAMED_MEMBERS).toHaveLength(42);
+    expect(REJECTING_LABELS).toHaveLength(33);
+    expect(NAMED_MEMBERS).toHaveLength(43);
 
     // Nothing is in both halves, and no label is spelled twice.
     expect(MEMBER_BY_LABEL.size).toBe(NAMED_MEMBERS.length);

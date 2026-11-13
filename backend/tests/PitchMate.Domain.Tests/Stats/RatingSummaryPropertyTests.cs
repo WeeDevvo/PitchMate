@@ -14,8 +14,9 @@ namespace PitchMate.Domain.Tests.Stats;
 /// For any membership, when it has a rating the summary reports the same μ/σ and the state from
 /// <see cref="IRatingEngine.GetState"/>; when it has no rating the summary is not-yet-established with
 /// no μ/σ pair, no state, and no display rating; and the not-yet-established report is distinguishable
-/// from a provisional report, which carries μ/σ and a <see cref="RatingState.Provisional"/> state but
-/// no display rating (Requirement 7.1, 7.7). The property runs at least 100 iterations.
+/// from a provisional (settling) report, which carries μ/σ, a <see cref="RatingState.Provisional"/>
+/// state and the same display rating an established rating would show for that μ (Requirement 7.1,
+/// 7.7). The property runs at least 100 iterations.
 /// </para>
 /// </summary>
 [Trait("Feature", "stats-and-summaries")]
@@ -25,7 +26,7 @@ public class RatingSummaryPropertyTests
     // provisional - when a membership has a Membership_Rating the reported μ/σ equal that rating and the
     // state equals IRatingEngine.GetState; when it has none the rating is not-yet-established with no
     // μ/σ, no Rating_State, and no Display_Rating, distinguishable from a Provisional report that
-    // carries μ/σ and a Provisional state but no Display_Rating.
+    // carries μ/σ, a Provisional state and its Display_Rating.
     // Validates: Requirements 7.1, 7.7
     [Property(MaxTest = 100)]
     [Trait("Property", "8")]
@@ -61,20 +62,25 @@ public class RatingSummaryPropertyTests
                 return false;
             }
 
+            // The number is μ on the display scale in either state; σ decides only the state.
+            var carriesTheNumber =
+                summary.DisplayRating == DisplayRatingCalculator.Compute(scenario.Mu, parameters);
+
             if (expectedState == RatingState.Provisional)
             {
-                // Provisional: μ/σ and a Provisional state, but no display rating, and it is
-                // distinguishable from the not-yet-established report (which has a null state).
+                // Provisional (settling): all four values present, and distinguishable from the
+                // not-yet-established report (which has a null state and no number).
                 var provisionalShape =
-                    summary is { State: RatingState.Provisional, DisplayRating: null }
+                    summary is { State: RatingState.Provisional, DisplayRating: not null }
                     && summary.State != notYetEstablished.State
                     && summary.Mu is not null
                     && summary.Sigma is not null;
-                return provisionalShape;
+                return provisionalShape && carriesTheNumber;
             }
 
             // Established: all four values present.
-            return summary is { Mu: not null, Sigma: not null, State: RatingState.Established, DisplayRating: not null };
+            return carriesTheNumber
+                && summary is { Mu: not null, Sigma: not null, State: RatingState.Established, DisplayRating: not null };
         });
 
     // ---- Generators -----------------------------------------------------------------------------

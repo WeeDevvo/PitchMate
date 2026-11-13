@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { areaUnderLine, plotProgression, provisionalBands, ratingTicks, type ChartExtent } from './chartGeometry';
+import { areaUnderLine, plotProgression, ratingTicks, type ChartExtent } from './chartGeometry';
 import type { ProgressionPoint } from './parse/playerProfile';
 
 const EXTENT: ChartExtent = { width: 640, height: 200, padding: 12 };
@@ -32,43 +32,6 @@ const seriesArb = fc
  * values inside the scale, top to bottom, each at the height the line uses for
  * that rating — never the scale's own ends, which may be a provisional reading.
  */
-describe('provisional bands', () => {
-  it('span each provisional run to the settled reading after it, left to right', () => {
-    fc.assert(
-      fc.property(seriesArb, (series) => {
-        const points = plotProgression(series, EXTENT).points;
-        const bands = provisionalBands(points);
-
-        const expected: { x1: number; x2: number }[] = [];
-        points.forEach((plotted, index) => {
-          if (!plotted.point.provisional || points[index - 1]?.point.provisional === true) return;
-          let last = index;
-          while (points[last + 1]?.point.provisional === true) last += 1;
-          const end = points[last + 1] ?? points[last]!;
-          if (end.x > plotted.x) expected.push({ x1: plotted.x, x2: end.x });
-        });
-
-        expect(bands).toEqual(expected);
-        bands.forEach((band, index) => {
-          expect(band.x2).toBeGreaterThan(band.x1);
-          if (index > 0) expect(band.x1).toBeGreaterThanOrEqual(bands[index - 1]!.x2);
-        });
-      }),
-      { numRuns: 200 },
-    );
-  });
-
-  it('gives none when nothing is provisional', () => {
-    fc.assert(
-      fc.property(seriesArb, (series) => {
-        const settled = series.map((point) => ({ ...point, provisional: false }));
-        expect(provisionalBands(plotProgression(settled, EXTENT).points)).toEqual([]);
-      }),
-      { numRuns: 100 },
-    );
-  });
-});
-
 describe('the area under the line', () => {
   it('is the line closed down to the baseline, and absent without a line', () => {
     fc.assert(

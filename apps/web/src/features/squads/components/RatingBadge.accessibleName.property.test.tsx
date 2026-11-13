@@ -64,7 +64,7 @@ import {
   type DisplayRatingLeaderboard,
 } from '../lib/parse/leaderboard';
 import { parseSquadMember, type SquadMember } from '../lib/parse/squadDetail';
-import { PROVISIONAL_BAND_LABEL, RATING_UNAVAILABLE_LABEL } from '../lib/messages';
+import { NEVER_PLAYED_BAND_LABEL, RATING_UNAVAILABLE_LABEL } from '../lib/messages';
 import {
   formatDisplayRating,
   selectRatingPresentation,
@@ -155,7 +155,7 @@ const ratingValueArb: fc.Arbitrary<number> = fc.oneof(
 );
 
 /** Which of the three presentations a generated row gets. */
-type PresentationKind = 'rating' | 'provisional' | 'unavailable';
+type PresentationKind = 'rating' | 'never-played' | 'unavailable';
 
 // --- From a generated case to a presentation ---------------------------------
 
@@ -171,7 +171,8 @@ type PresentationKind = 'rating' | 'provisional' | 'unavailable';
 function parsedMemberOf(
   membershipId: string,
   displayName: string,
-  ratingState: 'Provisional' | 'Established',
+  appearances: number,
+  ratingState: 'Provisional' | 'Established' = 'Established',
 ): SquadMember {
   const body = {
     membershipId,
@@ -179,7 +180,7 @@ function parsedMemberOf(
     role: null,
     state: 'Active',
     isGuest: false,
-    appearances: 12,
+    appearances,
     ratingState,
   };
   const parsed = parseSquadMember(body);
@@ -234,15 +235,15 @@ function presentationFor(
   const member = parsedMemberOf(
     membershipId,
     displayName,
-    kind === 'provisional' ? 'Provisional' : 'Established',
+    kind === 'never-played' ? 0 : 12,
   );
   const leaderboard =
     kind === 'unavailable'
       ? null
       : parsedLeaderboardOf(
-          kind === 'rating'
-            ? [{ membershipId, value }]
-            : [{ membershipId: otherIdentity(0), value }],
+          // A player who has never played gets the never-played label even
+          // where the leaderboard carries an entry for them.
+          [{ membershipId, value }, { membershipId: otherIdentity(0), value }],
         );
   const presentation = selectRatingPresentation(member, leaderboard);
 
@@ -298,12 +299,12 @@ function expectStatesTheRating(accessibleName: string, value: number): void {
  */
 function expectStatesTheAbsence(
   accessibleName: string,
-  kind: 'provisional' | 'unavailable',
+  kind: 'never-played' | 'unavailable',
 ): void {
   const expectedStatement =
-    kind === 'provisional' ? PROVISIONAL_BAND_LABEL : RATING_UNAVAILABLE_LABEL;
+    kind === 'never-played' ? NEVER_PLAYED_BAND_LABEL : RATING_UNAVAILABLE_LABEL;
   const otherStatement =
-    kind === 'provisional' ? RATING_UNAVAILABLE_LABEL : PROVISIONAL_BAND_LABEL;
+    kind === 'never-played' ? RATING_UNAVAILABLE_LABEL : NEVER_PLAYED_BAND_LABEL;
 
   expect(accessibleName).toContain(expectedStatement);
   expect(accessibleName).not.toContain(otherStatement);
@@ -319,7 +320,7 @@ describe("Property 22 — a row's rating is perceivable from its accessible name
   it('names the player and states the value, the band, or the unavailable label', () => {
     fc.assert(
       fc.property(
-        fc.constantFrom<PresentationKind>('rating', 'provisional', 'unavailable'),
+        fc.constantFrom<PresentationKind>('rating', 'never-played', 'unavailable'),
         digitFreeNameArb,
         fc.uuid(),
         ratingValueArb,
@@ -361,7 +362,7 @@ describe("Property 22 — a row's rating is perceivable from its accessible name
     fc.assert(
       fc.property(
         fc.constantFrom<Exclude<PresentationKind, 'rating'>>(
-          'provisional',
+          'never-played',
           'unavailable',
         ),
         digitBearingNameArb,
@@ -394,8 +395,8 @@ describe("Property 22 — a row's rating is perceivable from its accessible name
 
             expect(digitsOfAnnouncement).toBe(digitsOfName);
             expect(accessibleName).toContain(
-              kind === 'provisional'
-                ? PROVISIONAL_BAND_LABEL
+              kind === 'never-played'
+                ? NEVER_PLAYED_BAND_LABEL
                 : RATING_UNAVAILABLE_LABEL,
             );
           } finally {
@@ -409,6 +410,48 @@ describe("Property 22 — a row's rating is perceivable from its accessible name
 
   // Feature: web-squads-screens, Property 22: A row's rating is perceivable from its accessible name alone
   // Validates: Requirements 8.8
+  it('announces and draws a settling rating exactly as a settled one', () => {
+    fc.assert(
+      fc.property(
+        digitFreeNameArb,
+        fc.uuid(),
+        ratingValueArb,
+        (playerName, membershipId, value) => {
+          const leaderboard = parsedLeaderboardOf([{ membershipId, value }]);
+          const [settled, settling] = (['Established', 'Provisional'] as const).map(
+            (ratingState) => {
+              const presentation = selectRatingPresentation(
+                parsedMemberOf(membershipId, playerName, 12, ratingState),
+                leaderboard,
+              );
+              const { container } = render(
+                <RatingBadge playerName={playerName} presentation={presentation} />,
+              );
+
+              try {
+                return {
+                  presentation,
+                  markup: badgeOf(container).outerHTML,
+                  name: ratingBadgeAccessibleName(playerName, presentation),
+                };
+              } finally {
+                cleanup();
+              }
+            },
+          );
+
+          // The flag is the only difference, and the badge does not draw it:
+          // the settling note goes with the player's name, in the row.
+          expect(settling.presentation).toEqual({ ...settled.presentation, settling: true });
+          expect(settling.markup).toBe(settled.markup);
+          expect(settling.name).toBe(settled.name);
+          expect(settling.markup).not.toMatch(/~|settling|provisional/iu);
+        },
+      ),
+      { numRuns: 200 },
+    );
+  }, 120_000);
+
   it('names each row independently of where its badge sits', () => {
     fc.assert(
       fc.property(
@@ -418,7 +461,7 @@ describe("Property 22 — a row's rating is perceivable from its accessible name
             playerName: digitFreeNameArb,
             kind: fc.constantFrom<PresentationKind>(
               'rating',
-              'provisional',
+              'never-played',
               'unavailable',
             ),
             value: ratingValueArb,

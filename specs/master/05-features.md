@@ -109,12 +109,12 @@ Counts: see the summary at the end of this section.
 |---|---|---|---|---|
 | RA-01 | Squad-scoped μ and σ per membership | **Built** | | `backend/src/PitchMate.Domain/Matches/MembershipRating.cs` |
 | RA-02 | PlackettLuce rating engine | **Built** | An in-house implementation, not the OpenSkill package | `backend/src/PitchMate.Infrastructure/Rating/PlackettLuceRatingEngine.cs`, `backend/src/PitchMate.Infrastructure/PitchMate.Infrastructure.csproj` |
-| RA-03 | Provisional until σ ≤ 8.19 | **Built** | | `backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:28` |
+| RA-03 | Provisional until σ ≤ 8.19 | **Built** | The state drives the settling note; it no longer hides the number (RA-13) | `backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:28` |
 | RA-04 | Skill-tier seeding: Beginner / Average / Strong (μ 20 / 25 / 30) | **Built** | | `backend/src/PitchMate.Domain/Rating/SkillTier.cs`, `backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs` |
 | RA-05 | Ratings move on outcome rank, draws first-class, one update per match | **Built** | | `backend/src/PitchMate.Application/Matches/UseCases/CompleteMatchHandler.cs` |
 | RA-06 | σ decays back up after inactivity | **Partial** | The engine supports decay (42 days free, then 0.05); no scheduled job runs it | `backend/src/PitchMate.Infrastructure/Rating/PlackettLuceRatingEngine.cs:291`, `backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs` |
 | RA-07 | Margin-of-victory and participation weights as switchable levers | **Partial** | Both exist and are off; even switched on they would do nothing, because the outcome passed to the engine carries no margin or participation | `backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:37`, `backend/src/PitchMate.Domain/Matches/Match.cs` |
-| RA-08 | Display rating = round((μ − 3σ) × K + C), floored | **Built** | | `backend/src/PitchMate.Domain/Stats/DisplayRatingCalculator.cs` |
+| RA-08 | Display rating = round((μ − 25) × K + C), floored, with K=40 and C=1000 for every squad | **Built** | Every rated player has a number, settling or not; σ does not change it | `backend/src/PitchMate.Domain/Stats/DisplayRatingCalculator.cs` |
 | RA-09 | K and C tunable per squad | **Partial** | A per-squad source exists but always returns K=40, C=1000; nothing is stored and there is no UI | `backend/src/PitchMate.Infrastructure/Stats/SquadDisplayRatingParametersSource.cs` |
 | RA-10 | Rating snapshots after every match | **Built** | | `backend/src/PitchMate.Domain/Matches/RatingSnapshot.cs` |
 | RA-11 | Rating replay | **Partial** | The engine implements it; nothing calls it | `backend/src/PitchMate.Domain/Rating/IRatingEngine.cs` |
@@ -136,8 +136,8 @@ Counts: see the summary at the end of this section.
 | Id | Feature | Status | Notes | Source |
 |---|---|---|---|---|
 | ST-01 | Appearances, W/L/D, win % | **Built** | | `backend/src/PitchMate.Application/Stats/GetPlayerProfileHandler.cs`, `backend/src/PitchMate.Domain/Stats/WinPercentage.cs` |
-| ST-02 | Current rating and provisional state | **Built** | | `apps/web/src/features/player-stats/components/RatingPanel.tsx` |
-| ST-03 | Rating progression chart with the "~" band | **Built** | | `apps/web/src/features/player-stats/components/ProgressionChart.tsx`, `apps/web/src/ui/Stats.tsx` |
+| ST-02 | Current rating, with a settling note while it settles | **Built** | The number looks the same either way; the settling mark sits beside the name | `apps/web/src/features/player-stats/components/RatingPanel.tsx`, `apps/web/src/features/player-stats/components/PlayerIdentityHeader.tsx` |
+| ST-03 | Rating progression chart, every reading a number | **Built** | Settling readings are hollow marks on a dashed line, and the table beside it says "Settling" by their dates | `apps/web/src/features/player-stats/components/ProgressionChart.tsx`, `apps/web/src/ui/Stats.tsx` |
 | ST-04 | Longest win streak and unbeaten streak | **Built** | Longest ever, not current | `backend/src/PitchMate.Domain/Stats/StreakCalculator.cs` |
 | ST-05 | Most played with / against, best partnerships, bogey opponents | **Built** | No minimum number of shared matches | `backend/src/PitchMate.Application/Stats/GetPlayerProfileHandler.cs` |
 | ST-06 | Bib appearances | **Built** | | `backend/src/PitchMate.Application/Stats/GetPlayerProfileHandler.cs` |
@@ -222,7 +222,7 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | RA-06 | **σ decay runs nightly**, in the scheduled job (PL-01), and **starts after 8 weeks without a match**. Matches are weekly at best, so ratings must not decay quickly; decay raises σ only and never lowers μ. The code's free period is 42 days (`backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:31`) | **Gap** | | [R15](decisions.md#r15) |
 | RA-12 | **Ratings are tracked in every squad**, Pro or not. This is how the code behaves today: completion always updates ratings (`backend/src/PitchMate.Application/Matches/UseCases/CompleteMatchHandler.cs`). The requirement is that gating never changes it | **Built** | | [R5](decisions.md#r5) |
 | MA-11 | **Match-day options**, a Pro feature. Two: availability on or off, and payment tracking (who has paid). With both at their default a squad gets today's flow. Score confirmation (RE-08) and team naming (TB-05) are not Pro | **Gap** | | [R5](decisions.md#r5), [T4](decisions.md#t4), [U2](decisions.md#u2) |
-| RA-13 | **A rating number from the first match, with a settling note.** Display rating = round((μ − 25) × 40 + 1000), floored: μ on a friendlier scale, so a new Beginner, Average or Strong player starts on 800, 1000 or 1200 and moves with results. σ no longer changes the number; while it is above the provisional threshold (8.19, `backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:28`) the rating carries a visible "settling" mark and a line saying ratings take a few matches to settle. Leaderboards rank everyone and show the mark. Balancing is untouched: it uses μ and σ through `Predict`. This replaces today's (μ − 3σ) formula and the hidden number (`backend/src/PitchMate.Domain/Stats/DisplayRatingCalculator.cs`). On the launch gate because changing it later changes every number people have seen | **Gap** | Yes | [T8](decisions.md#t8), [U1](decisions.md#u1), [U6](decisions.md#u6) |
+| RA-13 | **A rating number from the first match, with a settling note.** Display rating = round((μ − 25) × 40 + 1000), floored: μ on a friendlier scale, so a new Beginner, Average or Strong player starts on 800, 1000 or 1200 and moves with results. σ no longer changes the number; while it is above the provisional threshold (8.19, `backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:28`) the rating carries a visible "settling" mark and a line saying ratings take a few matches to settle. Leaderboards rank everyone and show the mark. Balancing is untouched: it uses μ and σ through `Predict`. This replaced the (μ − 3σ) formula and the hidden number (`backend/src/PitchMate.Domain/Stats/DisplayRatingCalculator.cs`, `backend/src/PitchMate.Infrastructure/Stats/EfStatsRepository.cs`, `apps/web/src/features/squads/components/PlayerRow.tsx`). The note reads "Settling", with no count of matches played. On the launch gate because changing it later changes every number people have seen | **Built** | Yes | [T8](decisions.md#t8), [U1](decisions.md#u1), [U6](decisions.md#u6) |
 | RA-09 | **K and C are fixed at 40 and 1000**; no per-squad setting is built. The code already returns these for every squad (`backend/src/PitchMate.Infrastructure/Stats/SquadDisplayRatingParametersSource.cs`) | **Built** | | [T17](decisions.md#t17) |
 | RA-07 | **The margin and participation levers stay off**, and no work is done to feed them (`backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:37`) | **Built** | | [Q13](decisions.md#q13) |
 | NO-06 | **A "match cancelled" notification** to the squad's members | **Gap** | | [Q16](decisions.md#q16) |
@@ -244,7 +244,7 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 |---|---|---|---|---|
 | ST-08 | **Top scorer leaderboard**, using the query that already exists (`backend/src/PitchMate.Application/Stats/IRichStatsSource.cs`) | **Gap** | | [Q18](decisions.md#q18) |
 | ST-11 | **Every available stat is shown, presented usefully**, and nothing computed is hidden. The keeper-only stats no longer exist (RE-10) | **Gap** | | [Q18](decisions.md#q18), [R13](decisions.md#r13), [T9](decisions.md#t9) |
-| ST-12 | **The progression chart plots every point as a number**, with settling points marked, in place of the "~" band; the rating panel and leaderboards show the number with the settling mark (RA-13) | **Gap** | Yes | [T8](decisions.md#t8) |
+| ST-12 | **The progression chart plots every point as a number**, with settling points marked, in place of the "~" band; the rating panel and leaderboards show the number with the settling mark (RA-13) (`apps/web/src/features/player-stats/components/ProgressionChart.tsx`, `apps/web/src/features/player-stats/components/ProgressionTable.tsx`, `apps/web/src/features/player-stats/screens/SquadLeaderboards.tsx`) | **Built** | Yes | [T8](decisions.md#t8) |
 | NO-04 | **Notification preferences** on the account screen, for in-app, email and push | **Gap** | Yes | [T15](decisions.md#t15) |
 | NO-03 | **Email is really sent**, through Azure Communication Services, in QA and production (PL-07 in [06](06-platform.md#to-be)) | **Gap** | Yes | [Q9](decisions.md#q9) |
 | NO-05 | **Push notifications**, with the native apps (DV-05) | **Gap** | Yes | [Q4](decisions.md#q4), [R3](decisions.md#r3) |
@@ -273,7 +273,7 @@ Two rules are affected. The event log is append-only and "nothing is discarded":
 - **RA-07 · Wiring margin or participation data into the outcome** ([Q13](decisions.md#q13)).
 - **ST-07 · The keeper-only stats** (clean sheets, goals conceded as keeper, keeper time), removed with their data ([R13](decisions.md#r13), [T9](decisions.md#t9)). Goals stay.
 - **RA-09 · K and C per squad.** They stay fixed ([T17](decisions.md#t17)).
-- **RA-03, RA-08 · A badge or "~" band in place of a number**, and the (μ − 3σ) display formula, replaced by RA-13 ([T8](decisions.md#t8)).
+- **RA-03, RA-08 · A badge or "~" band in place of a number**, and the (μ − 3σ) display formula, replaced by RA-13 ([T8](decisions.md#t8)). Both are gone from the code.
 - **Reporting a squad** ([R10](decisions.md#r10)).
 
 ### Not decided

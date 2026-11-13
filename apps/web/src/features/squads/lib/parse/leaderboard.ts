@@ -3,15 +3,15 @@
  * `{ statistic: name, entries: [{ membershipId, displayName, value }] }`.
  *
  * The leaderboard **decorates** the Player_List rather than defining it. Its rows
- * are matched to `GetSquad`'s memberships by identity, a membership with no entry
- * renders the Provisional_Band, and a leaderboard failure degrades every row to
- * Rating_Unavailable (Requirements 7.2, 8.3). Two consequences shape this module.
+ * are matched to `GetSquad`'s memberships by identity, a played membership with
+ * no entry renders Rating_Unavailable, and a leaderboard failure degrades every
+ * row to Rating_Unavailable (Requirements 7.2, 8.3). Two consequences shape this module.
  *
  * **A duplicated membership identity fails the body** (Requirement 8.11). Two
  * entries for one membership make that person's rating ambiguous, and there is no
  * defensible way to pick between them — taking the first would render a number
- * chosen by array order, and ignoring both would show a Provisional_Band that
- * claims the player has no settled rating when the backend says they have two.
+ * chosen by array order, and ignoring both would claim the player has no rating
+ * when the backend says they have two.
  * Failing routes the ambiguity through the normal path: a `parse-failure` outcome,
  * no leaderboard, and Rating_Unavailable on **every** row, so no player gets a
  * rating derived from an ambiguous body. Identities compare exactly, as

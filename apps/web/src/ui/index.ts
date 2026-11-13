@@ -21,7 +21,6 @@ export {
   FormerBadge,
   GuestBadge,
   ProBadge,
-  ProvisionalBadge,
   RoleBadge,
   SettlingMark,
   type BadgeProps,

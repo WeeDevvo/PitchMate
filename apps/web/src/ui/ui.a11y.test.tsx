@@ -55,7 +55,6 @@ import {
   SidebarLabel,
   TopBar,
   ProBadge,
-  ProvisionalBadge,
   Rating,
   ResultBadge,
   RoleBadge,
@@ -116,7 +115,6 @@ function Gallery() {
       <RoleBadge role="owner" />
       <RoleBadge role="admin" />
       <GuestBadge />
-      <ProvisionalBadge />
       <SettlingMark detail="3 of 5 matches" />
       <ProBadge />
       <LockedFeatureList aria-label="Match-day options">
@@ -131,7 +129,6 @@ function Gallery() {
       <ResultBadge result="W" size="lg" />
       <FormGuide results={['W', 'L', 'D', 'W']} />
       <Rating value="1,240" delta={12} />
-      <Rating provisional band="1,1xx" />
       <BibFlag size="lg" />
       <BibFlag off />
       <TeamSheetCard
@@ -243,7 +240,7 @@ function Gallery() {
         role="group"
         aria-label="Priya Shah"
         nameContent={<a href="/players/priya">Priya Shah</a>}
-        badges={<ProvisionalBadge short />}
+        meta={<SettlingMark />}
         end={<Button variant="secondary" size="sm">Make admin</Button>}
       />
       <NotificationList>

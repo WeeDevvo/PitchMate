@@ -10,23 +10,23 @@
  * Every colour is read from a custom property declared in
  * `styles/playerStatsTokens.css`, so **no colour value is written here** and a
  * Theme change is a change of one attribute on the document element
- * (Requirements 15.1, 15.2). No new token is introduced: the panel paints with
- * `--text`, `--muted-text`, and the two already-declared provisional tokens.
+ * (Requirements 15.1, 15.2). The panel paints with the primary and secondary
+ * text colours only: a rating has no colour of its own, settling or not.
  *
- * ## The badge shapes are the non-colour cue (Requirements 7.3, 16.6)
+ * ## The badge shapes are the non-colour cue (Requirement 16.6)
  *
- * Each condition's badge is a different *shape*, so the four are distinguishable
+ * Each presentation's badge is a different *shape*, so they are distinguishable
  * in greyscale, under a forced-colours mode, and to anyone who reads the words
  * rather than the hue:
  *
- *   established   a filled disc        — the rating has landed on a value
- *   provisional   a dashed ring        — present, but not settled
+ *   rating        a filled disc        — a number, settled or still settling
  *   never-played  a hollow square      — nothing has been played
  *   absent        a dotted diamond     — appearances exist, no rating recorded
  *
- * Only the first is filled, and only the provisional one is amber; the other two
- * take the muted text colour, because neither is a result and neither should
- * compete with the figure above it. A badge is a non-text graphical object, so it
+ * A settling rating takes the same disc and the same figure as a settled one
+ * (brand.md): the sentence beneath it says it is settling. Only the disc is
+ * filled; the other two take the muted text colour, because neither is a result
+ * and neither should compete with the figure above it. A badge is a non-text graphical object, so it
  * owes 3:1 rather than 4.5:1 under WCAG 1.4.11 — and every token used here
  * clears the text floor anyway, as the measurements in the token table record.
  *
@@ -70,21 +70,14 @@
   border-style: solid;
 }
 
-/* A settled rating: a filled disc, the only badge with a fill. */
-.player-stats-rating__badge--established {
+/* A rating, settled or still settling: a filled disc, the only badge with a fill. */
+.player-stats-rating__badge--rating {
   border-color: var(--pm-text-primary);
   border-radius: 50%;
   background: var(--pm-text-primary);
 }
 
-/* Still settling: a ring, and a dashed one — an outline that has not closed. */
-.player-stats-rating__badge--provisional {
-  border-color: var(--pm-provisional-text);
-  border-style: dashed;
-  border-radius: 50%;
-}
-
-/* Nothing played: a hollow square. Square against the two round badges, so the
+/* Nothing played: a hollow square. Square against the round badge, so the
    difference reads at a glance and without colour. */
 .player-stats-rating__badge--never-played {
   border-color: var(--pm-text-secondary);
@@ -111,17 +104,12 @@
   overflow-wrap: anywhere;
 }
 
-/* The one condition with a number to show, sized as the section's figure. */
-.player-stats-rating__text--established {
+/* A number, sized as the section's figure, settling or not. */
+.player-stats-rating__text--rating {
   font-size: var(--player-stats-font-size-figure);
   font-family: var(--pm-font-display);
   font-weight: var(--player-stats-font-weight-heading);
   line-height: var(--player-stats-line-height-heading);
-}
-
-/* Amber is reinforcement over words that already state the condition. */
-.player-stats-rating__text--provisional {
-  color: var(--pm-provisional-text);
 }
 
 /* Neither absence is a result, so neither is emphasised. */
@@ -131,9 +119,10 @@
 }
 
 /* ------------------------------------------------------------------ *
- * The squad-scope statement (Requirement 7.9)
+ * The settling sentence and the squad-scope statement (Requirements 7.3, 7.9)
  * ------------------------------------------------------------------ */
 
+.player-stats-rating__settling,
 .player-stats-rating__scope {
   margin: 0;
   max-width: var(--player-stats-measure);

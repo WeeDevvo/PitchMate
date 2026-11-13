@@ -33,7 +33,7 @@
  * The row records *what rating data was available for this membership* —
  * {@link PlayerListRow.leaderboardObtained} and
  * {@link PlayerListRow.ratingEntry} — and stops there. Choosing between a
- * Display_Rating, a Provisional_Band, and a Rating_Unavailable label is
+ * Display_Rating, the Never_Played band, and a Rating_Unavailable label is
  * Requirement 8's business and lives in `lib/ratingPresentation.ts`, which is a
  * pure function of a Squad_Member and the optional leaderboard (Requirement 8.6).
  * Keeping the *decision* out of this module means the two never disagree about

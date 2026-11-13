@@ -1377,6 +1377,7 @@ export interface components {
             displayName: string;
             /** Format: double */
             value: number | string;
+            ratingState: null | components["schemas"]["RatingState"];
         };
         /** @enum {unknown} */
         LeaderboardStatistic: "Appearances" | "WinPercentage" | "DisplayRating" | "WinStreak" | "UnbeatenStreak" | "BibAppearances";
@@ -1602,9 +1603,7 @@ export interface components {
             sigma: number | string;
             state: components["schemas"]["RatingState"];
             /** Format: int32 */
-            displayRating: null | number | string;
-            /** Format: int32 */
-            estimatedRating: null | number | string;
+            displayRating: number | string;
         };
         /** @enum {unknown} */
         RatingState: "Provisional" | "Established" | null;

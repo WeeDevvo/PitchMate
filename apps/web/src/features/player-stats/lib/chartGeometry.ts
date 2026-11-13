@@ -410,22 +410,22 @@ function printCoordinate(value: number): string {
 }
 
 /**
- * The stretches of a plot's line that pass through provisional readings, as SVG
+ * The stretches of a plot's line that pass through settling readings, as SVG
  * `polyline` attribute values, so the chart can draw them dashed.
  *
- * Each maximal run of consecutive provisional points gives one line, reaching
- * out to the settled reading on either side of the run where there is one: the
- * step into or out of a provisional reading is itself uncertain. A run that
- * reaches fewer than two points in all — a lone provisional reading with no
- * neighbour — gives no line, as a single reading is never a trend.
+ * Each maximal run of consecutive settling points gives one line, reaching out
+ * to the settled reading on either side of the run where there is one: the step
+ * into or out of a settling reading is itself not settled. A run that reaches
+ * fewer than two points in all — a lone settling reading with no neighbour —
+ * gives no line, as a single reading is never a trend.
  *
- * Pure and total: the empty plot and a plot with no provisional point both give
+ * Pure and total: the empty plot and a plot with no settling point both give
  * none.
  *
  * @param points the plotted points, in series order
- * @returns the provisional lines, left to right
+ * @returns the settling lines, left to right
  */
-export function provisionalLines(
+export function settlingLines(
   points: readonly PlottedPoint[],
 ): readonly string[] {
   const lines: string[] = [];
@@ -453,49 +453,6 @@ export function provisionalLines(
   }
 
   return lines;
-}
-
-/**
- * The horizontal spans of a plot's provisional readings, so the chart can shade
- * a band behind them.
- *
- * Each maximal run of consecutive provisional points gives one span, from its
- * first point to the settled reading after it, which is where the dashed line
- * ends; a run that closes the series ends at its own last point. A span with no
- * width — a lone provisional reading at the end — gives none.
- *
- * Pure and total: the empty plot and a plot with no provisional point both give
- * none.
- *
- * @param points the plotted points, in series order
- * @returns the spans, left to right
- */
-export function provisionalBands(
-  points: readonly PlottedPoint[],
-): readonly { readonly x1: number; readonly x2: number }[] {
-  const bands: { x1: number; x2: number }[] = [];
-  let index = 0;
-
-  while (index < points.length) {
-    const first = points[index];
-    if (first?.point.provisional !== true) {
-      index += 1;
-      continue;
-    }
-
-    while (points[index + 1]?.point.provisional === true) {
-      index += 1;
-    }
-
-    const end = points[index + 1] ?? points[index];
-    if (end !== undefined && end.x > first.x) {
-      bands.push({ x1: first.x, x2: end.x });
-    }
-
-    index += 1;
-  }
-
-  return bands;
 }
 
 /** The steps a rating axis counts in within each power of ten: 1, 2.5 and 5 of it. */

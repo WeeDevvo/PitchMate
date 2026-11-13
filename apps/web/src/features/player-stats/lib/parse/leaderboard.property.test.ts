@@ -56,6 +56,8 @@ function boardArbFor(statistic: LeaderboardStatistic): fc.Arbitrary<Leaderboard>
         membershipId: wireIdentityArb,
         displayName: wireDisplayNameArb,
         value: valueArbFor(statistic),
+        // Only the rating board marks a player as settling.
+        settling: statistic === 'DisplayRating' ? fc.boolean() : fc.constant(false),
       }),
       { maxLength: 16 },
     )

@@ -97,34 +97,14 @@ export const INVITE_LINK_INCOMPLETE =
   'This invite link is incomplete. Ask for the full link, or for the short code.';
 
 /**
- * The Provisional_Band label, shown for a Squad_Member whose Rating_State is
- * provisional (Requirements 8.4, 8.12, and `web-player-stats-screen` 17.2,
- * 17.3 — bare numbers here are this feature's own).
- *
- * It **asserts the provisional condition** rather than only reporting an absence.
- * The earlier wording — "No settled rating yet" — had to stay non-asserting
- * because this one band stood for two different situations at once: a rating
- * still settling, and a player who had never played. The
- * `web-player-stats-screen` spec's Requirement 17 splits those apart (see
- * {@link NEVER_PLAYED_BAND_LABEL}), so this label is free to state which of them
- * it means.
- *
- * It still carries no digit, no approximation or range indicator, no count of
- * matches played, and no reason, and it is identical on every row that presents
- * it, whatever that member's role, state, or guest flag.
- */
-export const PROVISIONAL_BAND_LABEL = 'Rating still settling';
-
-/**
  * The Never_Played band label, shown for a Squad_Member whose Appearance_Count is
  * zero (`web-player-stats-screen` Requirements 17.2, 17.3).
  *
- * Distinct from {@link PROVISIONAL_BAND_LABEL} and from
- * {@link RATING_UNAVAILABLE_LABEL}, and a substring of neither, because that
- * spec's Requirement 17.3 asks the three to read differently: a player who has
- * played nothing, a rating that is still settling, and a rating that could not be
- * obtained are three different statements, and a reader who sees the same words
- * for all three learns nothing from any of them.
+ * Distinct from {@link RATING_UNAVAILABLE_LABEL} and not a substring of it,
+ * because that spec's Requirement 17.3 asks the two to read differently: a
+ * player who has played nothing and a rating that could not be obtained are
+ * different statements, and a reader who sees the same words for both learns
+ * nothing from either.
  *
  * It states the condition rather than a rating, so it carries no digit — the
  * count it stands for is zero, and the label says so in words.

@@ -7,22 +7,22 @@
  *
  *   - the Display_Rating rendered as an integer exactly as parsed, with no
  *     rounding, grouping separator, or locale formatting (7.2),
- *   - a badge **and** a label for a provisional rating, and no figure anywhere in
- *     that condition — neither seen nor announced (7.3),
+ *   - a rating that is still settling rendered as **the same number in the same
+ *     style** as a settled one, with a plain sentence beneath it saying it is
+ *     settling, and no "~", amber, or label on the figure (7.3, brand.md),
  *   - a label stating that no matches have been played (7.4),
  *   - a label stating that no rating is recorded (7.5),
- *   - the four presentations rendering four distinct texts and four distinct
- *     accessible names (7.6),
+ *   - the four conditions reading differently as a whole panel (7.6),
  *   - the squad-scope statement in every one of the four conditions (7.9),
- *   - and a distinct non-colour cue per condition, so none of them depends on a
- *     hue being perceived (16.6).
+ *   - and a non-colour cue per presentation, so none of them depends on a hue
+ *     being perceived (16.6).
  *
  * The exhaustive cases are driven over one list of all four conditions rather
  * than over four hand-written blocks, so a fifth condition added to the union
  * shows up here as a failure rather than as a silently unrendered rating.
  *
- * Properties 17 and 18 quantify the provisional and distinguishability claims
- * over generated inputs in their own files; these are the worked examples.
+ * Properties 17 and 18 quantify the settling and distinguishability claims over
+ * generated inputs in their own files; these are the worked examples.
  *
  * Feature: web-player-stats-screen
  */
@@ -35,6 +35,7 @@ import {
   RATING_PANEL_PRESENTATION_SELECTOR,
   RATING_PANEL_SCOPE_SELECTOR,
   RATING_PANEL_SELECTOR,
+  RATING_PANEL_SETTLING_SELECTOR,
   RATING_PANEL_TEXT_SELECTOR,
   RatingPanel,
   ratingPanelAccessibleName,
@@ -42,7 +43,7 @@ import {
 import {
   RATING_ABSENT,
   RATING_NEVER_PLAYED,
-  RATING_PROVISIONAL,
+  RATING_SETTLING_NOTE,
   RATING_SQUAD_SCOPE_STATEMENT,
 } from '../lib/messages';
 import type { RatingCondition } from '../lib/ratingCondition';
@@ -50,9 +51,9 @@ import type { RatingCondition } from '../lib/ratingCondition';
 /** A display name with no digit in it, so a stray figure is attributable. */
 const ORDINARY_NAME = 'BigDave';
 
-/** The three labels that must never appear in the wrong condition. */
+/** The three fixed statements that must never appear in the wrong condition. */
 const EVERY_CONDITION_LABEL = [
-  RATING_PROVISIONAL,
+  RATING_SETTLING_NOTE,
   RATING_NEVER_PLAYED,
   RATING_ABSENT,
 ] as const;
@@ -63,13 +64,16 @@ interface ConditionCase {
   readonly condition: RatingCondition;
 }
 
-/** All four conditions, with a settled rating carrying an ordinary value. */
+/** All four conditions, the two numeric ones carrying the same ordinary value. */
 const CONDITION_CASES: readonly ConditionCase[] = [
   {
     what: 'an established rating',
     condition: { kind: 'established', displayRating: 1240 },
   },
-  { what: 'a provisional rating', condition: { kind: 'provisional' } },
+  {
+    what: 'a settling rating',
+    condition: { kind: 'settling', displayRating: 1240 },
+  },
   { what: 'a player who has never played', condition: { kind: 'never-played' } },
   { what: 'a rating that was not recorded', condition: { kind: 'absent' } },
 ];
@@ -90,6 +94,11 @@ function renderedAccessibleName(container: HTMLElement): string {
       .querySelector(RATING_PANEL_PRESENTATION_SELECTOR)
       ?.getAttribute('aria-label') ?? ''
   );
+}
+
+/** The named composite's markup: the badge, the figure, and their classes. */
+function presentationMarkup(container: HTMLElement): string {
+  return container.querySelector(RATING_PANEL_PRESENTATION_SELECTOR)?.outerHTML ?? '';
 }
 
 describe('RatingPanel established rating (Req 7.2)', () => {
@@ -113,8 +122,8 @@ describe('RatingPanel established rating (Req 7.2)', () => {
     ).toBe(expected);
   });
 
-  it('renders none of the three absence labels beside a settled rating', () => {
-    render(
+  it('renders none of the three fixed statements beside a settled rating', () => {
+    const { container } = render(
       <RatingPanel
         playerName={ORDINARY_NAME}
         condition={{ kind: 'established', displayRating: 1240 }}
@@ -124,6 +133,7 @@ describe('RatingPanel established rating (Req 7.2)', () => {
     for (const label of EVERY_CONDITION_LABEL) {
       expect(screen.queryByText(label)).toBeNull();
     }
+    expect(container.querySelector(RATING_PANEL_SETTLING_SELECTOR)).toBeNull();
   });
 
   it('announces the number as a rating belonging to this player', () => {
@@ -142,30 +152,80 @@ describe('RatingPanel established rating (Req 7.2)', () => {
   });
 });
 
-describe('RatingPanel provisional rating (Req 7.3)', () => {
-  it('renders a badge and the label stating the rating is still settling', () => {
+describe('RatingPanel settling rating (Req 7.3)', () => {
+  it('shows the number, exactly as parsed', () => {
     const { container } = render(
-      <RatingPanel playerName={ORDINARY_NAME} condition={{ kind: 'provisional' }} />,
+      <RatingPanel
+        playerName={ORDINARY_NAME}
+        condition={{ kind: 'settling', displayRating: 1118 }}
+      />,
     );
 
-    expect(screen.getByText(RATING_PROVISIONAL)).toBeVisible();
     expect(
-      panelOf(container).querySelectorAll(RATING_PANEL_BADGE_SELECTOR),
-    ).toHaveLength(1);
+      container.querySelector(RATING_PANEL_TEXT_SELECTOR)?.textContent,
+    ).toBe('1118');
   });
 
-  it('renders no digit at all, seen or announced', () => {
-    const { container } = render(
-      <RatingPanel playerName={ORDINARY_NAME} condition={{ kind: 'provisional' }} />,
+  it('draws the number exactly as it draws an established one', () => {
+    const settling = render(
+      <RatingPanel
+        playerName={ORDINARY_NAME}
+        condition={{ kind: 'settling', displayRating: 1118 }}
+      />,
+    );
+    const established = render(
+      <RatingPanel
+        playerName={ORDINARY_NAME}
+        condition={{ kind: 'established', displayRating: 1118 }}
+      />,
     );
 
-    expect(panelOf(container).textContent ?? '').not.toMatch(/\d/u);
-    expect(renderedAccessibleName(container)).not.toMatch(/\d/u);
+    // The same badge, the same classes, the same words and the same accessible
+    // name: nothing on the figure says it is settling.
+    expect(presentationMarkup(settling.container)).toBe(
+      presentationMarkup(established.container),
+    );
   });
 
-  it('renders neither of the other two absence labels', () => {
+  it('puts no "~", band or provisional wording on the figure', () => {
+    const { container } = render(
+      <RatingPanel
+        playerName={ORDINARY_NAME}
+        condition={{ kind: 'settling', displayRating: 1118 }}
+      />,
+    );
+    const markup = presentationMarkup(container);
+
+    expect(markup).not.toContain('~');
+    expect(markup).not.toMatch(/provisional|settling/iu);
+  });
+
+  it('says in plain words under the figure that the rating is still settling', () => {
+    const { container } = render(
+      <RatingPanel
+        playerName={ORDINARY_NAME}
+        condition={{ kind: 'settling', displayRating: 1118 }}
+      />,
+    );
+
+    expect(screen.getByText(RATING_SETTLING_NOTE)).toBeVisible();
+    expect(
+      panelOf(container).querySelectorAll(RATING_PANEL_SETTLING_SELECTOR),
+    ).toHaveLength(1);
+    // Outside the named composite, so it is read as prose, never as the rating.
+    expect(
+      container
+        .querySelector(RATING_PANEL_PRESENTATION_SELECTOR)
+        ?.querySelector(RATING_PANEL_SETTLING_SELECTOR),
+    ).toBeNull();
+  });
+
+  it('renders neither of the two absence labels', () => {
     render(
-      <RatingPanel playerName={ORDINARY_NAME} condition={{ kind: 'provisional' }} />,
+      <RatingPanel
+        playerName={ORDINARY_NAME}
+        condition={{ kind: 'settling', displayRating: 1118 }}
+      />,
     );
 
     expect(screen.queryByText(RATING_NEVER_PLAYED)).toBeNull();
@@ -182,12 +242,12 @@ describe('RatingPanel never played (Req 7.4)', () => {
     expect(screen.getByText(RATING_NEVER_PLAYED)).toBeVisible();
   });
 
-  it('renders neither the provisional nor the unrecorded label', () => {
+  it('renders neither the settling sentence nor the unrecorded label', () => {
     render(
       <RatingPanel playerName={ORDINARY_NAME} condition={{ kind: 'never-played' }} />,
     );
 
-    expect(screen.queryByText(RATING_PROVISIONAL)).toBeNull();
+    expect(screen.queryByText(RATING_SETTLING_NOTE)).toBeNull();
     expect(screen.queryByText(RATING_ABSENT)).toBeNull();
   });
 });
@@ -199,37 +259,40 @@ describe('RatingPanel rating absent (Req 7.5)', () => {
     expect(screen.getByText(RATING_ABSENT)).toBeVisible();
   });
 
-  it('renders neither the provisional nor the never-played label', () => {
+  it('renders neither the settling sentence nor the never-played label', () => {
     render(<RatingPanel playerName={ORDINARY_NAME} condition={{ kind: 'absent' }} />);
 
-    expect(screen.queryByText(RATING_PROVISIONAL)).toBeNull();
+    expect(screen.queryByText(RATING_SETTLING_NOTE)).toBeNull();
     expect(screen.queryByText(RATING_NEVER_PLAYED)).toBeNull();
   });
 });
 
 describe('RatingPanel distinguishability (Req 7.6)', () => {
-  it('renders four distinct visible texts', () => {
+  it('reads differently, as a whole panel, in each of the four conditions', () => {
     const texts = CONDITION_CASES.map(({ condition }) => {
       const { container } = render(
         <RatingPanel playerName={ORDINARY_NAME} condition={condition} />,
       );
 
-      return container.querySelector(RATING_PANEL_TEXT_SELECTOR)?.textContent ?? '';
+      return panelOf(container).textContent ?? '';
     });
 
     expect(new Set(texts).size).toBe(CONDITION_CASES.length);
   });
 
-  it('renders four distinct accessible names', () => {
+  it('announces three distinct names: a rating, never played, and not recorded', () => {
     const names = CONDITION_CASES.map(({ condition }) =>
       ratingPanelAccessibleName(ORDINARY_NAME, condition),
     );
 
-    expect(new Set(names).size).toBe(CONDITION_CASES.length);
+    // A settling rating is announced as the rating it is; the settling sentence
+    // beside it is its own text.
+    expect(names[0]).toBe(names[1]);
+    expect(new Set(names).size).toBe(3);
   });
 
   it.each(CONDITION_CASES)(
-    'carries a non-colour cue of its own for $what',
+    'carries exactly one non-colour cue for $what',
     ({ condition }) => {
       const { container } = render(
         <RatingPanel playerName={ORDINARY_NAME} condition={condition} />,
@@ -239,13 +302,11 @@ describe('RatingPanel distinguishability (Req 7.6)', () => {
       );
 
       expect(badges).toHaveLength(1);
-      expect(badges[0]?.getAttribute('data-player-stats-rating-badge')).toBe(
-        condition.kind,
-      );
+      expect(badges[0]?.getAttribute('aria-hidden')).toBe('true');
     },
   );
 
-  it('gives the four conditions four different badge shapes', () => {
+  it('gives a rating, never played and not recorded three different badge shapes', () => {
     const shapes = CONDITION_CASES.map(({ condition }) => {
       const { container } = render(
         <RatingPanel playerName={ORDINARY_NAME} condition={condition} />,
@@ -258,7 +319,8 @@ describe('RatingPanel distinguishability (Req 7.6)', () => {
       );
     });
 
-    expect(new Set(shapes).size).toBe(CONDITION_CASES.length);
+    expect(shapes[0]).toBe(shapes[1]);
+    expect(new Set(shapes).size).toBe(3);
   });
 
   it.each(CONDITION_CASES)('records which condition it rendered for $what', ({
@@ -290,7 +352,10 @@ describe('RatingPanel squad scope (Req 7.9)', () => {
 
   it('keeps the statement outside the named composite, so it is read as prose', () => {
     const { container } = render(
-      <RatingPanel playerName={ORDINARY_NAME} condition={{ kind: 'provisional' }} />,
+      <RatingPanel
+        playerName={ORDINARY_NAME}
+        condition={{ kind: 'settling', displayRating: 1118 }}
+      />,
     );
 
     expect(

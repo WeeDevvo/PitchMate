@@ -8481,7 +8481,8 @@
         "required": [
           "membershipId",
           "displayName",
-          "value"
+          "value",
+          "ratingState"
         ],
         "type": "object",
         "properties": {
@@ -8499,6 +8500,16 @@
               "string"
             ],
             "format": "double"
+          },
+          "ratingState": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RatingState"
+              }
+            ]
           }
         }
       },
@@ -9406,8 +9417,7 @@
           "mu",
           "sigma",
           "state",
-          "displayRating",
-          "estimatedRating"
+          "displayRating"
         ],
         "type": "object",
         "properties": {
@@ -9437,16 +9447,6 @@
           "displayRating": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "estimatedRating": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
               "integer",
               "string"
             ],

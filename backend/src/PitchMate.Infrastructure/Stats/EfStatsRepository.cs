@@ -32,10 +32,10 @@ namespace PitchMate.Infrastructure.Stats;
 /// The <see cref="IRatingEngine"/> and <see cref="IDisplayRatingParametersSource"/> dependencies are
 /// used solely by the <c>Display_Rating</c> leaderboard, where the store aggregates each membership's
 /// current μ/σ and the pure Domain classification/mapping
-/// (<see cref="IRatingEngine.GetState"/> then <see cref="DisplayRatingCalculator.Compute"/>) turns it
-/// into the ranking value and drives eligibility (a value is present only for an <c>Established</c>
-/// rating — Requirement 4.5, 7.2). Every other leaderboard statistic and the whole Profile aggregate
-/// are computed without them.
+/// (<see cref="IRatingEngine.GetState"/> and <see cref="DisplayRatingCalculator.Compute"/>) turns it
+/// into the ranking value and the state reported beside it (every membership with a rating is
+/// ranked, settling ones included — Requirement 4.5, 7.2). Every other leaderboard statistic and the
+/// whole Profile aggregate are computed without them.
 /// </remarks>
 internal sealed class EfStatsRepository(
     PitchMateDbContext db,
@@ -416,11 +416,11 @@ internal sealed class EfStatsRepository(
     /// Builds the eligible <c>Display_Rating</c> ranking rows. The store aggregates each squad
     /// membership's current μ/σ from its 1:1 <see cref="MembershipRating"/> (scoped to the squad in
     /// Postgres), then the pure Domain pipeline turns it into the ranking value:
-    /// <see cref="IRatingEngine.GetState"/> classifies the rating and
-    /// <see cref="DisplayRatingCalculator.Compute"/> maps it with the squad's
-    /// <see cref="DisplayRatingParameters"/>. A membership whose rating is still
-    /// <see cref="RatingState.Provisional"/> has no display number, so it is excluded — the leaderboard
-    /// only ranks memberships with a value present (Requirement 4.5, 7.2, 7.4).
+    /// <see cref="DisplayRatingCalculator.Compute"/> maps μ with the squad's
+    /// <see cref="DisplayRatingParameters"/> and <see cref="IRatingEngine.GetState"/> classifies the
+    /// rating. A membership whose rating is still <see cref="RatingState.Provisional"/> is ranked on
+    /// its number like anyone else and carries that state, so a client can mark it as settling; only
+    /// a membership with no rating at all is left out (Requirement 4.5, 7.2).
     /// </summary>
     private async Task<IReadOnlyList<LeaderboardRow>> GetDisplayRatingRowsAsync(
         Guid squadId, CancellationToken ct)
@@ -445,15 +445,8 @@ internal sealed class EfStatsRepository(
                 continue;
             }
 
-            int? displayRating = DisplayRatingCalculator.Compute(
-                state.Value, row.Mu, row.Sigma, parameters);
-            if (displayRating is null)
-            {
-                // Provisional rating: no display number, so no leaderboard value (Requirement 7.4).
-                continue;
-            }
-
-            rows.Add(new LeaderboardRow(row.Id, row.DisplayName, row.State, displayRating.Value, null));
+            int displayRating = DisplayRatingCalculator.Compute(row.Mu, parameters);
+            rows.Add(new LeaderboardRow(row.Id, row.DisplayName, row.State, displayRating, null, state.Value));
         }
 
         return rows;

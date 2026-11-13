@@ -71,11 +71,7 @@ import {
   type DisplayRatingLeaderboard,
 } from '../lib/parse/leaderboard';
 import { parseSquadMember, type SquadMember } from '../lib/parse/squadDetail';
-import {
-  NEVER_PLAYED_BAND_LABEL,
-  PROVISIONAL_BAND_LABEL,
-  RATING_UNAVAILABLE_LABEL,
-} from '../lib/messages';
+import { NEVER_PLAYED_BAND_LABEL, RATING_UNAVAILABLE_LABEL } from '../lib/messages';
 import {
   formatDisplayRating,
   selectRatingPresentation,
@@ -91,14 +87,12 @@ type ConditionKind = RatingPresentation['kind'];
 /** All four, so "pairwise" covers every pairing rather than a chosen few. */
 const CONDITION_KINDS: readonly ConditionKind[] = [
   'rating',
-  'provisional',
   'never-played',
   'unavailable',
 ];
 
 /** The three conditions that render a fixed statement instead of a value. */
 const NON_RATING_KINDS: readonly Exclude<ConditionKind, 'rating'>[] = [
-  'provisional',
   'never-played',
   'unavailable',
 ];
@@ -107,7 +101,6 @@ const NON_RATING_KINDS: readonly Exclude<ConditionKind, 'rating'>[] = [
 const STATEMENT_OF_KIND: Readonly<
   Record<Exclude<ConditionKind, 'rating'>, string>
 > = {
-  provisional: PROVISIONAL_BAND_LABEL,
   'never-played': NEVER_PLAYED_BAND_LABEL,
   unavailable: RATING_UNAVAILABLE_LABEL,
 };
@@ -118,7 +111,7 @@ const STATEMENT_OF_KIND: Readonly<
  * of these, so re-drawing a shape stays a stylesheet decision while losing one
  * stays a failure (Requirement 17.4).
  */
-const SHAPE_NAMES: readonly RatingBadgeShape[] = ['disc', 'ring', 'square', 'bar'];
+const SHAPE_NAMES: readonly RatingBadgeShape[] = ['disc', 'square', 'bar'];
 
 /** Any decimal digit in any script — a rating value, wherever it came from. */
 const DIGIT_PATTERN = /\p{Nd}/u;
@@ -263,12 +256,13 @@ function presentationFor(
   membershipId: string,
   playerName: string,
   value: number,
+  ratingState: RatingState = 'Established',
 ): RatingPresentation {
   const member = parsedMemberOf(
     membershipId,
     playerName,
     kind === 'never-played' ? 0 : 12,
-    kind === 'provisional' ? 'Provisional' : 'Established',
+    ratingState,
   );
   const leaderboard =
     kind === 'unavailable' ? null : parsedLeaderboardOf(membershipId, value);
@@ -419,7 +413,7 @@ function expectNeitherContainsTheOther(first: string, second: string): void {
 
 // --- The property ------------------------------------------------------------
 
-describe('Property 39 — the four player-list bands are mutually distinguishable', () => {
+describe('Property 39 — the player-list rating conditions are mutually distinguishable', () => {
   // Feature: web-player-stats-screen, Property 39: The four player-list bands are mutually distinguishable
   // Validates: Requirements 17.3, 17.4, 17.5
   it('renders different words, a different cue, and a different accessible name for each pair of distinct conditions', () => {
@@ -505,7 +499,7 @@ describe('Property 39 — the four player-list bands are mutually distinguishabl
 
   // Feature: web-player-stats-screen, Property 39: The four player-list bands are mutually distinguishable
   // Validates: Requirements 17.3, 17.5
-  it('renders the never-played, provisional, and unavailable statements pairwise distinct, neither containing the other', () => {
+  it('renders the never-played and unavailable statements distinct, neither containing the other', () => {
     fc.assert(
       fc.property(
         distinctNonRatingPairArb,
@@ -542,6 +536,38 @@ describe('Property 39 — the four player-list bands are mutually distinguishabl
         },
       ),
       { numRuns: 150 },
+    );
+  }, 120_000);
+
+  it('draws a settling rating exactly as a settled one: same words, same cue, same name', () => {
+    fc.assert(
+      fc.property(
+        playerNameArb,
+        fc.uuid(),
+        ratingValueArb,
+        (playerName, membershipId, value) => {
+          const settled = presentationFor('rating', membershipId, playerName, value);
+          const settling = presentationFor(
+            'rating',
+            membershipId,
+            playerName,
+            value,
+            'Provisional',
+          );
+
+          expect(settled).toEqual({ ...settling, settling: false });
+          expect(settling).toMatchObject({ settling: true });
+          // Nothing the badge renders says the rating is settling: no colour,
+          // shape, word or name of its own. The note goes with the player's name.
+          expect(renderingOf(playerName, settling)).toEqual(
+            renderingOf(playerName, settled),
+          );
+          withBadge(playerName, settling, (badge) => {
+            expect(badge.outerHTML).not.toMatch(/~|settling|provisional/iu);
+          });
+        },
+      ),
+      { numRuns: 200 },
     );
   }, 120_000);
 });

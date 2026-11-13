@@ -1,3 +1,4 @@
+using PitchMate.Domain.Rating;
 using PitchMate.Domain.Squads;
 using PitchMate.Domain.Stats;
 
@@ -12,16 +13,19 @@ namespace PitchMate.Application.Stats;
 /// <see cref="PlayerResult"/> sequence for a streak statistic so the handler can apply the fold.
 /// Exactly one of the two is populated for a given query. <see cref="DisplayName"/> is the
 /// "Former player" placeholder for an anonymised membership, whose value is still retained
-/// (Requirement 4.6).
+/// (Requirement 4.6). <see cref="RatingState"/> is set only on a display-rating row, so a client can
+/// mark a ranked rating that is still settling.
 /// </summary>
 /// <param name="MembershipId">The membership's identity.</param>
 /// <param name="DisplayName">The membership's display name within the squad.</param>
 /// <param name="State">The membership's lifecycle state.</param>
 /// <param name="Value">The precomputed value for a non-streak statistic, or <see langword="null"/> for a streak statistic.</param>
 /// <param name="Results">The ordered result sequence for a streak statistic, or <see langword="null"/> for a non-streak statistic.</param>
+/// <param name="RatingState">The rating's classification on a display-rating row, otherwise <see langword="null"/>.</param>
 public sealed record LeaderboardRow(
     Guid MembershipId,
     string DisplayName,
     MembershipState State,
     double? Value,
-    IReadOnlyList<PlayerResult>? Results);
+    IReadOnlyList<PlayerResult>? Results,
+    RatingState? RatingState = null);

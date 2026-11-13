@@ -745,20 +745,16 @@ export interface ProgressionRecordInput {
   readonly displayRating: number | null;
   /** How an absent `displayRating` is spelled. */
   readonly displayRatingAbsence: AbsenceSpelling;
-  /** The provisional estimate, read only where `displayRating` is absent. Omitted reads as absent. */
-  readonly estimatedRating?: number | null;
-  /** How an absent `estimatedRating` is spelled. Omitted means the member is missing. */
-  readonly estimatedRatingAbsence?: AbsenceSpelling;
-  /** The point's own rating state, which the parser never reads. */
-  readonly state: RatingState | null;
+  /** The point's own rating state, which decides whether the point is settling. */
+  readonly state: RatingState;
   /** The wire's two rating-model member values, which the parser never reads. */
   readonly modelValues: readonly [number, number];
 }
 
 /**
- * A progression record on the wire, paired with the point it parses to — an
- * established point for a Display_Rating, a provisional one for an estimate
- * alone, or **no point** when the record carries neither.
+ * A progression record on the wire, paired with the point it parses to — a
+ * settled point for an `Established` state, a settling one for `Provisional`,
+ * or **no point** when the record carries no number.
  *
  * A ratingless record is not a failure: the body is accepted and the record
  * simply contributes nothing to plot, which is why the parsed side of this
@@ -777,11 +773,6 @@ export function progressionRecordFixture(
         input.displayRating,
         input.displayRatingAbsence,
       ),
-      ...optionalMember(
-        'estimatedRating',
-        input.estimatedRating ?? null,
-        input.estimatedRatingAbsence ?? 'missing',
-      ),
     },
     parsed: parsedProgressionPoint(input),
   };
@@ -790,27 +781,41 @@ export function progressionRecordFixture(
 function parsedProgressionPoint(
   input: ProgressionRecordInput,
 ): ProgressionPoint | null {
-  if (input.displayRating !== null) {
-    return {
-      completedAtMs: input.instant.ms,
-      displayRating: input.displayRating,
-      provisional: false,
-    };
+  if (input.displayRating === null) {
+    return null;
   }
 
-  if (input.estimatedRating !== undefined && input.estimatedRating !== null) {
-    return {
-      completedAtMs: input.instant.ms,
-      displayRating: input.estimatedRating,
-      provisional: true,
-    };
-  }
+  return {
+    completedAtMs: input.instant.ms,
+    displayRating: input.displayRating,
+    provisional: input.state === 'Provisional',
+  };
+}
 
-  return null;
+/** A record with a number in the given state, and so a plottable point. */
+function numberedProgressionRecordFixtureArb(
+  state: RatingState,
+): fc.Arbitrary<WireFixture<ProgressionPoint>> {
+  return fc
+    .record({
+      instant: wireInstantFixtureArb,
+      displayRating: wireDisplayRatingArb,
+      displayRatingAbsence: absenceSpellingArb,
+      state: fc.constant<RatingState>(state),
+      modelValues: fc.tuple(wireRatingModelValueArb, wireRatingModelValueArb),
+    })
+    .map((input) => ({
+      wire: progressionRecordFixture(input).wire,
+      parsed: {
+        completedAtMs: input.instant.ms,
+        displayRating: input.displayRating,
+        provisional: state === 'Provisional',
+      },
+    }));
 }
 
 /**
- * A progression record that carries a Display_Rating, and so a plottable point.
+ * A progression record for a settled rating, and so a plottable point.
  *
  * Typed more narrowly than {@link progressionRecordFixture}'s nullable result,
  * because this generator chose a rating: the record *is* a point, and a suite
@@ -818,47 +823,15 @@ function parsedProgressionPoint(
  */
 export const ratedProgressionRecordFixtureArb: fc.Arbitrary<
   WireFixture<ProgressionPoint>
-> = fc
-  .record({
-    instant: wireInstantFixtureArb,
-    displayRating: wireDisplayRatingArb,
-    displayRatingAbsence: absenceSpellingArb,
-    state: fc.option(wireRatingStateArb, { nil: null }),
-    modelValues: fc.tuple(wireRatingModelValueArb, wireRatingModelValueArb),
-  })
-  .map((input) => ({
-    wire: progressionRecordFixture(input).wire,
-    parsed: {
-      completedAtMs: input.instant.ms,
-      displayRating: input.displayRating,
-      provisional: false,
-    },
-  }));
+> = numberedProgressionRecordFixtureArb('Established');
 
 /**
- * A progression record that carries only a provisional estimate, and so a
- * provisional point plotted at that estimate.
+ * A progression record for a rating that was still settling: the same kind of
+ * number, with the wire's `Provisional` state, and so a settling point.
  */
 export const provisionalProgressionRecordFixtureArb: fc.Arbitrary<
   WireFixture<ProgressionPoint>
-> = fc
-  .record({
-    instant: wireInstantFixtureArb,
-    displayRating: fc.constant<number | null>(null),
-    displayRatingAbsence: absenceSpellingArb,
-    estimatedRating: wireDisplayRatingArb,
-    estimatedRatingAbsence: absenceSpellingArb,
-    state: fc.option(wireRatingStateArb, { nil: null }),
-    modelValues: fc.tuple(wireRatingModelValueArb, wireRatingModelValueArb),
-  })
-  .map((input) => ({
-    wire: progressionRecordFixture(input).wire,
-    parsed: {
-      completedAtMs: input.instant.ms,
-      displayRating: input.estimatedRating,
-      provisional: true,
-    },
-  }));
+> = numberedProgressionRecordFixtureArb('Provisional');
 
 /** A progression record that carries no rating number at all, and so no point. */
 export const ratinglessProgressionRecordFixtureArb: fc.Arbitrary<
@@ -868,9 +841,7 @@ export const ratinglessProgressionRecordFixtureArb: fc.Arbitrary<
     instant: wireInstantFixtureArb,
     displayRating: fc.constant<number | null>(null),
     displayRatingAbsence: absenceSpellingArb,
-    estimatedRating: fc.constant<number | null>(null),
-    estimatedRatingAbsence: absenceSpellingArb,
-    state: fc.option(wireRatingStateArb, { nil: null }),
+    state: wireRatingStateArb,
     modelValues: fc.tuple(wireRatingModelValueArb, wireRatingModelValueArb),
   })
   .map((input) => progressionRecordFixture(input));
