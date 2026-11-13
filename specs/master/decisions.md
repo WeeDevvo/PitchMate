@@ -1,6 +1,6 @@
 # Decisions
 
-The answers to the 22 questions the as-is spec ended with (Q1–Q22, round one) and to the 17 questions those answers raised (R1–R17, round two), both recorded on 2026-11-12, plus the further decisions and ideas raised along the way. Where a round-two answer changes a round-one decision, the round-one entry says so and the round-two entry is the one that stands. Each chapter's **To be** section turns these into requirements and links back here.
+The answers to the 22 questions the as-is spec ended with (Q1–Q22, round one) and to the 17 questions those answers raised (R1–R17, round two), both recorded on 2026-11-12; the answers to the 17 questions still open after that (T1–T17, round three), recorded on 2026-11-13; plus the further decisions and ideas raised along the way. Where a later answer changes an earlier decision, the earlier entry says so and the later entry is the one that stands. Each chapter's **To be** section turns these into requirements and links back here.
 
 **Source** says where a decision came from:
 
@@ -53,6 +53,23 @@ A decision is not a built feature. Nothing on this page is in the code unless a 
 | [R15](#r15) | Scheduled job | One Azure Functions timer, nightly; σ decay starts after 8 weeks | Suggested |
 | [R16](#r16) | Hostnames | pitch-mate.co.uk and api.pitch-mate.co.uk; QA with a `qa.` prefix | Suggested |
 | [R17](#r17) | QA database | Stays on the cheap external database until other testers join | User + Suggested |
+| [T1](#t1) | Free squads and teams | A random split the admin can then swap; balanced rolls are Pro, with one free balanced roll a month | User |
+| [T2](#t2) | Live tracking's tier | Free | User |
+| [T3](#t3) | Paying for Pro | Through the app stores; any member can pay; a lapse switches features off and loses no data; sold after launch | Suggested |
+| [T4](#t4) | Match-day options | Availability on or off, payment tracking, score confirmation, team naming | Suggested |
+| [T5](#t5) | Score confirmation | Any player in the match or an admin enters; live-tracked results need no confirming; ratings update on confirmation | Suggested |
+| [T6](#t6) | Tracker powers | Also undoes kickoff and records a basic score; one tracker at a time | Suggested |
+| [T7](#t7) | Side sizes | 3 to 11 a side, the sides at most 2 players apart | Suggested |
+| [T8](#t8) | Rating display | A number from the first match with a "settling" note; no badge in place of a number | User + Suggested |
+| [T9](#t9) | Keeper data | Removed entirely: stints, clean sheets, goals conceded as keeper, keeper time | User |
+| [T10](#t10) | Watch | An Apple Watch app at launch, as the main live tracker; Wear OS follows | User + Suggested |
+| [T11](#t11) | Parity | The web keeps every feature except watch tracking; the phone app has full admin parity | User |
+| [T12](#t12) | Mockups | Redone in the design-system overhaul; Higgsfield for brand imagery and promo animation only | User |
+| [T13](#t13) | Retention | Inactive accounts emailed at 2 years, erased at 3; memberships kept; notifications deleted after 90 days | Suggested |
+| [T14](#t14) | Controller | The user as an individual, for now | User |
+| [T15](#t15) | Account screen | Adds notification preferences and signed-in devices | Suggested |
+| [T16](#t16) | Nightly job | Calls a protected API endpoint | Suggested |
+| [T17](#t17) | Technical leftovers | K=40 and C=1000 fixed; typed-name check on the API; security headers and Dependabot; Application Insights wired | Suggested |
 
 ## Scope and launch
 
@@ -70,7 +87,9 @@ A decision is not a built feature. Nothing on this page is in the code unless a 
 
 **What follows:** an entitlement check, enforced by the API, that sits alongside the per-squad admin toggle ([05](05-features.md#to-be) OF-04). At launch every squad is entitled to everything, so nothing changes for users.
 
-**Refined by [R5](#r5):** Pro is per squad at about £1–2 a month, ratings are always tracked, and the Pro features are named as auto-balancing and match-day customisation. Whether live match tracking is still a Pro feature is open.
+**Refined by [R5](#r5):** Pro is per squad at about £1–2 a month, ratings are always tracked, and the Pro features are named as auto-balancing and match-day customisation.
+
+**Changed by [T2](#t2):** live match tracking is free, so it is no longer a feature to gate. [T1](#t1) says what a free squad gets in place of auto-balancing, and [T3](#t3) how Pro is paid for.
 
 <a id="q3"></a>
 ### Q3 · How far beyond a group of friends should the trust model stretch?
@@ -96,6 +115,8 @@ A decision is not a built feature. Nothing on this page is in the code unless a 
 **Decision (User):** the phone comes first, and the watch should become the main way to live-track.
 
 **What follows:** the tracker is built in the phone app first, with an outbox that survives being offline; the watch app follows and is designed as the primary tracker.
+
+**Changed by [T10](#t10):** the Apple Watch app is part of the launch, not something that follows it.
 
 <a id="q6"></a>
 ### Q6 · Is polling good enough?
@@ -148,7 +169,7 @@ A decision is not a built feature. Nothing on this page is in the code unless a 
 
 **Decision (User):** no. Once a result is confirmed it cannot be corrected. Add a squad setting under which a player from the opposing team must confirm the score before it is final. Where no such player can confirm (a guest-only side, for example), the admin's confirmation stands.
 
-**Refined by [R6](#r6):** how confirmation works, the 48-hour auto-confirm and disputes.
+**Refined by [R6](#r6):** how confirmation works, the 48-hour auto-confirm and disputes. **And by [T5](#t5):** who enters the score, and that a live-tracked result needs no confirming. [T4](#t4) lists score confirmation as a match-day option, which makes it a Pro feature rather than a plain squad setting; see [what round three contradicts](#what-round-three-contradicts).
 
 **What follows:** RE-07 is decided against. A new opposing-team confirmation feature (RE-08) and, with it, a step between "result recorded" and "completed". Rating replay (RA-11) no longer has a job.
 
@@ -157,7 +178,7 @@ A decision is not a built feature. Nothing on this page is in the code unless a 
 
 **Decision (User):** no. Any team-v-team size, uneven allowed (9v9 and 7v6 are the examples given).
 
-**Refined by [R7](#r7):** the range is 4v4 to 11v11.
+**Refined by [R7](#r7):** the range is 4v4 to 11v11. **And by [T7](#t7):** 3 to 11 a side, the sides at most 2 apart.
 
 **What follows:** the 10–16 roll limit and the 5–8-a-side lock limit go (TB-09). Because every split cannot be tried above 16 players, the more-than-16 heuristic (TB-11) becomes a requirement. The format stays two teams; three-team and winner-stays-on formats remain an Idea (TB-12).
 
@@ -202,7 +223,7 @@ A decision is not a built feature. Nothing on this page is in the code unless a 
 
 **Decision (Suggested):** password, data export and delete-account go on the same screen.
 
-**Refined by [R12](#r12):** the email can be changed, and sign-in methods are linked and unlinked there.
+**Refined by [R12](#r12):** the email can be changed, and sign-in methods are linked and unlinked there. **And by [T15](#t15):** notification preferences and signed-in devices are added.
 
 **What follows:** WE-04, AC-10, AC-11, AC-12 and TR-09. Avatars need somewhere to be stored ([06](06-platform.md#to-be) PL-08).
 
@@ -211,7 +232,7 @@ A decision is not a built feature. Nothing on this page is in the code unless a 
 
 **Decision (User):** show every available stat, presented usefully.
 
-**Limited by [R13](#r13):** keeper-only stats are dropped with keeper tracking.
+**Limited by [R13](#r13):** keeper-only stats are dropped with keeper tracking, and [T9](#t9) removes their data.
 
 **What follows:** ST-08 and ST-11. "Available" is read as "already computed or computable from stored data"; it does not by itself add new data to collect.
 
@@ -271,6 +292,8 @@ The questions the round-one answers left open or raised, numbered as they were i
 
 **What follows:** a per-match tracker role ([02](02-roles.md#to-be) RO-07, [05](05-features.md#to-be) RE-09). The tracker has to be someone who can sign in, so a guest cannot be picked.
 
+**Refined by [T6](#t6):** what else the tracker can do, and that there is one at a time.
+
 <a id="r2"></a>
 ### R2 · What should "teams rolled" announce?
 
@@ -297,6 +320,8 @@ The user leaves this to Claude, since they will not be writing the code.
 
 **What follows:** DV-01, DV-02, DV-04 and DV-09 in [04](04-devices.md#to-be), and the tokens need a native output ([08](08-design.md#to-be)).
 
+**Refined by [T10](#t10):** the Apple Watch app ships at launch; Wear OS still follows.
+
 <a id="r5"></a>
 ### R5 · The Pro tier
 
@@ -308,7 +333,7 @@ The user leaves this to Claude, since they will not be writing the code.
 - The aim is a free app useful enough that squads want to upgrade.
 - The app stores take about 15% of subscriptions.
 
-**What follows:** OF-04 is per squad, and gating never stops a rating update. The customisable match-day flow moves from an idea to an intended Pro feature (MA-11), though its options are not designed. Round one named live match tracking as a Pro feature and this answer does not mention it, so its tier is open. Where and how a squad pays is not decided.
+**What follows:** OF-04 is per squad, and gating never stops a rating update. The customisable match-day flow moves from an idea to an intended Pro feature (MA-11), though its options are not designed. Round one named live match tracking as a Pro feature and this answer does not mention it; [T2](#t2) settles that it is free. [T1](#t1) says how a free squad picks teams, [T3](#t3) how a squad pays, and [T4](#t4) which match-day options exist.
 
 <a id="r6"></a>
 ### R6 · How score confirmation works
@@ -319,10 +344,14 @@ The user leaves this to Claude, since they will not be writing the code.
 
 **What follows:** RE-08 gains the 48-hour auto-confirm (run by the nightly job, PL-01) and the dispute path. Ratings for that match update when the result becomes final, which can be up to 48 hours after the match.
 
+**Refined by [T5](#t5).**
+
 <a id="r7"></a>
 ### R7 · Smallest and largest match
 
 **Decision (User):** 4v4 to 11v11, with uneven sides allowed because people really do fail to turn up. The ranking should handle uneven sides as well as it can.
+
+**Refined by [T7](#t7):** a side can be as small as 3, and the sides may differ by 2 at most.
 
 **What follows:** TB-09 has bounds: 8 to 22 players when both sides are full. More than 16 players needs the faster balancing search, so TB-11 stays a requirement. The code's limits today are 5 to 8 a side (`backend/src/PitchMate.Domain/Matches/Match.cs:40`).
 
@@ -359,7 +388,7 @@ The user leaves this to Claude, since they will not be writing the code.
 - Clean up expired tokens daily.
 - Keep logs for 90 days.
 
-**What follows:** TR-18 (ICO registration), TR-12 and TR-13 (both in the nightly job), PL-11 (log retention; the template sets 30 days today, `infra/main.bicep:104`). No period was given for inactive accounts, inactive memberships or old notifications.
+**What follows:** TR-18 (ICO registration), TR-12 and TR-13 (both in the nightly job), PL-11 (log retention; the template sets 30 days today, `infra/main.bicep:104`). No period was given for inactive accounts, inactive memberships or old notifications; [T13](#t13) gives them, and [T14](#t14) says the controller is the user as an individual.
 
 <a id="r12"></a>
 ### R12 · The account screen
@@ -377,6 +406,8 @@ The user leaves this to Claude, since they will not be writing the code.
 
 **What follows:** RE-10. The tracker loses keeper changes; clean sheets, goals conceded as keeper and keeper time leave the stats screens. "Every available stat" ([Q18](#q18)) now means every stat except those.
 
+**Strengthened by [T9](#t9):** not hidden "for now" but removed, data included.
+
 <a id="r14"></a>
 ### R14 · The squad export
 
@@ -392,6 +423,8 @@ The user is not sure it is needed.
 **Decision (Suggested):** one Azure Functions timer, run nightly, covering the squad purge, erasure, score auto-confirm, token clean-up and σ decay. Start decay after 8 weeks without a match, not the 4–6 weeks in `product.md`.
 
 The user's point behind the last part: matches are weekly at best, so ratings must not decay quickly. Decay only raises σ; it never lowers μ.
+
+**Refined by [T16](#t16):** the timer does not run the work itself; it calls a protected API endpoint.
 
 **What follows:** PL-01 and RA-06. The code's decay-free period is 42 days (`backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:31`) and becomes 56.
 
@@ -409,6 +442,191 @@ The user's point behind the last part: matches are weekly at best, so ratings mu
 
 **What follows:** PL-12. The switch happens before the test squad of [Q1](#q1) starts using QA, because the free database pauses when idle.
 
+## Round three
+
+The 16 questions still open in [index](index.md) after round two (T1–T16), plus the as-is technical leftovers (T17), answered on 2026-11-13. "Suggested" here means the user took the default they were offered.
+
+<a id="t1"></a>
+### T1 · How does a free squad pick teams?
+
+**Decision (User):** a free squad gets a **random split**, and players can then be swapped between the teams. Balanced rolls, the ones that use the ratings, are Pro. A free squad gets **one balanced roll a month** as a taster; squads play about four matches a month.
+
+**What follows:** TB-13 and TB-14 in [05](05-features.md#to-be). Ratings are still tracked for every squad ([R5](#r5)), so the taster roll has real ratings to work with. Not said, and listed as open: whether "one roll" is one match or one press of the button, whether a free squad sees the predicted win % on a random split (with it, swapping by hand until it reads 50/50 is a slow free balancer), and what a free squad gets before Pro is on sale ([T3](#t3)).
+
+<a id="t2"></a>
+### T2 · Is live match tracking free or Pro?
+
+**Decision (User):** free. It stays an optional feature the admin turns on, as today.
+
+**What follows:** this reverses the part of [Q2](#q2) that named live tracking as a feature to gate. OF-04 covers balanced rolls and the match-day options only.
+
+<a id="t3"></a>
+### T3 · Paying for Pro
+
+**Decision (Suggested):**
+
+- Pro is sold through the app stores.
+- Any member can pay for the squad.
+- When Pro lapses its features switch off, and no data is lost.
+- Selling starts after launch.
+
+**What follows:** OF-05. Being store-only, Pro cannot be bought on the web, though a squad that has it gets it on every client. A lapse has to leave the squad coherent: saved together and apart rules and match-day settings are kept but stop applying, and matches already in progress finish under the rules they started with (this last part is not decided). The entitlement check (OF-04) is not needed at launch, since nothing is sold then; [Q2](#q2)'s "every squad is entitled to everything at launch" is taken to still hold, and is listed as open because round three did not restate it.
+
+<a id="t4"></a>
+### T4 · Which match-day options exist?
+
+**Decision (Suggested):** four: availability on or off, payment tracking, score confirmation, and team naming.
+
+**What follows:** MA-11 has a list. Two of the four were not Pro before this answer: score confirmation was a plain squad setting ([Q11](#q11), [R6](#r6)), and team names with the silly-name generator are built and free today. Both are recorded as listed and raised under [what round three contradicts](#what-round-three-contradicts).
+
+<a id="t5"></a>
+### T5 · Score confirmation, what was left
+
+**Decision (Suggested):**
+
+- Any player in the match, or an admin, enters the score.
+- If the person who entered it played on neither side, anyone in the match confirms it.
+- A live-tracked result needs no confirmation.
+- Ratings update on confirmation.
+
+**What follows:** RE-08. "Player" means a registered player in the kickoff lineup, since a guest cannot sign in. The match's tracker ([T6](#t6)) can also enter a basic score and is treated like an admin who did not play. Ratings can still be up to 48 hours behind for a basic result; a tracked result updates them at once.
+
+<a id="t6"></a>
+### T6 · What the tracker can do
+
+**Decision (Suggested):** besides starting the match and running the live tracker, the tracker can undo kickoff and record a basic score. There is one tracker at a time.
+
+**What follows:** RO-07 and RE-09. Picking a new tracker replaces the old one.
+
+<a id="t7"></a>
+### T7 · Uneven sides
+
+**Decision (Suggested):** 3 to 11 players a side, and the two sides differ by 2 players at most.
+
+**What follows:** TB-09. The smallest match is 3v3 (6 players) and the largest 11v11 (22); a no-show 4v3 is allowed and a 7v4 is not. This lowers the floor [R7](#r7) set at 4v4: 4v4 to 11v11 is what a squad plans, 3 a side is what it may end up with.
+
+<a id="t8"></a>
+### T8 · New players and the provisional badge
+
+**Decision (User):** a new player must not sit behind a provisional badge for about five weeks (a squad plays once a week at most). Show a rating **from the first match**, with a visible note that ratings take a few matches to settle. Balancing still uses μ and σ through `Predict`.
+
+The user asked for a proposal on the number itself, because the conservative figure (μ − 3σ) is very low while σ is high.
+
+**Decision (Suggested), the proposal:**
+
+- **One formula for everyone: display rating = round((μ − 25) × 40 + 1000)**, floored as today. It is μ on a friendlier scale, anchored on the seeding tiers: a new Beginner shows 800, Average 1000, Strong 1200, and the number then moves with results.
+- **σ no longer changes the number. It only drives the note.** While σ is above the provisional threshold (8.19, unchanged) the rating carries a visible "settling" mark and a line saying ratings take a few matches to settle. When σ drops below it, the mark goes and the number does not jump.
+- **K and C stay fixed at 40 and 1000** ([T17](#t17)). C becomes the number an Average player starts on.
+- **Leaderboards rank everyone** and show the settling mark beside the number, so a newcomer on a lucky start is read as such.
+- **The progression chart plots every point as a number**, with settling points marked, in place of the "~" band.
+
+Why not keep μ − 3σ once a player has settled: the two formulas differ by 3σ × 40, about 980 points at the threshold, so the number would fall off a cliff on the day the note disappears. And under μ − 3σ a rating climbs simply by turning up, because σ falls with every match; the same Average player shows 1000 on day one and about 1400 once σ reaches 5, without getting any better. A μ-based number says how good the ratings think a player is; the settling mark says how sure they are.
+
+**What follows:** RA-13, which replaces the display half of RA-03 and RA-08, and ST-12. The cost is honest volatility: μ moves fastest in a player's first matches, so a settling number swings more than a settled one. The proposal changes the formula in `product.md`, so it needs the user's go-ahead like any other row under [Proposed product.md changes](#proposed-productmd-changes).
+
+<a id="t9"></a>
+### T9 · Keeper tracking: hide or remove?
+
+**Decision (User):** remove keeper data entirely: keeper stints, clean sheets, goals conceded as keeper, and keeper time.
+
+**What follows:** RE-10 becomes a removal, not a hidden feature:
+
+- **Domain and events.** The keeper stint events and the stint type go (`backend/src/PitchMate.Domain/LiveTracking/KeeperStintStartedEvent.cs`, `backend/src/PitchMate.Domain/LiveTracking/KeeperStintRetractedEvent.cs`, `backend/src/PitchMate.Domain/LiveTracking/KeeperStint.cs`), along with the conceding keeper on a goal and the keeper parts of the rich statistics (`backend/src/PitchMate.Domain/LiveTracking/MatchRichStatistics.cs`).
+- **Stored data.** A migration deletes the stored keeper events and drops the keeper columns from the match event table (`backend/src/PitchMate.Infrastructure/Persistence/Configurations/LiveTracking/MatchEventConfiguration.cs`). It cannot be reversed. Only QA holds data today, so nothing public is lost; it is cheapest done before launch.
+- **The append-only rule.** `product.md` and the Rules in [03](03-journeys.md) say the event log is append-only and nothing is discarded. This migration is a one-off exception to that, and should be written down as one.
+- **Undo kickoff** counts "anything recorded"; after the removal that no longer includes keeper changes.
+- **The contract.** The live-tracking and stats responses lose their keeper fields, so the OpenAPI document and the generated client change, and every client with them. Old clients sending keeper events must be refused cleanly.
+- **Clients.** The web tracker loses the keeper control and the stats screens the keeper lines; the apps and the watch are built without them.
+
+<a id="t10"></a>
+### T10 · Is the watch part of the launch?
+
+**Decision (User):** yes, a watch app at launch, Apple Watch at minimum. The watch is the main live tracker.
+
+**Decision (Suggested):** Wear OS follows the launch. It is a second native codebase (Kotlin, not SwiftUI) for a smaller group of users, and an Android user still has the phone tracker on day one.
+
+**What follows:** DV-04 joins the [launch gate](index.md#launch-gate); DV-09 stays after it. The phone tracker is still built, first, because the watch needs its tracking logic, its offline outbox and a paired phone, and because it is the only tracker an Android user has at launch. The build order becomes: phone apps with the phone tracker, then the Apple Watch tracker, then launch, then Wear OS. This changes [Q5](#q5) and [R4](#r4), which had the watch after the launch.
+
+<a id="t11"></a>
+### T11 · Does the web keep every feature?
+
+**Decision (User):** the web keeps every feature except watch tracking. Admins must also be able to do everything in the phone app, so there is full admin parity on mobile.
+
+**What follows:** DV-10. Nothing may be built for the web alone or for the apps alone, apart from what a device cannot do (the watch tracker, push, store purchases). Whether "every feature" gives the web tracker an offline outbox is listed as open, because [Q5](#q5) put offline tracking in the phone app.
+
+<a id="t12"></a>
+### T12 · Do the mockups still match?
+
+**Decision (User):** the app mockups are redone in the design-system overhaul. That work runs on Fable, using the Higgsfield API where it fits: brand imagery and promo animation, not tokens or vector icons.
+
+**What follows:** the existing mobile and watch mockups are not build targets; the redone ones are ([08](08-design.md#to-be)). Tokens stay generated from `tokens.json` and icons stay vector. Higgsfield is an outside service, so only brand material goes to it, never squad or player data.
+
+<a id="t13"></a>
+### T13 · The missing retention periods
+
+**Decision (Suggested):**
+
+- An inactive account is emailed at 2 years and erased at 3.
+- Memberships are kept, anonymised.
+- Notifications are deleted after 90 days.
+
+**What follows:** TR-21 and TR-22, both run by the nightly job. "Inactive" needs a definition (no sign-in is the obvious one), and erasing an account follows the existing rule: memberships with match history are anonymised and kept, so matches and ratings stay valid. An inactive membership of an account that is still active keeps its name, as it does today when someone leaves a squad.
+
+<a id="t14"></a>
+### T14 · The controller's details
+
+**Decision (User):** the data controller is the user as an individual, for now.
+
+**What follows:** TR-14 and TR-18. An individual's ICO entry shows their address, so a company or a business address can be swapped in later to keep a home address off the public register. The policy and the registration are written so that the controller can be changed without rewriting them.
+
+<a id="t15"></a>
+### T15 · The account screen's full list
+
+**Decision (Suggested):** add notification preferences and signed-in devices to the account screen.
+
+**What follows:** NO-04 and AC-16. With push arriving at launch, preferences cover three channels: in-app, email and push.
+
+<a id="t16"></a>
+### T16 · How the nightly job reaches the code
+
+**Decision (Suggested):** the nightly job calls a protected API endpoint.
+
+**What follows:** PL-01 and SE-26. The timer holds no database secret and runs no PitchMate code; it wakes the API, which does the work. The endpoint must be callable by the job alone, must be safe to call twice, and must finish within one request or hand back a "more to do" answer the timer can repeat. This changes the reasoning in [Q7](#q7) and [R15](#r15), which wanted the job not to depend on the API being awake.
+
+<a id="t17"></a>
+### T17 · The technical leftovers from the as-is list
+
+**Decision (Suggested):**
+
+- The display rating is fixed at K=40, C=1000 for now. No per-squad setting is built (RA-09).
+- The typed-name check on squad deletion is enforced by the API (SQ-14, SE-20). Today only the web enforces it.
+- Add security headers to the API (SE-17) and Dependabot for dependency updates (SE-21).
+- Wire up Application Insights (PL-15); the resource is not removed.
+
+**What follows:** the four rows above. With [T8](#t8), K and C keep their values and C changes meaning. The fifth leftover, that "OpenSkill" names an algorithm and not a package, was not in the answer and is still open.
+
+<a id="what-round-three-contradicts"></a>
+### What round three contradicts
+
+Places where a round-three answer disagrees with an earlier decision, with `product.md`, or with the code. The later answer has been followed in each case; the ones marked **open** need a word from the user.
+
+| # | Answer | Disagrees with | How it is recorded |
+|---|---|---|---|
+| 1 | [T4](#t4): score confirmation is a match-day option, and those are Pro | [Q11](#q11), [R6](#r6): a squad setting, with no tier | **Open.** Recorded as a Pro option |
+| 2 | [T4](#t4): team naming is a match-day option | Team names and the silly-name generator are built and free (`backend/src/PitchMate.Application/Matches/Abstractions/ISillyNameGenerator.cs`), and `product.md` puts naming in every squad's flow | **Open.** Recorded as an option; which part of naming Pro adds is not said |
+| 3 | [T2](#t2): live tracking is free | [Q2](#q2): live tracking named as a feature to gate | T2 stands |
+| 4 | [T7](#t7): 3 a side | [R7](#r7): 4v4 at the smallest | T7 stands; 4v4 to 11v11 is the planned range |
+| 5 | [T9](#t9): keeper data removed | [R13](#r13) "for now"; the append-only event log rule in `product.md` | T9 stands, as a one-off exception to append-only |
+| 6 | [T10](#t10): watch at launch | [Q5](#q5), [R4](#r4): phone first, the watch following | T10 stands; the launch gets bigger |
+| 7 | [T16](#t16): the job calls the API | [Q7](#q7), [R15](#r15): a job that does not need the API awake | T16 stands |
+| 8 | [T8](#t8): a number from the first match | `product.md`: provisional players show "a badge or ~ band instead of a number", and the formula is (μ − 3σ) × K + C | Proposed `product.md` change |
+| 9 | [T17](#t17): K and C fixed | `product.md`: "K and C tunable per squad" | Proposed `product.md` change |
+| 10 | [T17](#t17): "keep" the typed-name check on the API | The API does not have one; only the web checks | Read as "add it to the API" |
+| 11 | [T3](#t3): any member can pay for Pro | `product.md`: toggling a squad's optional features is admin-only | Both hold: a member can pay, an admin still chooses what is switched on |
+| 12 | [T1](#t1), [T3](#t3): balanced rolls are Pro, and Pro is sold after launch | [Q2](#q2): at launch every squad is entitled to everything | **Open.** Recorded as: everything is free until Pro is on sale |
+| 13 | [T11](#t11): the web keeps every feature | [Q5](#q5): offline tracking is delivered in the phone app, not the web | **Open** |
+| 14 | [T13](#t13): memberships kept "anonymised" | A member who leaves keeps their name on the inactive membership today | Read as: anonymised when the account is erased |
+
 ## New ideas from the user
 
 Raised in round one. Two have since been decided.
@@ -416,8 +634,8 @@ Raised in round one. Two have since been decided.
 | Idea | Where | State |
 |---|---|---|
 | Pitch-booking marketplace, taking a small cut | [01](01-vision.md#ideas), [05](05-features.md#ideas) | **Idea.** The long-term revenue idea from Q2; needs partnerships |
-| Drop goalkeeper tracking from live tracking | [05](05-features.md#to-be) RE-10 | **Decided** in [R13](#r13) |
-| Customisable match-day flow per squad | [05](05-features.md#to-be) MA-11 | **Intended as a Pro feature** in [R5](#r5); its options are not designed |
+| Drop goalkeeper tracking from live tracking | [05](05-features.md#to-be) RE-10 | **Decided** in [R13](#r13); [T9](#t9) removes the data too |
+| Customisable match-day flow per squad | [05](05-features.md#to-be) MA-11 | **A Pro feature** ([R5](#r5)) with four options ([T4](#t4)) |
 | Squad chat | [05](05-features.md#ideas) | **Idea.** Needs report and block for messages and users ([R10](#r10)) |
 | Mini games between squad members | [05](05-features.md#ideas) | **Idea.** For example a Premier League results predictor |
 
@@ -432,26 +650,31 @@ Raised in round one. Two have since been decided.
 | 1 | Squads, roles and guests | "any number of admins, whom the owner or an admin can promote" | Add: only the owner can demote or remove an admin | Q15, R9 |
 | 2 | Squads, roles and guests | "Admin-only: creating matches and selecting players, …" | Add: for each match the admin can pick a **tracker**, a registered member who may start that match and run its live tracker | R1 |
 | 3 | Squads, roles and guests | Joining is by invite link; sign-up → auto-join | Add: a verified email is required before signing in, and the invite survives verification | Q9 |
-| 4 | Optional features | Features are opt-in per squad by admin toggle; a squad with live tracking off still gets balancing | Add **Pro**, held per squad. Ratings are tracked in every squad. Pro unlocks auto-balancing and match-day customisation. Say how a free squad picks teams, and which tier live tracking is in | Q2, R5 |
-| 5 | Match lifecycle | Roll teams "needs 10–16 players" | 4v4 to 11v11, uneven allowed | Q12, R7 |
-| 6 | Match lifecycle | "Matches run about an hour, from 5v5 to 8v8" | From 4v4 to 11v11 | R7 |
-| 7 | Match lifecycle, step 4 | An admin starts the match | The admin or the match's tracker starts it | R1 |
+| 4 | Optional features | Features are opt-in per squad by admin toggle; a squad with live tracking off still gets balancing | Add **Pro**, held per squad and bought through the app stores by any member. Ratings are tracked in every squad. Live tracking stays free. A free squad gets a random split it can then swap, plus one balanced roll a month; Pro gives balanced rolls every time and the match-day options (availability on or off, payment tracking, score confirmation, team naming). A lapse switches Pro features off and loses no data | Q2, R5, T1–T4 |
+| 5 | Match lifecycle | Roll teams "needs 10–16 players" | 3 to 11 a side, the sides at most 2 apart (6 to 22 players) | Q12, R7, T7 |
+| 6 | Match lifecycle | "Matches run about an hour, from 5v5 to 8v8" | From 4v4 to 11v11, and down to 3 a side when people do not turn up | R7, T7 |
+| 7 | Match lifecycle, steps 4 and 5 | An admin starts the match, undoes kickoff and records the result | The admin or the match's tracker does; there is one tracker at a time | R1, T6 |
 | 8 | Team balancing, Today | "proposals need 10–16 participants in 2 teams and brute-force every split. Keep-together/keep-apart constraints and the >16 heuristic … are not built" | Both become intended behaviour, with the constraints described as standing per-squad rules that are always obeyed and seen by admins only; the Today note stays until they are built | Q12, Q13, R8 |
-| 9 | Match lifecycle, step 5 | "Play, then record the result (basic or rich), then complete" | Add the optional step: in a squad with score confirmation on, one team enters the score and a user on the other team confirms it; unconfirmed after 48 hours it confirms itself; a dispute goes to an admin; the admin's confirmation stands where nobody on the other side can confirm. State that a completed result is never corrected | Q11, R6 |
+| 9 | Match lifecycle, step 5 | "Play, then record the result (basic or rich), then complete" | Add the optional step: in a squad with score confirmation on, any player in the match or an admin enters a basic score and a user on the other team confirms it (anyone in the match, if the person entering it played on neither side); unconfirmed after 48 hours it confirms itself; a dispute goes to an admin; the admin's confirmation stands where nobody on the other side can confirm. A live-tracked result needs no confirmation. Ratings update on confirmation. State that a completed result is never corrected | Q11, R6, T5 |
 | 10 | Match lifecycle, States | Five states plus Cancelled | Possibly a state for "awaiting confirmation"; depends on the design of RE-08 | Q11 |
 | 11 | Ratings | "σ decays back up after about 4–6 weeks inactive" | After 8 weeks without a match; decay raises σ only | R15 |
 | 12 | Ratings | "(today the engine supports decay but no scheduled job runs it)" | Keep until the nightly job exists | R15 |
-| 13 | Results | Rich results are goal events (scorer, conceding keeper, minute) and goalkeeper stints | Rich results are goal events (scorer, minute). Keeper stints and the conceding keeper are removed for now | R13 |
-| 14 | Results | The live tracker records "own goals, keeper changes, undo the last goal" | Remove keeper changes | R13 |
-| 15 | Stats and leaderboards | Rich tracking only: "goals and top scorer, clean sheets, goals conceded as keeper, keeper time" | Rich tracking only: goals and top scorer | R13 |
+| 13 | Results | Rich results are goal events (scorer, conceding keeper, minute) and goalkeeper stints | Rich results are goal events (scorer, minute). Keeper stints and the conceding keeper are removed, with their stored data | R13, T9 |
+| 14 | Results | The live tracker records "own goals, keeper changes, undo the last goal" | Remove keeper changes | R13, T9 |
+| 15 | Stats and leaderboards | Rich tracking only: "goals and top scorer, clean sheets, goals conceded as keeper, keeper time" | Rich tracking only: goals and top scorer | R13, T9 |
 | 16 | Stats and leaderboards | Lists the stats | Add: every available stat is shown, including a top-scorer leaderboard | Q18 |
 | 17 | Notifications | Events: match drafted, match confirmed, teams rolled, result posted, plus the squad events | Rename "teams rolled" to "teams locked" (sent at the lock with the team sheet); add match cancelled | Q16, R2 |
 | 18 | Notifications | "Web MVP: email + in-app; push arrives with the mobile app" | The apps are part of the launch, so push is too | Q4, R3 |
-| 19 | Web surfaces | "app shell (notifications, settings, profile)" | One account screen (name, email, avatar, password, linked sign-in methods, export, delete) in place of profile | Q17, R12 |
-| 20 | Web surfaces | Describes the web only | Add the Android and iOS apps as launch clients, and the watch as the intended main tracker | Q4, Q5, R3 |
-| 21 | Results, Today | "the tracker needs a connection … " | Add the intent: the phone app tracks offline, and the watch becomes the main tracker | Q5 |
+| 19 | Web surfaces | "app shell (notifications, settings, profile)" | One account screen (name, email, avatar, password, linked sign-in methods, notification preferences, signed-in devices, export, delete) in place of profile | Q17, R12, T15 |
+| 20 | Web surfaces | Describes the web only | Add the Android and iOS apps and the Apple Watch tracker as launch clients, the watch being the main live tracker and Wear OS following. The web keeps every feature except watch tracking, and the phone app does everything an admin can do | Q4, Q5, R3, T10, T11 |
+| 21 | Results, Today | "the tracker needs a connection … " | Add the intent: the phone app tracks offline, and the watch is the main tracker from launch | Q5, T10 |
 | 22 | Squads, roles and guests | Deleting a squad: "with an export offered first" | Say what the export is: a small CSV of players, matches and stats | R14 |
-| 23 | Visibility and privacy | "Before launch: privacy policy, terms, and a data export (DSAR) path" | Add what the user's export contains, ICO registration, and the retention rules (deleted squads purged after 30 days, expired tokens daily, logs 90 days) | Q8, R11 |
+| 23 | Visibility and privacy | "Before launch: privacy policy, terms, and a data export (DSAR) path" | Add what the user's export contains, ICO registration with the user as controller, and the retention rules (deleted squads purged after 30 days, expired tokens daily, logs and notifications 90 days, inactive accounts emailed at 2 years and erased at 3) | Q8, R11, T13, T14 |
+| 25 | Ratings | "provisional until σ ≤ 8.19 … The badge drops while σ is still high" | Keep the threshold, change what it means on screen: every player shows a number from their first match, and a rating above the threshold carries a visible "settling" note in place of hiding the number | T8 |
+| 26 | Ratings | "Display rating = round((μ − 3σ) × K + C), floored, with K and C tunable per squad (e.g. K=40, C=1000). Provisional players show a badge or "~" band instead of a number" | Display rating = round((μ − 25) × K + C), floored, with K=40 and C=1000 fixed. A new Beginner, Average or Strong player starts on 800, 1000 or 1200. Settling players show the same number with a note that ratings take a few matches to settle. Still presentational only | T8, T17 |
+| 27 | Stats and leaderboards | "provisional points are plotted at their estimate and shown only as the "~" band" | Every point is plotted as a number; settling points are marked | T8 |
+| 28 | Match lifecycle, step 4 | "roll teams (needs 10–16 players): the balancer proposes" | In a free squad the roll is a random split the admin then swaps, except for one balanced roll a month; in a Pro squad the balancer proposes | T1 |
+| 29 | Results | "the event log is append-only, so nothing is discarded" | Unchanged as a rule; note the one-off removal of keeper events | T9 |
 
 ### To correct `product.md` against the code
 
@@ -468,7 +691,7 @@ None left: dropping goalkeeper tracking and the customisable match-day flow are 
 These rows of the as-is list in [index](index.md) still need an answer; `product.md` stays the authority on each until then.
 
 - **OpenSkill** names an algorithm, not a dependency (the engine is an in-house PlackettLuce implementation).
-- **K and C tunable per squad**: fixed at K=40, C=1000 in the code.
-- **Typed-name confirmation** on squad deletion is enforced by the web only.
+- **K and C tunable per squad**: settled by [T17](#t17), fixed; `product.md` moves (row 26).
+- **Typed-name confirmation** on squad deletion: settled by [T17](#t17); the code moves (SQ-14).
 - **A squad in its grace period** is hidden from reads but not from match-changing actions. `product.md` is clear here, so this is treated as a Gap to fix (SQ-18), not a question.
-- **"Provisional for at most 5 matches (3 at 5v5, 4–5 at 8v8)"** was worked out for 5-a-side to 8-a-side. It needs re-checking for 4v4 and 11v11 before `product.md` repeats it ([R7](#r7)).
+- **"Provisional for at most 5 matches (3 at 5v5, 4–5 at 8v8)"** was worked out for 5-a-side to 8-a-side. With [T8](#t8) it now says how long the settling note lasts, and it needs re-checking with `/balance-simulation` for 3-a-side and 11-a-side before `product.md` repeats it ([T7](#t7)).

@@ -85,13 +85,16 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | TR-10 | **The user's export is everything held about them**, as one JSON file: account, memberships, matches, rating history and stats | **Gap** | Yes | [Q8](decisions.md#q8) |
 | TR-12 | **Deleted squads are purged** after their 30-day grace, by the nightly job (PL-01 in [06](06-platform.md#to-be)) | **Gap** | Yes | [Q7](decisions.md#q7), [R11](decisions.md#r11) |
 | TR-13 | **Expired tokens are cleaned up daily** by the same job | **Gap** | Yes | [R11](decisions.md#r11), [R15](decisions.md#r15) |
-| TR-14 | **A privacy policy and terms exist** and are linked: drafted by Claude, reviewed by a solicitor before launch. The policy names the user, as the person who operates PitchMate, as the data controller, and states the retention rules | **Gap** | Yes | [Q8](decisions.md#q8), [R11](decisions.md#r11) |
+| TR-14 | **A privacy policy and terms exist** and are linked: drafted by Claude, reviewed by a solicitor before launch. The policy names the user, as an individual, as the data controller, and states the retention rules. It is written so a company or a business address can replace the individual later without a rewrite | **Gap** | Yes | [Q8](decisions.md#q8), [R11](decisions.md#r11), [T14](decisions.md#t14) |
 | TR-15 | **Reset codes and verification links never reach a log**: real email in every cloud environment (NO-03) | **Gap** | Yes | [Q9](decisions.md#q9) |
 | TR-04 | **The guest lawful-basis acknowledgement stays**, asked once per admin (GU-02). It is the UK GDPR cover for storing a profile of someone with no account | **Gap** | | [Q14](decisions.md#q14) |
 | TR-11 | **The squad export is a small CSV of players, matches and stats** (SQ-15) | **Gap** | | [R14](decisions.md#r14) |
 | TR-17 | Withdrawn: reporting a squad was dropped | | | [R10](decisions.md#r10) |
-| TR-18 | **PitchMate's operator is registered with the ICO** as a data controller (a small annual fee) | **Gap** | Yes | [R11](decisions.md#r11) |
-| TR-19 | **Data is kept no longer than needed**: deleted squads go after 30 days (TR-12), expired tokens daily (TR-13), logs after 90 days (PL-11). Periods for inactive accounts, inactive memberships and old notifications are not set | **Gap** | Yes | [R11](decisions.md#r11) |
+| TR-18 | **The user is registered with the ICO as a data controller, as an individual for now** (a small annual fee). The public register shows the controller's address, so a company or a business address can be swapped in later to keep a home address off it | **Gap** | Yes | [R11](decisions.md#r11), [T14](decisions.md#t14) |
+| TR-19 | **Data is kept no longer than needed**: deleted squads go after 30 days (TR-12), expired tokens daily (TR-13), logs after 90 days (PL-11), notifications after 90 days (TR-22), inactive accounts after 3 years (TR-21) | **Gap** | Yes | [R11](decisions.md#r11), [T13](decisions.md#t13) |
+| TR-21 | **An inactive account is emailed at 2 years and erased at 3**, by the nightly job. Erasure follows the existing rule: memberships with match history are kept, anonymised. "Inactive" is taken to mean no sign-in. The policy states the rule at launch; the job itself has nothing to do until accounts are two years old | **Gap** | | [T13](decisions.md#t13) |
+| TR-22 | **Notifications are deleted after 90 days**, by the nightly job | **Gap** | Yes | [T13](decisions.md#t13) |
+| TR-23 | **Keeper data is deleted**, by a one-off migration, when keeper tracking is removed (RE-10 in [05](05-features.md#to-be)). Only QA holds any today | **Gap** | Yes | [T9](decisions.md#t9) |
 | TR-20 | **Changing an email is safe**: the new address is verified before it takes effect and the old address is told (AC-15) | **Gap** | Yes | [R12](decisions.md#r12) |
 
 ### Security
@@ -105,7 +108,13 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | SE-22 | **Native session: tokens in the Keychain (iOS) and the Keystore (Android).** The API keeps accepting the refresh token in the request body for these clients | **Gap** | Yes | [Q10](decisions.md#q10), [R3](decisions.md#r3) |
 | SE-23 | **Auth stays in the PitchMate API.** No move to Firebase or another hosted identity provider. Email and password and Google verification are built (`backend/src/PitchMate.Application/Auth/UseCases/SignInWithPasswordHandler.cs`, `backend/src/PitchMate.Infrastructure/Auth/GoogleProviderVerifier.cs`); Sign in with Apple is added for iOS (AC-05) | **Partial** | | [A1](decisions.md#a1) |
 | SE-24 | **Trust is squad-scoped.** Inside a squad members see each other's ratings and admins add anyone; this is already how the code works (`backend/src/PitchMate.Application/Squads/SquadAuthorization.cs`). The controls in SE-14 and SE-15 are what is added between squads | **Built** | | [Q3](decisions.md#q3), [R10](decisions.md#r10) |
-| SE-25 | **The per-match tracker is authorised by the API**, for that match only, and loses the power when the match ends or the admin picks someone else (RO-07) | **Gap** | | [R1](decisions.md#r1) |
+| SE-25 | **The per-match tracker is authorised by the API**, for that match only, and loses the power when the match ends or the admin picks someone else (RO-07) | **Gap** | | [R1](decisions.md#r1), [T6](decisions.md#t6) |
+| SE-26 | **The nightly-job endpoint is callable by the job alone**: authenticated with the job's own identity or a secret from Key Vault, not a user token, and hidden from everyone else as any concealed resource is (PL-01) | **Gap** | Yes | [T16](decisions.md#t16) |
+| SE-17 | **Security headers on the API** (HSTS among them) and a global error handler. Marking this, SE-20 and SE-21 for launch is this spec's reading; the answer did not say when | **Gap** | Yes | [T17](decisions.md#t17) |
+| SE-20 | **The API enforces the typed-name confirmation** on squad deletion; today only the web does | **Gap** | Yes | [T17](decisions.md#t17) |
+| SE-21 | **Dependabot** watches the NuGet, npm and GitHub Actions dependencies. No `.github/dependabot.yml` exists | **Gap** | Yes | [T17](decisions.md#t17) |
+| SE-27 | **A purchase is checked by the API** with the store before a squad becomes Pro; a client's word is not enough (OF-05, PL-16) | **Gap** | | [T3](decisions.md#t3) |
+| SE-28 | **Signed-in devices can be seen and signed out** by the account's owner (AC-16). Refresh tokens are already stored one per session (`backend/src/PitchMate.Domain/Auth/RefreshToken.cs`); what is missing is a label for each and the list | **Gap** | Yes | [T15](decisions.md#t15) |
 
 ### Accessibility
 
@@ -121,15 +130,14 @@ No decision touched accessibility. AX-08 to AX-10 stay Gap. The launch now waits
 
 ## Open questions
 
-Answered in round two: reporting a squad is dropped ([R10](decisions.md#r10)), the data controller and the first retention rules ([R11](decisions.md#r11)), the squad export ([R14](decisions.md#r14)). Still open:
+Answered in round three: the retention periods ([T13](decisions.md#t13)), the controller ([T14](decisions.md#t14)), and security headers, Dependabot and the typed-name check ([T17](decisions.md#t17)). Still open:
 
-1. **Retention periods that were not given.** "The recommended time" has no number yet for inactive accounts, inactive memberships and old notifications. The policy has to state one for each.
-2. **The controller's contact details.** The policy needs a contact address for the controller, and the ICO registration needs a named person or business. Does the user register as an individual or set up a company first?
-3. **Verified email and Google or Apple.** Is a Google or Apple sign-in treated as already verified? What happens to accounts created on QA before verification became required?
-4. **Lockout and existence concealment.** Locking a known email must not reveal that the account exists; the response for a locked account and an unknown one should stay the same.
-5. **Typed-name confirmation on the API** (SE-20), **API security headers** (SE-17) and **dependency scanning** (SE-21) were not discussed. Launch requirements for a public launch, or later?
-6. **Cookies and the policy** (TR-16): the refresh cookie is strictly necessary, so no banner is needed, but the privacy policy must describe it. Do the apps collect anything else (crash reports, push tokens) that the policy and the store privacy labels must list?
-7. **Payments and personal data** (OF-05): a subscription adds a payer and a payment provider to the policy.
+1. **Verified email and Google or Apple.** Is a Google or Apple sign-in treated as already verified? What happens to accounts created on QA before verification became required?
+2. **Lockout and existence concealment.** Locking a known email must not reveal that the account exists; the response for a locked account and an unknown one should stay the same.
+3. **Cookies and the policy** (TR-16): the refresh cookie is strictly necessary, so no banner is needed, but the privacy policy must describe it. The apps will also hold push tokens and, once Application Insights is wired, send telemetry; the policy and the store privacy labels must list both.
+4. **Payments and personal data** (OF-05): a store subscription adds a payer and two store operators to the policy, after launch.
+5. **What counts as "inactive"** for TR-21: no sign-in, or no match played either? No sign-in is assumed.
+6. **Outside services in the design work.** The design overhaul may send brand material to Higgsfield ([T12](decisions.md#t12)). No personal data should go with it; worth one line in the policy only if that ever changes.
 
 ## Ideas
 

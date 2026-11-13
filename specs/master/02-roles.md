@@ -111,14 +111,16 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | RO-01 | **Only the owner demotes an admin.** Admins keep the power to promote a member, and lose the power to demote. Today any admin can demote another (`backend/src/PitchMate.Application/Squads/UseCases/DemoteToMemberHandler.cs:49`) | **Gap** | [Q15](decisions.md#q15) |
 | RO-02 | **A signed-in user edits their own account** (name, avatar, password) and can export or delete it, from one account screen (AC-10 to AC-12 in [05](05-features.md#to-be)) | **Gap** | [Q17](decisions.md#q17) |
 | RO-03 | **A visitor must verify their email before signing in**, so every member of a squad has a verified address (SE-15 in [07](07-trust.md#to-be)) | **Gap** | [Q9](decisions.md#q9) |
-| RO-04 | **A user on the other team confirms the score**, in a squad that turns score confirmation on; a dispute goes to an admin to decide. This is the first match action a plain member takes on a result (RE-08 in [05](05-features.md#to-be)) | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6) |
+| RO-04 | **Any registered player in the match, or an admin, enters the score, and a user on the other team confirms it**, in a squad that turns score confirmation on. If the person who entered it played on neither side, anyone in the match confirms. A dispute goes to an admin to decide. These are the first match actions a plain member takes on a result (RE-08 in [05](05-features.md#to-be)) | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6), [T5](decisions.md#t5) |
 | RO-05 | **An admin acknowledges the lawful basis for guests once**, not on every guest (GU-02 in [05](05-features.md#to-be)) | **Gap** | [Q14](decisions.md#q14) |
 | RO-06 | Withdrawn: reporting a squad was dropped | | [R10](decisions.md#r10) |
-| RO-07 | **A per-match tracker.** The admin can pick one registered member as the tracker for a match. The tracker can start that match and run its live tracker, without being an admin and without any other admin power. A guest cannot be picked, because a guest cannot sign in | **Gap** | [R1](decisions.md#r1) |
+| RO-07 | **A per-match tracker.** The admin can pick one registered member as the tracker for a match. The tracker can start that match, undo its kickoff, run its live tracker and record a basic score, without being an admin and without any other admin power. There is one tracker at a time; picking another replaces them. A guest cannot be picked, because a guest cannot sign in | **Gap** | [R1](decisions.md#r1), [T6](decisions.md#t6) |
 | RO-08 | **Only the owner removes an admin.** Admins keep removing members and guests. Today an admin can remove another admin (`backend/src/PitchMate.Application/Squads/UseCases/RemoveMemberHandler.cs:74`) | **Gap** | [R9](decisions.md#r9) |
 | RO-09 | **A signed-in user changes their own email**, and links or unlinks Google and Apple sign-in, from the account screen (AC-09, AC-15) | **Gap** | [R12](decisions.md#r12) |
+| RO-10 | **Any member can pay for the squad's Pro**, through the app stores. Paying gives no admin power: an admin still chooses which Pro features are switched on (OF-05) | **Gap** | [T3](decisions.md#t3) |
+| RO-11 | **A signed-in user sets their own notification preferences and sees their signed-in devices** (NO-04, AC-16) | **Gap** | [T15](decisions.md#t15) |
 
-Proposed changes to the matrix once RO-01, RO-07 and RO-08 are built:
+Proposed changes to the matrix once RO-01, RO-04, RO-07, RO-08 and RO-10 are built:
 
 | Action | Member | Tracker for that match | Admin | Owner |
 |---|---|---|---|---|
@@ -128,7 +130,12 @@ Proposed changes to the matrix once RO-01, RO-07 and RO-08 are built:
 | Remove an admin | – | – | – | ✓ |
 | Pick the tracker for a match | – | – | ✓ | ✓ |
 | Start the match | – | ✓ | ✓ | ✓ |
+| Undo kickoff | – | ✓ | ✓ | ✓ |
 | Record live events; end the match from the tracker | – | ✓ | ✓ | ✓ |
+| Record a basic score (confirmation off) | – | ✓ | ✓ | ✓ |
+| Enter a score for confirmation (confirmation on) | if in the match | ✓ | ✓ | ✓ |
+| Confirm or dispute a score | if on the other team | – | decides a dispute | decides a dispute |
+| Pay for Pro | ✓ | ✓ | ✓ | ✓ |
 
 ## Rules
 
@@ -142,13 +149,12 @@ Proposed changes to the matrix once RO-01, RO-07 and RO-08 are built:
 
 ## Open questions
 
-Answered in round two: a non-admin can track ([R1](decisions.md#r1)) and only the owner removes an admin ([R9](decisions.md#r9)). Still open:
+Answered in round three: what the tracker can do ([T6](decisions.md#t6)) and who enters a score ([T5](decisions.md#t5)). Still open:
 
-1. **What exactly can the tracker do** (RO-07)? Starting the match and running the tracker are decided. Can the tracker also undo kickoff, and record the basic score in a squad that does not track live? Can the admin pick more than one tracker?
-2. **Who may enter the score for confirmation** (RE-08): any registered player in the lineup, as on Playtomic, or only an admin or the tracker?
-3. **Who may see guests' marked days?** Only organisers, and only while availability is being gathered (`backend/src/PitchMate.Application/Matches/UseCases/GetMatchDetailHandler.cs:89`). `product.md` does not say; members see the tally.
-4. **Should a member be able to rename themselves in a squad, or an owner rename the squad?** Neither exists (SQ-12). Not covered by the account screen, which changes the account's name, not the squad display name.
-5. **Is the claim "audit" enough?** `product.md` says the claim is audited; today that means timestamps on the claim row.
+1. **Who may see guests' marked days?** Only organisers, and only while availability is being gathered (`backend/src/PitchMate.Application/Matches/UseCases/GetMatchDetailHandler.cs:89`). `product.md` does not say; members see the tally.
+2. **Should a member be able to rename themselves in a squad, or an owner rename the squad?** Neither exists (SQ-12). Not covered by the account screen, which changes the account's name, not the squad display name.
+3. **Is the claim "audit" enough?** `product.md` says the claim is audited; today that means timestamps on the claim row.
+4. **Can a tracker who played confirm their own entry?** [T5](decisions.md#t5) covers an admin on neither side. A tracker who played is taken to count as a player of their team.
 
 ## Ideas
 

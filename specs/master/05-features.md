@@ -190,6 +190,7 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | AC-13 | **Lockout on: 5 failed attempts, then 15 minutes**, counted somewhere every API replica shares. The code defaults to 10 attempts, off, in one server's memory | **Gap** | Yes | [Q9](decisions.md#q9) |
 | AC-14 | **Change my password while signed in**, from the account screen. No endpoint does this today (adding a first password and resetting by email exist) | **Gap** | Yes | [Q17](decisions.md#q17) |
 | AC-15 | **Change my email.** The new address is verified before it takes effect, and the old address is told about the change | **Gap** | Yes | [R12](decisions.md#r12) |
+| AC-16 | **Signed-in devices** on the account screen: a list of the places the account is signed in, each of which can be signed out (SE-28 in [07](07-trust.md#to-be)) | **Gap** | Yes | [T15](decisions.md#t15) |
 
 ### Squads, guests and optional features
 
@@ -198,25 +199,31 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | SQ-07 | **Sign-up → auto-join survives email verification**, a reload and a new tab | **Gap** | Yes | [Q9](decisions.md#q9) |
 | SQ-08 | **Demotion is owner-only** (RO-01 in [02](02-roles.md#to-be)) | **Gap** | | [Q15](decisions.md#q15) |
 | SQ-09 | **Removing an admin is owner-only**; admins still remove members and guests (RO-08) | **Gap** | | [R9](decisions.md#r9) |
+| SQ-14 | **The API enforces the typed-name confirmation** before a squad is deleted; today only the web does (SE-20) | **Gap** | Yes | [T17](decisions.md#t17) |
 | SQ-15 | **The squad export is a small CSV of players, matches and stats**, offered before deletion. Today it is JSON of memberships, invites and features | **Gap** | | [R14](decisions.md#r14) |
 | SQ-17 | **Deleted squads are purged** when the grace period ends, by the scheduled job (PL-01) | **Gap** | Yes | [Q7](decisions.md#q7) |
 | SQ-18 | **A squad in its grace period refuses match-changing actions too.** `product.md` already says so; no decision was needed | **Gap** | Yes | |
 | GU-02 | **The lawful-basis acknowledgement is asked once per admin** and remembered, not on every guest | **Gap** | | [Q14](decisions.md#q14) |
 | GU-08 | **An admin can erase a guest**: anonymised if they have match history, deleted if not (TR-07, TR-08) | **Gap** | Yes | [Q7](decisions.md#q7) |
-| OF-04 | **Pro, held per squad**, at about £1–2 a month. A Pro feature has two switches: whether the squad is *entitled* to it (by plan) and whether the admin has turned it on, and the API enforces both. Pro unlocks auto-balancing and the match-day customisation options (MA-11). Ratings are tracked in every squad whatever its plan. Whether live match tracking is Pro is open | **Gap** | | [Q2](decisions.md#q2), [R5](decisions.md#r5) |
-| OF-05 | **Paying for Pro**: a subscription the squad takes out. The app stores take about 15% of subscriptions bought in the apps. Provider, who pays and where are not decided | **Gap** | | [R5](decisions.md#r5) |
+| OF-04 | **Pro, held per squad**, at about £1–2 a month. A Pro feature has two switches: whether the squad is *entitled* to it (by plan) and whether the admin has turned it on, and the API enforces both. Pro unlocks balanced rolls every time (TB-13, TB-14) and the match-day options (MA-11). Ratings are tracked in every squad whatever its plan, and live match tracking is free. Until Pro is on sale every squad is treated as entitled, which follows [Q2](decisions.md#q2) and was not restated | **Gap** | | [Q2](decisions.md#q2), [R5](decisions.md#r5), [T2](decisions.md#t2) |
+| OF-05 | **Paying for Pro**: a subscription bought through the app stores, which take about 15%. Any member can pay for the squad. It cannot be bought on the web, but a Pro squad is Pro on every client. When it lapses the Pro features switch off and no data is lost: saved rules and settings are kept and stop applying. Selling starts after the launch (PL-16, SE-27) | **Gap** | | [R5](decisions.md#r5), [T3](decisions.md#t3) |
+| OF-02 | **Live match tracking is free**, an optional feature the admin turns on, as today (`backend/src/PitchMate.Domain/Squads/SquadFeature.cs`) | **Built** | | [T2](decisions.md#t2) |
 
 ### Matches, balancing and ratings
 
 | Id | Requirement | Status | Launch | Decision |
 |---|---|---|---|---|
-| TB-09 | **4v4 to 11v11, uneven allowed** for real no-shows, with the ratings handling uneven sides as well as they can. The 10–16 roll limit and the 5–8-a-side lock limit (`backend/src/PitchMate.Domain/Matches/Match.cs:40`) are replaced; two teams remain | **Gap** | | [Q12](decisions.md#q12), [R7](decisions.md#r7) |
+| TB-09 | **3 to 11 players a side, the two sides at most 2 apart**: 6 to 22 players. 4v4 to 11v11 is what a squad plans; 3 a side and uneven sides cover real no-shows, with the ratings handling uneven sides as well as they can. The 10–16 roll limit and the 5–8-a-side lock limit (`backend/src/PitchMate.Domain/Matches/Match.cs:40`) are replaced; two teams remain | **Gap** | | [Q12](decisions.md#q12), [R7](decisions.md#r7), [T7](decisions.md#t7) |
+| TB-13 | **A free squad's roll is a random split**, after which the admin moves players between teams as today (TB-04). The random split does not use the ratings | **Gap** | | [T1](decisions.md#t1) |
+| TB-14 | **Balanced rolls are Pro, with one free balanced roll a month** as a taster (squads play about four matches a month). The API counts it, not the client | **Gap** | | [T1](decisions.md#t1) |
 | TB-10 | **Keep-together and keep-apart rules**: standing rules saved per squad, always obeyed by the balancer, visible to admins only. A set of rules that cannot all be met is reported to the admin, not quietly broken | **Gap** | | [Q13](decisions.md#q13), [R8](decisions.md#r8) |
 | TB-11 | **The faster search above 16 players** (greedy start, then local swaps), because every split can no longer be tried. Required by TB-09, which goes up to 22 | **Gap** | | [Q12](decisions.md#q12), [R7](decisions.md#r7) |
 | TB-12 | More than two teams stays an Idea | **Idea** | | [Q12](decisions.md#q12) |
 | RA-06 | **σ decay runs nightly**, in the scheduled job (PL-01), and **starts after 8 weeks without a match**. Matches are weekly at best, so ratings must not decay quickly; decay raises σ only and never lowers μ. The code's free period is 42 days (`backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:31`) | **Gap** | | [R15](decisions.md#r15) |
 | RA-12 | **Ratings are tracked in every squad**, Pro or not. This is how the code behaves today: completion always updates ratings (`backend/src/PitchMate.Application/Matches/UseCases/CompleteMatchHandler.cs`). The requirement is that gating never changes it | **Built** | | [R5](decisions.md#r5) |
-| MA-11 | **Match-day customisation**, a Pro feature: a squad chooses which steps its match day has. Not designed; the examples given are skipping availability and tracking who has paid | **Gap** | | [R5](decisions.md#r5) |
+| MA-11 | **Match-day options**, a Pro feature. Four: availability on or off, payment tracking (who has paid), score confirmation (RE-08), and team naming. With every option at its default a squad gets today's flow | **Gap** | | [R5](decisions.md#r5), [T4](decisions.md#t4) |
+| RA-13 | **A rating number from the first match, with a settling note.** Display rating = round((μ − 25) × 40 + 1000), floored: μ on a friendlier scale, so a new Beginner, Average or Strong player starts on 800, 1000 or 1200 and moves with results. σ no longer changes the number; while it is above the provisional threshold (8.19, `backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:28`) the rating carries a visible "settling" mark and a line saying ratings take a few matches to settle. Leaderboards rank everyone and show the mark. Balancing is untouched: it uses μ and σ through `Predict`. This replaces today's (μ − 3σ) formula and the hidden number (`backend/src/PitchMate.Domain/Stats/DisplayRatingCalculator.cs`). The formula is a proposal the user has not yet confirmed. Marked for launch because changing it later changes every number people have seen | **Gap** | Yes | [T8](decisions.md#t8) |
+| RA-09 | **K and C are fixed at 40 and 1000**; no per-squad setting is built. The code already returns these for every squad (`backend/src/PitchMate.Infrastructure/Stats/SquadDisplayRatingParametersSource.cs`) | **Built** | | [T17](decisions.md#t17) |
 | RA-07 | **The margin and participation levers stay off**, and no work is done to feed them (`backend/src/PitchMate.Domain/Rating/RatingEngineConfig.cs:37`) | **Built** | | [Q13](decisions.md#q13) |
 | NO-06 | **A "match cancelled" notification** to the squad's members | **Gap** | | [Q16](decisions.md#q16) |
 | NO-07 | **"Teams rolled" becomes "Teams locked"**, sent at the lock with the team sheet. Nothing is sent at the roll. It already fires at the lock (`backend/src/PitchMate.Application/Matches/UseCases/LockTeamsHandler.cs`); the name and content change | **Gap** | | [R2](decisions.md#r2) |
@@ -225,10 +232,10 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 
 | Id | Requirement | Status | Launch | Decision |
 |---|---|---|---|---|
-| RE-08 | **Score confirmation**, a squad setting. When on, someone on one team enters the score and a user on the other team confirms it before the result is final and ratings update. Left unconfirmed for 48 hours, it is confirmed by the nightly job (PL-01). A dispute goes to an admin to decide. When nobody on the other side can confirm (a guest-only side, for example), the admin's confirmation stands | **Gap** | | [Q11](decisions.md#q11), [R6](decisions.md#r6) |
-| RE-09 | **A tracker per match.** The admin picks a registered member who can start the match and run the live tracker (RO-07 in [02](02-roles.md#to-be)) | **Gap** | | [R1](decisions.md#r1) |
-| RE-10 | **Keeper tracking is dropped for now.** The tracker no longer records keeper changes, and the keeper-only stats (clean sheets, goals conceded as keeper, keeper time) leave the stats screens | **Gap** | | [R13](decisions.md#r13) |
-| RE-06 | **Offline tracking**, delivered in the phone app (DV-03 in [04](04-devices.md#to-be)) rather than the web | **Gap** | Yes | [Q5](decisions.md#q5), [R3](decisions.md#r3) |
+| RE-08 | **Score confirmation**, one of the match-day options (MA-11). When on, any registered player in the match, or an admin, enters a basic score, and a user on the other team confirms it before the result is final. If the person who entered it played on neither side, anyone in the match confirms. Ratings update on confirmation. Left unconfirmed for 48 hours, it is confirmed by the nightly job (PL-01). A dispute goes to an admin to decide. When nobody on the other side can confirm (a guest-only side, for example), the admin's confirmation stands. A live-tracked result needs no confirmation | **Gap** | | [Q11](decisions.md#q11), [R6](decisions.md#r6), [T5](decisions.md#t5) |
+| RE-09 | **A tracker per match.** The admin picks a registered member who can start the match, undo kickoff, run the live tracker and record a basic score. One tracker at a time (RO-07 in [02](02-roles.md#to-be)) | **Gap** | | [R1](decisions.md#r1), [T6](decisions.md#t6) |
+| RE-10 | **Keeper tracking is removed, data included**: keeper stints, clean sheets, goals conceded as keeper and keeper time. What the removal touches is listed under [Removing keeper data](#removing-keeper-data). Marked for launch because the apps and the watch tracker are built without it and the data is cheapest to drop before anything public exists; the answer did not say when | **Gap** | Yes | [R13](decisions.md#r13), [T9](decisions.md#t9) |
+| RE-06 | **Offline tracking**, delivered in the phone app and the Apple Watch app (DV-03, DV-04 in [04](04-devices.md#to-be)). Whether the web tracker gets it too is open | **Gap** | Yes | [Q5](decisions.md#q5), [R3](decisions.md#r3), [T10](decisions.md#t10) |
 | RE-05 | **Live score stays polled** every 20 seconds (`apps/web/src/features/matches/components/LiveScorePanel.tsx:30`) | **Built** | | [Q6](decisions.md#q6) |
 
 ### Stats, notifications and web surfaces
@@ -236,23 +243,42 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | Id | Requirement | Status | Launch | Decision |
 |---|---|---|---|---|
 | ST-08 | **Top scorer leaderboard**, using the query that already exists (`backend/src/PitchMate.Application/Stats/IRichStatsSource.cs`) | **Gap** | | [Q18](decisions.md#q18) |
-| ST-11 | **Every available stat is shown, presented usefully**, and nothing computed is hidden, except the keeper-only stats dropped by RE-10 | **Gap** | | [Q18](decisions.md#q18), [R13](decisions.md#r13) |
+| ST-11 | **Every available stat is shown, presented usefully**, and nothing computed is hidden. The keeper-only stats no longer exist (RE-10) | **Gap** | | [Q18](decisions.md#q18), [R13](decisions.md#r13), [T9](decisions.md#t9) |
+| ST-12 | **The progression chart plots every point as a number**, with settling points marked, in place of the "~" band; the rating panel and leaderboards show the number with the settling mark (RA-13) | **Gap** | Yes | [T8](decisions.md#t8) |
+| NO-04 | **Notification preferences** on the account screen, for in-app, email and push | **Gap** | Yes | [T15](decisions.md#t15) |
 | NO-03 | **Email is really sent**, through Azure Communication Services, in QA and production (PL-07 in [06](06-platform.md#to-be)) | **Gap** | Yes | [Q9](decisions.md#q9) |
 | NO-05 | **Push notifications**, with the native apps (DV-05) | **Gap** | Yes | [Q4](decisions.md#q4), [R3](decisions.md#r3) |
-| WE-04 | **One account screen** replacing the profile placeholder: name, email, avatar, password, linked sign-in methods, export, delete. On the web and in the apps | **Gap** | Yes | [Q17](decisions.md#q17), [R12](decisions.md#r12) |
+| WE-04 | **One account screen** replacing the profile placeholder: name, email, avatar, password, linked sign-in methods, notification preferences, signed-in devices, export, delete. On the web and in the apps | **Gap** | Yes | [Q17](decisions.md#q17), [R12](decisions.md#r12), [T15](decisions.md#t15) |
 | WE-05 | **Privacy policy and terms pages** at `/privacy` and `/terms`, drafted by Claude and reviewed by a solicitor before launch | **Gap** | Yes | [Q8](decisions.md#q8) |
+
+<a id="removing-keeper-data"></a>
+### Removing keeper data
+
+What RE-10 takes out ([T9](decisions.md#t9)). None of it is done.
+
+| What | Where | Note |
+|---|---|---|
+| Keeper stint events and the stint type | `backend/src/PitchMate.Domain/LiveTracking/KeeperStintStartedEvent.cs`, `backend/src/PitchMate.Domain/LiveTracking/KeeperStintRetractedEvent.cs`, `backend/src/PitchMate.Domain/LiveTracking/KeeperStint.cs`, `backend/src/PitchMate.Domain/LiveTracking/EventKind.cs` | The conceding keeper on a goal goes too |
+| Keeper statistics | `backend/src/PitchMate.Domain/LiveTracking/MatchRichStatistics.cs`, `backend/src/PitchMate.Application/Stats/RichStats.cs`, `backend/src/PitchMate.Infrastructure/LiveTracking/EventLogRichStatsSource.cs` | Clean sheets, goals conceded as keeper, keeper time. Goals stay |
+| Stored data | `backend/src/PitchMate.Infrastructure/Persistence/Configurations/LiveTracking/MatchEventConfiguration.cs` | A migration deletes the stored keeper events and drops the keeper columns. It cannot be reversed. Only QA holds data today |
+| The API contract | `backend/src/PitchMate.Api/LiveTracking/Endpoints/EventSubmissionRequest.cs`, `backend/src/PitchMate.Api/LiveTracking/Endpoints/MatchEventResponse.cs` | The OpenAPI document and the generated client change. A keeper event from an old client is refused cleanly |
+| The web | `apps/web/src/features/matches/screens/LiveTrackerScreen.tsx`, `apps/web/src/features/player-stats/components/RichStatsPanel.tsx` | The keeper control and the keeper stat lines |
+
+Two rules are affected. The event log is append-only and "nothing is discarded": deleting keeper events is a one-off exception and should be recorded as one. Undo kickoff is refused once anything is recorded; after the removal, "anything" no longer includes a keeper change.
 
 ### Decided against
 
 - **RE-07 · Correcting a result after completion.** A confirmed result is final ([Q11](decisions.md#q11)).
 - **RA-11 · Rating replay** has no job without RE-07. The engine method can stay; nothing will call it.
 - **RA-07 · Wiring margin or participation data into the outcome** ([Q13](decisions.md#q13)).
-- **ST-07 · The keeper-only stats** (clean sheets, goals conceded as keeper, keeper time), for now ([R13](decisions.md#r13)). Goals stay.
+- **ST-07 · The keeper-only stats** (clean sheets, goals conceded as keeper, keeper time), removed with their data ([R13](decisions.md#r13), [T9](decisions.md#t9)). Goals stay.
+- **RA-09 · K and C per squad.** They stay fixed ([T17](decisions.md#t17)).
+- **RA-03, RA-08 · A badge or "~" band in place of a number**, and the (μ − 3σ) display formula, replaced by RA-13 ([T8](decisions.md#t8)).
 - **Reporting a squad** ([R10](decisions.md#r10)).
 
 ### Not decided
 
-Catalogue rows the decisions did not touch stay as they are: SQ-12 (renaming), SQ-14 (typed-name check on the API), GU-07 (claim audit), MA-09 (editing a draft), RA-09 (K and C per squad), ST-10 (cross-squad aggregate), NO-04 (notification preferences), WE-03 (settings).
+Catalogue rows the decisions did not touch stay as they are: SQ-12 (renaming), GU-07 (claim audit), MA-09 (editing a draft), ST-10 (cross-squad aggregate), WE-03 (settings).
 
 ## Rules
 
@@ -264,21 +290,18 @@ Catalogue rows the decisions did not touch stay as they are: SQ-12 (renaming), S
 
 ## Open questions
 
-Answered in round two: Pro per squad with ratings always tracked ([R5](decisions.md#r5)), match sizes ([R7](decisions.md#r7)), the together and apart rules ([R8](decisions.md#r8)), keeper tracking ([R13](decisions.md#r13)), the account screen ([R12](decisions.md#r12)), the squad export ([R14](decisions.md#r14)). Still open:
+Answered in round three: free and Pro ([T1](decisions.md#t1), [T2](decisions.md#t2)), paying ([T3](decisions.md#t3)), side sizes ([T7](decisions.md#t7)), the rating display ([T8](decisions.md#t8)), keeper data ([T9](decisions.md#t9)), the account screen ([T15](decisions.md#t15)), and K and C and the typed-name check ([T17](decisions.md#t17)). Still open:
 
-1. **Free and Pro (OF-04).** How does a free squad pick teams without auto-balancing? Is live match tracking free or Pro? Do the together and apart rules, which only matter to the balancer, come with Pro?
-2. **Paying (OF-05).** In the apps (about 15% to the stores) or on the web? Who in the squad pays, and what happens to a squad's Pro features and rules if the subscription lapses? When is Pro first sold?
-3. **Uneven sides (TB-09).** Is the limit on each side (so a no-show 4v3 is refused) or on the match (so it is allowed)? How lopsided may a match be?
-4. **Provisional at new sizes.** `product.md` says a player stops being provisional in "at most 5 matches (3 at 5v5, 4–5 at 8v8)". That was worked out for 5-a-side to 8-a-side and needs re-checking for 4v4 and 11v11 with `/balance-simulation`.
-5. **Keeper tracking (RE-10).** Hidden in the clients while the API and stored stints stay, or removed altogether? "For now" suggests hiding. What happens to keeper stats already shown for past matches?
-6. **Score confirmation (RE-08).** The remaining questions are in [03](03-journeys.md#open-questions).
-7. **Match-day customisation (MA-11).** Which options exist; see [03](03-journeys.md#open-questions).
-8. **The account screen (WE-04).** "The features most similar apps offer" is not a list. Candidates beyond what is decided: notification preferences (NO-04, more pressing once push exists), and a list of signed-in devices.
-9. **Is the cross-squad vanity aggregate (ST-10) wanted for launch?** `product.md` describes it; nothing computes it.
-10. **Guest acknowledgement (GU-02).** Once per admin across all their squads, or once per admin per squad?
-11. **"OpenSkill" names an algorithm here, not a dependency** (RA-02). Fine as is, or should `product.md` and `CLAUDE.md` say so?
-12. **Should the API enforce the typed-name confirmation** (SQ-14)?
-13. **K and C per squad** (RA-09): build the setting, or change `product.md` to say they are fixed?
+1. **The rating display formula (RA-13).** The user asked for a proposal; the proposal is one μ-based number for everyone, with σ only driving the settling note. It needs a yes. The alternative, a conservative μ − 3σ once settled, makes the number fall by about 980 points on the day the note goes.
+2. **The free roll (TB-13, TB-14).** Is "one balanced roll a month" one match or one press of the button (re-rolls included)? A calendar month? Does a free squad see the predicted win % on a random split? With it, swapping until the meter reads 50/50 is a slow free balancer; without it, the fairness meter becomes Pro as well.
+3. **What is free before Pro is on sale?** See [01](01-vision.md#open-questions).
+4. **Score confirmation and team naming as Pro options (MA-11).** See [03](03-journeys.md#open-questions).
+5. **The together and apart rules (TB-10)** only act on a balanced roll. Do they apply to a free squad's random split too, or come with Pro in effect?
+6. **How long does the settling note last?** `product.md` says "at most 5 matches (3 at 5v5, 4–5 at 8v8)". That was worked out for 5-a-side to 8-a-side and needs re-checking for 3-a-side and 11-a-side with `/balance-simulation`. A check to run, not a question for the user.
+7. **Is the cross-squad vanity aggregate (ST-10) wanted for launch?** `product.md` describes it; nothing computes it.
+8. **Guest acknowledgement (GU-02).** Once per admin across all their squads, or once per admin per squad?
+9. **"OpenSkill" names an algorithm here, not a dependency** (RA-02). Fine as is, or should `product.md` and `CLAUDE.md` say so? Not in the round-three answer.
+10. **A lapse mid-match (OF-05).** Does a match already rolled or awaiting confirmation finish under the rules it started with?
 
 ## Ideas
 

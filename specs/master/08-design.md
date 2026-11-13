@@ -71,14 +71,18 @@ What is wanted, from [decisions](decisions.md). No decision changed the brand ru
 
 | Line | Status | Decision |
 |---|---|---|
-| **The mobile mockups in the design-system artifact become build targets**, for the Android and iOS apps the launch waits for | **Gap** | [Q4](decisions.md#q4), [R3](decisions.md#r3) |
+| **A design-system overhaul redoes the app mockups**, phone and watch, and the redone mockups are the build targets for the apps the launch waits for. The existing mockups predate the decisions and are not targets | **Gap** | [Q4](decisions.md#q4), [R3](decisions.md#r3), [T12](decisions.md#t12) |
+| **The overhaul runs on Fable and uses the Higgsfield API where it fits**: brand imagery and promo animation. Tokens stay generated from `tokens.json` and icons stay vector; neither comes from Higgsfield. Only brand material is sent to it | **Gap** | [T12](decisions.md#t12) |
 | **The design tokens are shared with the apps**: `tokens.json` gains a React Native output beside the CSS one, so web and apps cannot drift | **Gap** | [R4](decisions.md#r4) |
-| **The watch mockups become the target for the main live tracker**, after a phone tracker design | **Gap** | [Q5](decisions.md#q5) |
-| **One account screen** needs a design: name, email (changeable), avatar, password, linked sign-in methods, export, delete. It replaces the profile placeholder | **Gap** | [Q17](decisions.md#q17), [R12](decisions.md#r12) |
+| **The watch tracker is designed for the launch**, as the main live tracker, alongside the phone tracker | **Gap** | [Q5](decisions.md#q5), [T10](decisions.md#t10) |
+| **One account screen** needs a design: name, email (changeable), avatar, password, linked sign-in methods, notification preferences, signed-in devices, export, delete. It replaces the profile placeholder | **Gap** | [Q17](decisions.md#q17), [R12](decisions.md#r12), [T15](decisions.md#t15) |
+| **The rating with a "settling" note**: a number for every player, a mark and a line of copy while it settles, on the player screen, the leaderboards and the progression chart. It replaces "~ Provisional" in place of a number, and must not rely on colour alone | **Gap** | [T8](decisions.md#t8) |
+| **The free roll**: a random split with swapping, the monthly balanced roll and how many are left, and the way to upgrade | **Gap** | [T1](decisions.md#t1) |
+| **The match-day options** screen for a Pro squad | **Gap** | [T4](decisions.md#t4) |
 | **Stats presentation**: every available stat shown usefully means a designed layout for the leaderboards and the player screen, not a longer list | **Gap** | [Q18](decisions.md#q18) |
 | **A locked-feature state** for a Pro feature the squad does not have, distinct from "the admin has turned this off", with a way to upgrade | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5) |
 | **Score confirmation screens**: enter the score, confirm or dispute it, "waiting for confirmation", and the admin's decision on a dispute | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6) |
-| **The tracker without keeper changes**, on phone and watch, and the stats screens without the keeper-only stats | **Gap** | [R13](decisions.md#r13) |
+| **The tracker without keeper changes**, on web, phone and watch, and the stats screens without the keeper-only stats | **Gap** | [R13](decisions.md#r13), [T9](decisions.md#t9) |
 | **Picking a tracker** for a match, and what the tracker sees | **Gap** | [R1](decisions.md#r1) |
 | **Privacy policy and terms pages** follow the brand's plain voice (no cheek in privacy copy) | **Gap** | [Q8](decisions.md#q8) |
 
@@ -97,8 +101,10 @@ Rules that rest on review rather than a test: voice (friendly, a bit cheeky, sen
 
 ## Open questions
 
-1. **Is the artifact still ahead of, level with, or behind the code?** Nothing in the repo records when the token export was last taken. Worth a one-off comparison now that the mobile and watch mockups are build targets.
-2. **Do the mobile and watch mockups match the decisions?** They predate them: keeper changes are gone from the tracker ([R13](decisions.md#r13)), and the account, score-confirmation and tracker-picking screens are new. The artifact was not opened, so what it holds is unknown.
+Answered in round three: the app mockups are redone in the design-system overhaul ([T12](decisions.md#t12)), so whether the old ones match no longer matters. Still open:
+
+1. **Is the artifact still ahead of, level with, or behind the code?** Nothing in the repo records when the token export was last taken. The overhaul should start from a one-off comparison.
+2. **What does the overhaul change besides the mockups?** If tokens or `src/ui` components change, the web changes with them, and `.claude/rules/brand.md` needs the same update.
 3. **Should the unused components stay** (ready for future screens) or be pruned?
 4. **Remove the template leftovers** (`App.tsx`, `App.css`, the stock README)? The README part falls under [Q22](decisions.md#q22).
 5. **The brand rule's component list and the kit have drifted slightly** (the kit also has ActionsMenu, AvailabilityGrid, Checkbox, EventTimeline, OptionCard, Steps, TabNav, TeamSheet). Update the rule's list?

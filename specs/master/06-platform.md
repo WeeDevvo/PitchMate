@@ -116,7 +116,7 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 
 | Id | Requirement | Status | Launch | Decision |
 |---|---|---|---|---|
-| PL-01 | **One scheduled job beside the API: an Azure Functions timer, run nightly**, that does not depend on the API being awake (the API scales to zero). It runs the squad purge, the erasure work, score auto-confirm (RE-08), expired-token clean-up (TR-13) and σ decay (RA-06) | **Gap** | Yes | [Q7](decisions.md#q7), [R15](decisions.md#r15) |
+| PL-01 | **One scheduled job beside the API: an Azure Functions timer, run nightly, that calls a protected API endpoint.** The API scales to zero and cannot keep a timer, so the timer wakes it; the work itself runs in the API, and the timer holds no database secret. The endpoint runs the squad purge, the erasure work, score auto-confirm (RE-08), expired-token clean-up (TR-13), σ decay (RA-06), the inactive-account warning and erasure (TR-21) and the deletion of old notifications (TR-22). It is safe to call twice, and can answer "more to do" so the timer calls again (SE-26 in [07](07-trust.md#to-be)) | **Gap** | Yes | [Q7](decisions.md#q7), [R15](decisions.md#r15), [T16](decisions.md#t16) |
 | PL-02 | **Production is provisioned**, with its own Postgres Flexible Server on a burstable tier and 7-day point-in-time restore. The template already declares this server when `useExternalDatabase` is false (`infra/main.bicep:119`, `infra/main.bicep:133`); what is missing is the deployment, the production identity's roles, and the production secrets and variables | **Gap** | Yes | [Q19](decisions.md#q19) |
 | PL-03 | **Custom domains**: the app at `pitch-mate.co.uk` and, for QA, at `qa.pitch-mate.co.uk`, with DNS and certificates, and CORS and the token issuer following the new hostnames | **Gap** | Yes | [Q20](decisions.md#q20), [R16](decisions.md#r16) |
 | PL-04 | **Infrastructure deploys through CD**: a what-if preview of the Bicep change, then a manual approval, then the deployment. The workstation script stops being the only way | **Gap** | | [Q20](decisions.md#q20) |
@@ -128,8 +128,10 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | PL-10 | **Geo-redundant database backup** once there are paying users | **Idea** | | [Q19](decisions.md#q19) |
 | PL-11 | **Logs are kept for 90 days.** The template sets 30 (`infra/main.bicep:104`) | **Gap** | Yes | [R11](decisions.md#r11) |
 | PL-12 | **QA stays on the external database while the user is the only tester**, which is how it is set today (`infra/main.qa.bicepparam:16`). The setting is switched before anyone else tests on QA | **Built** | | [R17](decisions.md#r17) |
-| PL-13 | **App distribution**: store accounts, signing, and a build and release pipeline for the Expo apps, since the launch waits for them. None exists | **Gap** | Yes | [R3](decisions.md#r3), [R4](decisions.md#r4) |
+| PL-13 | **App distribution**: store accounts, signing, and a build and release pipeline for the Expo apps and for the Apple Watch app, since the launch waits for them. None exists | **Gap** | Yes | [R3](decisions.md#r3), [R4](decisions.md#r4), [T10](decisions.md#t10) |
 | PL-14 | **Push delivery** for the apps: the platform credentials and a sender the API or the job can call (NO-05) | **Gap** | Yes | [R3](decisions.md#r3) |
+| PL-15 | **Application Insights is wired up**: the API sends requests, failures and traces to the resource that already exists (`infra/main.bicep:108`). The resource is kept, not removed. Marking it for launch is this spec's reading; the answer did not say when | **Gap** | Yes | [T17](decisions.md#t17) |
+| PL-16 | **Store subscriptions for Pro**: products in both app stores, and server-side checking of a purchase so the API knows which squad is entitled (OF-05). After the launch | **Gap** | | [T3](decisions.md#t3) |
 
 ## Rules
 
@@ -141,16 +143,14 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 
 ## Open questions
 
-Answered in round two: what the job runs on and how often ([R15](decisions.md#r15)), the hostnames ([R16](decisions.md#r16)), QA's database ([R17](decisions.md#r17)). Still open:
+Answered in round three: the nightly job calls a protected API endpoint ([T16](decisions.md#t16)), and Application Insights is wired, not removed ([T17](decisions.md#t17)). Still open:
 
 1. **A production deploy was waiting for approval** when the as-is spec was written (seen with `gh` on 2026-11-11; live repository state, not in the repo), and `AZURE_DEPLOY_ENABLED` was `true` for both environments. Under [Q21](decisions.md#q21) that run should be rejected, not approved, and production disarmed until PL-02 is done. This is an action for the user in GitHub, not a code change.
-2. **How does the Functions job reach the use cases** (PL-01)? Run the Application and Infrastructure code itself with its own database access, or call an API endpoint, which wakes the API? The first keeps the API asleep and needs the job to have the database secret.
-3. **When QA moves off the pausing database** (PL-12), does it get its own Flexible Server, and who triggers the switch?
-4. **Who holds the DNS zone** for `pitch-mate.co.uk`, and is it managed in the template or by hand?
-5. **Should the web deploy wait for the API?** The jobs are unordered, so a web build can briefly call an API that has not rolled out.
-6. **Observability.** Application Insights is provisioned but unused. Wire the SDK before a public launch, or remove the resource?
-7. **Secret rotation.** `DB_CONNECTION_STRING` in GitHub is a one-time copy of the Key Vault secret, and rotating `Auth-SigningKey` signs everyone out. Is a rotation procedure needed before launch?
-8. **Payments** (OF-05): which provider, and does it need its own webhook endpoint and secrets?
+2. **When QA moves off the pausing database** (PL-12), does it get its own Flexible Server, and who triggers the switch?
+3. **Who holds the DNS zone** for `pitch-mate.co.uk`, and is it managed in the template or by hand?
+4. **Should the web deploy wait for the API?** The jobs are unordered, so a web build can briefly call an API that has not rolled out.
+5. **Secret rotation.** `DB_CONNECTION_STRING` in GitHub is a one-time copy of the Key Vault secret, and rotating `Auth-SigningKey` signs everyone out. Is a rotation procedure needed before launch?
+6. **How long may the nightly work take?** It now runs inside an API request (PL-01). The purge, decay and erasure are small today; the feature spec should set a limit and the "more to do" behaviour.
 
 ## Ideas
 
@@ -159,4 +159,3 @@ Answered in round two: what the job runs on and how often ([R15](decisions.md#r1
 - **Idea** · An always-run "changes" job so path-filtered checks can be required safely.
 - **Idea** · Uptime and error-rate alerts to email once Application Insights is wired.
 - **Idea** · A keep-alive ping so the free QA database does not pause.
-- **Idea** · Payments infrastructure (a provider, webhooks, entitlement sync) when a Pro tier is priced ([Q2](decisions.md#q2)).

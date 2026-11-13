@@ -43,11 +43,12 @@ What is wanted, from [decisions](decisions.md). Nothing in this section is built
 | Line | Status | Decision |
 |---|---|---|
 | **The first launch is public**, on pitch-mate.co.uk, after a test period on QA with the user's own squad and perhaps one more. Everything on the [launch gate](index.md#launch-gate) is therefore a requirement | **Gap** | [Q1](decisions.md#q1) |
-| **Free, and useful enough free that squads want to upgrade.** Ratings are tracked in every squad | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5) |
-| **A Pro tier per squad**, at about £1–2 a month so it is barely noticed when split between players. Pro unlocks auto-balancing and the match-day customisation options (OF-04, MA-11 in [05](05-features.md#to-be)) | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5) |
-| **The native apps are the main way people use PitchMate**, so the public launch waits for the Android and iOS apps. The web stays; a watch app follows as the main live tracker ([04](04-devices.md#to-be)) | **Gap** | [Q4](decisions.md#q4), [Q5](decisions.md#q5), [R3](decisions.md#r3) |
+| **Free, and useful enough free that squads want to upgrade.** Ratings are tracked in every squad, live tracking is free, and a free squad picks teams with a random split it can then swap, plus one balanced roll a month as a taster | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5), [T1](decisions.md#t1), [T2](decisions.md#t2) |
+| **A Pro tier per squad**, at about £1–2 a month so it is barely noticed when split between players. Pro unlocks balanced rolls every time and the match-day options (OF-04, MA-11 in [05](05-features.md#to-be)). It is bought through the app stores by any member, and goes on sale after the launch | **Gap** | [Q2](decisions.md#q2), [R5](decisions.md#r5), [T3](decisions.md#t3), [T4](decisions.md#t4) |
+| **The native apps are the main way people use PitchMate**, so the public launch waits for the Android and iOS apps and for an Apple Watch app, which is the main live tracker. The web stays, with every feature except watch tracking ([04](04-devices.md#to-be)) | **Gap** | [Q4](decisions.md#q4), [Q5](decisions.md#q5), [R3](decisions.md#r3), [T10](decisions.md#t10), [T11](decisions.md#t11) |
 | **Trust stays inside the squad.** Members see each other's ratings and admins add anyone, as today; towards strangers the product adds rate limits and verified email. Reporting a squad was considered and dropped ([07](07-trust.md#to-be)) | **Gap** | [Q3](decisions.md#q3), [R10](decisions.md#r10) |
-| **4v4 to 11v11**, uneven sides allowed, not only 5-a-side to 8-a-side | **Gap** | [Q12](decisions.md#q12), [R7](decisions.md#r7) |
+| **4v4 to 11v11**, not only 5-a-side to 8-a-side, and down to 3 a side when people do not turn up; the sides may differ by 2 at most | **Gap** | [Q12](decisions.md#q12), [R7](decisions.md#r7), [T7](decisions.md#t7) |
+| **A new player has a rating from their first match**, shown with a note that ratings take a few matches to settle, not hidden behind a badge | **Gap** | [T8](decisions.md#t8) |
 | **A confirmed result is final.** It is never corrected afterwards; a squad can ask for the other team to confirm the score first | **Gap** | [Q11](decisions.md#q11), [R6](decisions.md#r6) |
 | **The match does not depend on an admin being there.** The admin can hand starting and tracking a match to another member | **Gap** | [R1](decisions.md#r1) |
 
@@ -67,11 +68,10 @@ The principles the code already honours. A feature spec that breaks one needs an
 
 ## Open questions
 
-Answered in round two: the launch waits for the apps ([R3](decisions.md#r3)), and Pro is per squad with ratings always tracked ([R5](decisions.md#r5)). Still open:
+Answered in round three: how a free squad picks teams ([T1](decisions.md#t1)), live tracking is free ([T2](decisions.md#t2)), and how and when Pro is sold ([T3](decisions.md#t3)). Still open:
 
-1. **How does a free squad pick teams?** Pro unlocks auto-balancing, and fair teams are the product's core promise (see Rules). Does a free squad sort players by hand, get random teams, or get a limited number of balanced rolls? Does it still see the predicted win %?
-2. **Is live match tracking free or Pro?** Round one named it as a Pro feature; the round-two answer lists auto-balancing and match-day customisation only.
-3. **When is Pro first sold**: at the public launch, or once free squads are established? And where does a squad pay: in the apps (the stores take about 15%) or on the web?
+1. **What is free before Pro goes on sale?** Pro is sold after the launch ([T3](decisions.md#t3)). Round one said every squad is entitled to everything at launch ([Q2](decisions.md#q2)); the spec assumes that still holds, so balanced rolls are unlimited until Pro can be bought. The alternative is to launch with the random split and the monthly taster, and nothing to upgrade to.
+2. **Does the free tier weaken the core promise?** "Fair contest over even split" (see Rules) becomes a Pro promise once Pro is on sale. Stated here so it is a choice, not an accident.
 
 ## Ideas
 
