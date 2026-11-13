@@ -125,16 +125,15 @@ This table is the as-is finding: what `product.md` said on 2026-11-11 against wh
 **After sign-off**
 
 1. **The code still says "provisional".** `product.md` and this spec's To be sections say "settling"; renaming the code and the UI copy is a follow-up feature-spec item (row 31 in [decisions](decisions.md#proposed-productmd-changes)).
-2. **`CLAUDE.md` still says the spec is not signed off** and that `product.md` is the authority "until" it is. It was left alone in this change and should be updated with the docs refresh (PL-06).
-3. **A production deploy was waiting for approval** on 2026-11-11 with deploys armed for both environments. Under [Q21](decisions.md#q21) it should be rejected and production disarmed until it is provisioned. An action for the user in GitHub. ([06](06-platform.md#open-questions))
+2. **A production deploy was waiting for approval** on 2026-11-11 with deploys armed for both environments. Under [Q21](decisions.md#q21) it should be rejected and production disarmed until it is provisioned. An action for the user in GitHub. ([06](06-platform.md#open-questions))
 
 **Left for the feature specs**, each with a default the user accepted or a check to run
 
-4. The watch signs in and syncs through the paired phone. ([04](04-devices.md#open-questions))
-5. "Inactive" means no sign-in for the 2- and 3-year rule. ([07](07-trust.md#open-questions))
-6. The together and apart rules act only on balanced rolls. ([05](05-features.md#to-be) TB-10)
-7. How long the settling note lasts at 3-a-side and 11-a-side: a `/balance-simulation` check. ([05](05-features.md#open-questions))
-8. The smaller questions in each chapter's Open questions section: none blocks the launch gate or needs an answer before feature specs are cut.
+3. The watch signs in and syncs through the paired phone. ([04](04-devices.md#open-questions))
+4. "Inactive" means no sign-in for the 2- and 3-year rule. ([07](07-trust.md#open-questions))
+5. The together and apart rules act only on balanced rolls. ([05](05-features.md#to-be) TB-10)
+6. How long the settling note lasts at 3-a-side and 11-a-side: a `/balance-simulation` check. ([05](05-features.md#open-questions))
+7. The smaller questions in each chapter's Open questions section: none blocks the launch gate or needs an answer before feature specs are cut.
 
 ## How this was produced
 
