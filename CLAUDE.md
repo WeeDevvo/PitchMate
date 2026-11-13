@@ -11,12 +11,16 @@ The repository is structured as a monorepo with strict architectural boundaries:
 - **Backend (`backend/`)**: .NET 10 solution (`PitchMate.slnx`) following Clean Architecture with strict inward dependency flow:
   - `PitchMate.Domain`: Zero external dependencies. Encapsulated domain entities (private setters, mutations via methods), value types, domain errors/results (`Result<T>`), and rating engine interfaces (`IRatingEngine`).
   - `PitchMate.Application`: Orchestrates use cases (commands/queries returning `Result<T>`) and defines ports/abstractions (`IRepository<T>`, `IUnitOfWork`). Strictly no references to EF Core, Npgsql, or ASP.NET Core.
-  - `PitchMate.Infrastructure`: Implements persistence via EF Core 10, Npgsql and PostgreSQL, the OpenSkill rating engine (`PlackettLuceRatingEngine`), email delivery, and Azure integrations.
+  - `PitchMate.Infrastructure`: Implements persistence via EF Core 10, Npgsql and PostgreSQL, the OpenSkill rating engine (`PlackettLuceRatingEngine`, PitchMate's own PlackettLuce implementation of the OpenSkill model; no OpenSkill package is used), email delivery, and Azure integrations.
   - `PitchMate.Api`: Minimal API endpoints, transport DTOs, uniform existence-concealing error mapping (`XErrorResults`), authentication/JWT handling, and build-time OpenAPI document emission.
 - **Web Frontend (`apps/web/`)**: React 19, TypeScript, Vite, and React Router v7 (`@pitchmate/web`). Feature-sliced architecture (`src/features/<feature>/`) consuming the typed API client facade. (`apps/mobile` and `apps/watch` are future placeholders).
 - **Shared Packages (`packages/api-client/`)**: `@pitchmate/api-client`, providing TypeScript types and client generated directly from the backend OpenAPI specification.
 
 The product rules live in `.claude/rules/product.md`, which loads every session. `docs/` is git-ignored and may not exist locally.
+
+## Specs
+
+PitchMate is moving to spec-driven development. The **master spec** lives in `specs/master/` (start at `specs/master/index.md`): one chapter per file, every line tagged Built / Partial / Gap / Idea, and every Built or Partial line citing the code it comes from. Feature specs will live in `specs/features/<feature>.md`. The conventions are in `.claude/rules/specs.md`. `.claude/rules/product.md` is the authority on product rules, and `specs/master/` is the signed-off to-be spec; record any disagreement between them in the spec's Open questions rather than silently editing `product.md`.
 
 ## Common CLI Commands
 
@@ -149,6 +153,7 @@ Deep domain rules are modularized in `.claude/rules/` to ensure relevant guideli
 - **`security-and-privacy.md`** (Loads for `backend/src/**`, `apps/web/src/features/auth/**`, `apps/web/src/features/*/api/**`): Uniform existence concealment, token rotation and hashing, auth providers, GDPR anonymisation, and secrets management.
 - **`testing-patterns.md`** (Loads for backend tests and web test suites): xUnit, Testcontainers, FsCheck version rules (2.16.6 in Infrastructure vs 3.3.3 elsewhere), database property harnesses, Vitest, Testing Library, `fast-check`, and `jest-axe`.
 - **`brand.md`** (Loads for web styling and UI components): Design tokens (`--pm-*`), semantic colors, dark-first theming, and shared UI component guidelines.
+- **`specs.md`** (Loads for `specs/**`): Spec layout (`specs/master/`, `specs/features/`), status tags (Built / Partial / Gap / Idea), source citations, the six-section chapter shape (Purpose, Today (as-is), To be, Rules, Open questions, Ideas), Mermaid for flows, and how `product.md` and the signed-off to-be spec stay in agreement.
 
 ## Key Conventions & Gotchas
 
