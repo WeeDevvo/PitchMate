@@ -49,6 +49,9 @@ internal sealed class EfMatchRepository(PitchMateDbContext db) : IMatchRepositor
     /// <inheritdoc />
     public async Task<IReadOnlyList<Match>> GetForSquadAsync(Guid squadId, CancellationToken cancellationToken)
         => await db.Set<Match>()
+            .Include(match => match.Participants)
+            .Include(match => match.Teams)
+            .AsSplitQuery()
             .Where(match => match.SquadId == squadId)
             .ToListAsync(cancellationToken);
 

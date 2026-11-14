@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PitchMate.Application.Matches.Abstractions;
+using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Infrastructure.Matches.Queries;
 using PitchMate.Infrastructure.Matches.Repositories;
 
@@ -40,6 +41,11 @@ public static class MatchesInfrastructureRegistration
         services.TryAddScoped<IMatchRepository, EfMatchRepository>();
         services.TryAddScoped<IAvailabilityRepository, EfAvailabilityRepository>();
         services.TryAddScoped<IMembershipRatingRepository, EfMembershipRatingRepository>();
+
+        // Real match-history probe for GDPR membership erasure, registered ahead of
+        // AddSquadsInfrastructure's NoMatchHistoryProbe fallback so memberships with match, rating,
+        // or event history are anonymised rather than hard-deleted.
+        services.TryAddScoped<IMembershipHistoryProbe, EfMembershipHistoryProbe>();
 
         // The match-read query sources. Registered here, inside the Infrastructure assembly, because
         // they are internal to it — which is what makes it impossible for an Application or Api type

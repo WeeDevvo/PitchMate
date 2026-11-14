@@ -25,4 +25,10 @@ public interface IGuestClaimRepository
 
     /// <summary>Every open claim (issued or accepted) for memberships of <paramref name="squadId"/>.</summary>
     Task<IReadOnlyList<GuestClaim>> ListOpenForSquadAsync(Guid squadId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every guest claim targeting <paramref name="userId"/> (consented, completed, reversed, or
+    /// cancelled), used during data portability export and user erasure cleanup.
+    /// </summary>
+    Task<IReadOnlyList<GuestClaim>> ListForUserAsync(Guid userId, CancellationToken cancellationToken);
 }

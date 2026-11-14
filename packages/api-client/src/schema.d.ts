@@ -142,7 +142,7 @@ export interface paths {
         get: operations["GetAccount"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["DeleteAccount"];
         options?: never;
         head?: never;
         patch?: never;
@@ -255,6 +255,54 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ExportComprehensiveUserData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ExportV1UserData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteV1User"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1847,6 +1895,152 @@ export interface components {
             emailVerified: boolean;
             providers: components["schemas"]["AuthProvider"][];
         };
+        UserGdprAvailabilityRecord: {
+            /** Format: uuid */
+            matchId: string;
+            /** Format: uuid */
+            squadId: string;
+            squadName: string;
+            markedDays: string[];
+            /** Format: date-time */
+            submittedAt: string;
+        };
+        UserGdprDataPackage: {
+            profile: components["schemas"]["UserGdprProfile"];
+            squads: components["schemas"]["UserGdprSquadMembership"][];
+            matches: components["schemas"]["UserGdprMatchRecord"][];
+            stats: components["schemas"]["UserGdprStatsSummary"];
+            payments: components["schemas"]["UserGdprPaymentRecord"][];
+            /** Format: date-time */
+            exportedAt: string;
+            availabilityResponses: components["schemas"]["UserGdprAvailabilityRecord"][];
+            guestClaims: components["schemas"]["UserGdprGuestClaimRecord"][];
+            notifications: components["schemas"]["UserGdprNotificationRecord"][];
+        };
+        UserGdprGuestClaimRecord: {
+            /** Format: uuid */
+            claimId: string;
+            /** Format: uuid */
+            membershipId: string;
+            state: string;
+            /** Format: date-time */
+            consentAt: null | string;
+            /** Format: date-time */
+            completedAt: null | string;
+            /** Format: date-time */
+            reversedAt: null | string;
+            /** Format: date-time */
+            cancelledAt: null | string;
+        };
+        UserGdprMatchRecord: {
+            /** Format: uuid */
+            matchId: string;
+            /** Format: uuid */
+            squadId: string;
+            squadName: string;
+            status: string;
+            /** Format: date-time */
+            matchDate: null | string;
+            teamName: null | string;
+            outcome: null | string;
+            location?: null | string;
+            /** Format: int32 */
+            goalsScored?: null | number | string;
+            /** Format: int32 */
+            ownGoals?: null | number | string;
+            /** Format: int32 */
+            keeperMinutes?: null | number | string;
+        };
+        UserGdprNotificationRecord: {
+            /** Format: uuid */
+            notificationId: string;
+            /** Format: uuid */
+            squadId: string;
+            /** Format: uuid */
+            recipientMembershipId: string;
+            type: string;
+            title: string;
+            body: string;
+            readState: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        UserGdprPaymentRecord: {
+            /** Format: uuid */
+            paymentId: string;
+            description: string;
+            /** Format: double */
+            amount: number | string;
+            currency: string;
+            /** Format: date-time */
+            date: string;
+        };
+        UserGdprProfile: {
+            /** Format: uuid */
+            userId: string;
+            displayName: string;
+            email: string;
+            emailVerified: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            linkedProviders: components["schemas"]["AuthProvider"][];
+            avatarReference?: null | string;
+        };
+        UserGdprSquadMembership: {
+            /** Format: uuid */
+            squadId: string;
+            squadName: string;
+            /** Format: uuid */
+            membershipId: string;
+            role: string;
+            state: string;
+            displayName: string;
+            /** Format: date-time */
+            joinedAt: string;
+            skillTier?: null | string;
+            /** @default false */
+            isGuest: boolean;
+            /** Format: date-time */
+            lawfulBasisAcknowledgedAt?: null | string;
+            /** @default false */
+            claimCompleted: boolean;
+            /** @default false */
+            squadPendingDeletion: boolean;
+            /** Format: double */
+            ratingMu?: null | number | string;
+            /** Format: double */
+            ratingSigma?: null | number | string;
+        };
+        UserGdprStatsSummary: {
+            /** Format: int32 */
+            totalMatchesPlayed: number | string;
+            /** Format: int32 */
+            wins: number | string;
+            /** Format: int32 */
+            draws: number | string;
+            /** Format: int32 */
+            losses: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            goalsScored: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            ownGoals: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            cleanSheets: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            keeperMinutes: number | string;
+        };
         WorkingTeamsView: {
             teams: components["schemas"]["WorkingTeamView"][];
             prediction: null | components["schemas"]["SplitPrediction"];
@@ -2574,6 +2768,87 @@ export interface operations {
             };
         };
     };
+    DeleteAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     SignOut: {
         parameters: {
             query?: never;
@@ -3095,6 +3370,253 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UserDataExport"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ExportComprehensiveUserData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserGdprDataPackage"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ExportV1UserData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserGdprDataPackage"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeleteV1User: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {

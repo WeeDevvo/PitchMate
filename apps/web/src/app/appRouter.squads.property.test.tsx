@@ -81,6 +81,7 @@ import {
   SQUAD_TAB_ROUTES,
 } from '../features/squads';
 import { MATCH_LIVE_ROUTE, MATCH_ROUTE, NEW_MATCH_ROUTE } from '../features/matches';
+import { LEGAL_ROUTES } from '../features/legal';
 import { APP_CATCH_ALL_ROUTE, LANDING_ROUTE } from './appRoutePaths';
 import {
   assembleRoutes,
@@ -152,6 +153,7 @@ const FEATURE_PATHS: readonly string[] = [
  */
 const OTHER_TABLE_PATHS: readonly string[] = [
   LANDING_ROUTE,
+  ...LEGAL_ROUTES,
   ...AUTH_ROUTE_PATHS,
   ...SHELL_DESTINATIONS.map((destination) => destination.path),
   PLAYER_STATS_ROUTE,

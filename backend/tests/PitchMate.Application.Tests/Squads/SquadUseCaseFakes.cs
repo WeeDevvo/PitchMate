@@ -214,6 +214,10 @@ internal sealed class SquadStore
             .Where(c => c.IsOpen && _memberships.Any(m => m.Id == c.MembershipId && m.SquadId == squadId))
             .ToList();
 
+    /// <summary>Lists every claim targeting the supplied user.</summary>
+    public IReadOnlyList<GuestClaim> ListClaimsForUser(Guid userId) =>
+        _claims.Where(c => c.TargetUserId == userId).ToList();
+
     /// <summary>Counts the committed invites of a squad whose effective state at <paramref name="now"/> is active.</summary>
     public int CountActiveInvites(Guid squadId, DateTimeOffset now) =>
         _invites.Count(i => i.SquadId == squadId && i.EffectiveState(now) == InviteState.Active);
@@ -436,6 +440,12 @@ internal sealed class FakeGuestClaimRepository : IGuestClaimRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(_store.ListOpenClaimsForSquad(squadId));
+    }
+
+    public Task<IReadOnlyList<GuestClaim>> ListForUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_store.ListClaimsForUser(userId));
     }
 }
 

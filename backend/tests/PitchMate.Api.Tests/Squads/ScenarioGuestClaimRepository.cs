@@ -56,4 +56,7 @@ internal sealed class ScenarioGuestClaimRepository : IGuestClaimRepository
 
     public Task<IReadOnlyList<GuestClaim>> ListOpenForSquadAsync(Guid squadId, CancellationToken cancellationToken) =>
         throw new NotSupportedException("The already-member guard drives no claim listing.");
+
+    public Task<IReadOnlyList<GuestClaim>> ListForUserAsync(Guid userId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("The already-member guard drives no user claim listing.");
 }
