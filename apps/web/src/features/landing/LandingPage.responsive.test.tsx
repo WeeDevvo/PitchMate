@@ -193,17 +193,20 @@ describe('Landing page responsive layout — structural DOM contract', () => {
       ).toBeInTheDocument()
     })
 
-    // Req 4.6 — the only media elements (the header and footer logos) are
-    // covered by the `max-width: 100%` containment rule via their class, so
-    // they can never exceed the viewport width. Also verify no image declares
-    // an intrinsic width that would overflow the narrowest tested viewport.
+    // Req 4.6 — every media element is covered by a containment rule, so none
+    // can exceed the viewport width. The header and footer logos sit under the
+    // `max-width: 100%` rule via their class and declare an intrinsic width
+    // that fits even 360px. The brand photo is the design system's `Photo`,
+    // whose image is `width: 100%; height: auto` inside the content column, so
+    // its larger intrinsic size (kept for CLS) scales down with the viewport.
     it('constrains images to the viewport width', () => {
       renderPage()
       const images = document.querySelectorAll('img')
       expect(images.length).toBeGreaterThanOrEqual(1)
 
       for (const img of images) {
-        // Each image must sit where the containment CSS targets it.
+        if (img.closest('.landing-photo .pm-photo')) continue
+        // Each other image must sit where the containment CSS targets it.
         expect(img.closest('.landing-header__logo, .landing-footer__logo')).not.toBeNull()
         // Intrinsic width attribute (used for CLS) must fit even 360px.
         const declaredWidth = Number(img.getAttribute('width') ?? '0')

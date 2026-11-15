@@ -16,7 +16,7 @@ import type { ImageRef, MetadataBase, ShareMetadataInput } from '../lib/metadata
  * scrapers render a full-size card (Requirement 7.4).
  */
 const defaultPreviewImage: ImageRef = {
-  url: '/og-default.png',
+  url: '/og-share.jpg',
   width: 1200,
   height: 630,
 };

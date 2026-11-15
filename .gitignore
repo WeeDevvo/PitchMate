@@ -83,3 +83,7 @@ DerivedData/
 *.xcscmblueprint
 *.xccheckout
 .swiftpm/
+
+# Higgsfield originals: multi-MB sources, kept locally only (see apps/web/src/assets/brand/MANIFEST.md)
+/apps/web/src/assets/brand/incoming/*
+!/apps/web/src/assets/brand/incoming/.gitkeep

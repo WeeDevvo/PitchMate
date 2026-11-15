@@ -108,6 +108,11 @@ export interface LandingContent {
     /** The rolled match the hero's fairness card shows. */
     example: { when: string; state: string; teamA: string; teamB: string; winA: number; draw: number; winB: number };
   };
+  /** The brand photo band below the hero. */
+  photo: {
+    /** What the photo shows, for screen readers. */
+    alt: string;
+  };
   /** 3–8 benefits; the first three cover fair teams, organising, and stats. */
   benefits: BenefitModel[];
   howItWorks: {
@@ -183,6 +188,9 @@ export const landingContent: LandingContent = {
       draw: 0.07,
       winB: 0.46,
     },
+  },
+  photo: {
+    alt: 'Friends playing an evening five-a-side game on a floodlit astro pitch, one side in orange bibs.',
   },
   benefits: [
     {

@@ -41,6 +41,7 @@ import ThemeProvider from './components/ThemeProvider'
 import PageHead from './components/PageHead'
 import NavigationHeader from './components/NavigationHeader'
 import HeroSection from './components/HeroSection'
+import PhotoBand from './components/PhotoBand'
 import BenefitSection from './components/BenefitSection'
 import HowItWorks from './components/HowItWorks'
 import StatsShowcase from './components/StatsShowcase'
@@ -103,6 +104,7 @@ export function LandingPage({ content = landingContent }: LandingPageProps) {
         <NavigationHeader content={content} onNavigationError={handleCtaError} />
         <main className="landing-main">
           <HeroSection content={content} onNavigationError={handleCtaError} />
+          <PhotoBand content={content} />
           <div className="landing-benefits">
             {content.benefits.map((benefit) => (
               <BenefitSection key={benefit.id} benefit={benefit} />

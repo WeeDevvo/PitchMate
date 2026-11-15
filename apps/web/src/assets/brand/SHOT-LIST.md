@@ -2,6 +2,8 @@
 
 Images for the photo slots in the signed-off mockups. You make them in the Higgsfield app, then drop the files into [`incoming/`](incoming/). After that, Claude optimises them for the web, records their prompts in a manifest and wires them into the pages.
 
+**Status (2026-11-15):** shots 1–4 are shipped; [MANIFEST.md](MANIFEST.md) says how each came out. Shots 1 and 2 are take 2, with the swooshes retouched out. Shot 5, the loop, was dropped because both takes carried sportswear logos. Still to do: a reshoot or edit that brings women players into the landing band.
+
 ## How to run it (no code needed)
 
 1. Open **higgsfield.ai** and sign in. You are on the Plus plan, with about 1,210 credits.
@@ -51,13 +53,27 @@ Even with a couple of reruns, that leaves well over 1,000 credits.
 
 **Prompt**
 
-> Wide cinematic photograph of a casual evening five-a-side football game between friends on an outdoor artificial-grass cage pitch, shot from low on the touchline at dusk. Tall floodlights glow against a deep blue-black sky, and the turf is a rich, vivid green under the lights, with crisp white lines and a dark mesh fence around the pitch. Eight to ten ordinary adults of mixed ages, builds and genders, in plain mismatched training tops and shorts; one side wears loose hi-vis orange mesh bibs over their tops. Mid-play, relaxed and happy, the ball in motion near the centre, one player laughing. The players are small in the frame and slightly motion-blurred, with no faces in sharp focus. Moody, high-contrast night lighting with deep near-black shadows at the edges of the frame, natural film grain, 35mm lens, shallow depth of field.
+> Wide cinematic photograph of a casual evening five-a-side football game between friends on an outdoor artificial-grass cage pitch, shot from low on the touchline at dusk. Tall floodlights glow against a deep blue-black sky, and the turf is a rich, vivid green under the lights, with crisp white lines and a dark mesh fence around the pitch. Eight to ten ordinary adults, a mix of men and women of different ages and builds, in plain mismatched training tops and shorts; one side wears loose hi-vis orange mesh bibs over their tops. All clothing, bibs and boots are plain and completely unbranded, with no stripes, logos or print. Mid-play, relaxed and happy, the ball in motion near the centre. The players are small in the frame and slightly motion-blurred, with no faces in sharp focus. Moody, high-contrast night lighting with deep near-black shadows at the edges of the frame, natural film grain, 35mm lens, shallow depth of field.
 
 **Avoid**
 
-> text, letters, numbers, scoreboard, logos, club badges, crests, sponsor marks, branded kits, sports-brand logos, stadium, crowd, famous footballers, close-up faces, watermark, extra limbs, distorted hands, daylight, oversaturated neon colours
+> text, letters, numbers, scoreboard, logos, club badges, crests, sponsor marks, branded kits, sports-brand logos, swoosh, three stripes, striped shorts, striped boots, printed text on bibs, chest logos, stadium, crowd, famous footballers, close-up faces, sharp faces, watermark, extra limbs, distorted hands, daylight, oversaturated neon colours
+
+*Reshoot (2026-11-15):* the first version showed sportswear logos (swoosh, three stripes), print on a bib and only men, so the prompt now asks for unbranded kit and a mix of men and women.
 
 *Change from the mockup:* the placeholder also showed a phone and a watch reading 3–2. That would put numbers in the image, and a generated phone wouldn't show the real app, so the band is just the pitch. The real app screens already appear further down the landing page.
+
+### Fix by editing (take 2 → take 3)
+
+The second take kept the right scene but added small Nike-style swooshes to shorts and shirts, and still showed only men. Rather than generating from scratch again, **edit** the take-2 picture:
+
+1. In Higgsfield, choose **Nano Banana Pro** and add your take-2 `landing-band-wide` picture as the **reference image**.
+2. Same ratio (21:9) and resolution (4k). Paste this as the prompt:
+
+> Edit this photo. Remove every logo, tick, swoosh, stripe and printed mark from all shirts, shorts, bibs, socks and boots, so all kit is plain and completely unbranded. Change three of the players into women, keeping their poses, positions and bibs. Keep everything else exactly the same: the pitch, lighting, floodlights, fence, ball, framing and colours.
+
+3. Do the same for `landing-band-phone` with its take-2 picture (4:3, 2k). In that prompt, change "three of the players" to "one of the players".
+4. Make the loop (Shot 5) again from the edited wide picture.
 
 ## Shot 2: Landing band, phone crop
 
@@ -70,11 +86,13 @@ Even with a couple of reruns, that leaves well over 1,000 credits.
 
 **Prompt**
 
-> Cinematic photograph of a casual evening five-a-side football game between friends on an outdoor artificial-grass cage pitch under floodlights at dusk, closer framing on three or four players contesting the ball. One player wears a loose hi-vis orange mesh bib over a plain training top, the others plain mismatched tops; ordinary adults of mixed ages and builds. The turf is vivid green under the lights, the sky deep blue-black, a dark mesh fence behind. Bodies in motion, faces turned away or soft and motion-blurred. High-contrast night lighting, deep near-black shadows, natural film grain, 35mm lens, shallow depth of field.
+> Cinematic photograph of a casual evening five-a-side football game between friends on an outdoor artificial-grass cage pitch under floodlights at dusk, closer framing on three or four players contesting the ball. One player wears a loose hi-vis orange mesh bib over a plain training top, the others plain mismatched tops; ordinary adults, men and women, of mixed ages and builds. All clothing and boots are plain and completely unbranded, with no stripes, logos or print. The turf is vivid green under the lights, the sky deep blue-black, a dark mesh fence behind. Framed from the chest down or from behind, so faces are out of frame, turned away or soft and motion-blurred. High-contrast night lighting, deep near-black shadows, natural film grain, 35mm lens, shallow depth of field.
 
 **Avoid**
 
-> text, letters, numbers, logos, club badges, crests, sponsor marks, branded kits, sports-brand logos, stadium, crowd, famous footballers, sharp close-up faces, watermark, extra limbs, distorted hands, daylight
+> text, letters, numbers, logos, club badges, crests, sponsor marks, branded kits, sports-brand logos, swoosh, three stripes, striped shorts, striped boots, printed text on bibs, stadium, crowd, famous footballers, faces in focus, close-up faces, watermark, extra limbs, distorted hands, daylight
+
+*Reshoot (2026-11-15):* the first version had three-stripe shorts and three large, sharp faces.
 
 ## Shot 3: Pro paywall art
 
@@ -131,6 +149,8 @@ Even with a couple of reruns, that leaves well over 1,000 credits.
 **Avoid**
 
 > text, logos, cuts, fast camera moves, shaking, morphing bodies, extra players
+
+*Reshoot (2026-11-15):* make this again from the **new** Shot 1 picture. The first loop came from the rejected still, so it carried the same logos.
 
 Another route: a short clip made with Claude Motion can be brought into Higgsfield through its import, if you'd rather animate it that way.
 

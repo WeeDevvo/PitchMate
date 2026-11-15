@@ -65,6 +65,7 @@ export {
   type LockedFeatureProps,
 } from './LockedFeature';
 export { Logo, type LogoProps } from './Logo';
+export { Photo, type PhotoProps, type PhotoSet } from './Photo';
 export {
   DayPicker,
   FairnessMeter,
