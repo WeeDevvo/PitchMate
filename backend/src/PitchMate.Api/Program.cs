@@ -81,6 +81,9 @@ builder.Services.AddStats();
 // internal to that assembly (Requirement 14.4).
 builder.Services.AddLiveTracking();
 
+// Scheduled GDPR storage-limitation purge job (48h expired auth tokens & 30-day soft-deleted squads).
+builder.Services.AddHostedService<DataRetentionPurgeHostedService>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

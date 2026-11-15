@@ -1,0 +1,129 @@
+/*
+ * Cookie consent banner and preferences trigger built on PitchMate `--pm-*` design tokens.
+ */
+
+.cookie-banner {
+  position: fixed;
+  inset-block-end: var(--pm-space-4);
+  inset-inline: var(--pm-space-4);
+  z-index: var(--pm-z-toast);
+  max-inline-size: 60rem;
+  margin-inline: auto;
+  font-family: var(--pm-font-sans);
+}
+
+.cookie-banner,
+.cookie-banner *,
+.cookie-banner *::before,
+.cookie-banner *::after {
+  box-sizing: border-box;
+}
+
+.cookie-banner__surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-4);
+  background: var(--pm-surface-overlay);
+  border: 1px solid var(--pm-border-control);
+  box-shadow: var(--pm-shadow-3);
+}
+
+.cookie-banner__inner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--pm-space-3);
+}
+
+.cookie-banner__icon {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--pm-accent-subtle);
+  color: var(--pm-accent-on-subtle);
+}
+
+.cookie-banner__copy {
+  min-inline-size: 0;
+  flex: 1;
+}
+
+.cookie-banner__title {
+  margin: 0 0 var(--pm-space-1);
+  font: var(--pm-type-headline);
+  color: var(--pm-text-primary);
+}
+
+.cookie-banner__description {
+  margin: 0;
+  color: var(--pm-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.cookie-banner__link {
+  color: var(--pm-accent-text);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.cookie-banner__link:focus-visible {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.cookie-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--pm-space-2);
+}
+
+.cookie-reopen {
+  position: fixed;
+  inset-block-end: var(--pm-space-4);
+  inset-inline-start: var(--pm-space-4);
+  z-index: var(--pm-z-sticky);
+}
+
+.cookie-reopen__btn {
+  min-block-size: var(--pm-target-touch);
+  box-shadow: var(--pm-shadow-2);
+}
+
+.cookie-pref-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
+}
+
+.cookie-pref-item {
+  padding: var(--pm-space-3);
+  border-radius: var(--pm-radius-md);
+  border: 1px solid var(--pm-border-subtle);
+  background: var(--pm-surface-sunken);
+}
+
+@media (max-width: 640px) {
+  .cookie-banner__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cookie-banner__actions > button {
+    inline-size: 100%;
+    min-block-size: var(--pm-target-touch);
+  }
+}
+
+@media (forced-colors: active) {
+  .cookie-banner__surface,
+  .cookie-pref-item,
+  .cookie-reopen__btn {
+    border: 1px solid CanvasText;
+  }
+}

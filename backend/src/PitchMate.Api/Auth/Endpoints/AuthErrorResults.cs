@@ -51,6 +51,7 @@ internal static class AuthErrorResults
             AuthErrorCode.IdentityAlreadyLinked => StatusCodes.Status409Conflict,
             AuthErrorCode.PasswordMethodExists => StatusCodes.Status409Conflict,
             AuthErrorCode.LastIdentity => StatusCodes.Status409Conflict,
+            AuthErrorCode.OwnerConstraint => StatusCodes.Status409Conflict,
 
             // A downstream email transport failed after its retry budget.
             AuthErrorCode.DeliveryFailed => StatusCodes.Status502BadGateway,

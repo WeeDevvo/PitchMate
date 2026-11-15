@@ -207,6 +207,7 @@ public static class SeamBehaviourBaseline
         Problem(AuthStandard, nameof(AuthErrorCode.IdentityAlreadyLinked), StatusCodes.Status409Conflict),
         Problem(AuthStandard, nameof(AuthErrorCode.Unauthenticated), StatusCodes.Status401Unauthorized),
         Problem(AuthStandard, nameof(AuthErrorCode.UserNotFound), StatusCodes.Status404NotFound),
+        Problem(AuthStandard, nameof(AuthErrorCode.OwnerConstraint), StatusCodes.Status409Conflict),
 
         // ── SquadErrorResults (standard) ────────────────────────────────────────────────────────────
         // The ordinary mapping, where an authorisation failure is a code-echoing 403 and nothing is

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using PitchMate.Application.Auth.Abstractions;
 using PitchMate.Application.Common.Persistence;
 using PitchMate.Application.Notifications;
+using PitchMate.Application.Squads.UseCases;
 using PitchMate.Domain.Auth;
 
 namespace PitchMate.Application.Auth.Gdpr;
@@ -38,6 +39,7 @@ public sealed class EraseUserHandler(
     IRepository<PasswordCredential> passwordCredentials,
     IRefreshTokenStore refreshTokens,
     IUnitOfWork unitOfWork,
+    OnUserErasedHandler? onUserErased = null,
     RemoveNotificationsForUserHandler? removeNotifications = null,
     ILogger<EraseUserHandler>? logger = null)
 {
@@ -63,6 +65,19 @@ public sealed class EraseUserHandler(
             return Result.Fail(new AuthError(
                 AuthErrorCode.UserNotFound,
                 "No user exists for the supplied identifier."));
+        }
+
+        // Validate squad constraints: if the user owns any active squad, ownership must be
+        // transferred or the squad archived/deleted prior to user deletion.
+        if (onUserErased is not null)
+        {
+            var squadResult = await onUserErased.HandleAsync(new OnUserErasedCommand(command.UserId), ct);
+            if (!squadResult.IsSuccess)
+            {
+                return Result.Fail(new AuthError(
+                    AuthErrorCode.OwnerConstraint,
+                    squadResult.Error?.Message ?? "Ownership of a live squad must be transferred before the owning user can be erased."));
+            }
         }
 
         // Strip the user's PII through the anonymisation hook. The Id and relationships are
@@ -109,6 +124,8 @@ public sealed class EraseUserHandler(
         // and never touches match or rating-replay data; any failure is logged (identifiers only) and
         // swallowed so it can never roll back or surface through the committed erasure.
         await RemoveNotificationsForErasedUserAsync(command.UserId, ct);
+
+        logger?.LogInformation("User account erased and anonymised (Right to be Forgotten). UserId={UserId}", command.UserId);
 
         return Result.Ok();
     }

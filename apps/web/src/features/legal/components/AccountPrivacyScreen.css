@@ -1,0 +1,108 @@
+/*
+ * Account privacy and data rights management section rendered inside SettingsDestination.
+ * Built solely with PitchMate `--pm-*` design tokens for dark and light themes.
+ */
+
+.privacy-screen {
+  inline-size: 100%;
+  max-inline-size: 52rem;
+  font-family: var(--pm-font-sans);
+}
+
+.privacy-screen,
+.privacy-screen *,
+.privacy-screen *::before,
+.privacy-screen *::after {
+  box-sizing: border-box;
+}
+
+.privacy-screen__grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-5);
+}
+
+.privacy-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-4);
+}
+
+.privacy-card--danger {
+  border-color: var(--pm-result-loss-subtle);
+}
+
+.privacy-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-3);
+}
+
+.privacy-card__icon {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--pm-accent-subtle);
+  color: var(--pm-accent-on-subtle);
+}
+
+.privacy-card__icon--danger {
+  background: var(--pm-result-loss-subtle);
+  color: var(--pm-result-loss-text);
+}
+
+.privacy-card__heading {
+  margin: 0;
+  font: var(--pm-type-headline);
+  color: var(--pm-text-primary);
+}
+
+.privacy-card__desc {
+  margin: 0;
+  max-inline-size: 64ch;
+  color: var(--pm-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.privacy-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pm-space-3);
+}
+
+.privacy-link {
+  color: var(--pm-accent-text);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.privacy-link:focus-visible {
+  outline: 2px solid var(--pm-focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.privacy-dialog__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-4);
+}
+
+.privacy-dialog__checkbox {
+  padding: var(--pm-space-3);
+  border-radius: var(--pm-radius-md);
+  border: 1px solid var(--pm-border-subtle);
+  background: var(--pm-surface-sunken);
+}
+
+@media (forced-colors: active) {
+  .privacy-card,
+  .privacy-card--danger,
+  .privacy-dialog__checkbox {
+    border: 1px solid CanvasText;
+  }
+}

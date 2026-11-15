@@ -3,7 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PitchMate.Application.Common.Persistence;
+using PitchMate.Application.Squads.Abstractions;
 using PitchMate.Infrastructure;
+using PitchMate.Infrastructure.Matches.Repositories;
 using PitchMate.Infrastructure.Persistence;
 
 namespace PitchMate.Infrastructure.Tests.Persistence;
@@ -166,6 +168,16 @@ public sealed class DependencyInjectionWiringTests
             exception.InnerExceptions,
             inner => inner.Message.Contains(nameof(TimeProvider))
                 || inner.Message.Contains(nameof(PitchMateDbContext)));
+    }
+
+    [Fact]
+    public void AddInfrastructureResolvesMembershipHistoryProbeToEfProbe()
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+
+        var probe = scope.ServiceProvider.GetRequiredService<IMembershipHistoryProbe>();
+        Assert.IsType<EfMembershipHistoryProbe>(probe);
     }
 
     /// <summary>

@@ -166,6 +166,23 @@ public sealed class GuestClaim : BaseEntity
         return Result.Ok();
     }
 
+    /// <summary>
+    /// Clears the target user binding when that user account is erased under GDPR Article 17.
+    /// Open claims already accepted by the user are cancelled so they cannot subsequently be
+    /// completed onto an erased account.
+    /// </summary>
+    /// <param name="now">The current instant from the clock.</param>
+    public void ScrubTargetUserOnErasure(DateTimeOffset now)
+    {
+        TargetUserId = null;
+
+        if (State == GuestClaimState.Consented)
+        {
+            State = GuestClaimState.Cancelled;
+            CancelledAt = now;
+        }
+    }
+
     private static Result Fail(SquadErrorCode code, string message) =>
         Result.Fail(new SquadError(code, message));
 }
