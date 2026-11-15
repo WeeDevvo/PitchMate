@@ -1,0 +1,12 @@
+.pm-photo {
+  display: block;
+  overflow: hidden;
+  border-radius: var(--pm-radius-xl);
+  background: var(--pm-surface-sunken);
+}
+
+.pm-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}

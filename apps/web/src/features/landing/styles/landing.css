@@ -8,6 +8,7 @@
  *   LandingPage      → .landing-page / .landing-main / .landing-benefits
  *   NavigationHeader → .landing-header / __logo / __sections / __section / __actions
  *   HeroSection      → .hero / __stripe / __copy / __headline / __subheadline / __actions / __visual / __card
+ *   PhotoBand        → .landing-photo
  *   BenefitSection   → .benefit / __icon / __heading / __description
  *   HowItWorks       → .how / __inner / __steps / __step / __number / __teams
  *   StatsShowcase    → .stats / __visual / __board / __copy / __tiles
@@ -127,6 +128,7 @@
 /* Every band centres its content in the constrained column. */
 .landing-header,
 .hero,
+.landing-photo,
 .landing-benefits,
 .how__inner,
 .stats,
@@ -307,6 +309,16 @@
   font-size: 17px;
   line-height: 26px;
   color: var(--pm-text-secondary);
+}
+
+/* ------------------------------------------------------------------ *
+ * Photo band — the brand photo under the hero, in the content column.
+ * ------------------------------------------------------------------ */
+
+/* Positioned so it paints over the hero's decorative stripe, which runs past the hero. */
+.landing-photo {
+  position: relative;
+  padding-block-end: var(--landing-band);
 }
 
 /* ------------------------------------------------------------------ *
